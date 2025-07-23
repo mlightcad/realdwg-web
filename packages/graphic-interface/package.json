@@ -1,0 +1,27 @@
+{
+  "name": "@mlightcad/graphic-interface",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "main": "./dist/graphic-interface.umd.cjs",
+  "module": "./dist/graphic-interface.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "types": "./lib/index.d.ts",
+    "import": "./dist/graphic-interface.js",
+    "require": "./dist/graphic-interface.umd.cjs"
+  },
+  "scripts": {
+    "clean": "rimraf dist lib tsconfig.tsbuildinfo",
+    "build": "tsc && vite build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix --quiet src/"
+  },
+  "peerDependencies": {
+    "@mlightcad/geometry-engine": "0.0.1"
+  }
+}

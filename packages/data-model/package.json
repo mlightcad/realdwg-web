@@ -1,0 +1,35 @@
+{
+  "name": "@mlightcad/data-model",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "files": [
+    "dist",
+    "lib"
+  ],
+  "main": "./dist/data-model.umd.cjs",
+  "module": "./dist/data-model.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "types": "./lib/index.d.ts",
+    "import": "./dist/data-model.js",
+    "require": "./dist/data-model.umd.cjs"
+  },
+  "scripts": {
+    "clean": "rimraf dist lib tsconfig.tsbuildinfo",
+    "build": "tsc && vite build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix --quiet src/"
+  },
+  "dependencies": {
+    "@mlightcad/dxf-json": "1.0.8",
+    "@mlightcad/common": "0.0.1",
+    "@mlightcad/geometry-engine": "0.0.1",
+    "@mlightcad/graphic-interface": "0.0.1",
+    "lodash-es": "*",
+    "uid": "^2.0.2"
+  },
+  "devDependencies": {
+    "@types/lodash-es": "^4.17.12"
+  }
+}
