@@ -8,8 +8,9 @@ on:
   pull_request:
 
 permissions:
-  actions: read
   contents: read
+  pages: write
+  id-token: write
 
 jobs:
   main:
@@ -43,3 +44,18 @@ jobs:
 
       - name: Run tests
         run: pnpm test
+
+      - name: Build API docs
+        run: pnpm doc
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './docs/'
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
