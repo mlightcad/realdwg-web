@@ -1,11 +1,23 @@
 {
   "name": "@mlightcad/data-model",
   "private": true,
-  "version": "0.0.1",
+  "version": "1.0.0",
   "type": "module",
+  "keywords": [
+    "autocad",
+    "cad",
+    "dwg",
+    "dxf",
+    "mlight",
+    "mlightcad",
+    "objecarx",
+    "realdwg"
+  ],
   "files": [
     "dist",
-    "lib"
+    "lib",
+    "README.md",
+    "package.json"
   ],
   "main": "./dist/data-model.umd.cjs",
   "module": "./dist/data-model.js",

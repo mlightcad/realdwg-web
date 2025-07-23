@@ -1,13 +1,12 @@
 {
     "entryPoints": ["packages/*"],
-    "name": "MLightCAD",
+    "name": "RealDWG-Web",
     "out": "docs",
     "entryPointStrategy": "packages",
     "includeVersion": false,
     "exclude": [
         "**/__tests__/**",
-        "**/*.test.ts",
-        "viewer"
+        "**/*.test.ts"
     ],
     "excludeExternals": true,
     "excludePrivate": true,
