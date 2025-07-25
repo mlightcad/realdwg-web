@@ -104,16 +104,16 @@ importers:
   packages/data-model:
     dependencies:
       '@mlightcad/common':
-        specifier: 0.0.1
+        specifier: workspace:*
         version: link:../common
       '@mlightcad/dxf-json':
         specifier: 1.0.8
         version: 1.0.8
       '@mlightcad/geometry-engine':
-        specifier: 0.0.1
+        specifier: workspace:*
         version: link:../geometry-engine
       '@mlightcad/graphic-interface':
-        specifier: 0.0.1
+        specifier: workspace:*
         version: link:../graphic-interface
       lodash-es:
         specifier: '*'
@@ -129,7 +129,7 @@ importers:
   packages/geometry-engine:
     dependencies:
       '@mlightcad/common':
-        specifier: 0.0.1
+        specifier: workspace:*
         version: link:../common
       lodash-es:
         specifier: '*'
@@ -141,7 +141,7 @@ importers:
   packages/graphic-interface:
     dependencies:
       '@mlightcad/geometry-engine':
-        specifier: 0.0.1
+        specifier: workspace:*
         version: link:../geometry-engine
 
 packages:

@@ -1,11 +1,23 @@
 {
   "name": "@mlightcad/graphic-interface",
-  "private": true,
-  "version": "0.0.1",
+  "version": "1.0.1",
+  "license": "MIT",
   "type": "module",
+  "keywords": [
+    "autocad",
+    "cad",
+    "dwg",
+    "dxf",
+    "mlight",
+    "mlightcad",
+    "objecarx",
+    "realdwg"
+  ],
   "files": [
     "dist",
-    "lib"
+    "lib",
+    "README.md",
+    "package.json"
   ],
   "main": "./dist/graphic-interface.umd.cjs",
   "module": "./dist/graphic-interface.js",
@@ -22,6 +34,6 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "peerDependencies": {
-    "@mlightcad/geometry-engine": "0.0.1"
+    "@mlightcad/geometry-engine": "workspace:*"
   }
 }

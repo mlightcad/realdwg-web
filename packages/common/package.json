@@ -1,11 +1,23 @@
 {
   "name": "@mlightcad/common",
-  "private": true,
-  "version": "0.0.1",
+  "version": "1.0.1",
+  "license": "MIT",
   "type": "module",
+  "keywords": [
+    "autocad",
+    "cad",
+    "dwg",
+    "dxf",
+    "mlight",
+    "mlightcad",
+    "objecarx",
+    "realdwg"
+  ],
   "files": [
     "dist",
-    "lib"
+    "lib",
+    "README.md",
+    "package.json"
   ],
   "main": "./dist/common.umd.cjs",
   "module": "./dist/common.js",

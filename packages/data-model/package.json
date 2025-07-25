@@ -1,7 +1,7 @@
 {
   "name": "@mlightcad/data-model",
-  "private": true,
-  "version": "1.0.0",
+  "version": "1.0.3",
+  "license": "MIT",
   "type": "module",
   "keywords": [
     "autocad",
@@ -35,13 +35,16 @@
   },
   "dependencies": {
     "@mlightcad/dxf-json": "1.0.8",
-    "@mlightcad/common": "0.0.1",
-    "@mlightcad/geometry-engine": "0.0.1",
-    "@mlightcad/graphic-interface": "0.0.1",
     "lodash-es": "*",
     "uid": "^2.0.2"
   },
   "devDependencies": {
     "@types/lodash-es": "^4.17.12"
+  },
+  "peerDependencies": {
+    "@mlightcad/common": "workspace:*",
+    "@mlightcad/geometry-engine": "workspace:*",
+    "@mlightcad/graphic-interface": "workspace:*",
+    "lodash-es": "*"
   }
 }

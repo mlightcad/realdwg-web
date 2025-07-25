@@ -1,7 +1,7 @@
 {
   "name": "mlightcad",
-  "version": "0.0.1",
-  "license": "UNLICENSED",
+  "version": "1.0.0",
+  "license": "MIT",
   "author": "MLight Lee <mlight.lee@outlook.com>",
   "type": "module",
   "repository": {
@@ -26,7 +26,6 @@
   "engines": {
     "pnpm": ">=8"
   },
-  "private": true,
   "dependencies": {
     "lodash-es": "4.17.21"
   },

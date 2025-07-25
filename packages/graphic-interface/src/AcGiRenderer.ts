@@ -5,12 +5,12 @@ import {
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
-import { AcGiPointStyle } from 'AcGiPointStyle'
 
 import { AcGiEntity } from './AcGiEntity'
 import { AcGiHatchStyle } from './AcGiHatchStyle'
 import { AcGiImageStyle } from './AcGiImageStyle'
 import { AcGiLineStyle } from './AcGiLineStyle'
+import { AcGiPointStyle } from './AcGiPointStyle'
 import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle'
 
 /**
