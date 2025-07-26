@@ -1,0 +1,43 @@
+{
+  "name": "@mlightcad/libdxfrw-converter",
+  "version": "1.0.1",
+  "type": "module",
+  "keywords": [
+    "autocad",
+    "cad",
+    "dwg",
+    "dxf",
+    "libdxfrw",
+    "libdxfrw-web",
+    "mlight",
+    "mlightcad",
+    "objecarx",
+    "realdwg"
+  ],
+  "files": [
+    "dist",
+    "lib",
+    "README.md",
+    "package.json"
+  ],
+  "main": "./dist/libdxfrw-converter.umd.cjs",
+  "module": "./dist/libdxfrw-converter.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "types": "./lib/index.d.ts",
+    "import": "./dist/libdxfrw-converter.js",
+    "require": "./dist/libdxfrw-converter.umd.cjs"
+  },
+  "scripts": {
+    "clean": "rimraf dist lib tsconfig.tsbuildinfo",
+    "build": "tsc && vite build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix --quiet src/"
+  },
+  "dependencies": {},
+  "devDependencies": {},
+  "peerDependencies": {
+    "@mlightcad/data-model": "workspace:*",
+    "@mlightcad/libdxfrw-web": "0.0.9"
+  }
+}

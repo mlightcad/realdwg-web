@@ -22,10 +22,13 @@ To register a converter for a file type:
 
 ```ts
 import { AcDbDatabaseConverterManager, AcDbFileType } from '@mlightcad/data-model';
-import { MyDwgConverter } from './my-dwg-converter';
+import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter';
 
-// Register a DWG converter
-AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, new MyDwgConverter());
+// WASM module loading (async)
+import('@mlightcad/libredwg-web/wasm/libredwg-web').then(libredwgModule => {
+  const dwgConverter = new AcDbLibreDwgConverter(libredwgModule);
+  AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, dwgConverter);
+});
 ```
 
 ### Unregistering a Converter
@@ -59,6 +62,14 @@ This design ensures the system is open for extension and can easily adapt to new
 ## Architecture
 
 AutoCAD holds an absolute dominant position in the 2D CAD field. A large number of vertical applications and third-party plugins have been developed based on AutoCAD ObjectARX, and there are many software engineers familiar with AutoCAD ObjectARX. Therefore, this project mimics the architecture of AutoCAD ObjectARX and adopts similar API interfaces to AutoCAD ObjectARX.
+
+### libdxfrw-converter (DWG file support)
+
+This module provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the drawing database. It is powered by the libdxfrw library compiled to WebAssembly and is designed to be registered with the converter manager for DWG file support.
+
+### libredwg-converter (DWG file support)
+
+This module provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the drawing database. It is powered by the LibreDWG library compiled to WebAssembly and is designed to be registered with the converter manager for DWG file support.
 
 ## geometry-engine (AcGe classes in AutoCAD ObjectARX)
 

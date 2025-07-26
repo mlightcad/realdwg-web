@@ -1,0 +1,44 @@
+{
+  "name": "@mlightcad/libredwg-converter",
+  "version": "1.0.1",
+  "type": "module",
+  "keywords": [
+    "autocad",
+    "cad",
+    "dwg",
+    "dxf",
+    "libredwg",
+    "libredwg-web",
+    "mlight",
+    "mlightcad",
+    "objecarx",
+    "realdwg"
+  ],
+  "files": [
+    "dist",
+    "lib",
+    "README.md",
+    "package.json"
+  ],
+  "main": "./dist/libredwg-converter.umd.cjs",
+  "module": "./dist/libredwg-converter.js",
+  "types": "./lib/index.d.ts",
+  "exports": {
+    "types": "./lib/index.d.ts",
+    "import": "./dist/libredwg-converter.js",
+    "require": "./dist/libredwg-converter.umd.cjs"
+  },
+  "scripts": {
+    "clean": "rimraf dist lib tsconfig.tsbuildinfo",
+    "build": "tsc && vite build",
+    "lint": "eslint src/",
+    "lint:fix": "eslint --fix --quiet src/"
+  },
+  "devDependencies": {
+    "vite": "^5.2.10"
+  },
+  "peerDependencies": {
+    "@mlightcad/data-model": "workspace:*",
+    "@mlightcad/libredwg-web": "0.1.5"
+  }
+}
