@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.0.3
+
+### Patch Changes
+
+- bundle common, geometry-engine, and graphic-interface into data-model and remove dependency on lodash-es
+
 ## 1.0.2
 
 ### Patch Changes

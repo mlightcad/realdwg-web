@@ -214,7 +214,6 @@ newLayout.setPlotCentered(true);
 - **@mlightcad/common**: For common utilities (peer dependency)
 - **@mlightcad/geometry-engine**: For geometric operations (peer dependency)
 - **@mlightcad/graphic-interface**: For graphics interface (peer dependency)
-- **lodash-es**: For utility functions (peer dependency)
 - **uid**: For unique ID generation
 
 ## API Documentation

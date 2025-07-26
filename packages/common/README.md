@@ -123,7 +123,6 @@ manager.start();
 ## Dependencies
 
 - **loglevel**: For logging functionality
-- **lodash-es**: For utility functions (peer dependency)
 
 ## API Documentation
 

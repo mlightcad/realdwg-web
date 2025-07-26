@@ -165,7 +165,6 @@ const areCollinear = AcGeGeometryUtil.areCollinear(points);
 ## Dependencies
 
 - **@mlightcad/common**: For common utilities (peer dependency)
-- **lodash-es**: For utility functions (peer dependency)
 
 ## API Documentation
 

@@ -1,5 +1,9 @@
-import { AcCmAttributes, AcCmObject, AcCmStringKey } from '@mlightcad/common'
-import { defaults } from 'lodash-es'
+import {
+  AcCmAttributes,
+  AcCmObject,
+  AcCmStringKey,
+  defaults
+} from '@mlightcad/common'
 import { uid } from 'uid'
 
 import { AcDbDatabase } from '../database/AcDbDatabase'

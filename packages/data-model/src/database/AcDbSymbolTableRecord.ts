@@ -1,4 +1,4 @@
-import { defaults } from 'lodash-es'
+import { defaults } from '@mlightcad/common'
 
 import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
 

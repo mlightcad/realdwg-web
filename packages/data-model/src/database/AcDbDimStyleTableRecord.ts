@@ -1,4 +1,4 @@
-import { defaults } from 'lodash-es'
+import { defaults } from '@mlightcad/common'
 
 import {
   AcDbSymbolTableRecord,

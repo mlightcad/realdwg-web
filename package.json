@@ -26,16 +26,13 @@
   "engines": {
     "pnpm": ">=8"
   },
-  "dependencies": {
-    "lodash-es": "4.17.21"
-  },
   "devDependencies": {
     "@changesets/cli": "^2.29.5",
     "@intlify/eslint-plugin-vue-i18n": "^3.0.0",
     "@nx/js": "19.3.1",
     "@types/jest": "^29.5.12",
-    "@types/lodash-es": "^4.17.12",
     "@types/node": "^20.14.9",
+    "@types/rollup-plugin-peer-deps-external": "^2.2.5",
     "@typescript-eslint/parser": "^8.4.0",
     "@vitejs/plugin-legacy": "^5.4.2",
     "eslint": "^9.9.1",

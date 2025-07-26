@@ -1,5 +1,4 @@
-import { AcCmColor } from '@mlightcad/common'
-import { defaults } from 'lodash-es'
+import { AcCmColor, defaults } from '@mlightcad/common'
 
 import {
   AcDbSymbolTableRecord,

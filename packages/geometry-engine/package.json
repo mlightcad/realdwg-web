@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/geometry-engine",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -34,7 +34,6 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "peerDependencies": {
-    "@mlightcad/common": "workspace:*",
-    "lodash-es": "*"
+    "@mlightcad/common": "workspace:*"
   }
 }

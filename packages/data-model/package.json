@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/data-model",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -28,6 +28,7 @@
     "require": "./dist/data-model.umd.cjs"
   },
   "scripts": {
+    "analyze": "vite build --mode analyze",
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",
     "build": "tsc && vite build",
     "lint": "eslint src/",
@@ -35,16 +36,9 @@
   },
   "dependencies": {
     "@mlightcad/dxf-json": "1.0.8",
-    "lodash-es": "*",
-    "uid": "^2.0.2"
-  },
-  "devDependencies": {
-    "@types/lodash-es": "^4.17.12"
-  },
-  "peerDependencies": {
     "@mlightcad/common": "workspace:*",
     "@mlightcad/geometry-engine": "workspace:*",
     "@mlightcad/graphic-interface": "workspace:*",
-    "lodash-es": "*"
+    "uid": "^2.0.2"
   }
 }
