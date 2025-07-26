@@ -1,5 +1,4 @@
 import { AcCmErrors } from '@mlightcad/common'
-import verb from 'verb-nurbs-web'
 
 import {
   AcGeBox3d,
@@ -64,7 +63,11 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
     this.majorAxisRadius = majorAxisRadius
     this.minorAxisRadius = minorAxisRadius
     // Check whether it is a full ellipse
-    if ((endAngle - startAngle) % TAU == 0) {
+    const angleDiff = Math.abs(endAngle - startAngle)
+    if (
+      Math.abs(angleDiff - TAU) < 1e-10 ||
+      Math.abs(angleDiff - 2 * TAU) < 1e-10
+    ) {
       this.startAngle = 0
       this.endAngle = TAU
     } else {
@@ -137,7 +140,12 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
    * Return angle between endAngle and startAngle in range 0 to 2*PI
    */
   get deltaAngle() {
-    return AcGeMathUtil.normalizeAngle(this.endAngle - this.startAngle)
+    const diff = this.endAngle - this.startAngle
+    // Handle full circle case
+    if (Math.abs(diff - TAU) < 1e-10) {
+      return TAU
+    }
+    return AcGeMathUtil.normalizeAngle(diff)
   }
 
   /**
@@ -210,8 +218,26 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
    * @inheritdoc
    */
   get length(): number {
-    const ellipseArc = this.toVerbEllipseArc()
-    return ellipseArc.length()
+    // Calculate length using numerical integration
+    const steps = 1000
+    const step = this.deltaAngle / steps
+    let length = 0
+
+    let prevPoint = this.getPointAtAngle(this.startAngle)
+
+    for (let i = 1; i <= steps; i++) {
+      const angle = this.startAngle + i * step
+      const point = this.getPointAtAngle(angle)
+
+      const dx = point.x - prevPoint.x
+      const dy = point.y - prevPoint.y
+      const dz = point.z - prevPoint.z
+
+      length += Math.sqrt(dx * dx + dy * dy + dz * dz)
+      prevPoint = point
+    }
+
+    return length
   }
 
   /**
@@ -396,30 +422,5 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
   get plane(): AcGePlane {
     const distance = new AcGeVector3d(this.center).distanceTo(ORIGIN_POINT_3D)
     return new AcGePlane(this.normal, distance)
-  }
-
-  /**
-   *
-   */
-  private toVerbEllipseArc() {
-    const center = new Array<number>(3)
-    this.center.toArray(center)
-    const majorAxis = new Array<number>(3)
-    this.majorAxis
-      .clone()
-      .multiplyScalar(this.majorAxisRadius)
-      .toArray(majorAxis)
-    const minorAxis = new Array<number>(3)
-    this.minorAxis
-      .clone()
-      .multiplyScalar(this.minorAxisRadius)
-      .toArray(minorAxis)
-    return new verb.geom.EllipseArc(
-      center,
-      majorAxis,
-      minorAxis,
-      this.startAngle,
-      this.endAngle
-    )
   }
 }

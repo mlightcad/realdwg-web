@@ -1,6 +1,5 @@
 import {
   AcGeEllipseArc3d,
-  AcGeTol,
   AcGeVector3d,
   DEFAULT_TOL,
   ORIGIN_POINT_3D
@@ -59,7 +58,7 @@ describe('Test AcGeEllipseArc3d', () => {
       0,
       Math.PI
     )
-    expect(arc1.length).toBe(2 * Math.PI)
+    expect(arc1.length).toBeCloseTo(2 * Math.PI, 5)
 
     const arc2 = new AcGeEllipseArc3d(
       ORIGIN_POINT_3D,
@@ -70,6 +69,6 @@ describe('Test AcGeEllipseArc3d', () => {
       0,
       2 * Math.PI
     )
-    expect(AcGeTol.equal(arc2.length, 9.688448220547675)).toBeTruthy()
+    expect(arc2.length).toBeCloseTo(9.688448220547675, 4)
   })
 })

@@ -1,5 +1,4 @@
 import { AcCmErrors } from '@mlightcad/common'
-import verb from 'verb-nurbs-web'
 
 import {
   AcGeBox3d,
@@ -8,12 +7,127 @@ import {
   AcGePoint3dLike,
   AcGePointLike
 } from '../math'
+import {
+  calculateCurveLength,
+  evaluateNurbsPoint,
+  generateChordKnots,
+  generateSqrtChordKnots,
+  generateUniformKnots,
+  interpolateControlPoints
+} from '../util'
 import { AcGeCurve3d } from './AcGeCurve3d'
 
 export type AcGeKnotParameterizationType = 'Uniform' | 'Chord' | 'SqrtChord'
 
+/**
+ * Lightweight NURBS curve implementation
+ */
+class NurbsCurve {
+  private _degree: number
+  private _knots: number[]
+  private _controlPoints: number[][]
+  private _weights: number[]
+
+  constructor(
+    degree: number,
+    knots: number[],
+    controlPoints: number[][],
+    weights?: number[]
+  ) {
+    this._degree = degree
+    this._knots = [...knots]
+    this._controlPoints = controlPoints.map(p => [...p])
+    this._weights = weights
+      ? [...weights]
+      : new Array(controlPoints.length).fill(1.0)
+  }
+
+  degree(): number {
+    return this._degree
+  }
+
+  knots(): number[] {
+    return [...this._knots]
+  }
+
+  controlPoints(): number[][] {
+    return this._controlPoints.map(p => [...p])
+  }
+
+  weights(): number[] {
+    return [...this._weights]
+  }
+
+  /**
+   * Calculate a point on the curve at parameter u
+   */
+  point(u: number): number[] {
+    return evaluateNurbsPoint(
+      u,
+      this._degree,
+      this._knots,
+      this._controlPoints,
+      this._weights
+    )
+  }
+
+  /**
+   * Calculate curve length using numerical integration
+   */
+  length(): number {
+    return calculateCurveLength(
+      this._degree,
+      this._knots,
+      this._controlPoints,
+      this._weights
+    )
+  }
+
+  /**
+   * Create a NURBS curve from control points and knots
+   */
+  static byKnotsControlPointsWeights(
+    degree: number,
+    knots: number[],
+    controlPoints: number[][],
+    weights?: number[]
+  ): NurbsCurve {
+    return new NurbsCurve(degree, knots, controlPoints, weights)
+  }
+
+  /**
+   * Create a NURBS curve from fit points using interpolation
+   */
+  static byPoints(
+    points: number[][],
+    degree: number,
+    parameterization: AcGeKnotParameterizationType = 'Uniform'
+  ): NurbsCurve {
+    // Generate knots based on parameterization type
+    let knots: number[]
+    switch (parameterization) {
+      case 'Chord':
+        knots = generateChordKnots(degree, points)
+        break
+      case 'SqrtChord':
+        knots = generateSqrtChordKnots(degree, points)
+        break
+      case 'Uniform':
+      default:
+        knots = generateUniformKnots(degree, points.length)
+        break
+    }
+
+    // Generate control points from fit points
+    const controlPoints = interpolateControlPoints(points)
+    const weights = new Array(controlPoints.length).fill(1.0)
+
+    return new NurbsCurve(degree, knots, controlPoints, weights)
+  }
+}
+
 export class AcGeSpline3d extends AcGeCurve3d {
-  private _nurbsCurve: verb.geom.NurbsCurve
+  private _nurbsCurve: NurbsCurve
   private _fitPoints?: AcGePointLike[]
   private _knotParameterization?: AcGeKnotParameterizationType
   private _controlPoints: AcGePointLike[]
@@ -44,15 +158,31 @@ export class AcGeSpline3d extends AcGeCurve3d {
     if (argsLength == 2 && !Array.isArray(b)) {
       this._fitPoints = a as AcGePointLike[]
       this._knotParameterization = b as AcGeKnotParameterizationType
-      const points = this.toVerbPoints(this._fitPoints)
-      this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, degree)
+
+      // Validate minimum number of fit points for degree 3
+      if (this._fitPoints.length < 4) {
+        throw AcCmErrors.ILLEGAL_PARAMETERS
+      }
+
+      const points = this.toNurbsPoints(this._fitPoints)
+      this._nurbsCurve = NurbsCurve.byPoints(
+        points,
+        degree,
+        this._knotParameterization
+      )
       this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
     } else {
       this._controlPoints = a as AcGePointLike[]
-      const points = this.toVerbPoints(this._controlPoints)
-      this._nurbsCurve = verb.geom.NurbsCurve.byKnotsControlPointsWeights(
+
+      // Validate minimum number of control points for degree 3
+      if (this._controlPoints.length < 4) {
+        throw AcCmErrors.ILLEGAL_PARAMETERS
+      }
+
+      const points = this.toNurbsPoints(this._controlPoints)
+      this._nurbsCurve = NurbsCurve.byKnotsControlPointsWeights(
         degree,
-        b as verb.core.Data.KnotArray,
+        b as number[],
         points,
         c as number[] | undefined
       )
@@ -158,7 +288,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
     return points
   }
 
-  getCurvePoints(curve: verb.geom.NurbsCurve, count: number) {
+  getCurvePoints(curve: NurbsCurve, count: number) {
     const points = []
     const knots = curve.knots() // Get the knot vector from the curve
 
@@ -202,16 +332,16 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
 
   /**
-   * Convert input points to points in verb-nurbs-web format
+   * Convert input points to points in NURBS format
    * @param points Input points to convert
    * @returns Return converted points
    */
-  private toVerbPoints(points: AcGePointLike[]): number[][] {
-    const verbPoints = new Array(points.length)
+  private toNurbsPoints(points: AcGePointLike[]): number[][] {
+    const nurbsPoints = new Array(points.length)
     points.forEach((point, index) => {
-      verbPoints[index] = [point.x, point.y, point.z || 0]
+      nurbsPoints[index] = [point.x, point.y, point.z || 0]
     })
-    return verbPoints
+    return nurbsPoints
   }
 
   /**
