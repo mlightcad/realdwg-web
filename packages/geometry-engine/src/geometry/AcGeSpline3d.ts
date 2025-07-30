@@ -279,10 +279,13 @@ export class AcGeSpline3d extends AcGeCurve3d {
     // Adjust step size for correct range
     const step = (endParam - startParam) / (numPoints - 1)
     for (let i = 0; i < numPoints; i++) {
-      // Map t to the correct parameter space
-      const t = startParam + i * step
+      let t: number
+      if (i === numPoints - 1) {
+        t = endParam
+      } else {
+        t = startParam + i * step
+      }
       const point = curve.point(t)
-      // Sample the curve at the mapped parameter t
       points.push(new AcGePoint3d(point[0], point[1], point[2]))
     }
     return points

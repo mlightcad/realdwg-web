@@ -254,6 +254,15 @@ describe('AcGeSpline3d', () => {
       const points = spline.getPoints(1)
       expect(points).toHaveLength(1)
     })
+
+    it('should have last sampled point matching endPoint', () => {
+      const points = spline.getPoints(50)
+      const end = spline.endPoint
+      const last = points[points.length - 1]
+      expect(last.x).toBeCloseTo(end.x, 6)
+      expect(last.y).toBeCloseTo(end.y, 6)
+      expect(last.z).toBeCloseTo(end.z, 6)
+    })
   })
 
   describe('Bounding Box', () => {

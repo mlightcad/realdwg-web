@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 1.0.4
+
+### Patch Changes
+
+- Fix bug on AcGeSpline3d.getPoints to calcuate the last point
+
 ## 1.0.3
 
 ### Patch Changes
