@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.0.7
+
+### Patch Changes
+
+- fix: support 'closed' property in class AcGeSpline3d
+
 ## 1.0.6
 
 ### Patch Changes

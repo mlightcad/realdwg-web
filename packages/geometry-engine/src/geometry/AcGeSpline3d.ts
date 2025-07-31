@@ -132,6 +132,9 @@ export class AcGeSpline3d extends AcGeCurve3d {
   private _knotParameterization?: AcGeKnotParameterizationType
   private _controlPoints: AcGePointLike[]
   private _closed: boolean
+  private _originalControlPoints?: AcGePointLike[]
+  private _originalKnots?: number[]
+  private _originalWeights?: number[]
 
   constructor(
     controlPoints: AcGePointLike[],
@@ -171,6 +174,11 @@ export class AcGeSpline3d extends AcGeCurve3d {
         this._knotParameterization
       )
       this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
+
+      // Store original data for potential reopening
+      this._originalControlPoints = [...this._controlPoints]
+      this._originalKnots = [...this._nurbsCurve.knots()]
+      this._originalWeights = [...this._nurbsCurve.weights()]
     } else {
       this._controlPoints = a as AcGePointLike[]
 
@@ -186,7 +194,121 @@ export class AcGeSpline3d extends AcGeCurve3d {
         points,
         c as number[] | undefined
       )
+
+      // Store original data for potential reopening
+      this._originalControlPoints = [...this._controlPoints]
+      this._originalKnots = [...this._nurbsCurve.knots()]
+      this._originalWeights = c
+        ? [...(c as number[])]
+        : new Array(this._controlPoints.length).fill(1.0)
     }
+  }
+
+  /**
+   * Set the closed property and rebuild the curve if necessary
+   */
+  private setClosed(closed: boolean) {
+    if (this._closed === closed) {
+      return
+    }
+
+    this._closed = closed
+    this._boundingBoxNeedsUpdate = true
+
+    if (closed) {
+      this.makeClosed()
+    } else {
+      this.makeOpen()
+    }
+  }
+
+  /**
+   * Make the spline closed by adding control points and adjusting knots
+   */
+  private makeClosed() {
+    const degree = this._nurbsCurve.degree()
+    const originalControlPoints = this._nurbsCurve.controlPoints()
+    const originalKnots = this._nurbsCurve.knots()
+    const originalWeights = this._nurbsCurve.weights()
+
+    // For a closed curve, we need to add control points at the end
+    // that ensure the curve closes smoothly
+    const closedControlPoints = [...originalControlPoints]
+    const closedWeights = [...originalWeights]
+
+    // Add control points to close the curve
+    // For a degree 3 curve, we typically need 3 additional control points
+    for (let i = 0; i < degree; i++) {
+      // Use the first control point to ensure the curve closes
+      closedControlPoints.push([...originalControlPoints[0]])
+      closedWeights.push(originalWeights[0])
+    }
+
+    // Create new knot vector for closed curve
+    const closedKnots = this.createClosedKnotVector(originalKnots, degree)
+
+    // Create new NURBS curve
+    this._nurbsCurve = NurbsCurve.byKnotsControlPointsWeights(
+      degree,
+      closedKnots,
+      closedControlPoints,
+      closedWeights
+    )
+
+    this._controlPoints = this.toGePoints(closedControlPoints)
+  }
+
+  /**
+   * Make the spline open by restoring the original curve
+   */
+  private makeOpen() {
+    if (
+      !this._originalControlPoints ||
+      !this._originalKnots ||
+      !this._originalWeights
+    ) {
+      throw new Error('Original curve data not available')
+    }
+
+    const degree = this._nurbsCurve.degree()
+    const originalPoints = this.toNurbsPoints(this._originalControlPoints)
+
+    // Create new NURBS curve with original data
+    this._nurbsCurve = NurbsCurve.byKnotsControlPointsWeights(
+      degree,
+      this._originalKnots,
+      originalPoints,
+      this._originalWeights
+    )
+
+    this._controlPoints = [...this._originalControlPoints]
+  }
+
+  /**
+   * Create knot vector for closed curve
+   */
+  private createClosedKnotVector(
+    originalKnots: number[],
+    degree: number
+  ): number[] {
+    // For a closed curve, we need to create a proper knot vector
+    // that allows the curve to close smoothly
+
+    // Start with the original knots
+    const closedKnots = [...originalKnots]
+
+    // For a closed curve, we need to extend the knot vector
+    // The key is to ensure that the curve can actually close
+    const lastKnot = originalKnots[originalKnots.length - 1]
+
+    // Add knots for the additional control points
+    // Use a spacing that ensures the curve closes properly
+    const additionalKnots = degree
+    for (let i = 1; i <= additionalKnots; i++) {
+      closedKnots.push(lastKnot + i)
+    }
+
+    return closedKnots
   }
 
   /**
@@ -279,12 +401,8 @@ export class AcGeSpline3d extends AcGeCurve3d {
     // Adjust step size for correct range
     const step = (endParam - startParam) / (numPoints - 1)
     for (let i = 0; i < numPoints; i++) {
-      let t: number
-      if (i === numPoints - 1) {
-        t = endParam
-      } else {
-        t = startParam + i * step
-      }
+      // For the last point, use endParam exactly to avoid floating-point issues
+      const t = i === numPoints - 1 ? endParam : startParam + i * step
       const point = curve.point(t)
       points.push(new AcGePoint3d(point[0], point[1], point[2]))
     }
@@ -321,8 +439,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
     return this._closed
   }
   set closed(value: boolean) {
-    this._boundingBoxNeedsUpdate = true
-    this._closed = value
+    this.setClosed(value)
   }
 
   /**

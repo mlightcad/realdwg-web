@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 1.0.5
+
+### Patch Changes
+
+- fix: support 'closed' property in class AcGeSpline3d
+
 ## 1.0.4
 
 ### Patch Changes

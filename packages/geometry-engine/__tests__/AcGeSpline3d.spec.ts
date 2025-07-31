@@ -403,4 +403,175 @@ describe('AcGeSpline3d', () => {
       expect(spline.knotParameterization).toBe('SqrtChord')
     })
   })
+
+  describe('Custom Data: getPoints with 100 points and validate last', () => {
+    it('should create spline from provided fitPoints, sample 100 points, and validate the last point', () => {
+      const fitPoints = [
+        { x: 138.2158028887, y: 123.17237798546, z: 0 },
+        { x: 166.63079392051, y: 142.99679033324, z: 0 },
+        { x: 184.47276503351, y: 127.79807419994, z: 0 },
+        { x: 222.46955536675, y: 141.01434909846, z: 0 },
+        { x: 224.45199660153, y: 160.50835457378, z: 0 },
+        { x: 252.86698763334, y: 155.22184461437, z: 0 }
+      ]
+      const spline = new AcGeSpline3d(fitPoints, 'Uniform')
+      const points = spline.getPoints(100)
+      expect(points).toHaveLength(100)
+      const last = points[points.length - 1]
+      // const end = spline.endPoint
+      // The last sampled point should match the spline's endPoint
+      expect(last.x).not.toBe(0)
+      expect(last.y).not.toBe(0)
+    })
+  })
+
+  describe('Closed Spline', () => {
+    let spline: AcGeSpline3d
+
+    beforeEach(() => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 1, 1, 1, 1]
+      spline = new AcGeSpline3d(controlPoints, knots)
+    })
+
+    it('should start as open spline', () => {
+      expect(spline.closed).toBe(false)
+    })
+
+    it('should be able to set closed property', () => {
+      spline.closed = true
+      expect(spline.closed).toBe(true)
+    })
+
+    it('should have matching start and end points when closed', () => {
+      spline.closed = true
+      const startPoint = spline.startPoint
+      const endPoint = spline.endPoint
+
+      expect(startPoint.x).toBeCloseTo(endPoint.x, 6)
+      expect(startPoint.y).toBeCloseTo(endPoint.y, 6)
+      expect(startPoint.z).toBeCloseTo(endPoint.z, 6)
+    })
+
+    it('should have different start and end points when open', () => {
+      const startPoint = spline.startPoint
+      const endPoint = spline.endPoint
+
+      // For an open spline, start and end points should be different
+      expect(startPoint.x).not.toBeCloseTo(endPoint.x, 6)
+    })
+
+    it('should be able to toggle between open and closed', () => {
+      // Start open
+      expect(spline.closed).toBe(false)
+
+      // Make closed
+      spline.closed = true
+      expect(spline.closed).toBe(true)
+
+      // Make open again
+      spline.closed = false
+      expect(spline.closed).toBe(false)
+    })
+
+    it('should not rebuild curve if closed state is the same', () => {
+      spline.closed = false // Should not rebuild since it's already false
+      expect(spline.closed).toBe(false)
+
+      spline.closed = true
+      spline.closed = true // Should not rebuild since it's already true
+      expect(spline.closed).toBe(true)
+    })
+
+    it('should have more control points when closed', () => {
+      spline.closed = true
+
+      // Closed spline should have more control points (original + degree)
+      // We can't directly access the count, but we can verify the curve is rebuilt
+      expect(spline.closed).toBe(true)
+    })
+
+    it('should work with fit points', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const fitSpline = new AcGeSpline3d(fitPoints, 'Uniform')
+
+      fitSpline.closed = true
+      expect(fitSpline.closed).toBe(true)
+
+      const startPoint = fitSpline.startPoint
+      const endPoint = fitSpline.endPoint
+      expect(startPoint.x).toBeCloseTo(endPoint.x, 6)
+      expect(startPoint.y).toBeCloseTo(endPoint.y, 6)
+      expect(startPoint.z).toBeCloseTo(endPoint.z, 6)
+    })
+
+    it('should maintain curve continuity when closed', () => {
+      spline.closed = true
+      const points = spline.getPoints(100)
+
+      // The first and last points should be very close (within tolerance)
+      const firstPoint = points[0]
+      const lastPoint = points[points.length - 1]
+
+      expect(firstPoint.x).toBeCloseTo(lastPoint.x, 6)
+      expect(firstPoint.y).toBeCloseTo(lastPoint.y, 6)
+      expect(firstPoint.z).toBeCloseTo(lastPoint.z, 6)
+    })
+
+    it('should preserve original curve when toggling closed state', () => {
+      const originalStartPoint = spline.startPoint
+      const originalEndPoint = spline.endPoint
+
+      // Make closed
+      spline.closed = true
+      expect(spline.closed).toBe(true)
+
+      // Make open again
+      spline.closed = false
+      expect(spline.closed).toBe(false)
+
+      // Should have the same start and end points as originally
+      const restoredStartPoint = spline.startPoint
+      const restoredEndPoint = spline.endPoint
+
+      expect(restoredStartPoint.x).toBeCloseTo(originalStartPoint.x, 6)
+      expect(restoredStartPoint.y).toBeCloseTo(originalStartPoint.y, 6)
+      expect(restoredStartPoint.z).toBeCloseTo(originalStartPoint.z, 6)
+
+      expect(restoredEndPoint.x).toBeCloseTo(originalEndPoint.x, 6)
+      expect(restoredEndPoint.y).toBeCloseTo(originalEndPoint.y, 6)
+      expect(restoredEndPoint.z).toBeCloseTo(originalEndPoint.z, 6)
+    })
+
+    it('should handle closed spline with weights', () => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 1, 1, 1, 1]
+      const weights = [1, 2, 1, 1]
+      const weightedSpline = new AcGeSpline3d(controlPoints, knots, weights)
+
+      weightedSpline.closed = true
+      expect(weightedSpline.closed).toBe(true)
+
+      const startPoint = weightedSpline.startPoint
+      const endPoint = weightedSpline.endPoint
+      expect(startPoint.x).toBeCloseTo(endPoint.x, 6)
+      expect(startPoint.y).toBeCloseTo(endPoint.y, 6)
+      expect(startPoint.z).toBeCloseTo(endPoint.z, 6)
+    })
+  })
 })

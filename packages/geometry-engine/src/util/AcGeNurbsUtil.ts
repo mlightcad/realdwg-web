@@ -163,6 +163,16 @@ export function evaluateNurbsPoint(
   // Clamp parameter to valid range
   u = Math.max(knots[p], Math.min(knots[n + 1], u))
 
+  // If u is very close to the end, return the last control point
+  if (Math.abs(u - knots[n + 1]) < 1e-8) {
+    return [...controlPoints[n]]
+  }
+
+  // If u is very close to the start, return the first control point
+  if (Math.abs(u - knots[p]) < 1e-8) {
+    return [...controlPoints[0]]
+  }
+
   const point = [0, 0, 0]
   let weight = 0
 
@@ -174,6 +184,20 @@ export function evaluateNurbsPoint(
     point[1] += controlPoints[i][1] * w
     point[2] += controlPoints[i][2] * w
     weight += w
+  }
+
+  // If weight is very small (all basis functions are zero),
+  // check if we're at the end and return the last control point
+  if (weight < 1e-10) {
+    // Check if we're at the end of the domain
+    const endParam = knots[knots.length - p - 1]
+    if (Math.abs(u - endParam) < 1e-8) {
+      return [...controlPoints[n]]
+    }
+    // Check if we're at the start of the domain
+    if (Math.abs(u - knots[p]) < 1e-8) {
+      return [...controlPoints[0]]
+    }
   }
 
   if (weight > 1e-10) {
@@ -221,6 +245,19 @@ export function calculateCurveLength(
     length += Math.sqrt(dx * dx + dy * dy + dz * dz)
     prevPoint = point
   }
+
+  // Add the final segment to the end point
+  const finalPoint = evaluateNurbsPoint(
+    endParam,
+    degree,
+    knots,
+    controlPoints,
+    weights
+  )
+  const dx = finalPoint[0] - prevPoint[0]
+  const dy = finalPoint[1] - prevPoint[1]
+  const dz = finalPoint[2] - prevPoint[2]
+  length += Math.sqrt(dx * dx + dy * dy + dz * dz)
 
   return length
 }

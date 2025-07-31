@@ -95,21 +95,22 @@ importers:
 
   packages/data-model:
     dependencies:
-      '@mlightcad/common':
-        specifier: workspace:*
-        version: link:../common
       '@mlightcad/dxf-json':
         specifier: 1.0.8
         version: 1.0.8
+      uid:
+        specifier: ^2.0.2
+        version: 2.0.2
+    devDependencies:
+      '@mlightcad/common':
+        specifier: workspace:*
+        version: link:../common
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
       '@mlightcad/graphic-interface':
         specifier: workspace:*
         version: link:../graphic-interface
-      uid:
-        specifier: ^2.0.2
-        version: 2.0.2
 
   packages/geometry-engine:
     dependencies:

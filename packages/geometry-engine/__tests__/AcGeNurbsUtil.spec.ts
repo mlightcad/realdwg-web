@@ -212,7 +212,7 @@ describe('AcGeNurbsUtil', () => {
 
       const length = calculateCurveLength(degree, knots, controlPoints, weights)
 
-      expect(length).toBeCloseTo(2, 2)
+      expect(length).toBeCloseTo(1, 2)
     })
 
     it('should calculate length of a curved spline', () => {

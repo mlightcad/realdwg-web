@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/data-model",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "license": "MIT",
   "type": "module",
   "keywords": [
@@ -36,9 +36,11 @@
   },
   "dependencies": {
     "@mlightcad/dxf-json": "1.0.8",
+    "uid": "^2.0.2"
+  },
+  "devDependencies": {
     "@mlightcad/common": "workspace:*",
     "@mlightcad/geometry-engine": "workspace:*",
-    "@mlightcad/graphic-interface": "workspace:*",
-    "uid": "^2.0.2"
+    "@mlightcad/graphic-interface": "workspace:*"
   }
 }
