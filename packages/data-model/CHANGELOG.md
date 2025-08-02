@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.0
+
+### Minor Changes
+
+- refine constructor of spline related class to add one new parameter 'closed'
+
 ## 1.0.7
 
 ### Patch Changes

@@ -139,28 +139,39 @@ export class AcGeSpline3d extends AcGeCurve3d {
   constructor(
     controlPoints: AcGePointLike[],
     knots: number[],
-    weights?: number[]
+    weights?: number[],
+    closed?: boolean
   )
   constructor(
     fitPoints: AcGePointLike[],
-    knotParam: AcGeKnotParameterizationType
+    knotParam: AcGeKnotParameterizationType,
+    closed?: boolean
   )
-  constructor(a?: unknown, b?: unknown, c?: unknown) {
+  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown) {
     super()
     const argsLength =
-      +(a !== undefined) + +(b !== undefined) + +(c !== undefined)
+      +(a !== undefined) +
+      +(b !== undefined) +
+      +(c !== undefined) +
+      +(d !== undefined)
 
-    if (argsLength != 2 && argsLength != 3) {
+    if (argsLength < 2 || argsLength > 4) {
       throw AcCmErrors.ILLEGAL_PARAMETERS
     }
 
     // For now, we support 3 degree only
     const degree = 3
-    this._closed = false
+    this._closed = (d as boolean) || false
 
-    if (argsLength == 2 && !Array.isArray(b)) {
+    if (!Array.isArray(b)) {
+      // Constructor with fit points
       this._fitPoints = a as AcGePointLike[]
       this._knotParameterization = b as AcGeKnotParameterizationType
+
+      // Handle closed parameter for fit points constructor
+      if (argsLength >= 3) {
+        this._closed = c as boolean
+      }
 
       // Validate minimum number of fit points for degree 3
       if (this._fitPoints.length < 4) {
@@ -180,7 +191,13 @@ export class AcGeSpline3d extends AcGeCurve3d {
       this._originalKnots = [...this._nurbsCurve.knots()]
       this._originalWeights = [...this._nurbsCurve.weights()]
     } else {
+      // Constructor with control points
       this._controlPoints = a as AcGePointLike[]
+
+      // Handle closed parameter for control points constructor
+      if (argsLength >= 4) {
+        this._closed = d as boolean
+      }
 
       // Validate minimum number of control points for degree 3
       if (this._controlPoints.length < 4) {
@@ -201,6 +218,11 @@ export class AcGeSpline3d extends AcGeCurve3d {
       this._originalWeights = c
         ? [...(c as number[])]
         : new Array(this._controlPoints.length).fill(1.0)
+    }
+
+    // Apply closed state if specified
+    if (this._closed) {
+      this.makeClosed()
     }
   }
 

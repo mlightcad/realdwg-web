@@ -10,6 +10,7 @@ import {
   AcGeVector3dLike
 } from '../math'
 import { AcGeMathUtil, ORIGIN_POINT_3D, TAU } from '../util'
+import { AcGeTol } from '../util/AcGeTol'
 import { AcGeCurve3d } from './AcGeCurve3d'
 
 /**
@@ -217,8 +218,21 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
   /**
    * @inheritdoc
    */
+  /**
+   * Check if this ellipse arc is actually a circular arc (major and minor radii are equal)
+   * @returns True if the ellipse arc is circular
+   */
+  get isCircular(): boolean {
+    return AcGeTol.equal(this.majorAxisRadius, this.minorAxisRadius)
+  }
+
   get length(): number {
-    // Calculate length using numerical integration
+    // For circular arcs, use the exact formula: length = radius * deltaAngle
+    if (this.isCircular) {
+      return this.majorAxisRadius * Math.abs(this.deltaAngle)
+    }
+
+    // For elliptical arcs, use numerical integration
     const steps = 1000
     const step = this.deltaAngle / steps
     let length = 0

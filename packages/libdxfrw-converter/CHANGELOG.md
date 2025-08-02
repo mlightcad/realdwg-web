@@ -1,5 +1,16 @@
 # @mlightcad/libdxfrw-converter
 
+## 2.0.0
+
+### Minor Changes
+
+- refine constructor of spline related class to add one new parameter 'closed'
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.1.0
+
 ## 1.0.2
 
 ### Patch Changes

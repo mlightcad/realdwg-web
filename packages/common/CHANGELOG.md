@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.1.0
+
+### Minor Changes
+
+- refine constructor of spline related class to add one new parameter 'closed'
+
 ## 1.0.3
 
 ### Patch Changes

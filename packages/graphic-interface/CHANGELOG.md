@@ -1,5 +1,16 @@
 # @mlightcad/graphic-interface
 
+## 2.0.0
+
+### Minor Changes
+
+- refine constructor of spline related class to add one new parameter 'closed'
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/geometry-engine@2.0.0
+
 ## 1.0.4
 
 ### Patch Changes

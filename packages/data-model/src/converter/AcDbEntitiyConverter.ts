@@ -192,22 +192,19 @@ export class AcDbEntityConverter {
 
   private convertSpline(spline: SplineEntity) {
     if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-      const dbEntity = new AcDbSpline(
+      return new AcDbSpline(
         spline.controlPoints,
         spline.knots,
-        spline.weights
+        spline.weights,
+        !!(spline.flag & 0x01)
       )
-      dbEntity.closed = !!(spline.flag & 0x01)
-      return dbEntity
     } else if (spline.numberOfFitPoints > 0) {
       const fitPoints = this.numberArrayToPointArray(
         spline.fitPoints,
         spline.numberOfFitPoints
       )
       if (fitPoints != null) {
-        const dbEntity = new AcDbSpline(fitPoints, 'Uniform')
-        dbEntity.closed = !!(spline.flag & 0x01)
-        return dbEntity
+        return new AcDbSpline(fitPoints, 'Uniform', !!(spline.flag & 0x01))
       }
     }
     return null
