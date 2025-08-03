@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.1
+
+### Patch Changes
+
+- Use CatmullRomCurve3 in three.js to create one closed spline
+
 ## 1.1.0
 
 ### Minor Changes

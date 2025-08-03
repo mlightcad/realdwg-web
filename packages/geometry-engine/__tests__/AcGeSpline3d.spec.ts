@@ -350,20 +350,6 @@ describe('AcGeSpline3d', () => {
         new AcGeSpline3d(controlPoints, knots)
       }).not.toThrow()
     })
-
-    it('should handle points with undefined z coordinate', () => {
-      const controlPoints = [
-        { x: 0, y: 0 },
-        { x: 1, y: 1 },
-        { x: 2, y: 0 },
-        { x: 3, y: 1 }
-      ]
-      const knots = [0, 0, 0, 0, 1, 1, 1, 1]
-
-      expect(() => {
-        new AcGeSpline3d(controlPoints, knots)
-      }).not.toThrow()
-    })
   })
 
   describe('Parameterization Types', () => {

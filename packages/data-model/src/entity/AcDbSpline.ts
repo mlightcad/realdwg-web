@@ -1,7 +1,7 @@
 import { AcCmErrors } from '@mlightcad/common'
 import {
   AcGeKnotParameterizationType,
-  AcGePointLike,
+  AcGePoint3dLike,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -23,7 +23,7 @@ export class AcDbSpline extends AcDbCurve {
    * @param closed Whether the spline should be closed. Default is false
    */
   constructor(
-    controlPoints: AcGePointLike[],
+    controlPoints: AcGePoint3dLike[],
     knots: number[],
     weights?: number[],
     closed?: boolean
@@ -35,7 +35,7 @@ export class AcDbSpline extends AcDbCurve {
    * @param closed Whether the spline should be closed. Default is false
    */
   constructor(
-    fitPoints: AcGePointLike[],
+    fitPoints: AcGePoint3dLike[],
     knotParam: AcGeKnotParameterizationType,
     closed?: boolean
   )
@@ -56,13 +56,13 @@ export class AcDbSpline extends AcDbCurve {
 
     if (isFitPointsConstructor) {
       this._geo = new AcGeSpline3d(
-        a as AcGePointLike[],
+        a as AcGePoint3dLike[],
         b as AcGeKnotParameterizationType,
         c as boolean
       )
     } else {
       this._geo = new AcGeSpline3d(
-        a as AcGePointLike[],
+        a as AcGePoint3dLike[],
         b as number[],
         c as number[] | undefined,
         d as boolean

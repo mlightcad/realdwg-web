@@ -43,7 +43,6 @@ import {
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike,
   AcGePolyline2d,
   AcGeSpline3d,
   AcGeVector2d,
@@ -639,12 +638,12 @@ export class AcDbEntityConverter {
     }
     if (dimension == 0) return undefined
 
-    const points: AcGePointLike[] = []
+    const points: AcGePoint3dLike[] = []
     for (let index = 0, size = count / dimension; index < size; ++index) {
       points.push({
         x: numbers[index * dimension],
         y: numbers[index * dimension + 1],
-        z: dimension == 3 ? numbers[index * dimension + 2] : undefined
+        z: dimension == 3 ? numbers[index * dimension + 2] : 0
       })
     }
     return points

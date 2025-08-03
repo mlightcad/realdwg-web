@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 2.0.1
+
+### Patch Changes
+
+- Use CatmullRomCurve3 in three.js to create one closed spline
+
 ## 2.0.0
 
 ### Minor Changes
