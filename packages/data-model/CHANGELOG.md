@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.2
+
+### Patch Changes
+
+- add repo url in package.json
+
 ## 1.1.1
 
 ### Patch Changes

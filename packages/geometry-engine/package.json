@@ -1,8 +1,12 @@
 {
   "name": "@mlightcad/geometry-engine",
-  "version": "2.0.1",
+  "version": "2.0.2",
   "license": "MIT",
   "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mlight-lee/realdwg-web"
+  },
   "keywords": [
     "autocad",
     "cad",

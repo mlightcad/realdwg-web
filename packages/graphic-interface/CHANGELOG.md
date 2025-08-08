@@ -1,5 +1,13 @@
 # @mlightcad/graphic-interface
 
+## 2.0.2
+
+### Patch Changes
+
+- add repo url in package.json
+- Updated dependencies
+  - @mlightcad/geometry-engine@2.0.2
+
 ## 2.0.1
 
 ### Patch Changes

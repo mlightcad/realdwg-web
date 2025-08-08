@@ -36,7 +36,7 @@ import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
 
 /**
- * Database converter for DWG files.
+ * Database converter for DWG files based on [libdxfrw-web](https://github.com/mlight-lee/libdxfrw).
  * @internal
  */
 export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {

@@ -41,8 +41,7 @@ import { MainModule } from '@mlightcad/libredwg-web/wasm/libredwg-web'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 
 /**
- * Database converter for DWG files.
- * @internal
+ * Database converter for DWG files based on [libredwg-web](https://github.com/mlight-lee/libredwg-web).
  */
 export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   libredwg: LibreDwgEx
