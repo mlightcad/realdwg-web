@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 2.0.3
+
+### Patch Changes
+
+- refine methods to open database and refine typedocs of packages 'common' and 'data-model'
+- Updated dependencies
+  - @mlightcad/data-model@1.1.3
+
 ## 2.0.2
 
 ### Patch Changes

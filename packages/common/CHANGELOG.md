@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.1.2
+
+### Patch Changes
+
+- refine methods to open database and refine typedocs of packages 'common' and 'data-model'
+
 ## 1.1.1
 
 ### Patch Changes

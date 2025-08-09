@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 2.0.3
+
+### Patch Changes
+
+- refine methods to open database and refine typedocs of packages 'common' and 'data-model'
+- Updated dependencies
+  - @mlightcad/common@1.1.2
+
 ## 2.0.2
 
 ### Patch Changes

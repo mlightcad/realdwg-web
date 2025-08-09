@@ -562,16 +562,23 @@ export class AcDbDatabase extends AcDbObject {
    * 
    * This method parses the provided data and populates the database with
    * the resulting entities, tables, and objects. The method supports
-   * both DXF and other file formats.
+   * both DXF and DWG file formats.
    * 
    * @param data - The drawing data as a string or ArrayBuffer
+   *   - For DXF files: Pass a string containing the DXF content
+   *   - For DWG files: Pass an ArrayBuffer instance containing the binary DWG data
    * @param options - Options for reading the database
    * @param fileType - The type of file being read (defaults to DXF)
    * 
    * @example
    * ```typescript
+   * // Reading a DXF file (string)
    * const database = new AcDbDatabase();
-   * await database.read(dxfString, { readOnly: true });
+   * await database.read(dxfString, { readOnly: true }, AcDbFileType.DXF);
+   * 
+   * // Reading a DWG file (ArrayBuffer)
+   * const database = new AcDbDatabase();
+   * await database.read(dwgArrayBuffer, { readOnly: true }, AcDbFileType.DWG);
    * ```
    */
   async read(
@@ -619,8 +626,11 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Read AutoCAD DXF drawing specified by the URL into the database object.
-   * @param url Input the URL linked to one AutoCAD DXF file
+   * Read AutoCAD DXF or DWG drawing specified by the URL into the database object.
+   * The method automatically detects the file type based on the URL extension:
+   * - .dxf files are read as text using readAsText()
+   * - .dwg files are read as binary data using readAsArrayBuffer()
+   * @param url Input the URL linked to one AutoCAD DXF or DWG file
    * @param options Input options to read drawing data
    */
   async openUri(url: string, options: AcDbOpenDatabaseOptions): Promise<void> {
@@ -628,12 +638,23 @@ export class AcDbDatabase extends AcDbObject {
     const blob = await response.blob()
 
     const reader = new FileReader()
-    reader.onload = event => {
-      const content = event.target?.result
-      if (content) this.read(content as string, options)
+    const fileExtension = url.toLowerCase().split('.').pop()
+    
+    if (fileExtension === 'dwg') {
+      // DWG files are binary, read as ArrayBuffer
+      reader.onload = event => {
+        const content = event.target?.result
+        if (content) this.read(content as ArrayBuffer, options, AcDbFileType.DWG)
+      }
+      reader.readAsArrayBuffer(blob)
+    } else {
+      // Default to DXF files (text-based) or fallback
+      reader.onload = event => {
+        const content = event.target?.result
+        if (content) this.read(content as string, options, AcDbFileType.DXF)
+      }
+      reader.readAsText(blob)
     }
-
-    reader.readAsText(blob)
   }
 
   /**
