@@ -8,29 +8,76 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbCurve } from './AcDbCurve'
 
+/**
+ * Defines the annotation type for leader entities.
+ */
 export enum AcDbLeaderAnnotationType {
+  /** Multiline text annotation */
   MText = 0,
+  /** Feature control frame annotation */
   Fcf = 1,
+  /** Block reference annotation */
   BlockReference = 2,
+  /** No annotation */
   NoAnnotation = 3
 }
 
 /**
- * The class represents the LEADER entity within AutoCAD. Leaders are considered as dimensions in AutoCAD,
- * which means they are controlled by dimension variable settings and dimension styles.
+ * Represents a leader entity in AutoCAD.
+ * 
+ * A leader is a dimension-like entity that consists of a line or spline with an arrowhead
+ * pointing to a specific object or location, and an annotation (text, block, or feature
+ * control frame) at the other end. Leaders are controlled by dimension variable settings
+ * and dimension styles.
+ * 
+ * @example
+ * ```typescript
+ * // Create a leader entity
+ * const leader = new AcDbLeader();
+ * leader.appendVertex(new AcGePoint3d(0, 0, 0));
+ * leader.appendVertex(new AcGePoint3d(5, 5, 0));
+ * leader.appendVertex(new AcGePoint3d(10, 5, 0));
+ * leader.hasArrowHead = true;
+ * leader.hasHookLine = true;
+ * leader.annoType = AcDbLeaderAnnotationType.MText;
+ * 
+ * // Access leader properties
+ * console.log(`Number of vertices: ${leader.numVertices}`);
+ * console.log(`Has arrow head: ${leader.hasArrowHead}`);
+ * console.log(`Has hook line: ${leader.hasHookLine}`);
+ * ```
  */
 export class AcDbLeader extends AcDbCurve {
+  /** Whether this leader is spline-fit */
   private _isSplined: boolean
+  /** The spline geometry if this leader is spline-fit */
   private _splineGeo?: AcGeSpline3d
+  /** Whether this leader has been updated */
   private _updated: boolean
+  /** Whether this leader has an arrowhead */
   private _hasArrowHead: boolean
+  /** The vertices of the leader line */
   private _vertices: AcGePoint3d[]
+  /** The dimension style applied to this leader */
   private _dimensionStyle: string
+  /** Whether this leader has a hook line */
   private _hasHookLine: boolean
+  /** The annotation type for this leader */
   private _annoType: AcDbLeaderAnnotationType
 
   /**
-   * Construct an instance of the leader entity.
+   * Creates a new leader entity.
+   * 
+   * This constructor initializes a leader with default values.
+   * The leader is not spline-fit, has no arrowhead, no hook line,
+   * and no annotation type.
+   * 
+   * @example
+   * ```typescript
+   * const leader = new AcDbLeader();
+   * leader.appendVertex(new AcGePoint3d(0, 0, 0));
+   * leader.appendVertex(new AcGePoint3d(5, 5, 0));
+   * ```
    */
   constructor() {
     super()
@@ -44,59 +91,164 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * Return true if this leader is spline-fit. Otherwise return false.
+   * Gets whether this leader is spline-fit.
+   * 
+   * @returns True if the leader is spline-fit, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const isSplined = leader.isSplined;
+   * console.log(`Leader is spline-fit: ${isSplined}`);
+   * ```
    */
   get isSplined() {
     return this._isSplined
   }
+
+  /**
+   * Sets whether this leader is spline-fit.
+   * 
+   * @param value - True to make the leader spline-fit, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * leader.isSplined = true;
+   * ```
+   */
   set isSplined(value: boolean) {
     this._isSplined = value
   }
 
   /**
-   * Return true if arrowhead is currently enabled for this leader. Otherwise return false.
+   * Gets whether this leader has an arrowhead.
+   * 
+   * @returns True if the leader has an arrowhead, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const hasArrowHead = leader.hasArrowHead;
+   * console.log(`Leader has arrowhead: ${hasArrowHead}`);
+   * ```
    */
   get hasArrowHead() {
     return this._hasArrowHead
   }
+
+  /**
+   * Sets whether this leader has an arrowhead.
+   * 
+   * @param value - True to enable arrowhead, false to disable
+   * 
+   * @example
+   * ```typescript
+   * leader.hasArrowHead = true;
+   * ```
+   */
   set hasArrowHead(value: boolean) {
     this._hasArrowHead = value
   }
 
   /**
-   * Return true if this leader has a hookline. Otherwise return false. The "hookline" is the small
-   * horizontal line at the end of the leader line just before the annotation.
+   * Gets whether this leader has a hook line.
+   * 
+   * The "hookline" is the small horizontal line at the end of the leader line
+   * just before the annotation.
+   * 
+   * @returns True if the leader has a hook line, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const hasHookLine = leader.hasHookLine;
+   * console.log(`Leader has hook line: ${hasHookLine}`);
+   * ```
    */
   get hasHookLine() {
     return this._hasHookLine
   }
+
+  /**
+   * Sets whether this leader has a hook line.
+   * 
+   * @param value - True to enable hook line, false to disable
+   * 
+   * @example
+   * ```typescript
+   * leader.hasHookLine = true;
+   * ```
+   */
   set hasHookLine(value: boolean) {
     this._hasHookLine = value
   }
 
   /**
-   * The number of vertices in the leader's vertex list.
+   * Gets the number of vertices in the leader's vertex list.
+   * 
+   * @returns The number of vertices
+   * 
+   * @example
+   * ```typescript
+   * const numVertices = leader.numVertices;
+   * console.log(`Number of vertices: ${numVertices}`);
+   * ```
    */
   get numVertices(): number {
     return this._vertices.length
   }
 
   /**
-   * The dimension style applied on this leader
+   * Gets the dimension style applied to this leader.
+   * 
+   * @returns The dimension style name
+   * 
+   * @example
+   * ```typescript
+   * const dimensionStyle = leader.dimensionStyle;
+   * console.log(`Dimension style: ${dimensionStyle}`);
+   * ```
    */
   get dimensionStyle() {
     return this._dimensionStyle
   }
+
+  /**
+   * Sets the dimension style applied to this leader.
+   * 
+   * @param value - The new dimension style name
+   * 
+   * @example
+   * ```typescript
+   * leader.dimensionStyle = "Standard";
+   * ```
+   */
   set dimensionStyle(value: string) {
     this._dimensionStyle = value
   }
 
   /**
-   * The leader's annotation type.
+   * Gets the leader's annotation type.
+   * 
+   * @returns The annotation type
+   * 
+   * @example
+   * ```typescript
+   * const annoType = leader.annoType;
+   * console.log(`Annotation type: ${annoType}`);
+   * ```
    */
   get annoType() {
     return this._annoType
   }
+
+  /**
+   * Sets the leader's annotation type.
+   * 
+   * @param value - The new annotation type
+   * 
+   * @example
+   * ```typescript
+   * leader.annoType = AcDbLeaderAnnotationType.MText;
+   * ```
+   */
   set annoType(value: AcDbLeaderAnnotationType) {
     this._annoType = value
   }

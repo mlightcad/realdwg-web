@@ -1,8 +1,22 @@
 /**
- * AutoCad files sometimes use an indexed color value between 1 and 255 inclusive.
- * Each value corresponds to a color. index 1 is red, that is 16711680 or 0xFF0000.
- * index 0 and 256, while included in this array, are actually reserved for inheritance
- * values in AutoCad so they should not be used for index color lookups.
+ * @fileoverview Utility functions for AutoCAD color index mapping and manipulation.
+ * 
+ * This module provides functions to convert between AutoCAD color indices and RGB values,
+ * supporting the standard AutoCAD color palette used in DWG files.
+ * 
+ * @module AcCmColorUtil
+ * @version 1.0.0
+ */
+
+/**
+ * AutoCAD color index array mapping index values (1-255) to RGB color values.
+ * Each value corresponds to a color. Index 1 is red, that is 16711680 or 0xFF0000.
+ * Index 0 and 256, while included in this array, are actually reserved for inheritance
+ * values in AutoCAD so they should not be used for index color lookups:
+ * - Index 0: "ByBlock" - entity uses color of the block reference  
+ * - Index 256: "ByLayer" - entity uses color specified in the layer
+ * 
+ * @internal
  */
 const AUTO_CAD_COLOR_INDEX = [
   0, 16711680, 16776960, 65280, 65535, 255, 16711935, 16777215, 8421504,
@@ -38,11 +52,34 @@ const AUTO_CAD_COLOR_INDEX = [
   14079702, 16777215
 ]
 
+/**
+ * Utility class for AutoCAD color index operations.
+ * 
+ * Provides static methods to convert between AutoCAD color indices and RGB values,
+ * supporting the standard 256-color palette used in AutoCAD files.
+ * 
+ * @class AcCmColorUtil
+ * @version 1.0.0
+ */
 export class AcCmColorUtil {
   /**
-   * Return the truecolor value of the given AutoCAD color index value
-   * @param index Input AutoCAD color index value
-   * @return Return truecolor value as a number
+   * Returns the RGB color value for a given AutoCAD color index.
+   * 
+   * @param {number} index - The AutoCAD color index value (0-255).
+   * @returns {number} The RGB color value as a 24-bit integer.
+   * 
+   * @example
+   * ```typescript
+   * // Get the RGB value for color index 1 (red)
+   * const redColor = AcCmColorUtil.getAcadColor(1); // returns 16711680 (0xFF0000)
+   * ```
+   * 
+   * @example
+   * ```typescript
+   * // Get special inheritance colors
+   * const byBlock = AcCmColorUtil.getAcadColor(0);   // "ByBlock" color
+   * const byLayer = AcCmColorUtil.getAcadColor(256); // "ByLayer" color
+   * ```
    */
   static getAcadColor(index: number) {
     return AUTO_CAD_COLOR_INDEX[index]

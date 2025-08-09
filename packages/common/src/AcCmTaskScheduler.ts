@@ -1,7 +1,35 @@
 /**
+ * @fileoverview Task scheduling and execution system for the AutoCAD Common library.
+ * 
+ * This module provides a type-safe task scheduler that can execute a chain of named tasks
+ * in sequence, with progress reporting, error handling, and data flow between tasks.
+ * 
+ * @module AcCmTaskScheduler
+ * @version 1.0.0
+ */
+
+/**
  * Represents a named unit of work with an asynchronous or synchronous execution function.
- * @template TIn Input type
- * @template TOut Output type
+ * 
+ * Tasks can be chained together in a scheduler to create complex workflows with
+ * proper data flow and error handling.
+ * 
+ * @template TIn - Input type for the task.
+ * @template TOut - Output type for the task.
+ * 
+ * @example
+ * ```typescript
+ * class LoadFileTask extends AcCmTask<string, ArrayBuffer> {
+ *   constructor() {
+ *     super('LoadFile')
+ *   }
+ * 
+ *   async run(url: string): Promise<ArrayBuffer> {
+ *     const response = await fetch(url)
+ *     return response.arrayBuffer()
+ *   }
+ * }
+ * ```
  */
 export class AcCmTask<TIn, TOut> {
   /**
@@ -9,12 +37,24 @@ export class AcCmTask<TIn, TOut> {
    */
   readonly name: string
 
+  /**
+   * Creates a new task with the specified name.
+   * 
+   * @param {string} name - The name identifier for this task.
+   */
   constructor(name: string) {
     this.name = name
   }
 
   /**
-   * Executes the task.
+   * Executes the task with the given input.
+   * 
+   * This method must be implemented by subclasses to define the actual work
+   * performed by the task. Can return either a synchronous result or a Promise.
+   * 
+   * @param {TIn} _input - The input data for the task.
+   * @returns {TOut | Promise<TOut>} The task result, either synchronous or asynchronous.
+   * @throws {Error} When the method is not implemented by a subclass.
    */
   run(_input: TIn): TOut | Promise<TOut> {
     throw new Error('run() must be implemented by subclass')
@@ -22,9 +62,10 @@ export class AcCmTask<TIn, TOut> {
 }
 
 /**
- * Reports progress after a task completes.
- * @param progress A number between 0 and 1 indicating task completion
- * @param task The task that was just completed
+ * Callback function that reports progress after a task completes.
+ * 
+ * @param {number} progress - A number between 0 and 1 indicating task completion.
+ * @param {AcCmTask<unknown, unknown>} task - The task that was just completed.
  */
 type AcCmProgressCallback = (
   progress: number,
@@ -32,15 +73,19 @@ type AcCmProgressCallback = (
 ) => void
 
 /**
- * Callback function to handle final output.
+ * Callback function to handle the final output after all tasks complete successfully.
+ * 
+ * @template T - The type of the final result.
+ * @param {T} finalResult - The final result from the task chain.
  */
 export type AcCmCompleteCallback<T> = (finalResult: T) => void
 
 /**
- * Handles errors during task execution.
- * @param error The error thrown
- * @param taskIndex Index of the failed task
- * @param task The task that failed
+ * Callback function that handles errors during task execution.
+ * 
+ * @param {unknown} error - The error that was thrown.
+ * @param {number} taskIndex - Index of the failed task in the task queue.
+ * @param {AcCmTask<unknown, unknown>} task - The task that failed.
  */
 type AcCmErrorCallback = (
   error: unknown,
@@ -49,11 +94,36 @@ type AcCmErrorCallback = (
 ) => void
 
 /**
- * Type-safe task scheduler that executes a chain of named tasks in order,
- * passing results between them and stopping on the first failure.
+ * Type-safe task scheduler that executes a chain of named tasks in order.
+ * 
+ * The scheduler passes results between tasks, reports progress, and stops
+ * execution on the first failure. Supports both synchronous and asynchronous tasks.
  *
- * @template TInitial Initial input type
- * @template TFinal Final output type
+ * @template TInitial - Initial input type for the first task.
+ * @template TFinal - Final output type from the last task.
+ * 
+ * @example
+ * ```typescript
+ * // Create scheduler with string input and object output
+ * const scheduler = new AcCmTaskScheduler<string, ParsedData>()
+ * 
+ * // Add tasks
+ * scheduler.addTask(new LoadFileTask())
+ * scheduler.addTask(new ParseDataTask())
+ * scheduler.addTask(new ValidateDataTask())
+ * 
+ * // Set callbacks
+ * scheduler.setProgressCallback((progress, task) => {
+ *   console.log(`${task.name}: ${(progress * 100).toFixed(1)}%`)
+ * })
+ * 
+ * scheduler.setCompleteCallback((result) => {
+ *   console.log('All tasks completed:', result)
+ * })
+ * 
+ * // Execute
+ * await scheduler.execute('file.dwg')
+ * ```
  */
 export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
   private tasks: AcCmTask<unknown, unknown>[] = []

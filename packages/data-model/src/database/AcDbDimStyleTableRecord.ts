@@ -5,112 +5,227 @@ import {
   AcDbSymbolTableRecordAttrs
 } from './AcDbSymbolTableRecord'
 
+/**
+ * Controls the horizontal positioning of dimension text relative to the dimension line.
+ * This setting affects how dimension text is aligned when it's placed outside the extension lines.
+ */
 export enum AcDbDimTextHorizontal {
+  /** Centers the text between the extension lines */
   Center = 0,
+  /** Positions text next to the first extension line */
   Left = 1,
+  /** Positions text next to the second extension line */
   Right = 2,
+  /** Positions text above and aligned with the first extension line */
   OverFirst = 3,
+  /** Positions text above and aligned with the second extension line */
   OverSecond = 4
 }
 
+/**
+ * Controls the vertical positioning of dimension text relative to the dimension line.
+ * This setting determines whether text appears above, below, or centered on the dimension line.
+ */
 export enum AcDbDimTextVertical {
+  /** Centers text between the extension lines */
   Center = 0,
+  /** Places text above the dimension line */
   Above = 1,
+  /** Places text on the side farthest from the defining points */
   Outside = 2,
+  /** Places text according to Japanese Industrial Standards (JIS) */
   JIS = 3,
+  /** Places text below the dimension line */
   Below = 4
 }
 
+/**
+ * Controls the suppression of zeros in primary unit values for linear dimensions.
+ * This setting affects how feet, inches, and decimal values are displayed.
+ */
 export enum AcDbDimZeroSuppression {
+  /** Suppresses zero feet and precisely zero inches */
   Feet = 0,
+  /** Includes zero feet and precisely zero inches */
   None = 1,
+  /** Includes zero feet and suppresses zero inches */
   Inch = 2,
+  /** Includes zero inches and suppresses zero feet */
   FeetAndInch = 3,
+  /** Suppresses leading zeros in decimal dimensions */
   Leading = 4,
+  /** Suppresses trailing zeros in decimal dimensions */
   Trailing = 8,
+  /** Suppresses both leading and trailing zeros */
   LeadingAndTrailing = 12
 }
 
+/**
+ * Controls the suppression of zeros in angular dimension values.
+ * This setting affects how angular dimensions are displayed.
+ */
 export enum AcDbDimZeroSuppressionAngular {
+  /** Displays all leading and trailing zeros */
   None = 0,
+  /** Suppresses leading zeros in decimal dimensions */
   Leading = 1,
+  /** Suppresses trailing zeros in decimal dimensions */
   Trailing = 2,
+  /** Suppresses both leading and trailing zeros */
   LeadingAndTrailing = 3
 }
 
+/**
+ * Controls the vertical justification of tolerance values relative to the nominal dimension text.
+ * This setting only affects dimensions when tolerance is enabled.
+ */
 export enum AcDbDimVerticalJustification {
+  /** Aligns tolerance text at the bottom */
   Bottom = 0,
+  /** Centers tolerance text vertically */
   Middle = 1,
+  /** Aligns tolerance text at the top */
   Top = 2
 }
 
+/**
+ * Interface defining the attributes for a dimension style table record.
+ * Contains all the properties that control the appearance and behavior of dimensions
+ * that reference this style.
+ */
 export interface AcDbDimStyleTableRecordAttrs
   extends AcDbSymbolTableRecordAttrs {
+  /** Dimension postfix for text prefix/suffix */
   dimpost: string
+  /** Dimension append postfix for alternate units */
   dimapost: string
+  /** Overall scale factor for dimensions */
   dimscale: number
+  /** Arrow size for dimension lines */
   dimasz: number
+  /** Extension line offset from origin */
   dimexo: number
+  /** Dimension line increment for baseline dimensions */
   dimdli: number
+  /** Extension line extension beyond dimension line */
   dimexe: number
+  /** Rounding value for dimension distances */
   dimrnd: number
+  /** Dimension line extension beyond extension lines */
   dimdle: number
+  /** Plus tolerance value */
   dimtp: number
+  /** Minus tolerance value */
   dimtm: number
+  /** Text height for dimensions */
   dimtxt: number
+  /** Center mark size for circles/arcs */
   dimcen: number
+  /** Tick size (replaces arrows when > 0) */
   dimtsz: number
+  /** Alternate unit scale factor */
   dimaltf: number
+  /** Linear dimension scale factor */
   dimlfac: number
+  /** Text vertical position offset */
   dimtvp: number
+  /** Text height scale factor */
   dimtfac: number
+  /** Gap between dimension line and text */
   dimgap: number
+  /** Alternate unit rounding */
   dimaltrnd: number
+  /** Enable/disable tolerance display */
   dimtol: 0 | 1
+  /** Enable/disable dimension limits */
   dimlim: 0 | 1
+  /** Text horizontal alignment inside extension lines */
   dimtih: 0 | 1
+  /** Text horizontal alignment outside extension lines */
   dimtoh: 0 | 1
+  /** Suppress first extension line */
   dimse1: 0 | 1
+  /** Suppress second extension line */
   dimse2: 0 | 1
+  /** Text vertical position relative to dimension line */
   dimtad: AcDbDimTextVertical
+  /** Zero suppression for primary units */
   dimzin: AcDbDimZeroSuppression
+  /** Zero suppression for angular dimensions */
   dimazin: AcDbDimZeroSuppressionAngular
+  /** Enable/disable alternate units */
   dimalt: 0 | 1
+  /** Decimal places for alternate units */
   dimaltd: number
+  /** Force dimension line between extension lines */
   dimtofl: 0 | 1
+  /** Use separate arrow blocks for each end */
   dimsah: 0 | 1
+  /** Force text inside extension lines */
   dimtix: 0 | 1
+  /** Suppress arrows when text doesn't fit */
   dimsoxd: 0 | 1
+  /** Dimension line color */
   dimclrd: number
+  /** Extension line color */
   dimclre: number
+  /** Dimension text color */
   dimclrt: number
+  /** Angular dimension decimal places */
   dimadec: number
+  /** Linear dimension units format */
   dimunit: number
+  /** Primary unit decimal places */
   dimdec: number
+  /** Tolerance decimal places */
   dimtdec: number
+  /** Alternate unit format */
   dimaltu: number
+  /** Alternate tolerance decimal places */
   dimalttd: number
+  /** Angular dimension units */
   dimaunit: number
+  /** Fraction format for architectural units */
   dimfrac: number
+  /** Linear dimension units */
   dimlunit: number
+  /** Decimal separator character */
   dimdsep: string
+  /** Text movement rules */
   dimtmove: number
+  /** Text horizontal justification */
   dimjust: AcDbDimTextHorizontal
+  /** Suppress first dimension line */
   dimsd1: 0 | 1
+  /** Suppress second dimension line */
   dimsd2: 0 | 1
+  /** Tolerance text vertical justification */
   dimtolj: AcDbDimVerticalJustification
+  /** Tolerance zero suppression */
   dimtzin: AcDbDimZeroSuppression
+  /** Alternate unit zero suppression */
   dimaltz: AcDbDimZeroSuppression
+  /** Alternate tolerance zero suppression */
   dimalttz: AcDbDimZeroSuppression
+  /** Text fitting behavior */
   dimfit: number
+  /** User positioning control */
   dimupt: number
+  /** Angular dimension text/arrow fitting */
   dimatfit: number
+  /** Text style name */
   dimtxsty: string
+  /** Leader arrow block name */
   dimldrblk: string
+  /** Arrow block name */
   dimblk: string
+  /** First arrow block name (when using separate arrows) */
   dimblk1: string
+  /** Second arrow block name (when using separate arrows) */
   dimblk2: string
+  /** Dimension line weight */
   dimlwd: number
+  /** Extension line weight */
   dimlwe: number
 }
 

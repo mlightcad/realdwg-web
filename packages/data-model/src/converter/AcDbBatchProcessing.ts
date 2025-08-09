@@ -2,23 +2,45 @@
 type AcDbChunkProcessingCallback = (start: number, end: number) => Promise<void>
 
 /**
- * This class is used to break up the work into smaller chunks that are executed asynchronously.
- * This is often referred to "batch processing" or "cooperative multitasking," where the
+ * Class used to break up work into smaller chunks that are executed asynchronously.
+ * 
+ * This is often referred to as "batch processing" or "cooperative multitasking," where the
  * time-consuming task is broken into smaller pieces and executed in small intervals to allow
  * the UI to remain responsive.
+ * 
+ * @example
+ * ```typescript
+ * const batchProcessor = new AcDbBatchProcessing(1000, 10, 50);
+ * await batchProcessor.processChunk(async (start, end) => {
+ *   // Process items from start to end
+ *   for (let i = start; i < end; i++) {
+ *     // Process item i
+ *   }
+ * });
+ * ```
  */
 export class AcDbBatchProcessing {
+  /** Total number of items to process */
   private _count: number
+  /** Number of chunks to process */
   private _numerOfChunk: number
+  /** Number of items in one chunk */
   private _chunkSize: number = -1
+  /** Minimum number of items in one chunk */
   private _minimumChunkSize: number = 50
 
   /**
-   * Construct one instance of this class
-   * @param count Input the total number of items to process
-   * @param numerOfChunk Input the number of chunks to process
-   * @param minimumChunkSize Input the minimum number of items in one chunk. If it is greater
+   * Creates a new AcDbBatchProcessing instance.
+   * 
+   * @param count - The total number of items to process
+   * @param numerOfChunk - The number of chunks to process
+   * @param minimumChunkSize - The minimum number of items in one chunk. If it is greater
    * than the total number of items to process, the total number is used.
+   * 
+   * @example
+   * ```typescript
+   * const batchProcessor = new AcDbBatchProcessing(1000, 10, 50);
+   * ```
    */
   constructor(count: number, numerOfChunk: number, minimumChunkSize: number) {
     this._count = count
@@ -28,37 +50,84 @@ export class AcDbBatchProcessing {
   }
 
   /**
-   * The total number of items to process
+   * Gets the total number of items to process.
+   * 
+   * @returns The total number of items to process
+   * 
+   * @example
+   * ```typescript
+   * const totalItems = batchProcessor.count;
+   * ```
    */
   get count() {
     return this._count
   }
 
   /**
-   * The number of chunks to process
+   * Gets the number of chunks to process.
+   * 
+   * @returns The number of chunks to process
+   * 
+   * @example
+   * ```typescript
+   * const numberOfChunks = batchProcessor.numerOfChunk;
+   * ```
    */
   get numerOfChunk() {
     return this._numerOfChunk
   }
 
   /**
-   * The minimum number of items in one chunk.
+   * Gets the minimum number of items in one chunk.
+   * 
+   * @returns The minimum number of items in one chunk
+   * 
+   * @example
+   * ```typescript
+   * const minChunkSize = batchProcessor.minimumChunkSize;
+   * ```
    */
   get minimumChunkSize() {
     return this._minimumChunkSize
   }
+
+  /**
+   * Sets the minimum number of items in one chunk.
+   * 
+   * @param value - The new minimum chunk size
+   * 
+   * @example
+   * ```typescript
+   * batchProcessor.minimumChunkSize = 100;
+   * ```
+   */
   set minimumChunkSize(value: number) {
     this._minimumChunkSize = value
     this.calculateChunkSize()
   }
 
   /**
-   * The number of items in one chunk
+   * Gets the number of items in one chunk.
+   * 
+   * @returns The number of items in one chunk
+   * 
+   * @example
+   * ```typescript
+   * const chunkSize = batchProcessor.chunkSize;
+   * ```
    */
   get chunkSize() {
     return this._chunkSize
   }
 
+  /**
+   * Calculates the chunk size based on the total count, number of chunks, and minimum chunk size.
+   * 
+   * @example
+   * ```typescript
+   * batchProcessor.calculateChunkSize();
+   * ```
+   */
   private calculateChunkSize() {
     let demicalChunkSize = this._count / this._numerOfChunk
     if (demicalChunkSize < this._minimumChunkSize) {
@@ -68,6 +137,21 @@ export class AcDbBatchProcessing {
       demicalChunkSize < 1 ? this._count : Math.floor(demicalChunkSize)
   }
 
+  /**
+   * Schedules a task to be executed asynchronously.
+   * 
+   * This method uses requestAnimationFrame in browser environments or setTimeout
+   * in Node.js environments to schedule the task.
+   * 
+   * @param callback - The callback function to schedule
+   * 
+   * @example
+   * ```typescript
+   * batchProcessor.scheduleTask(() => {
+   *   // Task to be executed asynchronously
+   * });
+   * ```
+   */
   private scheduleTask(callback: () => void) {
     if (
       typeof window !== 'undefined' &&
@@ -81,7 +165,25 @@ export class AcDbBatchProcessing {
     }
   }
 
-  // Use the ChunkProcessingCallback type for the callback parameter
+  /**
+   * Processes items in chunks using the provided callback function.
+   * 
+   * This method breaks up the work into chunks and processes each chunk
+   * asynchronously, allowing the UI to remain responsive.
+   * 
+   * @param callback - The callback function to execute for each chunk
+   * @returns Promise that resolves when all chunks have been processed
+   * 
+   * @example
+   * ```typescript
+   * await batchProcessor.processChunk(async (start, end) => {
+   *   for (let i = start; i < end; i++) {
+   *     // Process item i
+   *     await processItem(i);
+   *   }
+   * });
+   * ```
+   */
   public async processChunk(callback: AcDbChunkProcessingCallback) {
     let currentIndex = 0
 

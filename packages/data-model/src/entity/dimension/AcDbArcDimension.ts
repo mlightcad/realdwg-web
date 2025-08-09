@@ -7,7 +7,15 @@ import {
 import { AcDbDimension } from './AcDbDimension'
 
 /**
- * This class represents an arc length dimension.
+ * Represents an arc length dimension entity in AutoCAD.
+ * 
+ * This dimension type measures the length of an arc by defining the arc's center point,
+ * two points that define the arc's extent, and a point on the arc itself. Arc length
+ * dimensions are commonly used in mechanical drawings, architectural plans, and other
+ * technical documentation where precise arc measurements are required.
+ * 
+ * The dimension displays the actual arc length value and typically includes extension
+ * lines, dimension lines, and arrows positioned to clearly indicate the arc being measured.
  */
 export class AcDbArcDimension extends AcDbDimension {
   private _arcPoint: AcGePoint3d
@@ -16,13 +24,21 @@ export class AcDbArcDimension extends AcDbDimension {
   private _xLine2Point: AcGePoint3d
 
   /**
-   * Create one instance of this class.
-   * @param centerPoint Input the center of the arc being dimensioned
-   * @param xLine1Point Input the first extension line end point
-   * @param xLine2Point Input the second extension line end point
-   * @param arcPoint Input point on arc being dimensioned
-   * @param dimText Input dimension text to use instead of calculated value
-   * @param dimStyle Input string name of dimension style table record to use
+   * Creates a new arc length dimension.
+   * 
+   * @param centerPoint - The center point of the arc being measured. This defines
+   *                      the center of the circle that contains the arc
+   * @param xLine1Point - The first extension line end point. This defines one end
+   *                      of the arc being measured
+   * @param xLine2Point - The second extension line end point. This defines the other
+   *                      end of the arc being measured
+   * @param arcPoint - A point on the arc that helps define the specific arc segment
+   *                   being measured. This point is typically between the two extension
+   *                   line points
+   * @param dimText - Optional custom dimension text to display instead of the calculated
+   *                  arc length value. If null, the calculated length will be displayed
+   * @param dimStyle - Optional name of the dimension style table record to use for
+   *                   formatting. If null, the current default style will be used
    */
   constructor(
     centerPoint: AcGePoint3dLike,
@@ -44,7 +60,13 @@ export class AcDbArcDimension extends AcDbDimension {
   }
 
   /**
-   * A point on the arc length dimension's dimension arc.
+   * Gets or sets a point on the arc that helps define the arc segment being measured.
+   * 
+   * This point is typically positioned between the two extension line points and helps
+   * determine which arc segment should be measured when multiple arcs could be defined
+   * by the same center and end points.
+   * 
+   * @returns The arc point that defines the arc segment
    */
   get arcPoint() {
     return this._arcPoint
@@ -54,7 +76,12 @@ export class AcDbArcDimension extends AcDbDimension {
   }
 
   /**
-   * The center point of the arc dimensioned by the arc length dimension.
+   * Gets or sets the center point of the arc being measured.
+   * 
+   * The center point defines the center of the circle that contains the arc. This point
+   * is used to calculate the arc length and position the dimension elements correctly.
+   * 
+   * @returns The center point of the arc
    */
   get centerPoint() {
     return this._centerPoint
@@ -64,7 +91,13 @@ export class AcDbArcDimension extends AcDbDimension {
   }
 
   /**
-   * The start point for the first extension line of the dimension.
+   * Gets or sets the first extension line end point.
+   * 
+   * This point defines one end of the arc being measured. The extension line extends
+   * from this point to the arc, helping to clearly identify the starting point of
+   * the arc length measurement.
+   * 
+   * @returns The first extension line end point
    */
   get xLine1Point() {
     return this._xLine1Point
@@ -74,7 +107,13 @@ export class AcDbArcDimension extends AcDbDimension {
   }
 
   /**
-   * The start point for the second extension line of the dimension.
+   * Gets or sets the second extension line end point.
+   * 
+   * This point defines the other end of the arc being measured. The extension line
+   * extends from this point to the arc, helping to clearly identify the ending point
+   * of the arc length measurement.
+   * 
+   * @returns The second extension line end point
    */
   get xLine2Point() {
     return this._xLine2Point
@@ -84,6 +123,13 @@ export class AcDbArcDimension extends AcDbDimension {
   }
 
   /**
+   * Gets the geometric extents (bounding box) of this dimension entity.
+   * 
+   * The geometric extents define the minimum bounding box that completely contains
+   * the dimension entity, including all its components like extension lines,
+   * dimension lines, arrows, and text.
+   * 
+   * @returns A 3D bounding box containing the dimension entity
    * @inheritdoc
    */
   get geometricExtents() {

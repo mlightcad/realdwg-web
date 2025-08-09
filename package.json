@@ -17,7 +17,7 @@
     "clean": "nx run-many -t clean",
     "dev": "nx run @mlightcad/mlightcad:dev",
     "doc": "typedoc",
-    "format": "prettier --config ./.prettierrc.js --write packages/**/*.{ts,js,vue,json}",
+    "format": "prettier --config ./.prettierrc.js --write packages/**/*.{ts,json}",
     "lint": "nx run-many -t lint",
     "lint:fix": "nx run-many -t lint:fix",
     "preview": "nx run @mlightcad/mlightcad:preview",

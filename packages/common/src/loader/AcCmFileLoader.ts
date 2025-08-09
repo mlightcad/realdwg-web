@@ -1,3 +1,14 @@
+/**
+ * @fileoverview HTTP-based file loader implementation for the AutoCAD Common library.
+ * 
+ * This module provides a concrete implementation of the loader interface using
+ * the Fetch API for loading files over HTTP. Supports various response types
+ * and provides comprehensive error handling.
+ * 
+ * @module AcCmFileLoader
+ * @version 1.0.0
+ */
+
 import { AcCmLoader, AcCmLoaderProgressCallback } from './AcCmLoader'
 import {
   AcCmLoadingManager,
@@ -5,6 +16,9 @@ import {
   AcCmOnLoadCallback
 } from './AcCmLoadingManager'
 
+/**
+ * @internal
+ */
 const loading: Record<
   string,
   {
@@ -14,8 +28,21 @@ const loading: Record<
   }[]
 > = {}
 
+/**
+ * Custom error class for HTTP-related failures.
+ * 
+ * @internal
+ */
 class HttpError extends Error {
+  /** The HTTP response object that caused the error. */
   response: Response
+  
+  /**
+   * Creates a new HttpError.
+   * 
+   * @param {string} message - The error message.
+   * @param {Response} response - The HTTP response that caused the error.
+   */
   constructor(message: string, response: Response) {
     super(message)
     this.response = response
@@ -23,12 +50,13 @@ class HttpError extends Error {
 }
 
 /**
- * The response type. Valid values are:
- * - text or empty string (default) - returns the data as String.
- * - arraybuffer - loads the data into a ArrayBuffer and returns that.
- * - blob - returns the data as a Blob.
- * - document - parses the file using the DOMParser.
- * - json - parses the file using JSON.parse.
+ * The supported response types for file loading operations.
+ * 
+ * - `''` or `'text'` - Returns the data as a string (default).
+ * - `'arraybuffer'` - Loads the data into an ArrayBuffer.
+ * - `'blob'` - Returns the data as a Blob.
+ * - `'document'` - Parses the file using the DOMParser.
+ * - `'json'` - Parses the file using JSON.parse.
  */
 type AcCmResponseType =
   | ''
@@ -39,8 +67,34 @@ type AcCmResponseType =
   | 'json'
 
 /**
- * A low level class for loading resources with 'Fetch', used internally by most loaders. It can also
- * be used directly to load any file type that does not have a loader.
+ * HTTP-based file loader using the Fetch API.
+ * 
+ * A low-level class for loading resources over HTTP, used internally by most loaders.
+ * It can also be used directly to load any file type that does not have a specialized loader.
+ * 
+ * Supports various response types, custom MIME types, and provides comprehensive error handling
+ * with automatic retry mechanisms for failed requests.
+ * 
+ * @example
+ * ```typescript
+ * import { AcCmFileLoader } from './AcCmFileLoader'
+ * 
+ * const loader = new AcCmFileLoader()
+ * 
+ * // Load a text file
+ * loader.load(
+ *   'data.txt',
+ *   (data) => console.log('Loaded:', data),
+ *   (progress) => console.log('Progress:', progress.loaded / progress.total),
+ *   (error) => console.error('Error:', error)
+ * )
+ * 
+ * // Load binary data
+ * loader.setResponseType('arraybuffer')
+ * loader.load('file.dwg', (arrayBuffer) => {
+ *   // Process binary data
+ * })
+ * ```
  */
 export class AcCmFileLoader extends AcCmLoader {
   /**

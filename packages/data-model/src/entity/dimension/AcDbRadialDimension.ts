@@ -9,31 +9,81 @@ import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
- * This class represents the radius dimension type in AutoCAD. This dimension type requires a center
- * point and a point on the curve being dimensioned in order to be able to draw the dimension line
- * from the center point through the point on the curve. In addition, it utilizes a "leader length"
- * value to determine how far the dimension line extends out past the curve before doing a horizontal
- * dogleg (if necessary) to the annotation text.
+ * Represents a radial dimension entity in AutoCAD.
+ * 
+ * A radial dimension measures the radius of a curve (typically a circle or arc).
+ * This dimension type requires a center point and a point on the curve being dimensioned
+ * in order to draw the dimension line from the center point through the point on the curve.
+ * 
+ * The dimension utilizes a "leader length" value to determine how far the dimension line
+ * extends out past the curve before doing a horizontal dogleg (if necessary) to the annotation text.
+ * 
+ * @example
+ * ```typescript
+ * // Create a radial dimension
+ * const radialDim = new AcDbRadialDimension(
+ *   new AcGePoint3d(0, 0, 0),    // Center point
+ *   new AcGePoint3d(5, 0, 0),    // Point on curve
+ *   2.0,                         // Leader length
+ *   "5.0",                       // Dimension text
+ *   "Standard"                   // Dimension style
+ * );
+ * 
+ * // Access dimension properties
+ * console.log(`Center: ${radialDim.center}`);
+ * console.log(`Chord point: ${radialDim.chordPoint}`);
+ * console.log(`Leader length: ${radialDim.leaderLength}`);
+ * ```
  */
 export class AcDbRadialDimension extends AcDbDimension {
+  /** The center point of the curve being dimensioned */
   private _center: AcGePoint3d
+  /** The point where the dimension line intersects the curve being dimensioned */
   private _chordPoint: AcGePoint3d
+  /** The extension arc start angle in radians */
   private _extArcStartAngle: number
+  /** The extension arc end angle in radians */
   private _extArcEndAngle: number
+  /** The leader length distance */
   private _leaderLength: number
 
   /**
-   * Create one instance of this class by using the parameters passed in to initialize the dimension.
-   * - If the text is inside the curve being dimensioned, then the dimension line is drawn from the
-   * center to the chordPoint, with a break for the annotation text.
-   * - If the dimension text is outside the curve being dimensioned, then the dimension line is drawn
-   * from the center, on through the chordPoint and out the leaderLength distance past the chordPoint
-   * where it does a short horizontal dogleg (if appropriate) to the annotation text.
-   * @param center Input center point (in WCS coordinates) of curve being dimensioned
-   * @param chordPoint Input point (in WCS coordinates) on the curve being dimensioned
-   * @param leaderLength Input leader length
-   * @param dimText	Input text string to use as the dimension annotation
-   * @param dimStyle Input object ID of AcDbDimStyleTableRecord to use
+   * Creates a new radial dimension entity.
+   * 
+   * This constructor initializes a radial dimension using the specified center point,
+   * chord point, and leader length. The dimension line behavior depends on whether
+   * the text is inside or outside the curve being dimensioned.
+   * 
+   * - If the text is inside the curve, the dimension line is drawn from the center
+   *   to the chordPoint, with a break for the annotation text.
+   * - If the text is outside the curve, the dimension line is drawn from the center,
+   *   through the chordPoint and out the leaderLength distance past the chordPoint
+   *   where it does a short horizontal dogleg (if appropriate) to the annotation text.
+   * 
+   * @param center - Center point (in WCS coordinates) of curve being dimensioned
+   * @param chordPoint - Point (in WCS coordinates) on the curve being dimensioned
+   * @param leaderLength - Leader length distance
+   * @param dimText - Text string to use as the dimension annotation (optional)
+   * @param dimStyle - String name of dimension style table record to use (optional)
+   * 
+   * @example
+   * ```typescript
+   * // Create a radial dimension with default text and style
+   * const radialDim = new AcDbRadialDimension(
+   *   new AcGePoint3d(0, 0, 0),
+   *   new AcGePoint3d(5, 0, 0),
+   *   2.0
+   * );
+   * 
+   * // Create a radial dimension with custom text and style
+   * const radialDim2 = new AcDbRadialDimension(
+   *   new AcGePoint3d(10, 10, 0),
+   *   new AcGePoint3d(15, 10, 0),
+   *   3.0,
+   *   "5.0",
+   *   "Architectural"
+   * );
+   * ```
    */
   constructor(
     center: AcGePoint3dLike,
@@ -55,54 +105,152 @@ export class AcDbRadialDimension extends AcDbDimension {
   }
 
   /**
-   * The center point (in WCS coordinates) of the curve being dimensioned.
-   * Note: This point is the primary definition point for this dimension type.
+   * Gets the center point of the curve being dimensioned.
+   * 
+   * This point is the primary definition point for this dimension type.
+   * 
+   * @returns The center point in WCS coordinates
+   * 
+   * @example
+   * ```typescript
+   * const center = radialDim.center;
+   * console.log(`Center point: ${center.x}, ${center.y}, ${center.z}`);
+   * ```
    */
   get center() {
     return this._center
   }
+
+  /**
+   * Sets the center point of the curve being dimensioned.
+   * 
+   * @param value - The new center point
+   * 
+   * @example
+   * ```typescript
+   * radialDim.center = new AcGePoint3d(0, 0, 0);
+   * ```
+   */
   set center(value: AcGePoint3d) {
     this._center.copy(value)
   }
 
   /**
-   * The point (in WCS coordinates) where the dimension line intersects the curve being dimensioned.
+   * Gets the point where the dimension line intersects the curve being dimensioned.
+   * 
+   * @returns The chord point in WCS coordinates
+   * 
+   * @example
+   * ```typescript
+   * const chordPoint = radialDim.chordPoint;
+   * console.log(`Chord point: ${chordPoint.x}, ${chordPoint.y}, ${chordPoint.z}`);
+   * ```
    */
   get chordPoint() {
     return this._chordPoint
   }
+
+  /**
+   * Sets the point where the dimension line intersects the curve being dimensioned.
+   * 
+   * @param value - The new chord point
+   * 
+   * @example
+   * ```typescript
+   * radialDim.chordPoint = new AcGePoint3d(5, 0, 0);
+   * ```
+   */
   set chordPoint(value: AcGePoint3d) {
     this._chordPoint.copy(value)
   }
 
   /**
-   * The extension arc start angle.
+   * Gets the extension arc start angle.
+   * 
+   * @returns The extension arc start angle in radians
+   * 
+   * @example
+   * ```typescript
+   * const startAngle = radialDim.extArcStartAngle;
+   * console.log(`Extension arc start angle: ${startAngle} radians`);
+   * ```
    */
   get extArcStartAngle() {
     return this._extArcStartAngle
   }
+
+  /**
+   * Sets the extension arc start angle.
+   * 
+   * @param value - The new extension arc start angle in radians
+   * 
+   * @example
+   * ```typescript
+   * radialDim.extArcStartAngle = 0;
+   * ```
+   */
   set extArcStartAngle(value: number) {
     this._extArcStartAngle = value
   }
 
   /**
-   * The extension arc end angle.
+   * Gets the extension arc end angle.
+   * 
+   * @returns The extension arc end angle in radians
+   * 
+   * @example
+   * ```typescript
+   * const endAngle = radialDim.extArcEndAngle;
+   * console.log(`Extension arc end angle: ${endAngle} radians`);
+   * ```
    */
   get extArcEndAngle() {
     return this._extArcEndAngle
   }
+
+  /**
+   * Sets the extension arc end angle.
+   * 
+   * @param value - The new extension arc end angle in radians
+   * 
+   * @example
+   * ```typescript
+   * radialDim.extArcEndAngle = Math.PI / 2;
+   * ```
+   */
   set extArcEndAngle(value: number) {
     this._extArcEndAngle = value
   }
 
   /**
-   * The dimension uses length as the distance from the chordPoint dimension definition point out to
-   * where the dimension does a horizontal dogleg to the annotation text (or stops if no dogleg is
-   * necessary).
+   * Gets the leader length.
+   * 
+   * The leader length is the distance from the chordPoint dimension definition point
+   * out to where the dimension does a horizontal dogleg to the annotation text
+   * (or stops if no dogleg is needed).
+   * 
+   * @returns The leader length value
+   * 
+   * @example
+   * ```typescript
+   * const leaderLength = radialDim.leaderLength;
+   * console.log(`Leader length: ${leaderLength}`);
+   * ```
    */
   get leaderLength() {
     return this._leaderLength
   }
+
+  /**
+   * Sets the leader length.
+   * 
+   * @param value - The new leader length value
+   * 
+   * @example
+   * ```typescript
+   * radialDim.leaderLength = 3.0;
+   * ```
+   */
   set leaderLenght(value: number) {
     this._leaderLength = value
   }

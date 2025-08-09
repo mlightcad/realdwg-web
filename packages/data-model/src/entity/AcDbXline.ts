@@ -8,15 +8,42 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbCurve } from './AcDbCurve'
 
 /**
- * The class represents the XLINE entity type within AutoCAD. An xline entity is a line that extends to
- * infinity in both directions.
+ * Represents an xline entity in AutoCAD.
+ * 
+ * An xline is a 3D geometric object that extends infinitely in both directions from a base point.
+ * Xlines are commonly used for construction lines, reference lines, and temporary geometry.
+ * Unlike lines, xlines have no end points and extend to infinity in both directions.
+ * 
+ * @example
+ * ```typescript
+ * // Create an xline from origin in the positive X direction
+ * const xline = new AcDbXline();
+ * xline.basePoint = new AcGePoint3d(0, 0, 0);
+ * xline.unitDir = new AcGeVector3d(1, 0, 0);
+ * 
+ * // Access xline properties
+ * console.log(`Base point: ${xline.basePoint}`);
+ * console.log(`Unit direction: ${xline.unitDir}`);
+ * ```
  */
 export class AcDbXline extends AcDbCurve {
+  /** The base point of the xline */
   private _basePoint: AcGePoint3d
+  /** The unit direction vector of the xline */
   private _unitDir: AcGeVector3d
 
   /**
-   * Create one empty polyline
+   * Creates a new xline entity.
+   * 
+   * This constructor initializes an xline with default values.
+   * The base point is at the origin and the unit direction is undefined.
+   * 
+   * @example
+   * ```typescript
+   * const xline = new AcDbXline();
+   * xline.basePoint = new AcGePoint3d(5, 10, 0);
+   * xline.unitDir = new AcGeVector3d(0, 1, 0); // Positive Y direction
+   * ```
    */
   constructor() {
     super()
@@ -25,34 +52,93 @@ export class AcDbXline extends AcDbCurve {
   }
 
   /**
-   * The base point of the xline.
+   * Gets the base point of this xline.
+   * 
+   * The base point is the center point from which the xline extends infinitely
+   * in both directions.
+   * 
+   * @returns The base point as a 3D point
+   * 
+   * @example
+   * ```typescript
+   * const basePoint = xline.basePoint;
+   * console.log(`Xline base point: ${basePoint.x}, ${basePoint.y}, ${basePoint.z}`);
+   * ```
    */
   get basePoint() {
     return this._basePoint
   }
+
+  /**
+   * Sets the base point of this xline.
+   * 
+   * @param value - The new base point
+   * 
+   * @example
+   * ```typescript
+   * xline.basePoint = new AcGePoint3d(10, 20, 0);
+   * ```
+   */
   set basePoint(value: AcGePoint3d) {
     this._basePoint.copy(value)
   }
 
   /**
-   * The second point of the xline.
+   * Gets the unit direction vector of this xline.
+   * 
+   * The unit direction vector defines the direction in which the xline extends
+   * infinitely in both directions from the base point.
+   * 
+   * @returns The unit direction vector
+   * 
+   * @example
+   * ```typescript
+   * const unitDir = xline.unitDir;
+   * console.log(`Xline direction: ${unitDir.x}, ${unitDir.y}, ${unitDir.z}`);
+   * ```
    */
   get unitDir() {
     return this._unitDir
   }
+
+  /**
+   * Sets the unit direction vector of this xline.
+   * 
+   * @param value - The new unit direction vector
+   * 
+   * @example
+   * ```typescript
+   * xline.unitDir = new AcGeVector3d(0, 0, 1); // Positive Z direction
+   * ```
+   */
   set unitDir(value: AcGePoint3d) {
     this._unitDir.copy(value)
   }
 
   /**
-   * @inheritdoc
+   * Gets whether this xline is closed.
+   * 
+   * Xlines are always open entities, so this always returns false.
+   * 
+   * @returns Always false for xlines
    */
   get closed(): boolean {
     return false
   }
 
   /**
-   * @inheritdoc
+   * Gets the geometric extents (bounding box) of this xline.
+   * 
+   * Since xlines extend infinitely in both directions, this method returns a
+   * bounding box that encompasses a finite portion of the xline for practical purposes.
+   * 
+   * @returns The bounding box that encompasses a portion of the xline
+   * 
+   * @example
+   * ```typescript
+   * const extents = xline.geometricExtents;
+   * console.log(`Xline bounds: ${extents.minPoint} to ${extents.maxPoint}`);
+   * ```
    */
   get geometricExtents(): AcGeBox3d {
     const extents = new AcGeBox3d()
@@ -66,7 +152,18 @@ export class AcDbXline extends AcDbCurve {
   }
 
   /**
-   * @inheritdoc
+   * Gets the grip points for this xline.
+   * 
+   * Grip points are control points that can be used to modify the xline.
+   * For an xline, the grip point is the base point.
+   * 
+   * @returns Array of grip points (base point)
+   * 
+   * @example
+   * ```typescript
+   * const gripPoints = xline.subGetGripPoints();
+   * // gripPoints contains: [basePoint]
+   * ```
    */
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
@@ -75,7 +172,19 @@ export class AcDbXline extends AcDbCurve {
   }
 
   /**
-   * @inheritdoc
+   * Draws this xline using the specified renderer.
+   * 
+   * This method renders the xline as a line segment extending from the base point
+   * in both directions along the unit vector. For practical purposes, the xline is
+   * drawn with a finite length.
+   * 
+   * @param renderer - The renderer to use for drawing
+   * @returns The rendered xline entity, or undefined if drawing failed
+   * 
+   * @example
+   * ```typescript
+   * const renderedXline = xline.draw(renderer);
+   * ```
    */
   draw(renderer: AcGiRenderer) {
     const points: AcGePoint3d[] = []

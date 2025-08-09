@@ -16,26 +16,67 @@ import { AcDbRenderingCache } from '../../misc'
 import { AcDbEntity } from '../AcDbEntity'
 import { AcDbLine } from '../AcDbLine'
 
+/**
+ * Defines the line spacing style for dimension text.
+ */
 export enum AcDbLineSpacingStyle {
+  /** At least the specified spacing */
   AtLeast = 1,
+  /** Exactly the specified spacing */
   Exactly = 2
 }
 
 /**
- * This class is the base class for the classes that represent all the dimension entity types within AutoCAD.
- * The appearance of dimensions is controlled by dimension variable settings and dimension styles.
+ * Abstract base class for all dimension entity types in AutoCAD.
+ * 
+ * This class provides the fundamental functionality for all dimension entities,
+ * including dimension text, style management, arrow handling, and measurement
+ * calculations. The appearance of dimensions is controlled by dimension variable
+ * settings and dimension styles.
+ * 
+ * @example
+ * ```typescript
+ * class MyDimension extends AcDbDimension {
+ *   // Implementation for specific dimension type
+ *   draw(renderer: AcGiRenderer) {
+ *     // Custom drawing logic
+ *   }
+ * }
+ * ```
  */
 export abstract class AcDbDimension extends AcDbEntity {
+  /** The block table record ID containing the dimension entities */
   private _dimBlockId: string | null
+  /** The dimension style name used by this dimension */
   private _dimensionStyleName: string | null
+  /** The user-supplied dimension annotation text */
   private _dimensionText: string | null
+  /** The measured value of the dimension */
   private _measurement?: number
+  /** The line spacing factor for dimension text */
   private _textLineSpacingFactor: number
+  /** The line spacing style for dimension text */
   private _textLineSpacingStyle: AcDbLineSpacingStyle
+  /** The position of the dimension text */
   private _textPosition: AcGePoint3d
+  /** The rotation angle of the dimension text */
   private _textRotation: number
+  /** The cached dimension style record */
   private _dimStyle?: AcDbDimStyleTableRecord
 
+  /**
+   * Creates a new dimension entity.
+   * 
+   * This constructor initializes a dimension with default values.
+   * Subclasses should override this constructor to set up dimension-specific properties.
+   * 
+   * @example
+   * ```typescript
+   * const dimension = new MyDimension();
+   * dimension.dimensionText = "10.0";
+   * dimension.textPosition = new AcGePoint3d(5, 5, 0);
+   * ```
+   */
   constructor() {
     super()
     this._dimBlockId = null
@@ -48,27 +89,76 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
-   * The name of the block table record containing the entities that this dimension displays.
+   * Gets the block table record ID containing the entities that this dimension displays.
+   * 
+   * @returns The block table record ID, or null if not set
+   * 
+   * @example
+   * ```typescript
+   * const blockId = dimension.dimBlockId;
+   * console.log(`Dimension block ID: ${blockId}`);
+   * ```
    */
   get dimBlockId() {
     return this._dimBlockId
   }
+
+  /**
+   * Sets the block table record ID for this dimension.
+   * 
+   * @param value - The block table record ID, or null to clear
+   * 
+   * @example
+   * ```typescript
+   * dimension.dimBlockId = "MyDimensionBlock";
+   * ```
+   */
   set dimBlockId(value: string | null) {
     this._dimBlockId = value
   }
 
   /**
-   * The dimension style name used by this dimension
+   * Gets the dimension style name used by this dimension.
+   * 
+   * @returns The dimension style name, or null if not set
+   * 
+   * @example
+   * ```typescript
+   * const styleName = dimension.dimensionStyleName;
+   * console.log(`Dimension style: ${styleName}`);
+   * ```
    */
   get dimensionStyleName() {
     return this._dimensionStyleName
   }
+
+  /**
+   * Sets the dimension style name for this dimension.
+   * 
+   * @param value - The dimension style name, or null to use default
+   * 
+   * @example
+   * ```typescript
+   * dimension.dimensionStyleName = "Standard";
+   * ```
+   */
   set dimensionStyleName(value: string | null) {
     this._dimensionStyleName = value
   }
 
   /**
-   * The dimension style used by this dimension.
+   * Gets the dimension style used by this dimension.
+   * 
+   * This method returns the dimension style record associated with this dimension.
+   * If no style is specified, it returns the default dimension style.
+   * 
+   * @returns The dimension style record
+   * 
+   * @example
+   * ```typescript
+   * const style = dimension.dimensionStyle;
+   * console.log(`Style name: ${style.name}`);
+   * ```
    */
   get dimensionStyle(): AcDbDimStyleTableRecord {
     if (this._dimStyle == null) {
@@ -85,15 +175,21 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
-   * The user-supplied dimension annotation text string. This string will need to contain any desired
-   * multiline text formatting characters.
-   * - If the default text is the only text in the dimension, provide this function with an empty string
-   * (for example, '')
-   * - If the dimension contains user-defined text along with the defualt text, provide this function with
-   * the default text denoted with angle brackets (for example, 'This is the default text <>').
-   * - If the dimension contains no text (for example using the '.' syntax), provide the '.'.
-   * - if the text is user defined, but there is no default text, provide only the user-defined text to
-   * this function.
+   * Gets the user-supplied dimension annotation text string.
+   * 
+   * This string can contain multiline text formatting characters. The text can be:
+   * - Empty string ('') for default text only
+   * - Text with angle brackets for mixed default and user text (e.g., 'This is the default text <>')
+   * - Period ('.') for no text
+   * - User-defined text only
+   * 
+   * @returns The dimension text string
+   * 
+   * @example
+   * ```typescript
+   * const text = dimension.dimensionText;
+   * console.log(`Dimension text: ${text}`);
+   * ```
    */
   get dimensionText() {
     return this._dimensionText

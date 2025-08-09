@@ -3,23 +3,46 @@ import { AcDbDatabase } from '../database'
 import { AcDbObjectIterator } from '../misc'
 
 /**
- * A database-resident object dictionary, which maintains a map between text strings and database objects.
+ * A database-resident object dictionary that maintains a map between text strings and database objects.
+ * 
  * An instance of this class represents a single object, such as Drawing Symbol Table, to which objects
  * derived from AcDbObject may be added, accessed, and removed. Entries in an AcDbDictionary must be unique.
  * Entries consist of a unique AcDbObject and string, which comprises the entry's key name. The key may be
- * either an text string, or an asterisk ('*') as the first character in the string to signify an anonymous
+ * either a text string, or an asterisk ('*') as the first character in the string to signify an anonymous
  * entry. An anonymous entry's key will be constructed internally by appending an 'A' plus a unique integer
  * value to the asterisk; for example, '*A13'. When an object is placed in a dictionary, the dictionary is
  * established as the object's owner, the lookup key string is associated with the object's object ID, and
  * the dictionary itself is attached to the object as a persistent reactor so that the dictionary is notified
  * when the object is erased.
+ * 
+ * @template TObjectType - The type of objects stored in this dictionary
+ * 
+ * @example
+ * ```typescript
+ * const dictionary = new AcDbDictionary<AcDbLayout>(database);
+ * const layout = new AcDbLayout();
+ * dictionary.setAt('MyLayout', layout);
+ * const retrievedLayout = dictionary.getAt('MyLayout');
+ * ```
  */
 export class AcDbDictionary<
   TObjectType extends AcDbObject = AcDbObject
 > extends AcDbObject {
+  /** Map of records indexed by name */
   protected _recordsByName: Map<string, TObjectType>
+  /** Map of records indexed by object ID */
   protected _recordsById: Map<string, TObjectType>
 
+  /**
+   * Creates a new AcDbDictionary instance.
+   * 
+   * @param db - The database this dictionary belongs to
+   * 
+   * @example
+   * ```typescript
+   * const dictionary = new AcDbDictionary(database);
+   * ```
+   */
   constructor(db: AcDbDatabase) {
     super()
     this.database = db
@@ -28,17 +51,34 @@ export class AcDbDictionary<
   }
 
   /**
-   * The number of entries in the dictionary.
+   * Gets the number of entries in the dictionary.
+   * 
+   * @returns The number of entries in the dictionary
+   * 
+   * @example
+   * ```typescript
+   * const count = dictionary.numEntries;
+   * console.log(`Dictionary has ${count} entries`);
+   * ```
    */
   get numEntries() {
     return this._recordsByName.size
   }
 
   /**
-   * Add a new entry specified by 'value' into the dictionary, if 'key' does not already exist in the
-   * dictionary. If the entry with 'key' already exists, the existing entry is erased.
-   * @param key Input string representing the object's search key name
-   * @param value Input the new object to add to the dictionary
+   * Adds a new entry to the dictionary.
+   * 
+   * If an entry with the specified key already exists, the existing entry is erased
+   * and replaced with the new one.
+   * 
+   * @param key - String representing the object's search key name
+   * @param value - The new object to add to the dictionary
+   * 
+   * @example
+   * ```typescript
+   * const layout = new AcDbLayout();
+   * dictionary.setAt('MyLayout', layout);
+   * ```
    */
   setAt(key: string, value: TObjectType) {
     value.database = this.database
@@ -47,10 +87,18 @@ export class AcDbDictionary<
   }
 
   /**
-   * Remove the entry specified by 'name' from the dictionary.
-   * @param name Input string representing the entry's key (or name)
-   * @returns If the entry specified by object id exists in the dictionary and remove it correctly, return
-   * true. Otherwise, return false.
+   * Removes the entry specified by name from the dictionary.
+   * 
+   * @param name - String representing the entry's key (or name)
+   * @returns True if the entry was found and removed, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const removed = dictionary.remove('MyLayout');
+   * if (removed) {
+   *   console.log('Layout removed successfully');
+   * }
+   * ```
    */
   remove(name: string) {
     const object = this.getAt(name)
@@ -63,10 +111,15 @@ export class AcDbDictionary<
   }
 
   /**
-   * Remove the entry specified by object id from the dictionary.
-   * @param id Input id of the object to delete
-   * @returns If the entry specified by object id exists in the dictionary and remove it correctly, return
-   * true. Otherwise, return false.
+   * Removes the entry specified by object ID from the dictionary.
+   * 
+   * @param id - ID of the object to delete
+   * @returns True if the entry was found and removed, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const removed = dictionary.removeId('some-object-id');
+   * ```
    */
   removeId(id: string) {
     const object = this.getIdAt(id)
@@ -81,7 +134,12 @@ export class AcDbDictionary<
   }
 
   /**
-   * Remove all of records in the dictionary.
+   * Removes all records from the dictionary.
+   * 
+   * @example
+   * ```typescript
+   * dictionary.removeAll();
+   * ```
    */
   removeAll() {
     this._recordsByName.clear()
@@ -89,45 +147,85 @@ export class AcDbDictionary<
   }
 
   /**
-   * Return true if the dictionary contains an object with the sepcified name. Otherwise it returns false.
-   * @param name Input name to search for
+   * Checks if the dictionary contains an object with the specified name.
+   * 
+   * @param name - Name to search for
+   * @returns True if the dictionary contains an object with the specified name, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * if (dictionary.has('MyLayout')) {
+   *   console.log('Layout exists');
+   * }
+   * ```
    */
   has(name: string) {
     return this._recordsByName.has(name.toUpperCase())
   }
 
   /**
-   * Return true if the dictionary contains an object with the sepcified id. Otherwise it returns false.
-   * @param id Input object id to search for
+   * Checks if the dictionary contains an object with the specified ID.
+   * 
+   * @param id - ID to search for
+   * @returns True if the dictionary contains an object with the specified ID, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * if (dictionary.hasId('some-object-id')) {
+   *   console.log('Object exists');
+   * }
+   * ```
    */
   hasId(id: string) {
     return this._recordsById.has(id)
   }
 
   /**
-   * Search the dictionary for the object with the specified name. If found, it return the record.
-   * Otherwise, return undefined.
-   * @param name Input the name to search
-   * @returns If found the object with the specified name, return it. Otherwise, return undefined.
+   * Gets the object with the specified name from the dictionary.
+   * 
+   * @param name - Name of the object to retrieve
+   * @returns The object with the specified name, or undefined if not found
+   * 
+   * @example
+   * ```typescript
+   * const layout = dictionary.getAt('MyLayout');
+   * if (layout) {
+   *   console.log('Layout found:', layout);
+   * }
+   * ```
    */
   getAt(name: string) {
     return this._recordsByName.get(name)
   }
 
   /**
-   * Search the dictionary for the record with the specified id. If found, it returns the record.
-   * Otherwise, return undefined.
-   * @param id Input the id to search
-   * @returns If found the object with the specified id, return it. Otherwise, return undefined.
+   * Gets the object with the specified ID from the dictionary.
+   * 
+   * @param id - ID of the object to retrieve
+   * @returns The object with the specified ID, or undefined if not found
+   * 
+   * @example
+   * ```typescript
+   * const object = dictionary.getIdAt('some-object-id');
+   * ```
    */
   getIdAt(id: AcDbObjectId) {
     return this._recordsById.get(id)
   }
 
   /**
-   * Create an iterator object that can be used to iterate through the contents of the symbol table.
-   *
-   * @returns Return an iterator object that can be used to iterate through the contents of the symbol table.
+   * Creates a new iterator for traversing the dictionary entries.
+   * 
+   * @returns A new AcDbObjectIterator for this dictionary
+   * 
+   * @example
+   * ```typescript
+   * const iterator = dictionary.newIterator();
+   * while (iterator.hasNext()) {
+   *   const object = iterator.next();
+   *   console.log('Object:', object);
+   * }
+   * ```
    */
   newIterator(): AcDbObjectIterator<TObjectType> {
     return new AcDbObjectIterator(this._recordsByName)

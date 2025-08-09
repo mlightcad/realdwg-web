@@ -3,14 +3,38 @@ import { AcGiBaseTextStyle } from '@mlightcad/graphic-interface'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
+ * Represents a record in the text style table.
+ * 
  * This class represents the records that are found in the text style table (known as the "style"
  * table in DXF). Each of these records represents a specific set of text parameters such as font,
- * default size, relative x scaling, vertical or horizontal, etc.
+ * default size, relative x scaling, vertical or horizontal orientation, etc.
+ * 
+ * @example
+ * ```typescript
+ * const textStyle = new AcGiBaseTextStyle();
+ * textStyle.name = 'MyStyle';
+ * textStyle.font = 'Arial';
+ * const record = new AcDbTextStyleTableRecord(textStyle);
+ * ```
  */
 export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
+  /** The text style configuration */
   private _textStyle: AcGiBaseTextStyle
+  /** Whether text drawn with this style is vertical */
   private _isVertical: boolean
 
+  /**
+   * Creates a new AcDbTextStyleTableRecord instance.
+   * 
+   * @param textStyle - The text style configuration to use
+   * 
+   * @example
+   * ```typescript
+   * const textStyle = new AcGiBaseTextStyle();
+   * textStyle.name = 'MyStyle';
+   * const record = new AcDbTextStyleTableRecord(textStyle);
+   * ```
+   */
   constructor(textStyle: AcGiBaseTextStyle) {
     super()
     this.name = textStyle.name
@@ -24,10 +48,20 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The obliquing angle. The obliquing angle is the angle from the text's vertical; that is, the
+   * Gets or sets the obliquing angle.
+   * 
+   * The obliquing angle is the angle from the text's vertical; that is, the
    * top of the text "slants" relative to the bottom--the same as the slope in this italic text.
    * Positive angles slant characters forward at their tops. Negative angles have 2pi added to them
    * to convert them to their positive equivalent.
+   * 
+   * @returns The obliquing angle in radians
+   * 
+   * @example
+   * ```typescript
+   * const angle = record.obliquingAngle;
+   * record.obliquingAngle = Math.PI / 6; // 30 degrees
+   * ```
    */
   get obliquingAngle() {
     return this._textStyle.obliqueAngle
@@ -37,13 +71,23 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The text height used for the last text created using this text style. This value is updated
-   * automatically by AutoCAD after the creation of any text object that references this text style
-   * table record. If the textSize value for this text style is 0, then the priorSize value is used
-   * by AutoCAD as the default text height for the next text created using this text style.
-   *
-   * This value is automatically changed by the use of the text command. It will only be automatically
-   * changed if the textSize is set to 0 so that users are prompted for a height.
+   * Gets or sets the text height used for the last text created using this text style.
+   * 
+   * This value is updated automatically by AutoCAD after the creation of any text object
+   * that references this text style table record. If the textSize value for this text style
+   * is 0, then the priorSize value is used by AutoCAD as the default text height for the
+   * next text created using this text style.
+   * 
+   * This value is automatically changed by the use of the text command. It will only be
+   * automatically changed if the textSize is set to 0 so that users are prompted for a height.
+   * 
+   * @returns The prior text size
+   * 
+   * @example
+   * ```typescript
+   * const priorSize = record.priorSize;
+   * record.priorSize = 12.0;
+   * ```
    */
   get priorSize() {
     return this._textStyle.lastHeight
@@ -53,9 +97,19 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The default size of the text drawn with this text style. If the text size is set to 0, then each
-   * use of the AutoCAD text commands prompt for a text height to use in creating the text entity. If
-   * textSize is non-zero, the text command will not prompt for a text height and will use this value.
+   * Gets or sets the default size of the text drawn with this text style.
+   * 
+   * If the text size is set to 0, then each use of the AutoCAD text commands prompt
+   * for a text height to use in creating the text entity. If textSize is non-zero,
+   * the text command will not prompt for a text height and will use this value.
+   * 
+   * @returns The default text size
+   * 
+   * @example
+   * ```typescript
+   * const textSize = record.textSize;
+   * record.textSize = 10.0; // Fixed text height
+   * ```
    */
   get textSize() {
     return this._textStyle.fixedTextHeight
@@ -65,10 +119,19 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The width factor (also referred to as the relative X-scale factor) for the text style table
-   * record. The width factor is applied to the text's width to allow the width to be adjusted
+   * Gets or sets the width factor (also referred to as the relative X-scale factor) for the text style.
+   * 
+   * The width factor is applied to the text's width to allow the width to be adjusted
    * independently of the height. For example, if the width factor value is 0.8, then the text is
    * drawn with a width that is 80% of its normal "unadjusted" width.
+   * 
+   * @returns The width factor
+   * 
+   * @example
+   * ```typescript
+   * const xScale = record.xScale;
+   * record.xScale = 0.8; // 80% width
+   * ```
    */
   get xScale() {
     return this._textStyle.widthFactor
@@ -78,7 +141,17 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * True if text drawn with this text style is drawn vertically. Faslse otherwise.
+   * Gets or sets whether text drawn with this text style is drawn vertically.
+   * 
+   * @returns True if text is drawn vertically, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * if (record.isVertical) {
+   *   console.log('Text style is vertical');
+   * }
+   * record.isVertical = true;
+   * ```
    */
   get isVertical() {
     return this._isVertical
@@ -88,7 +161,15 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The name of the font file for this text style
+   * Gets or sets the name of the font file for this text style.
+   * 
+   * @returns The font file name
+   * 
+   * @example
+   * ```typescript
+   * const fileName = record.fileName;
+   * record.fileName = 'Arial';
+   * ```
    */
   get fileName() {
     return this._textStyle.font
@@ -98,7 +179,18 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The name of the big font file for this text style
+   * Gets or sets the name of the big font file for this text style.
+   * 
+   * Big font files are used for languages that require more than 256 characters,
+   * such as Chinese, Japanese, and Korean.
+   * 
+   * @returns The big font file name
+   * 
+   * @example
+   * ```typescript
+   * const bigFontFileName = record.bigFontFileName;
+   * record.bigFontFileName = 'bigfont.shx';
+   * ```
    */
   get bigFontFileName() {
     return this._textStyle.bigFont
@@ -108,12 +200,32 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Text style information used by renderer.
+   * Gets the text style information used by the renderer.
+   * 
+   * @returns The text style configuration
+   * 
+   * @example
+   * ```typescript
+   * const textStyle = record.textStyle;
+   * console.log('Font:', textStyle.font);
+   * ```
    */
   get textStyle() {
     return this._textStyle
   }
 
+  /**
+   * Removes the file extension from a file name.
+   * 
+   * @param pathName - The file path or name
+   * @returns The file name without extension
+   * 
+   * @example
+   * ```typescript
+   * const fileName = this.getFileNameWithoutExtension('arial.ttf');
+   * // Returns: 'arial'
+   * ```
+   */
   private getFileNameWithoutExtension(pathName: string) {
     const fileName = pathName.split('/').pop()
     if (fileName) {

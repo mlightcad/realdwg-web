@@ -1,13 +1,47 @@
+/**
+ * @fileoverview Base loader implementation for the AutoCAD Common library.
+ * 
+ * This module provides the abstract base class for all loaders in the system,
+ * defining the common interface and shared functionality for loading various
+ * types of resources.
+ * 
+ * @module AcCmLoader
+ * @version 1.0.0
+ */
+
 import {
   AcCmLoadingManager,
   AcCmOnErrorCallback,
   DefaultLoadingManager
 } from './AcCmLoadingManager'
 
+/**
+ * Callback function for reporting loading progress.
+ * 
+ * @param {ProgressEvent} progress - The progress event containing loading information.
+ */
 export type AcCmLoaderProgressCallback = (progress: ProgressEvent) => void
 
 /**
- * Base class for implementing loaders.
+ * Abstract base class for implementing resource loaders.
+ * 
+ * This class provides the common functionality and interface that all loaders
+ * must implement, including loading manager integration, path handling, and
+ * configuration options for cross-origin requests.
+ * 
+ * @abstract
+ * 
+ * @example
+ * ```typescript
+ * class MyCustomLoader extends AcCmLoader {
+ *   load(url: string, onLoad: (data: MyDataType) => void, onProgress?: AcCmLoaderProgressCallback, onError?: AcCmOnErrorCallback): void {
+ *     // Implementation specific loading logic
+ *     const fullUrl = this.resolveURL(url)
+ *     // ... fetch and process data
+ *     onLoad(processedData)
+ *   }
+ * }
+ * ```
  */
 export abstract class AcCmLoader {
   manager: AcCmLoadingManager

@@ -8,13 +8,19 @@ import {
 import { AcDbRenderingCache } from '../misc'
 import { AcDbDatabase } from './AcDbDatabase'
 
+/**
+ * Represents the different stages of DXF/DWG file conversion.
+ * 
+ * These stages define the order and types of operations performed
+ * during the conversion of a DXF or DWG file into an AcDbDatabase.
+ */
 export type AcDbConversionStage =
   /**
    * Start DXF/DWG file conversion
    */
   | 'START'
   /**
-   * Prasing DXF/DWG file
+   * Parsing DXF/DWG file
    */
   | 'PARSE'
   /**
@@ -66,10 +72,37 @@ export type AcDbConversionStage =
    */
   | 'END'
 
+/**
+ * Represents the status of a conversion stage.
+ */
 export type AcDbConversionStageStatus = 'START' | 'END' | 'IN-PROGRESS'
 
 /**
- * Callback function to update progress when parsing one file
+ * Callback function to update progress when parsing one file.
+ * 
+ * This callback is called during the conversion process to provide
+ * progress updates and stage information.
+ * 
+ * @param percentage - Finish percentage (0-100)
+ * @param stage - Name of the current stage
+ * @param stageStatus - Status of the current stage
+ * @param data - Store data associated with the current stage. Its meaning varies by stage:
+ *   - 'FONT' stage: fonts needed by this drawing
+ * 
+ * @example
+ * ```typescript
+ * const progressCallback: AcDbConversionProgressCallback = async (
+ *   percentage,
+ *   stage,
+ *   stageStatus,
+ *   data
+ * ) => {
+ *   console.log(`Progress: ${percentage}% - Stage: ${stage} - Status: ${stageStatus}`);
+ *   if (stage === 'FONT' && data) {
+ *     console.log('Fonts needed:', data);
+ *   }
+ * };
+ * ```
  */
 export type AcDbConversionProgressCallback = (
   /**
@@ -93,6 +126,12 @@ export type AcDbConversionProgressCallback = (
   data?: unknown
 ) => Promise<void>
 
+/**
+ * Interface defining the data for a conversion task.
+ * 
+ * @template TIn - The input type for the task
+ * @template TOut - The output type for the task
+ */
 interface AcDbConversionTaskData<TIn, TOut> {
   /**
    * The name of the task.
@@ -112,6 +151,9 @@ interface AcDbConversionTaskData<TIn, TOut> {
   task: (input: TIn) => Promise<TOut>
 }
 
+/**
+ * Interface defining performance data for database conversion.
+ */
 export interface AcDbConvertDatabasePerformanceData {
   [key: string]: number
   total: number
@@ -120,15 +162,17 @@ export interface AcDbConvertDatabasePerformanceData {
 const PERFORMANCE_ENTRY_NAME = 'Load Database'
 
 /**
- * A specialized task that includes additional data for dwg conversion.
- * @template TIn Input type
- * @template TOut Output type
+ * Task class for database conversion operations.
+ * 
+ * This class extends AcCmTask to provide specialized functionality
+ * for database conversion tasks, including progress tracking and
+ * stage management.
+ * 
+ * @template TIn - The input type for the task
+ * @template TOut - The output type for the task
  */
 class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
   readonly data: AcDbConversionTaskData<TIn, TOut>
-  /**
-   * The function to notify progress.
-   */
   readonly progress?: AcDbConversionProgressCallback
 
   constructor(
@@ -177,21 +221,50 @@ class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
 }
 
 /**
- * It defines interface that one drawing database convert should follow. One drawing database converter
- * can convert one dxf/dwg file to one instance of AcDbDatabase.
+ * Abstract base class for database converters.
+ * 
+ * This class provides the foundation for converting various file formats
+ * (such as DXF, DWG) into AcDbDatabase objects. It handles the conversion
+ * process in stages and provides progress tracking capabilities.
+ * 
+ * @template TModel - The type of the parsed model data
+ * 
+ * @example
+ * ```typescript
+ * class MyConverter extends AcDbDatabaseConverter<MyModel> {
+ *   protected parse(data: string | ArrayBuffer): MyModel {
+ *     // Implementation for parsing data
+ *   }
+ *   
+ *   protected processEntities(model: MyModel, db: AcDbDatabase) {
+ *     // Implementation for processing entities
+ *   }
+ * }
+ * ```
  */
 export abstract class AcDbDatabaseConverter<TModel = unknown> {
+  /** Optional progress callback for tracking conversion progress */
   progress?: AcDbConversionProgressCallback
 
   /**
-   * Read the drawing specified by data and store them into the specified database. It will break up
-   * entities in the drawing into smaller chunks that are processed asynchronously to allow the UI to
-   * remain responsive.
-   * @param data Input drawing data in dxf format
-   * @param db Input database to store drawing data
-   * @param progress Input optional callback function to update progress
-   * @param minimumChunkSize Input the minimum number of entities in one chunk. If it is greater than
-   * the total number of entities to process, the total number is used.
+   * Reads and converts data into an AcDbDatabase.
+   * 
+   * This method orchestrates the entire conversion process, including
+   * parsing, processing various components (fonts, linetypes, styles, etc.),
+   * and building the final database.
+   * 
+   * @param data - The input data to convert (string or ArrayBuffer)
+   * @param db - The database to populate with converted data
+   * @param minimumChunkSize - Minimum chunk size for batch processing
+   * @param progress - Optional progress callback
+   * @returns Promise that resolves when conversion is complete
+   * 
+   * @example
+   * ```typescript
+   * const converter = new MyConverter();
+   * const database = new AcDbDatabase();
+   * await converter.read(dxfData, database, 100, progressCallback);
+   * ```
    */
   async read(
     data: string | ArrayBuffer,

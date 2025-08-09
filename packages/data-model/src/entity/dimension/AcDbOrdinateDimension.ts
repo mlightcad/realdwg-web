@@ -7,24 +7,34 @@ import {
 import { AcDbDimension } from './AcDbDimension'
 
 /**
- * This class represents the ordinate dimension type within AutoCAD. Ordinate dimensions measure
- * the "horizontal" (X axis) or "vertical" (Y axis) distance from a specified origin point to some
- * other specified point.
- * It measures the distance from the their origin point to their definingPoint along the X or Y
- * axis (as specified by the appropriate member function). They display a leader line from the
- * definingPoint to the leaderEndPoint, with the annotation text located appropriately near the
- * end of the leader.
+ * Represents an ordinate dimension entity in AutoCAD.
+ * 
+ * Ordinate dimensions measure the "horizontal" (X axis) or "vertical" (Y axis) distance
+ * from a specified origin point to some other specified point. They are commonly used
+ * in mechanical drawings, architectural plans, and other technical documentation where
+ * precise coordinate measurements are required.
+ * 
+ * The dimension displays a leader line from the defining point to the leader end point,
+ * with the annotation text located appropriately near the end of the leader. Ordinate
+ * dimensions are particularly useful for dimensioning parts with multiple features that
+ * need to be positioned relative to a common reference point.
  */
 export class AcDbOrdinateDimension extends AcDbDimension {
   private _definingPoint: AcGePoint3d
   private _leaderEndPoint: AcGePoint3d
 
   /**
-   * Create one instance of this class.
-   * @param definingPoint Input point where ordinate leader should start
-   * @param leaderEndPoint Input point where ordinate leader should end
-   * @param dimText Input dimension text to use instead of calculated value
-   * @param dimStyle Input string name of dimension style table record to use
+   * Creates a new ordinate dimension.
+   * 
+   * @param definingPoint - The point where the ordinate leader should start. This is
+   *                        the point being measured relative to the dimension's origin
+   * @param leaderEndPoint - The point where the ordinate leader should end. This point
+   *                         is used for the dimension leader's endpoint and in text
+   *                         position calculations
+   * @param dimText - Optional custom dimension text to display instead of the calculated
+   *                  coordinate value. If null, the calculated coordinate will be displayed
+   * @param dimStyle - Optional name of the dimension style table record to use for
+   *                   formatting. If null, the current default style will be used
    */
   constructor(
     definingPoint: AcGePoint3dLike,
@@ -42,8 +52,13 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   }
 
   /**
-   * The ordinate point (in WCS coordinates) to be measured. The dimension measures the X or Y
-   * distance between this point and the dimension's origin point.
+   * Gets or sets the ordinate point to be measured.
+   * 
+   * This is the point (in WCS coordinates) that defines the location being measured.
+   * The dimension measures the X or Y distance between this point and the dimension's
+   * origin point, depending on the orientation of the ordinate dimension.
+   * 
+   * @returns The defining point of the ordinate dimension
    */
   get definingPoint() {
     return this._definingPoint
@@ -53,8 +68,13 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   }
 
   /**
-   * The point that is used as the dimension leader's endpoint and is used in the text position
-   * calculations.
+   * Gets or sets the leader end point.
+   * 
+   * This point is used as the dimension leader's endpoint and is used in the text
+   * position calculations. It determines where the leader line ends and where the
+   * dimension text is positioned relative to the leader.
+   * 
+   * @returns The leader end point of the ordinate dimension
    */
   get leaderEndPoint() {
     return this._leaderEndPoint
@@ -64,6 +84,12 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   }
 
   /**
+   * Gets the geometric extents (bounding box) of this dimension entity.
+   * 
+   * The geometric extents define the minimum bounding box that completely contains
+   * the dimension entity, including all its components like the leader line and text.
+   * 
+   * @returns A 3D bounding box containing the dimension entity
    * @inheritdoc
    */
   get geometricExtents() {
@@ -72,6 +98,12 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   }
 
   /**
+   * Gets the number of arrow lines for this dimension.
+   * 
+   * Ordinate dimensions typically don't use arrows since they are coordinate-based
+   * measurements rather than distance measurements between two points.
+   * 
+   * @returns The number of arrow lines (always 0 for ordinate dimensions)
    * @inheritdoc
    */
   protected get arrowLineCount() {

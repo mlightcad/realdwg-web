@@ -1,31 +1,85 @@
 /**
+ * @fileoverview Event system implementation for the AutoCAD Common library.
+ * 
+ * This module provides a type-safe event dispatcher system that allows objects to
+ * emit and listen to events with proper TypeScript typing support.
+ * 
+ * @module AcCmEventDispatcher
+ * @version 1.0.0
+ */
+
+/**
  * The minimal basic Event that can be dispatched by a {@link AcCmEventDispatcher<>}.
+ * 
+ * @template TEventType - The string literal type of the event.
  */
 export interface AcCmBaseEvent<TEventType extends string = string> {
+  /** The type identifier for this event. */
   readonly type: TEventType
 }
 
 /**
  * The minimal expected contract of a fired Event that was dispatched by a {@link AcCmEventDispatcher<>}.
+ * 
+ * @template TEventType - The string literal type of the event.
+ * @template TTarget - The type of the object that dispatched the event.
  */
 export interface AcCmEvent<
   TEventType extends string = string,
   TTarget = unknown
 > {
+  /** The type identifier for this event. */
   readonly type: TEventType
+  /** The object that dispatched this event. */
   readonly target: TTarget
 }
 
+/**
+ * Type definition for event listener functions.
+ * 
+ * @template TEventData - The data payload type for the event.
+ * @template TEventType - The string literal type of the event.
+ * @template TTarget - The type of the object that dispatched the event.
+ */
 export type AcCmEventListener<
   TEventData,
   TEventType extends string,
   TTarget
 > = (event: TEventData & AcCmEvent<TEventType, TTarget>) => void
 
+/**
+ * Type-safe event dispatcher implementation.
+ * 
+ * Provides a robust event system that allows objects to emit and listen to events
+ * with full TypeScript type safety. Supports both typed event maps and dynamic events.
+ * 
+ * @template TEventMap - A record type mapping event names to their data payloads.
+ * 
+ * @example
+ * ```typescript
+ * // Define event types
+ * interface MyEvents {
+ *   load: { url: string }
+ *   error: { message: string }
+ * }
+ * 
+ * // Create dispatcher
+ * const dispatcher = new AcCmEventDispatcher<MyEvents>()
+ * 
+ * // Add listeners
+ * dispatcher.addEventListener('load', (event) => {
+ *   console.log(`Loaded: ${event.url}`)
+ * })
+ * 
+ * // Dispatch events
+ * dispatcher.dispatchEvent({ type: 'load', url: 'test.dwg' })
+ * ```
+ */
 // eslint-disable-next-line
 export class AcCmEventDispatcher<TEventMap extends {} = {}> {
   /**
    * Index a record of all callback functions
+   * @private
    */
   private _listeners: {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

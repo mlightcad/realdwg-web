@@ -10,72 +10,108 @@ import { AcDbObjectId } from 'base'
 
 import { AcDbEntity } from './AcDbEntity'
 
+/**
+ * Defines the clip boundary type for raster images.
+ */
 export enum AcDbRasterImageClipBoundaryType {
-  /**
-   * Undefined state
-   */
+  /** Undefined state */
   Invalid = 0,
-  /**
-   * Rectangle aligned with the image pixel coordinate system
-   */
+  /** Rectangle aligned with the image pixel coordinate system */
   Rect = 1,
-  /**
-   * Polygon with points entirely within the image boundary
-   */
+  /** Polygon with points entirely within the image boundary */
   Poly = 2
 }
 
 /**
- * The enum type to specify display options of one image.
+ * Defines the display options for raster images.
  */
 export enum AcDbRasterImageImageDisplayOpt {
-  /**
-   * Show image (or draw frame only)
-   */
+  /** Show image (or draw frame only) */
   Show = 1,
-  /**
-   * Show rotates images (or draw frame only)
-   */
+  /** Show rotates images (or draw frame only) */
   ShowUnAligned = 2,
-  /**
-   * Clip image
-   */
+  /** Clip image */
   Clip = 4,
-  /**
-   * Use transparent background for bitonal images (or use opaque background color)
-   */
+  /** Use transparent background for bitonal images (or use opaque background color) */
   Transparent = 8
 }
 
 /**
- * The AcDbRasterImage entity (or "image entity") works with the AcDbRasterImageDef object (or "image
- * definition object") to implement raster images inside AutoCAD. The relationship between these two
- * classes is much like the relationship between an AutoCAD block definition object and a block insert
- * entity.
- *
- * Two or more image entities can be linked to a single image definition object. Since each image entity
- * has its own clip boundary, this is an efficient way to display different regions of a single raster
- * image at different positions in the drawing.
+ * Represents a raster image entity in AutoCAD.
+ * 
+ * The AcDbRasterImage entity (or "image entity") works with the AcDbRasterImageDef object
+ * (or "image definition object") to implement raster images inside AutoCAD. The relationship
+ * between these two classes is much like the relationship between an AutoCAD block definition
+ * object and a block insert entity.
+ * 
+ * Two or more image entities can be linked to a single image definition object. Since each
+ * image entity has its own clip boundary, this is an efficient way to display different
+ * regions of a single raster image at different positions in the drawing.
+ * 
+ * @example
+ * ```typescript
+ * // Create a raster image entity
+ * const rasterImage = new AcDbRasterImage();
+ * rasterImage.position = new AcGePoint3d(0, 0, 0);
+ * rasterImage.width = 100;
+ * rasterImage.height = 75;
+ * rasterImage.scale = new AcGeVector2d(1, 1);
+ * rasterImage.rotation = 0;
+ * rasterImage.brightness = 50;
+ * rasterImage.contrast = 50;
+ * 
+ * // Access raster image properties
+ * console.log(`Position: ${rasterImage.position}`);
+ * console.log(`Width: ${rasterImage.width}`);
+ * console.log(`Height: ${rasterImage.height}`);
+ * ```
  */
 export class AcDbRasterImage extends AcDbEntity {
+  /** The current brightness value of the image (0-100) */
   private _brightness: number
+  /** The current contrast value of the image (0-100) */
   private _contrast: number
+  /** The current fade value of the image (0-100) */
   private _fade: number
+  /** The width of the image */
   private _width: number
+  /** The height of the image */
   private _height: number
+  /** The position of the image in WCS coordinates */
   private _position: AcGePoint3d
+  /** The rotation angle of the image in radians */
   private _rotation: number
+  /** The scale factors for the image */
   private _scale: AcGeVector2d
+  /** The clip boundary type */
   private _clipBoundaryType: AcDbRasterImageClipBoundaryType
+  /** The clip boundary points */
   private _clipBoundary: AcGePoint2d[]
+  /** The image definition object ID */
   private _imageDefId: AcDbObjectId
+  /** Whether the image is clipped */
   private _isClipped: boolean
+  /** Whether the image is shown */
   private _isImageShown: boolean
+  /** Whether the image is transparent */
   private _isImageTransparent: boolean
+  /** The image data as a Blob */
   private _image?: Blob
 
   /**
-   * Construct one instance of this class.
+   * Creates a new raster image entity.
+   * 
+   * This constructor initializes a raster image with default values.
+   * The brightness and contrast are set to 50, fade to 0, position to origin,
+   * scale to (1,1), rotation to 0, and clip boundary type to Rect.
+   * 
+   * @example
+   * ```typescript
+   * const rasterImage = new AcDbRasterImage();
+   * rasterImage.position = new AcGePoint3d(10, 20, 0);
+   * rasterImage.width = 200;
+   * rasterImage.height = 150;
+   * ```
    */
   constructor() {
     super()
@@ -96,7 +132,15 @@ export class AcDbRasterImage extends AcDbEntity {
   }
 
   /**
-   * The current brightness value of the image.
+   * Gets the current brightness value of the image.
+   * 
+   * @returns The brightness value (0-100)
+   * 
+   * @example
+   * ```typescript
+   * const brightness = rasterImage.brightness;
+   * console.log(`Image brightness: ${brightness}`);
+   * ```
    */
   get brightness() {
     return this._brightness

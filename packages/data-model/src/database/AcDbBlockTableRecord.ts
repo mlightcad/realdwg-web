@@ -6,16 +6,42 @@ import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
- * Objects of the block table record are used as containers for entities within drawing file
- * databases. There are two special BTRs that are always present in every database. They are
- * *Model_Space and *Paper_Space. They are the Model and Paper Spaces for the database.
+ * Block table record that serves as a container for entities within drawing databases.
+ * 
+ * Block table records (BTRs) are used to organize and group entities together.
+ * There are two special BTRs that are always present in every database:
+ * - *Model_Space: Contains entities in model space
+ * - *Paper_Space: Contains entities in paper space
+ * 
+ * Each block table record has an origin point and can contain multiple entities.
+ * 
+ * @example
+ * ```typescript
+ * const blockRecord = new AcDbBlockTableRecord();
+ * blockRecord.name = 'MyBlock';
+ * blockRecord.origin = new AcGePoint3d(0, 0, 0);
+ * blockRecord.appendEntity(new AcDbLine());
+ * ```
  */
 export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
+  /** Name constant for model space block table record */
   static MODEL_SPACE_NAME = '*Model_Space'
+  /** Name prefix for paper space block table records */
   static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
+  
+  /** The base point of the block in WCS coordinates */
   private _origin: AcGePoint3d
+  /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
 
+  /**
+   * Creates a new AcDbBlockTableRecord instance.
+   * 
+   * @example
+   * ```typescript
+   * const blockRecord = new AcDbBlockTableRecord();
+   * ```
+   */
   constructor() {
     super()
     this._origin = new AcGePoint3d()
@@ -23,7 +49,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Return true if it is model space block table record.
+   * Returns true if this is a model space block table record.
+   * 
+   * Model space is the primary drawing area where most entities are created.
+   * 
+   * @returns True if this is a model space block table record
+   * 
+   * @example
+   * ```typescript
+   * if (blockRecord.isModelSapce) {
+   *   console.log('This is model space');
+   * }
+   * ```
    */
   get isModelSapce() {
     return (
@@ -33,7 +70,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Return true if it is paper space block table record.
+   * Returns true if this is a paper space block table record.
+   * 
+   * Paper space is used for creating layouts for printing and plotting.
+   * 
+   * @returns True if this is a paper space block table record
+   * 
+   * @example
+   * ```typescript
+   * if (blockRecord.isPaperSapce) {
+   *   console.log('This is paper space');
+   * }
+   * ```
    */
   get isPaperSapce() {
     return this.name
@@ -42,8 +90,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * The base point of the block in WCS coordinates. This point is the origin of the MCS (which is the
-   * local WCS for the entities within the block table record).
+   * Gets or sets the base point of the block in WCS coordinates.
+   * 
+   * This point is the origin of the MCS (Model Coordinate System), which is the
+   * local WCS for the entities within the block table record.
+   * 
+   * @returns The origin point of the block
+   * 
+   * @example
+   * ```typescript
+   * const origin = blockRecord.origin;
+   * blockRecord.origin = new AcGePoint3d(10, 20, 0);
+   * ```
    */
   get origin() {
     return this._origin
@@ -53,8 +111,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Append the specified entity to this block table record.
-   * @param entity Input entity to append
+   * Appends the specified entity to this block table record.
+   * 
+   * This method adds an entity to the block and sets up the necessary
+   * relationships between the entity and the block table record.
+   * 
+   * @param entity - The entity to append to this block table record
+   * 
+   * @example
+   * ```typescript
+   * const line = new AcDbLine();
+   * blockRecord.appendEntity(line);
+   * ```
    */
   appendEntity(entity: AcDbEntity) {
     entity.database = this.database
@@ -72,19 +140,35 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Create an iterator object that can be used to iterate over the entities in the block table record.
-   *
-   * @returns Return an iterator object that can be used to iterate over the entities in the block table record.
+   * Creates an iterator object that can be used to iterate over the entities in the block table record.
+   * 
+   * @returns An iterator object that can be used to iterate over the entities
+   * 
+   * @example
+   * ```typescript
+   * const iterator = blockRecord.newIterator();
+   * for (const entity of iterator) {
+   *   console.log('Entity:', entity.type);
+   * }
+   * ```
    */
   newIterator(): AcDbObjectIterator<AcDbEntity> {
     return new AcDbObjectIterator(this._entities)
   }
 
   /**
-   * Search entities in this block table record with the specified id. If found, it return the entity.
-   * Otherwise, return undefined.
-   * @param id Input the entity id to search
-   * @returns If found the entity with the specified id, return it. Otherwise, return undefined.
+   * Searches for an entity in this block table record with the specified ID.
+   * 
+   * @param id - The entity ID to search for
+   * @returns The entity with the specified ID, or undefined if not found
+   * 
+   * @example
+   * ```typescript
+   * const entity = blockRecord.getIdAt('some-entity-id');
+   * if (entity) {
+   *   console.log('Found entity:', entity.type);
+   * }
+   * ```
    */
   getIdAt(id: string) {
     return this._entities.get(id)

@@ -11,7 +11,7 @@ import {
 import { AcDbEntity } from './AcDbEntity'
 
 /**
- * Hatch pattern type
+ * Defines the type of hatch pattern.
  */
 export enum AcDbHatchPatternType {
   /**
@@ -45,7 +45,7 @@ export enum AcDbHatchPatternType {
 }
 
 /**
- * Hatch style
+ * Defines the hatch style for determining which areas to hatch.
  */
 export enum AcDbHatchStyle {
   /**
@@ -68,20 +68,65 @@ export enum AcDbHatchStyle {
 }
 
 /**
- * The class represents the hatch entity in AutoCAD.
+ * Represents a hatch entity in AutoCAD.
+ * 
+ * A hatch is a 2D geometric object that fills an area with a pattern of lines, dots, or other shapes.
+ * Hatches are commonly used to represent materials, textures, or to distinguish different areas in drawings.
+ * 
+ * @example
+ * ```typescript
+ * // Create a hatch entity
+ * const hatch = new AcDbHatch();
+ * hatch.patternName = "ANSI31";
+ * hatch.patternType = AcDbHatchPatternType.Predefined;
+ * hatch.patternScale = 1.0;
+ * hatch.patternAngle = 0;
+ * hatch.hatchStyle = AcDbHatchStyle.Normal;
+ * 
+ * // Add a loop to define the hatch boundary
+ * const loop = new AcGeLoop2d();
+ * loop.add(new AcGePoint2d(0, 0));
+ * loop.add(new AcGePoint2d(10, 0));
+ * loop.add(new AcGePoint2d(10, 5));
+ * loop.add(new AcGePoint2d(0, 5));
+ * hatch.add(loop);
+ * 
+ * // Access hatch properties
+ * console.log(`Pattern name: ${hatch.patternName}`);
+ * console.log(`Pattern scale: ${hatch.patternScale}`);
+ * ```
  */
 export class AcDbHatch extends AcDbEntity {
+  /** The underlying geometric area object */
   private _geo: AcGeArea2d
+  /** The elevation (Z-coordinate) of the hatch plane */
   private _elevation: number
+  /** The definition lines for the hatch pattern */
   private _definitionLines: AcGiHatchPatternLine[]
+  /** The name of the hatch pattern */
   private _patternName: string
+  /** The type of hatch pattern */
   private _patternType: AcDbHatchPatternType
+  /** The angle of the hatch pattern in radians */
   private _patternAngle: number
+  /** The scale factor for the hatch pattern */
   private _patternScale: number
+  /** The hatch style for determining which areas to hatch */
   private _hatchStyle: AcDbHatchStyle
 
   /**
-   * Create one empty polyline
+   * Creates a new hatch entity.
+   * 
+   * This constructor initializes a hatch with default values.
+   * The elevation is 0, pattern type is Predefined, pattern scale is 1,
+   * pattern angle is 0, and hatch style is Normal.
+   * 
+   * @example
+   * ```typescript
+   * const hatch = new AcDbHatch();
+   * hatch.patternName = "ANSI31";
+   * hatch.patternScale = 2.0;
+   * ```
    */
   constructor() {
     super()
@@ -95,6 +140,17 @@ export class AcDbHatch extends AcDbEntity {
     this._hatchStyle = AcDbHatchStyle.Normal
   }
 
+  /**
+   * Gets the definition lines for the hatch pattern.
+   * 
+   * @returns Array of hatch pattern lines
+   * 
+   * @example
+   * ```typescript
+   * const definitionLines = hatch.definitionLines;
+   * console.log(`Number of definition lines: ${definitionLines.length}`);
+   * ```
+   */
   get definitionLines() {
     return this._definitionLines
   }

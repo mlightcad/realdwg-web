@@ -4,39 +4,88 @@ import { acdbHostApplicationServices, AcDbObjectId } from '../../base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../../database'
 import { AcDbLayout } from './AcDbLayout'
 
+/**
+ * Event arguments for layout-related events.
+ */
 export interface AcDbLayoutEventArgs {
+  /** The previous layout */
   oldLayout: AcDbLayout
+  /** The new layout */
   newLayout: AcDbLayout
 }
 
+/**
+ * Manages layout objects in a drawing database.
+ * 
+ * This class provides functionality for managing layouts, including creating,
+ * finding, renaming, and switching between layouts. It also provides event
+ * notifications when layouts are switched.
+ * 
+ * @example
+ * ```typescript
+ * const layoutManager = new AcDbLayoutManager();
+ * const layoutCount = layoutManager.countLayouts();
+ * const activeLayout = layoutManager.findActiveLayout();
+ * ```
+ */
 export class AcDbLayoutManager {
+  /**
+   * Events that can be triggered by the layout manager.
+   * 
+   * These events allow applications to respond to layout changes.
+   */
   public readonly events = {
+    /** Fired when the layout is switched */
     layoutSwitched: new AcCmEventManager<AcDbLayoutEventArgs>()
   }
+
   /**
-   * Return the number of items in the layout dictionary which should represent the number of
-   * AcDbLayout objects in the drawing. This includes the Model tab, which is always present.
-   * @param db Input drawing database to use. Default is the current database.
-   * @returns Return the number of items in the layout dictionary.
+   * Gets the number of layouts in the layout dictionary.
+   * 
+   * This includes the Model tab, which is always present.
+   * 
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns The number of layouts in the dictionary
+   * 
+   * @example
+   * ```typescript
+   * const count = layoutManager.countLayouts();
+   * console.log(`Number of layouts: ${count}`);
+   * ```
    */
   countLayouts(db?: AcDbDatabase) {
     return this.getWorkingDatabase(db).dictionaries.layouts.numEntries
   }
 
   /**
-   * Find the layout "name" in the database 'db' (or the workingDatabase if 'db' isn't provided)
-   * and return the layout object or undefined if no layout with that name is found.
-   * @param name Input name of layout to find.
-   * @param db Input drawing database to use. Default is the current database.
-   * @returns Return the layout object or undefined if no layout with that name is found.
+   * Finds a layout by name in the database.
+   * 
+   * @param name - Name of the layout to find
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns The layout object, or undefined if not found
+   * 
+   * @example
+   * ```typescript
+   * const layout = layoutManager.findLayoutNamed('A4 Landscape');
+   * if (layout) {
+   *   console.log('Found layout:', layout.layoutName);
+   * }
+   * ```
    */
   findLayoutNamed(name: string, db?: AcDbDatabase) {
     return this.getWorkingDatabase(db).dictionaries.layouts.getAt(name)
   }
 
   /**
-   * Return the name of the active layout in the database 'db' (or the workingDatabase if
-   * 'db' isn't provided).
+   * Gets the name of the active layout in the database.
+   * 
+   * @returns The name of the active layout, or 'Model' if no layout is active
+   * 
+   * @example
+   * ```typescript
+   * const activeLayoutName = layoutManager.findActiveLayout();
+   * console.log('Active layout:', activeLayoutName);
+   * ```
    */
   findActiveLayout() {
     const layout = this.getActiveLayout()
@@ -44,11 +93,19 @@ export class AcDbLayoutManager {
   }
 
   /**
-   * Make the layout object associated with the given object id the current layout
-   * in the active database.
-   * @param id Input object id for the layout object to make current
-   * @param db Input drawing database to use. Default is the current database.
-   * @returns Return true if setting current layout correctly. Otherwise, return false.
+   * Makes the layout object associated with the given object ID the current layout.
+   * 
+   * @param id - Object ID for the layout object to make current
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns True if setting the current layout was successful, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const success = layoutManager.setCurrentLayoutId('some-layout-id');
+   * if (success) {
+   *   console.log('Layout switched successfully');
+   * }
+   * ```
    */
   setCurrentLayoutId(id: AcDbObjectId, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
@@ -57,11 +114,16 @@ export class AcDbLayoutManager {
   }
 
   /**
-   * Make the layout object associated with the given block table record id the current layout
-   * in the active database.
-   * @param id Input object for the layout object to make current
-   * @param db Input drawing database to use. Default is the current database.
-   * @returns Return true if setting current layout correctly. Otherwise, return false.
+   * Makes the layout object associated with the given block table record ID the current layout.
+   * 
+   * @param id - Block table record ID for the layout object to make current
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns True if setting the current layout was successful, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const success = layoutManager.setCurrentLayoutBtrId('some-block-id');
+   * ```
    */
   setCurrentLayoutBtrId(id: AcDbObjectId, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
@@ -70,11 +132,16 @@ export class AcDbLayoutManager {
   }
 
   /**
-   * Set the layout named 'name' as the current layout in the database 'db' (or the
-   * workingDatabase if 'db' isn't provided).
-   * @param name Input the layout named 'name' as the current layout in the database.
-   * @param db Input drawing database to use. Default is the current database.
-   * @returns Return true if setting current layout correctly. Otherwise, return false.
+   * Sets the layout named 'name' as the current layout in the database.
+   * 
+   * @param name - Name of the layout to make current
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns True if setting the current layout was successful, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const success = layoutManager.setCurrentLayout('A4 Landscape');
+   * ```
    */
   setCurrentLayout(name: string, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
@@ -83,11 +150,17 @@ export class AcDbLayoutManager {
   }
 
   /**
-   * Rename the layout named "oldName" to the new name "newName" in the database 'db'
-   * (or the workingDatabase if 'db' isn't provided).
-   * @param oldName Input name of layout to rename.
-   * @param newName Input new name for layout.
-   * @param db Input drawing database to use. Default is the current database.
+   * Renames a layout in the database.
+   * 
+   * @param oldName - Current name of the layout to rename
+   * @param newName - New name for the layout
+   * @param db - Drawing database to use (defaults to the current database)
+   * @returns True if the layout was renamed successfully, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * const success = layoutManager.renameLayout('Old Name', 'New Name');
+   * ```
    */
   renameLayout(oldName: string, newName: string, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)

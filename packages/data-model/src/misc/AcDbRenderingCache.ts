@@ -6,15 +6,36 @@ import { AcDbBlockTableRecord } from '../database'
 
 /**
  * Internal class used to cache rendered results to avoid duplicated rendering.
- * It can be used to improve performance to render block references.
- * Because differnt color will result in different material, the block name and
- * color are used together to create the key.
+ * 
+ * This class can be used to improve performance when rendering block references.
+ * Because different colors will result in different materials, the block name and
+ * color are used together to create the cache key.
+ * 
  * @internal
+ * 
+ * @example
+ * ```typescript
+ * const cache = AcDbRenderingCache.instance;
+ * const key = cache.createKey('MyBlock', 0xFF0000);
+ * const renderedEntity = cache.draw(renderer, blockRecord, 0xFF0000);
+ * ```
  */
 export class AcDbRenderingCache {
+  /** Map of cached rendering results indexed by key */
   private _blocks: Map<string, AcGiEntity>
+  /** Singleton instance of the cache */
   private static _instance?: AcDbRenderingCache
 
+  /**
+   * Gets the singleton instance of the rendering cache.
+   * 
+   * @returns The singleton instance of AcDbRenderingCache
+   * 
+   * @example
+   * ```typescript
+   * const cache = AcDbRenderingCache.instance;
+   * ```
+   */
   static get instance() {
     if (!this._instance) {
       this._instance = new AcDbRenderingCache()
@@ -22,24 +43,46 @@ export class AcDbRenderingCache {
     return this._instance
   }
 
+  /**
+   * Creates a new AcDbRenderingCache instance.
+   * 
+   * @example
+   * ```typescript
+   * const cache = new AcDbRenderingCache();
+   * ```
+   */
   constructor() {
     this._blocks = new Map()
   }
 
   /**
-   * Create one key by combining the inputted name and the inputted color
-   * @param name Input the name
-   * @param color Input the color
+   * Creates a cache key by combining the block name and color.
+   * 
+   * @param name - The block name
+   * @param color - The color value
+   * @returns A unique key for the cache entry
+   * 
+   * @example
+   * ```typescript
+   * const key = cache.createKey('MyBlock', 0xFF0000);
+   * // Returns: "MyBlock_16711680"
+   * ```
    */
   createKey(name: string, color: number) {
     return `${name}_${color}`
   }
 
   /**
-   * Store rendering results of one block in the cache.
-   * @param key Input the key of the rendering results
-   * @param group Input rendering results with specified key
-   * @returns Return the inputted rendering results
+   * Stores rendering results of a block in the cache.
+   * 
+   * @param key - The key for the rendering results
+   * @param group - The rendering results to store
+   * @returns The stored rendering results (deep cloned)
+   * 
+   * @example
+   * ```typescript
+   * const renderedEntity = cache.set(key, entity);
+   * ```
    */
   set(key: string, group: AcGiEntity) {
     group = group.fastDeepClone()
@@ -48,10 +91,18 @@ export class AcDbRenderingCache {
   }
 
   /**
-   * Get rendering results with the specified key
-   * @param name Input the key of the rendering results
-   * @return Return rendering results with the specified key if found it.
-   * Othewise, return undefined.
+   * Gets rendering results with the specified key.
+   * 
+   * @param name - The key of the rendering results
+   * @returns The rendering results with the specified key, or undefined if not found
+   * 
+   * @example
+   * ```typescript
+   * const cachedEntity = cache.get('MyBlock_16711680');
+   * if (cachedEntity) {
+   *   // Use cached entity
+   * }
+   * ```
    */
   get(name: string) {
     let block = this._blocks.get(name)
@@ -62,33 +113,60 @@ export class AcDbRenderingCache {
   }
 
   /**
-   * Return true if the cache contains rendering results with the specified key.
-   * @param name Input the key of the rendering results
-   * @return Return true if the cache contains rendering results with the specified
-   * key. Otherwise, reutrn false.
+   * Checks if rendering results with the specified key exist in the cache.
+   * 
+   * @param name - The key to check
+   * @returns True if the key exists in the cache, false otherwise
+   * 
+   * @example
+   * ```typescript
+   * if (cache.has('MyBlock_16711680')) {
+   *   console.log('Cached result found');
+   * }
+   * ```
    */
   has(name: string) {
     return this._blocks.has(name)
   }
 
   /**
-   * Remove all of rendering results stored in the cache.
+   * Clears all cached rendering results.
+   * 
+   * @example
+   * ```typescript
+   * cache.clear();
+   * console.log('Cache cleared');
+   * ```
    */
   clear() {
     this._blocks.clear()
   }
 
   /**
-   * Render the specified the block. If rendering results of the block is already in cache,
-   * use cached data. Otherwise, render it and store rendered results in cache.
-   * @param renderer Input renderer used to render the block
-   * @param blockTableRecord Input the block to render
-   * @param color Input overriden color when color of entitis in the block is 'ByBlock'. If
-   * not specified, use color of entities directly.
-   * @param cache Input the flag whether to cache the rendering results
-   * @param transform Input matrix transform applied on the block
-   * @param normal Input extrusion direction of the block
-   * @returns Return rendering results of the block
+   * Draws a block table record and optionally caches the result.
+   * 
+   * This method renders the block table record using the specified renderer
+   * and color, and optionally stores the result in the cache for future use.
+   * 
+   * @param renderer - The renderer to use for drawing
+   * @param blockTableRecord - The block table record to draw
+   * @param color - The color to use for rendering
+   * @param cache - Whether to cache the rendering result (default: true)
+   * @param transform - Optional transformation matrix to apply
+   * @param normal - Optional normal vector
+   * @returns The rendered entity
+   * 
+   * @example
+   * ```typescript
+   * const renderedEntity = cache.draw(
+   *   renderer,
+   *   blockRecord,
+   *   0xFF0000,
+   *   true,
+   *   transform,
+   *   normal
+   * );
+   * ```
    */
   draw(
     renderer: AcGiRenderer,

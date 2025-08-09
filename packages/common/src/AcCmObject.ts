@@ -1,3 +1,14 @@
+/**
+ * @fileoverview Object model implementation for the AutoCAD Common library.
+ * 
+ * This module provides a reactive object model with attribute management,
+ * change tracking, and event notification. Inspired by Backbone.js Model
+ * but with TypeScript support and reduced dependencies.
+ * 
+ * @module AcCmObject
+ * @version 1.0.0
+ */
+
 import { AcCmEventManager } from './AcCmEventManager'
 import { clone, defaults, has, isEmpty, isEqual } from './AcCmLodashUtils'
 
@@ -72,22 +83,66 @@ export class AcCmObject<T extends AcCmAttributes = any> {
   }
 
   /**
-   * For strongly-typed access to attributes, use the `get` method only privately in public getter properties.
+   * Gets the value of an attribute.
+   * 
+   * For strongly-typed access to attributes, use the `get` method privately in public getter properties.
+   * 
+   * @template A - The key type extending string keys of T.
+   * @param {A} key - The attribute key to retrieve.
+   * @returns {T[A] | undefined} The attribute value or undefined if not set.
+   * 
    * @example
-   * get name(): string {
-   *    return super.get("name")
+   * ```typescript
+   * // Get a single attribute value
+   * const name = obj.get('name')
+   * const visible = obj.get('visible')
+   * 
+   * // Check if attribute exists
+   * if (obj.get('name') !== undefined) {
+   *   console.log('Name is set')
    * }
+   * 
+   * // For strongly-typed subclasses
+   * get name(): string {
+   *   return super.get("name")
+   * }
+   * ```
    */
   get<A extends AcCmStringKey<T>>(key: A): T[A] | undefined {
     return this.attributes[key]
   }
 
   /**
-   * For strongly-typed assignment of attributes, use the `set` method only privately in public setter properties.
+   * Sets one or more attributes on the object.
+   * 
+   * For strongly-typed assignment of attributes, use the `set` method privately in public setter properties.
+   * Triggers change events unless the `silent` option is specified.
+   * 
+   * @template A - The key type extending string keys of T.
+   * @param {A | Partial<T>} key - The attribute key or an object of key-value pairs.
+   * @param {T[A] | AcCmObjectOptions} [val] - The value to set or options when key is an object.
+   * @param {AcCmObjectOptions} [options] - Options for the set operation.
+   * @returns {this} The current instance for method chaining.
+   * 
    * @example
+   * ```typescript
+   * // Set a single attribute
+   * obj.set('name', 'MyEntity')
+   * 
+   * // Set multiple attributes
+   * obj.set({ name: 'MyEntity', visible: true })
+   * 
+   * // Set with options
+   * obj.set('name', 'MyEntity', { silent: true })
+   * 
+   * // Unset an attribute
+   * obj.set('name', undefined, { unset: true })
+   * 
+   * // For strongly-typed subclasses
    * set name(value: string) {
-   *    super.set("name", value)
+   *   super.set("name", value)
    * }
+   * ```
    */
   set<A extends AcCmStringKey<T>>(
     key: A,

@@ -18,25 +18,75 @@ import {
 import { AcDbEntity } from './AcDbEntity'
 
 /**
- * The class represents the mtext (multiline text) entity in AutoCAD.
+ * Represents a multiline text (mtext) entity in AutoCAD.
+ * 
+ * A multiline text entity is a 2D geometric object that displays formatted text
+ * with support for multiple lines, word wrapping, and rich text formatting.
+ * MText entities are more advanced than regular text entities and support
+ * features like background fills, line spacing, and attachment points.
+ * 
+ * @example
+ * ```typescript
+ * // Create a multiline text entity
+ * const mtext = new AcDbMText();
+ * mtext.contents = "This is a\nmultiline text\nwith formatting";
+ * mtext.height = 2.5;
+ * mtext.width = 20;
+ * mtext.location = new AcGePoint3d(0, 0, 0);
+ * mtext.attachmentPoint = AcGiMTextAttachmentPoint.TopLeft;
+ * 
+ * // Access mtext properties
+ * console.log(`Contents: ${mtext.contents}`);
+ * console.log(`Height: ${mtext.height}`);
+ * console.log(`Width: ${mtext.width}`);
+ * ```
  */
 export class AcDbMText extends AcDbEntity {
+  /** The height of the text */
   private _height: number
+  /** The maximum width for word wrap formatting */
   private _width: number
+  /** The text contents */
   private _contents: string
+  /** The line spacing style */
   private _lineSpacingStyle: number
+  /** The line spacing factor */
   private _lineSpacingFactor: number
+  /** Whether background fill is enabled */
   private _backgroundFill: boolean
+  /** The background fill color */
   private _backgroundFillColor: number
+  /** The background scale factor */
   private _backgroundScaleFactor: number
+  /** The background fill transparency */
   private _backgroundFillTransparency: number
+  /** The rotation angle in radians */
   private _rotation: number
+  /** The text style name */
   private _styleName: string
+  /** The location point of the text */
   private _location: AcGePoint3d
+  /** The attachment point for the text */
   private _attachmentPoint: AcGiMTextAttachmentPoint
+  /** The direction vector of the text */
   private _direction: AcGeVector3d
+  /** The drawing direction of the text */
   private _drawingDirection: AcGiMTextFlowDirection
 
+  /**
+   * Creates a new multiline text entity.
+   * 
+   * This constructor initializes an mtext entity with default values.
+   * The contents are empty, height and width are 0, and the location is at the origin.
+   * 
+   * @example
+   * ```typescript
+   * const mtext = new AcDbMText();
+   * mtext.contents = "Sample multiline text";
+   * mtext.height = 3.0;
+   * mtext.width = 15;
+   * ```
+   */
   constructor() {
     super()
     this._contents = ''
@@ -57,43 +107,112 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
-   * Returns a string that contains the contents of the mtext object. Formatting data used for word
-   * wrap calculations is removed
+   * Gets the contents of the mtext object.
+   * 
+   * This returns a string that contains the contents of the mtext object.
+   * Formatting data used for word wrap calculations is removed.
+   * 
+   * @returns The text contents
+   * 
+   * @example
+   * ```typescript
+   * const contents = mtext.contents;
+   * console.log(`Text contents: ${contents}`);
+   * ```
    */
   get contents() {
     return this._contents
   }
+
+  /**
+   * Sets the contents of the mtext object.
+   * 
+   * @param value - The new text contents
+   * 
+   * @example
+   * ```typescript
+   * mtext.contents = "New multiline\ntext content";
+   * ```
+   */
   set contents(value: string) {
     this._contents = value
   }
 
   /**
-   * The height of the text.
+   * Gets the height of the text.
+   * 
+   * @returns The text height
+   * 
+   * @example
+   * ```typescript
+   * const height = mtext.height;
+   * console.log(`Text height: ${height}`);
+   * ```
    */
   get height() {
     return this._height
   }
+
+  /**
+   * Sets the height of the text.
+   * 
+   * @param value - The new text height
+   * 
+   * @example
+   * ```typescript
+   * mtext.height = 5.0;
+   * ```
+   */
   set height(value: number) {
     this._height = value
   }
 
   /**
-   * The maximum width setting used by the MText object for word wrap formatting. It is possible that
-   * none of the lines resulting from word wrap formatting will reach this width value. Words which
-   * exceed this width value will not be broken, but will extend beyond the given width.
+   * Gets the maximum width setting used by the MText object for word wrap formatting.
+   * 
+   * It is possible that none of the lines resulting from word wrap formatting will
+   * reach this width value. Words which exceed this width value will not be broken,
+   * but will extend beyond the given width.
+   * 
+   * @returns The maximum width for word wrap
+   * 
+   * @example
+   * ```typescript
+   * const width = mtext.width;
+   * console.log(`Text width: ${width}`);
+   * ```
    */
   get width() {
     return this._width
   }
+
+  /**
+   * Sets the maximum width setting used by the MText object for word wrap formatting.
+   * 
+   * @param value - The new maximum width for word wrap
+   * 
+   * @example
+   * ```typescript
+   * mtext.width = 25;
+   * ```
+   */
   set width(value: number) {
     this._width = value
   }
 
   /**
-   * The rotation angle of the text. The rotation angle is relative to the X axis of the text's OCS,
-   * with positive angles going counterclockwise when looking down the Z axis toward the origin. The
-   * OCS X axis is determined by using the text's normal vector, the WCS Z axis, and the arbitrary
-   * axis algorithm.
+   * Gets the rotation angle of the text.
+   * 
+   * The rotation angle is relative to the X axis of the text's OCS, with positive
+   * angles going counterclockwise when looking down the Z axis toward the origin.
+   * 
+   * @returns The rotation angle in radians
+   * 
+   * @example
+   * ```typescript
+   * const rotation = mtext.rotation;
+   * console.log(`Rotation: ${rotation} radians (${rotation * 180 / Math.PI} degrees)`);
+   * ```
    */
   get rotation() {
     return this._rotation

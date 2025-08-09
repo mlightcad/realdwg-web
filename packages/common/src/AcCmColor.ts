@@ -1,3 +1,20 @@
+/**
+ * @fileoverview This module provides color handling functionality for AutoCAD files,
+ * including color representation, color name mapping, and color index conversion.
+ * 
+ * The module supports various color formats including RGB values, named colors,
+ * AutoCAD color indices, and special values like "ByLayer" and "ByBlock".
+ * 
+ * @module AcCmColor
+ * @version 1.0.0
+ */
+
+/**
+ * Mapping of CSS color names to their corresponding RGB values.
+ * These are standard web color names that can be used for color representation.
+ * 
+ * @internal
+ */
 const _colorKeywords: Record<string, number> = {
   aliceblue: 0xf0f8ff,
   antiquewhite: 0xfaebd7,
@@ -146,10 +163,14 @@ const _colorKeywords: Record<string, number> = {
 }
 
 /**
- * AutoCAD files sometimes use an indexed color value between 1 and 255 inclusive.
- * Each value corresponds to a color. index 1 is red, that is 16711680 or 0xFF0000.
- * index 0 and 256, while included in this array, are actually reserved for inheritance
- * values in AutoCAD so they should not be used for index color lookups.
+ * AutoCAD color index array mapping index values (1-255) to RGB color values.
+ * Each value corresponds to a color. Index 1 is red, that is 16711680 or 0xFF0000.
+ * Index 0 and 256, while included in this array, are actually reserved for inheritance
+ * values in AutoCAD so they should not be used for index color lookups:
+ * - Index 0: "ByBlock" - entity uses color of the block reference
+ * - Index 256: "ByLayer" - entity uses color specified in the layer
+ * 
+ * @internal
  */
 const AUTO_CAD_COLOR_INDEX = [
   0, 16711680, 16776960, 65280, 65535, 255, 16711935, 16777215, 8421504,
@@ -185,26 +206,55 @@ const AUTO_CAD_COLOR_INDEX = [
   14079702, 16777215, 0
 ]
 
-function clamp(value: number, min: number, max: number) {
+/**
+ * Clamps a value between a minimum and maximum value.
+ * 
+ * @param {number} value - The value to clamp.
+ * @param {number} min - The minimum value.
+ * @param {number} max - The maximum value.
+ * @returns {number} The clamped value.
+ * @internal
+ */
+function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value))
 }
 
+/**
+ * Represents a color in AutoCAD, supporting various color formats.
+ * 
+ * @class AcCmColor
+ * @version 1.0.0
+ */
 export class AcCmColor {
   private _colorIndex: number | null
   private _color: number | null
   private _colorName: string | null
   static NAMES = _colorKeywords
 
+  /**
+   * Constructs a new AcCmColor instance.
+   * Initializes the color to "ByLayer" (index 256) and null RGB values.
+   */
   constructor() {
     this._colorIndex = 256
     this._color = null
     this._colorName = null
   }
 
+  /**
+   * Gets the current color value.
+   * 
+   * @returns {number | null} The color value (RGB or index).
+   */
   get color() {
     return this._color
   }
 
+  /**
+   * Sets the color value.
+   * 
+   * @param {number | null} value - The color value to set (RGB or index).
+   */
   set color(value: number | null) {
     if (value == null) {
       this._color = null
@@ -215,6 +265,11 @@ export class AcCmColor {
     }
   }
 
+  /**
+   * Gets the hexadecimal representation of the current color.
+   * 
+   * @returns {string} The hexadecimal color string (e.g., "0xFFFFFF").
+   */
   get hexColor() {
     // Ensure the number is a valid RGB value
     if (this._color && this._color > 0 && this._color <= 0xffffff) {
@@ -228,33 +283,61 @@ export class AcCmColor {
     return ''
   }
 
+  /**
+   * Gets the CSS RGB color string representation.
+   * 
+   * @returns {string} The CSS RGB color string (e.g., "rgb(255,255,255)").
+   */
   get cssColor() {
     return `rgb(${this.red},${this.green},${this.blue})`
   }
 
+  /**
+   * Gets the red component of the current color.
+   * 
+   * @returns {number | null} The red component (0-255).
+   */
   get red() {
     return this.color ? (this.color >> 16) & 255 : null
   }
 
+  /**
+   * Gets the green component of the current color.
+   * 
+   * @returns {number | null} The green component (0-255).
+   */
   get green() {
     return this.color ? (this.color >> 8) & 255 : null
   }
 
+  /**
+   * Gets the blue component of the current color.
+   * 
+   * @returns {number | null} The blue component (0-255).
+   */
   get blue() {
     return this.color ? this.color & 255 : null
   }
 
   /**
-   * AutoCAD color index value. The index value will be in the range 0 to 256. 0 and 256 are special values.
-   * If value less than 0 is set, 0 will be used. If value greater than 256 is set, 256 will be used.
-   * - 0 indicates that the entity uses the color of the BlockReference that's displaying it. If the entity
-   * is not displayed through a block reference (for example, it is directly owned by the model space
-   * block table record) and its color is 0, then it will display as though its color were 7.
-   * - 256 indicates that the entity uses the color specified in the layer table record it references.
+   * Gets the AutoCAD color index value. The index value will be in the range 0 to 256.
+   * 0 and 256 are special values.
+   * 
+   * @returns {number | null} The color index.
    */
   get colorIndex() {
     return this._colorIndex
   }
+  /**
+   * Sets the AutoCAD color index value. If value less than 0 is set, 0 will be used. If value greater than
+   * 256 is set, 256 will be used.
+   * - 0 indicates that the entity uses the color of the BlockReference that's displaying it. If the entity
+   * is not displayed through a block reference (for example, it is directly owned by the model space
+   * block table record) and its color is 0, then it will display as though its color were 7.
+   * - 256 indicates that the entity uses the color specified in the layer table record it references.
+   * 
+   * @param {number | null} value - The color index to set (0-256).
+   */
   set colorIndex(value: number | null) {
     if (value == null) {
       this._colorIndex = null
@@ -265,9 +348,19 @@ export class AcCmColor {
     }
   }
 
+  /**
+   * Gets the name of the current color.
+   * 
+   * @returns {string | null} The color name.
+   */
   get colorName() {
     return this._colorName
   }
+  /**
+   * Sets the color by name.
+   * 
+   * @param {string | null} value - The color name to set.
+   */
   set colorName(value: string | null) {
     if (value) {
       const color = _colorKeywords[value.toLowerCase()]
@@ -285,35 +378,79 @@ export class AcCmColor {
     }
   }
 
+  /**
+   * Checks if the color has a name.
+   * 
+   * @returns {boolean} True if the color has no name, false otherwise.
+   */
   get hasColorName() {
     return this._colorName == null
   }
 
+  /**
+   * Checks if the color has an index.
+   * 
+   * @returns {boolean} True if the color has no index, false otherwise.
+   */
   get hasColorIndex() {
     return this._colorIndex == null
   }
 
+  /**
+   * Checks if the color is set to "ByLayer".
+   * 
+   * @returns {boolean} True if the color is "ByLayer", false otherwise.
+   */
   get isByLayer() {
     return this.colorIndex == 256
   }
+  /**
+   * Sets the color to "ByLayer".
+   * 
+   * @returns {AcCmColor} The current instance.
+   */
   setByLayer() {
     this.colorIndex = 256
     return this
   }
 
+  /**
+   * Checks if the color is set to "ByBlock".
+   * 
+   * @returns {boolean} True if the color is "ByBlock", false otherwise.
+   */
   get isByBlock() {
     return this.colorIndex == 0
   }
+  /**
+   * Sets the color to "ByBlock".
+   * 
+   * @returns {AcCmColor} The current instance.
+   */
   setByBlock() {
     this.colorIndex = 0
     return this
   }
 
+  /**
+   * Sets the color using a scalar value (RGB).
+   * 
+   * @param {number} scalar - The scalar value (0-255).
+   * @returns {AcCmColor} The current instance.
+   */
   setScalar(scalar: number) {
     this.setRGB(scalar, scalar, scalar)
     return this
   }
 
+  /**
+   * Sets the color using RGB values.
+   * 
+   * @param {number} r - The red component (0-255).
+   * @param {number} g - The green component (0-255).
+   * @param {number} b - The blue component (0-255).
+   * @returns {AcCmColor} The current instance.
+   */
   setRGB(r: number, g: number, b: number) {
     const red = Math.round(clamp(r, 0, 255))
     const green = Math.round(clamp(g, 0, 255))
@@ -322,6 +459,12 @@ export class AcCmColor {
     return this
   }
 
+  /**
+   * Sets the color by name.
+   * 
+   * @param {string} style - The color name to set.
+   * @returns {AcCmColor} The current instance.
+   */
   setColorName(style: string) {
     const color = _colorKeywords[style.toLowerCase()]
     if (color !== undefined) {
@@ -334,6 +477,11 @@ export class AcCmColor {
     return this
   }
 
+  /**
+   * Clones the current AcCmColor instance.
+   * 
+   * @returns {AcCmColor} A new AcCmColor instance with the same color and index.
+   */
   clone() {
     const clonedColor = new AcCmColor()
     clonedColor.colorIndex = this.colorIndex
@@ -342,6 +490,12 @@ export class AcCmColor {
     return this
   }
 
+  /**
+   * Copies the color from another AcCmColor instance.
+   * 
+   * @param {AcCmColor} color - The color to copy from.
+   * @returns {AcCmColor} The current instance.
+   */
   copy(color: AcCmColor) {
     this.colorIndex = color.colorIndex
     this.color = color.color
@@ -349,6 +503,12 @@ export class AcCmColor {
     return this
   }
 
+  /**
+   * Checks if two AcCmColor instances are equal.
+   * 
+   * @param {AcCmColor} c - The color to compare with.
+   * @returns {boolean} True if the colors and their indices are the same.
+   */
   equals(c: AcCmColor) {
     return (
       c.color == this.color &&
@@ -357,6 +517,11 @@ export class AcCmColor {
     )
   }
 
+  /**
+   * Returns a string representation of the color.
+   * 
+   * @returns {string} The color name or hexadecimal string.
+   */
   toString() {
     if (this.isByLayer) {
       return 'ByLayer'
@@ -369,6 +534,13 @@ export class AcCmColor {
     }
   }
 
+  /**
+   * Finds the color name associated with a given RGB value.
+   * 
+   * @private
+   * @param {number} target - The RGB value to find a name for.
+   * @returns {string | null} The color name if found, null otherwise.
+   */
   private getColorNameByValue(target: number) {
     for (const [key, value] of Object.entries(_colorKeywords)) {
       if (value === target) {
@@ -378,6 +550,13 @@ export class AcCmColor {
     return null
   }
 
+  /**
+   * Finds the AutoCAD color index associated with a given RGB value.
+   * 
+   * @private
+   * @param {number} target - The RGB value to find an index for.
+   * @returns {number | null} The color index if found, null otherwise.
+   */
   private getColorIndexByValue(target: number) {
     const length = AUTO_CAD_COLOR_INDEX.length - 1
     for (let index = 1; index < length; ++index) {

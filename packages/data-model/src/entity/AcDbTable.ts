@@ -16,39 +16,71 @@ import {
 import { AcDbTextStyleTableRecord } from '../database'
 import { AcDbBlockReference } from './AcDbBlockReference'
 
+/**
+ * Interface defining the properties of a table cell within an AcDbTable entity.
+ * 
+ * Table cells can contain various types of content including text, blocks, and other
+ * entities. Each cell has properties that control its appearance, content, and behavior.
+ */
 export interface AcDbTableCell {
+  /** The text content displayed in the cell */
   text: string
+  /** The attachment point for text positioning within the cell */
   attachmentPoint: AcGiMTextAttachmentPoint
+  /** Optional text style name for the cell content */
   textStyle?: string
+  /** Optional rotation angle for the cell content in radians */
   rotation?: number
+  /** The type of cell (text, block, etc.) */
   cellType: number
+  /** Optional flag value for cell behavior */
   flagValue?: number
+  /** Optional value indicating merged cell information */
   mergedValue?: number
+  /** Optional auto-fit behavior setting */
   autoFit?: number
+  /** Optional border width for merged cells */
   borderWidth?: number
+  /** Optional border height for merged cells */
   borderHeight?: number // applicable for merged cells
+  /** Optional override flag for cell properties */
   overrideFlag?: number
+  /** Optional virtual edge flag for cell borders */
   virtualEdgeFlag?: number
+  /** Optional field object ID for text type cells */
   fieldObjetId?: string // only for text type cell
+  /** Optional block table record ID for block type cells */
   blockTableRecordId?: string
+  /** Optional scale factor for block type cells */
   blockScale?: number
+  /** Optional number of block attributes */
   blockAttrNum?: number
+  /** Optional array of attribute definition IDs */
   attrDefineId?: string[]
+  /** Optional attribute text content */
   attrText?: string
+  /** The height of text in the cell */
   textHeight: number
+  /** Extended cell flags from AutoCAD 2007 and later */
   extendedCellFlags?: number // from AutoCAD 2007
 }
 
 const tempVector = /*@__PURE__*/ new AcGeVector3d()
 
 /**
- * The class represents the table entity in AutoCAD. A table is generally thought of as an n x m rectangular
- * array of cells whose contents consist of annotation objects, primarily text. Tables often contain a title
- * row, a header row, and multiple data rows.
+ * Represents a table entity in AutoCAD.
+ * 
+ * A table is generally thought of as an n x m rectangular array of cells whose contents
+ * consist of annotation objects, primarily text. Tables often contain a title row, a
+ * header row, and multiple data rows.
  *
- * After creating a new table object using the constructor, applications usually need to set the table style,
- * number of rows and columns, column width, row height, insert position, width direction, and normal vector.
- * Applications can also enter text or block contents into each cell using methods of this class.
+ * After creating a new table object using the constructor, applications usually need to
+ * set the table style, number of rows and columns, column width, row height, insert
+ * position, width direction, and normal vector. Applications can also enter text or
+ * block contents into each cell using methods of this class.
+ * 
+ * Tables are commonly used for bills of materials, schedules, data sheets, and other
+ * tabular information in technical drawings and documentation.
  */
 export class AcDbTable extends AcDbBlockReference {
   private _attachmentPoint: AcGiMTextAttachmentPoint
@@ -58,6 +90,13 @@ export class AcDbTable extends AcDbBlockReference {
   private _columnWidth: number[]
   private _cells: AcDbTableCell[]
 
+  /**
+   * Creates a new table entity.
+   * 
+   * @param name - The name of the table block reference
+   * @param numRows - The number of rows in the table
+   * @param numColumns - The number of columns in the table
+   */
   constructor(name: string, numRows: number, numColumns: number) {
     super(name)
     this._attachmentPoint = AcGiMTextAttachmentPoint.TopLeft
@@ -69,7 +108,12 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * Cell alignment value of this table.
+   * Gets or sets the cell alignment value for this table.
+   * 
+   * This property controls how text is positioned within table cells by default.
+   * Individual cells can override this setting with their own attachment point.
+   * 
+   * @returns The default attachment point for table cells
    */
   get attachmentPoint() {
     return this._attachmentPoint
@@ -79,7 +123,11 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * The number of rows in the table.
+   * Gets or sets the number of rows in the table.
+   * 
+   * Changing this value will resize the table and may affect existing cell data.
+   * 
+   * @returns The current number of rows in the table
    */
   get numRows() {
     return this._numRows
@@ -89,7 +137,11 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * The number of columns in the table.
+   * Gets or sets the number of columns in the table.
+   * 
+   * Changing this value will resize the table and may affect existing cell data.
+   * 
+   * @returns The current number of columns in the table
    */
   get numColumns() {
     return this._numColumns
@@ -99,10 +151,11 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * Get the number of contents in the specified cell.
-   * @param row Input row index. It should be more than or equal to 0 and less than the number of rows.
-   * @param col Input column index. It should be more than or equal to 0 and less than the number of columns.
-   * @returns Return the number of contents in the specified cell.
+   * Gets the number of contents in the specified cell.
+   * 
+   * @param row - Row index. Must be greater than or equal to 0 and less than the number of rows
+   * @param col - Column index. Must be greater than or equal to 0 and less than the number of columns
+   * @returns The number of contents in the specified cell
    */
   // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
   numContents(row: number, col: number) {
@@ -111,55 +164,68 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * Get the row height of the specified row in the table.
-   * @param index Input zero-based row index
-   * @returns Return the row height of the specified row in the table.
+   * Gets the row height of the specified row in the table.
+   * 
+   * @param index - Zero-based row index
+   * @returns The row height of the specified row in the table
    */
   rowHeight(index: number) {
     return this._rowHeight[index]
   }
+  
   /**
-   * Set the row height for the specified row index in the table.
-   * @param index Input zero-based row index
-   * @param height Input height to be used for the specified row
+   * Sets the row height for the specified row index in the table.
+   * 
+   * @param index - Zero-based row index
+   * @param height - Height to be used for the specified row
    */
   setRowHeight(index: number, height: number) {
     this._rowHeight[index] = height
   }
+  
   /**
-   * Set a uniform row height for all the rows in the table.
-   * @param height Input height to be used for all the rows in the table
+   * Sets a uniform row height for all the rows in the table.
+   * 
+   * @param height - Height to be used for all the rows in the table
    */
   setUniformRowHeight(height: number) {
     this._rowHeight.fill(height)
   }
 
   /**
-   * Get the column width at the specified column index in the table.
+   * Gets the column width at the specified column index in the table.
+   * 
+   * @param index - Zero-based column index
+   * @returns The width of the specified column
    */
   columnWidth(index: number) {
     return this._columnWidth[index]
   }
+  
   /**
-   * Set a uniform column width for all the columns in the table.
-   * @param width Input uniform width to be used for all the columns in the table
+   * Sets a uniform column width for all the columns in the table.
+   * 
+   * @param width - Uniform width to be used for all the columns in the table
    */
   setUniformColumnWidth(width: number) {
     this._columnWidth.fill(width)
   }
+  
   /**
-   * Set the column width at the specified column index in the table.
-   * @param index Input zero-based column index
-   * @param width Input width to be used for the specified column
+   * Sets the column width at the specified column index in the table.
+   * 
+   * @param index - Zero-based column index
+   * @param width - Width to be used for the specified column
    */
   setColumnWidth(index: number, width: number) {
     this._columnWidth[index] = width
   }
 
   /**
-   * Get the cell by index.
-   * @param index Input cell index
-   * @returns Return the specified cell by index
+   * Gets the cell at the specified index.
+   * 
+   * @param index - Cell index (calculated as row * numColumns + column)
+   * @returns The specified cell by index, or undefined if index is out of range
    */
   cell(index: number) {
     if (index < 0 || index >= this._cells.length) return undefined
@@ -167,18 +233,22 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * Set the cell by index.
-   * @param index Input cell index
+   * Sets the cell at the specified index.
+   * 
+   * @param index - Cell index (calculated as row * numColumns + column)
+   * @param cell - The cell data to set
    */
   setCell(index: number, cell: AcDbTableCell) {
     this._cells[index] = cell
   }
 
   /**
-   * Get text string in the specified cell.
-   * @param row Input integer specifying the zero-based row index for the cell
-   * @param col Input integer specifying the zero-based column index for the cell
-   * @param content Input content index. It should be more than or equal to 0 and less than the number of contents.
+   * Gets the text string in the specified cell.
+   * 
+   * @param row - Integer specifying the zero-based row index for the cell
+   * @param col - Integer specifying the zero-based column index for the cell
+   * @param content - Content index. Should be greater than or equal to 0 and less than the number of contents
+   * @returns The text string in the specified cell
    */
   // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
   textString(row: number, col: number, content?: number) {
@@ -186,26 +256,34 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
-   * Set the text for the first content at the specified content index.
-   * @param row Input integer specifying the zero-based row index for the cell
-   * @param col Input integer specifying the zero-based column index for the cell
-   * @param text Input text string
+   * Sets the text for the first content at the specified content index.
+   * 
+   * @param row - Integer specifying the zero-based row index for the cell
+   * @param col - Integer specifying the zero-based column index for the cell
+   * @param text - Text string to set
    */
   setTextString(row: number, col: number, text: string) {
     this._cells[row * col].text = text
   }
 
   /**
-   * Return true if the content of the specified cell is empty
-   * @param row Input integer specifying the zero-based row index for the cell
-   * @param col Input integer specifying the zero-based column index for the cell
-   * @returns Return true if the content of the specified cell is empty. Otherwise, return false.
+   * Checks if the content of the specified cell is empty.
+   * 
+   * @param row - Integer specifying the zero-based row index for the cell
+   * @param col - Integer specifying the zero-based column index for the cell
+   * @returns True if the content of the specified cell is empty, false otherwise
    */
   isEmpty(row: number, col: number) {
     return !this._cells[row * col].text
   }
 
   /**
+   * Gets the geometric extents (bounding box) of this table entity.
+   * 
+   * The geometric extents define the minimum bounding box that completely contains
+   * the table entity, including all its cells, borders, and content.
+   * 
+   * @returns A 3D bounding box containing the table entity
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
@@ -214,6 +292,14 @@ export class AcDbTable extends AcDbBlockReference {
   }
 
   /**
+   * Renders the table entity using the specified graphics renderer.
+   * 
+   * This method draws the table structure including borders, cell content, and text.
+   * It handles the rendering of individual cells, merged cells, and applies the
+   * appropriate transformations and styling.
+   * 
+   * @param renderer - The graphics renderer used to draw the table
+   * @returns The rendered graphics entity representing the table
    * @inheritdoc
    */
   draw(renderer: AcGiRenderer): AcGiEntity {
@@ -329,6 +415,19 @@ export class AcDbTable extends AcDbBlockReference {
     return group
   }
 
+  /**
+   * Marks cells as visited to handle merged cell rendering.
+   * 
+   * This method prevents duplicate rendering of merged cells by marking all
+   * constituent cells as visited.
+   * 
+   * @param visited - Array tracking which cells have been processed
+   * @param currentIndex - Index of the current cell being processed
+   * @param columnCount - Total number of columns in the table
+   * @param columnSpan - Number of columns this cell spans
+   * @param rowSpan - Number of rows this cell spans
+   * @private
+   */
   private fillVisited(
     visited: boolean[],
     currentIndex: number,
@@ -347,6 +446,16 @@ export class AcDbTable extends AcDbBlockReference {
     }
   }
 
+  /**
+   * Gets the text style for a specific cell.
+   * 
+   * This method retrieves the appropriate text style for the cell, falling back
+   * to the standard style if no specific style is specified.
+   * 
+   * @param cell - The cell for which to get the text style
+   * @returns The text style configuration for the cell
+   * @private
+   */
   private getTextStyle(cell: AcDbTableCell): AcGiBaseTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
     let style: AcDbTextStyleTableRecord | undefined
@@ -360,6 +469,18 @@ export class AcDbTable extends AcDbBlockReference {
     return style.textStyle
   }
 
+  /**
+   * Calculates the text offset within a table cell based on attachment point.
+   * 
+   * This method determines the appropriate positioning offset for text within
+   * a cell based on the specified attachment point and cell dimensions.
+   * 
+   * @param textAlign - The text alignment/attachment point value
+   * @param width - The width of the cell
+   * @param height - The height of the cell
+   * @returns A vector representing the text offset from the cell corner
+   * @private
+   */
   private getTableTextOffset(textAlign: number, width: number, height: number) {
     const offset = new AcGeVector3d()
     switch (textAlign) {
