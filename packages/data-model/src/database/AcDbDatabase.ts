@@ -635,25 +635,19 @@ export class AcDbDatabase extends AcDbObject {
    */
   async openUri(url: string, options: AcDbOpenDatabaseOptions): Promise<void> {
     const response = await fetch(url)
-    const blob = await response.blob()
+    if (!response.ok) {
+      throw new Error(`Failed to fetch file '${url}' with HTTP status codee '${response.status}'!`)
+    }
 
-    const reader = new FileReader()
     const fileExtension = url.toLowerCase().split('.').pop()
-    
     if (fileExtension === 'dwg') {
       // DWG files are binary, read as ArrayBuffer
-      reader.onload = event => {
-        const content = event.target?.result
-        if (content) this.read(content as ArrayBuffer, options, AcDbFileType.DWG)
-      }
-      reader.readAsArrayBuffer(blob)
+      const content = await response.arrayBuffer()
+      await this.read(content, options, AcDbFileType.DWG)
     } else {
       // Default to DXF files (text-based) or fallback
-      reader.onload = event => {
-        const content = event.target?.result
-        if (content) this.read(content as string, options, AcDbFileType.DXF)
-      }
-      reader.readAsText(blob)
+      const content = await response.text()
+      await this.read(content, options, AcDbFileType.DXF)
     }
   }
 
