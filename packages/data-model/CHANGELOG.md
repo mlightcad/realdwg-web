@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.4
+
+### Patch Changes
+
+- feat: add 'FETCH_FILE' stage in AcDbDatabase.events.openProgress event
+
 ## 1.1.3
 
 ### Patch Changes

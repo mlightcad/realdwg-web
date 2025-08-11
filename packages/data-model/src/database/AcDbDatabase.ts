@@ -16,10 +16,7 @@ import {
 } from '../object'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
-import {
-  AcDbConversionStage,
-  AcDbConversionStageStatus
-} from './AcDbDatabaseConverter'
+import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
 import { AcDbDimStyleTable } from './AcDbDimStyleTable'
 import { AcDbLayerTable } from './AcDbLayerTable'
 import {
@@ -59,6 +56,11 @@ export interface AcDbLayerModifiedEventArgs extends AcDbLayerEventArgs {
 }
 
 /**
+ * The stage of opening one drawing file
+ */
+export type AcDbOpenFileStage = 'FETCH_FILE' | 'CONVERSION'
+
+/**
  * Event arguments for progress events during database operations.
  */
 export interface AcDbProgressdEventArgs {
@@ -66,10 +68,12 @@ export interface AcDbProgressdEventArgs {
   database: AcDbDatabase
   /** The progress percentage (0-100) */
   percentage: number
-  /** The current conversion stage */
-  stage: AcDbConversionStage
+  /** The current stage of opening one drawing file */
+  stage: AcDbOpenFileStage
+  /** The current sub stage */
+  subStage?: AcDbConversionStage
   /** The status of the current stage */
-  stageStatus: AcDbConversionStageStatus
+  stageStatus: AcDbStageStatus
 }
 
 /**
@@ -84,7 +88,7 @@ export interface AcDbHeaderSysVarEventArgs {
 
 /**
  * Font information structure.
- * 
+ *
  * Contains information about a font including its name, file path,
  * type, and URL for loading.
  */
@@ -101,17 +105,17 @@ export interface AcDbFontInfo {
 
 /**
  * Interface for loading fonts when opening a document.
- * 
+ *
  * Applications should implement this interface to provide font loading
  * functionality when opening drawing databases that contain text entities.
  */
 export interface AcDbFontLoader {
   /**
    * Loads the specified fonts.
-   * 
+   *
    * @param fontNames - Array of font names to load
    * @returns Promise that resolves when fonts are loaded
-   * 
+   *
    * @example
    * ```typescript
    * const fontLoader: AcDbFontLoader = {
@@ -128,9 +132,9 @@ export interface AcDbFontLoader {
 
   /**
    * Gets all available fonts.
-   * 
+   *
    * @returns Promise that resolves to an array of available font information
-   * 
+   *
    * @example
    * ```typescript
    * const fonts = await fontLoader.getAvaiableFonts();
@@ -142,29 +146,29 @@ export interface AcDbFontLoader {
 
 /**
  * Options for reading a drawing database.
- * 
+ *
  * These options control how a drawing database is opened and processed.
  */
 export interface AcDbOpenDatabaseOptions {
   /**
    * Opens the drawing database in read-only mode.
-   * 
+   *
    * When true, the database will be opened in read-only mode, preventing
    * any modifications to the database content.
    */
   readOnly?: boolean
-  
+
   /**
    * Loader used to load fonts used in the drawing database.
-   * 
+   *
    * This loader will be used to load any fonts referenced by text entities
    * in the drawing database.
    */
   fontLoader?: AcDbFontLoader
-  
+
   /**
    * The minimum number of items in one chunk.
-   * 
+   *
    * If this value is greater than the total number of entities in the
    * drawing database, the total number is used. This controls how the
    * database processing is broken into chunks for better performance.
@@ -174,7 +178,7 @@ export interface AcDbOpenDatabaseOptions {
 
 /**
  * Interface defining the tables available in a drawing database.
- * 
+ *
  * This interface provides access to all the symbol tables in the database,
  * including block table, dimension style table, linetype table, text style table,
  * layer table, and viewport table.
@@ -196,7 +200,7 @@ export interface AcDbTables {
 
 /**
  * Interface defining the dictionaries available in a drawing database.
- * 
+ *
  * This interface provides access to various dictionaries in the database,
  * such as layout dictionary and image definition dictionary.
  */
@@ -207,13 +211,13 @@ export interface AcDbDictionaries {
 
 /**
  * The AcDbDatabase class represents an AutoCAD drawing file.
- * 
+ *
  * Each AcDbDatabase object contains the various header variables, symbol tables,
  * table records, entities, and objects that make up the drawing. The AcDbDatabase
  * class has member functions to allow access to all the symbol tables, to read
  * and write to DWG files, to get or set database defaults, to execute various
  * database-level operations, and to get or set all header variables.
- * 
+ *
  * @example
  * ```typescript
  * const database = new AcDbDatabase();
@@ -249,10 +253,10 @@ export class AcDbDatabase extends AcDbObject {
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
-  
+
   /**
    * Events that can be triggered by the database.
-   * 
+   *
    * These events allow applications to respond to various database operations
    * such as entity modifications, layer changes, and progress updates.
    */
@@ -304,9 +308,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets all tables in this drawing database.
-   * 
+   *
    * @returns Object containing all the symbol tables in the database
-   * 
+   *
    * @example
    * ```typescript
    * const tables = database.tables;
@@ -320,9 +324,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets all named object dictionaries in this drawing database.
-   * 
+   *
    * @returns Object containing all the dictionaries in the database
-   * 
+   *
    * @example
    * ```typescript
    * const dictionaries = database.dictionaries;
@@ -335,11 +339,11 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets the object ID of the AcDbBlockTableRecord of the current space.
-   * 
+   *
    * The current space can be either model space or paper space.
-   * 
+   *
    * @returns The object ID of the current space
-   * 
+   *
    * @example
    * ```typescript
    * const currentSpaceId = database.currentSpaceId;
@@ -354,10 +358,10 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Sets the current space by object ID.
-   * 
+   *
    * @param value - The object ID of the block table record to set as current space
    * @throws {Error} When the specified block table record ID doesn't exist
-   * 
+   *
    * @example
    * ```typescript
    * database.currentSpaceId = 'some-block-record-id';
@@ -376,11 +380,11 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets the angle units for the database.
-   * 
+   *
    * This is the current AUNITS value for the database.
-   * 
+   *
    * @returns The angle units value
-   * 
+   *
    * @example
    * ```typescript
    * const angleUnits = database.aunits;
@@ -392,9 +396,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Sets the angle units for the database.
-   * 
+   *
    * @param value - The new angle units value
-   * 
+   *
    * @example
    * ```typescript
    * database.aunits = AcDbAngleUnits.DecimalDegrees;
@@ -407,11 +411,11 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets the drawing-units value for automatic scaling of blocks, images, or xrefs.
-   * 
+   *
    * This is the current INSUNITS value for the database.
-   * 
+   *
    * @returns The insertion units value
-   * 
+   *
    * @example
    * ```typescript
    * const insertionUnits = database.insunits;
@@ -423,9 +427,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Sets the drawing-units value for automatic scaling.
-   * 
+   *
    * @param value - The new insertion units value
-   * 
+   *
    * @example
    * ```typescript
    * database.insunits = AcDbUnitsValue.Millimeters;
@@ -439,9 +443,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets the line type scale factor.
-   * 
+   *
    * @returns The line type scale factor
-   * 
+   *
    * @example
    * ```typescript
    * const lineTypeScale = database.ltscale;
@@ -453,9 +457,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Sets the line type scale factor.
-   * 
+   *
    * @param value - The new line type scale factor
-   * 
+   *
    * @example
    * ```typescript
    * database.ltscale = 2.0;
@@ -468,9 +472,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Gets the color of new objects as they are created.
-   * 
+   *
    * @returns The current entity color
-   * 
+   *
    * @example
    * ```typescript
    * const currentColor = database.cecolor;
@@ -482,9 +486,9 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Sets the color of new objects as they are created.
-   * 
+   *
    * @param value - The new current entity color
-   * 
+   *
    * @example
    * ```typescript
    * database.cecolor = new AcCmColor(0xFF0000);
@@ -559,23 +563,23 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Reads drawing data from a string or ArrayBuffer.
-   * 
+   *
    * This method parses the provided data and populates the database with
    * the resulting entities, tables, and objects. The method supports
    * both DXF and DWG file formats.
-   * 
+   *
    * @param data - The drawing data as a string or ArrayBuffer
    *   - For DXF files: Pass a string containing the DXF content
    *   - For DWG files: Pass an ArrayBuffer instance containing the binary DWG data
    * @param options - Options for reading the database
    * @param fileType - The type of file being read (defaults to DXF)
-   * 
+   *
    * @example
    * ```typescript
    * // Reading a DXF file (string)
    * const database = new AcDbDatabase();
    * await database.read(dxfString, { readOnly: true }, AcDbFileType.DXF);
-   * 
+   *
    * // Reading a DWG file (ArrayBuffer)
    * const database = new AcDbDatabase();
    * await database.read(dwgArrayBuffer, { readOnly: true }, AcDbFileType.DWG);
@@ -601,15 +605,16 @@ export class AcDbDatabase extends AcDbObject {
       async (
         percentage: number,
         stage: AcDbConversionStage,
-        stageStatus: AcDbConversionStageStatus,
+        stageStatus: AcDbStageStatus,
         data?: unknown
       ) => {
         this.events.openProgress.dispatch({
-            database: this,
+          database: this,
           percentage: percentage,
-          stage: stage,
+          stage: 'CONVERSION',
+          subStage: stage,
           stageStatus: stageStatus
-          })
+        })
         if (
           options &&
           options.fontLoader &&
@@ -634,11 +639,23 @@ export class AcDbDatabase extends AcDbObject {
    * @param options Input options to read drawing data
    */
   async openUri(url: string, options: AcDbOpenDatabaseOptions): Promise<void> {
+    this.events.openProgress.dispatch({
+      database: this,
+      percentage: 0,
+      stage: 'FETCH_FILE',
+      stageStatus: 'START'
+    })
     const response = await fetch(url)
+    this.events.openProgress.dispatch({
+      database: this,
+      percentage: 100,
+      stage: 'FETCH_FILE',
+      stageStatus: 'END'
+    })
     if (!response.ok) {
       throw new Error(`Failed to fetch file '${url}' with HTTP status codee '${response.status}'!`)
     }
-
+  
     const fileExtension = url.toLowerCase().split('.').pop()
     if (fileExtension === 'dwg') {
       // DWG files are binary, read as ArrayBuffer
@@ -653,10 +670,10 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Clears all data from the database.
-   * 
+   *
    * This method removes all entities, tables, and objects from the database,
    * effectively resetting it to an empty state.
-   * 
+   *
    * @example
    * ```typescript
    * database.clear();
@@ -676,12 +693,12 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Triggers a header system variable changed event.
-   * 
+   *
    * This method is called internally when header system variables
    * are modified to notify listeners of the change.
-   * 
+   *
    * @param sysVarName - The name of the system variable that changed
-   * 
+   *
    * @example
    * ```typescript
    * database.triggerHeaderSysVarChangedEvent('aunits');

@@ -1,5 +1,13 @@
 # @mlightcad/graphic-interface
 
+## 2.0.4
+
+### Patch Changes
+
+- feat: add 'FETCH_FILE' stage in AcDbDatabase.events.openProgress event
+- Updated dependencies
+  - @mlightcad/geometry-engine@2.0.4
+
 ## 2.0.3
 
 ### Patch Changes

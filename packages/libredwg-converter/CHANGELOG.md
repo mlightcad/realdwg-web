@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 2.0.4
+
+### Patch Changes
+
+- feat: add 'FETCH_FILE' stage in AcDbDatabase.events.openProgress event
+- Updated dependencies
+  - @mlightcad/data-model@1.1.4
+
 ## 2.0.3
 
 ### Patch Changes
