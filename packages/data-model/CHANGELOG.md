@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.5
+
+### Patch Changes
+
+- fix: fix issue that AcDbBatchProcessing.processChunk doesn't wait for all chunks processed and then return
+
 ## 1.1.4
 
 ### Patch Changes

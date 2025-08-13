@@ -144,25 +144,35 @@ export class AcDbBatchProcessing {
    * in Node.js environments to schedule the task.
    * 
    * @param callback - The callback function to schedule
+   * @returns Promise that resolves when the task completes
    * 
    * @example
    * ```typescript
-   * batchProcessor.scheduleTask(() => {
+   * await batchProcessor.scheduleTask(async () => {
    *   // Task to be executed asynchronously
    * });
    * ```
    */
-  private scheduleTask(callback: () => void) {
-    if (
-      typeof window !== 'undefined' &&
-      typeof window.requestAnimationFrame === 'function'
-    ) {
-      // Browser environment with requestAnimationFrame
-      window.requestAnimationFrame(callback)
-    } else {
-      // Node.js or fallback to setTimeout
-      setTimeout(callback, 0)
-    }
+  private scheduleTask(callback: () => void | Promise<void>): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const executeCallback = () => {
+        // Execute the callback and handle the result
+        Promise.resolve(callback())
+          .then(resolve)
+          .catch(reject)
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.requestAnimationFrame === 'function'
+      ) {
+        // Browser environment with requestAnimationFrame
+        window.requestAnimationFrame(executeCallback)
+      } else {
+        // Node.js or fallback to setTimeout
+        setTimeout(executeCallback, 0)
+      }
+    })
   }
 
   /**
@@ -187,7 +197,7 @@ export class AcDbBatchProcessing {
   public async processChunk(callback: AcDbChunkProcessingCallback) {
     let currentIndex = 0
 
-    const processNextChunk = async () => {
+    const processNextChunk = async (): Promise<void> => {
       const start = currentIndex
       const end = Math.min(currentIndex + this._chunkSize, this._count)
 
@@ -198,11 +208,11 @@ export class AcDbBatchProcessing {
 
       // If there are more items to process, schedule the next chunk
       if (currentIndex < this._count) {
-        this.scheduleTask(processNextChunk) // Schedule the next chunk to be processed asynchronously
+        await this.scheduleTask(processNextChunk) // Schedule the next chunk to be processed asynchronously
       }
     }
 
-    // Start processing the first chunk
+    // Start processing the first chunk and wait for all chunks to complete
     await processNextChunk()
   }
 }

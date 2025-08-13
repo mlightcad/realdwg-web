@@ -132,6 +132,37 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
   private onError: AcCmErrorCallback = () => {}
 
   /**
+   * Schedules a task to be executed asynchronously.
+   * 
+   * This method uses requestAnimationFrame in browser environments or setTimeout
+   * in Node.js environments to schedule the task.
+   * 
+   * @param callback - The callback function to schedule
+   * @returns Promise that resolves with the result of the callback
+   */
+  private scheduleTask<T>(callback: () => T | Promise<T>): Promise<T> {
+    return new Promise<T>((resolve, reject) => {
+      const executeCallback = () => {
+        // Execute the callback and handle the result
+        Promise.resolve(callback())
+          .then(resolve)
+          .catch(reject)
+      }
+
+      if (
+        typeof window !== 'undefined' &&
+        typeof window.requestAnimationFrame === 'function'
+      ) {
+        // Browser environment with requestAnimationFrame
+        window.requestAnimationFrame(executeCallback)
+      } else {
+        // Node.js or fallback to setTimeout
+        setTimeout(executeCallback, 0)
+      }
+    })
+  }
+
+  /**
    * Adds a task to the execution queue.
    *
    * @param task Task instance with name and run function
@@ -172,16 +203,10 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
       const task = this.tasks[i]
 
       try {
-        result = await new Promise((resolve, reject) => {
-          setTimeout(async () => {
-            try {
-              const output = await task.run(result)
-              this.onProgress((i + 1) / total, task)
-              resolve(output)
-            } catch (err) {
-              reject(err)
-            }
-          }, 0)
+        result = await this.scheduleTask(async () => {
+          const output = await task.run(result)
+          this.onProgress((i + 1) / total, task)
+          return output
         })
       } catch (error) {
         this.onError(error, i, task)
