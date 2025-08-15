@@ -352,12 +352,13 @@ export class AcDbEntityConverter {
         this.toPointArray(spline.getControlList(), false),
         this.toNumberArray(spline.knots),
         weights.length > 0 ? weights : undefined,
+        spline.degree, // Default degree
         !!(spline.flags & 0x01)
       )
     } else if (spline.numberOfFits > 0) {
       const fitPoints = this.toPointArray(spline.getFitList())
       if (fitPoints.length > 0) {
-        return new AcDbSpline(fitPoints, 'Uniform', !!(spline.flags & 0x01))
+        return new AcDbSpline(fitPoints, 'Uniform', spline.degree, !!(spline.flags & 0x01))
       }
     }
     return null

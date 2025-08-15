@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 2.0.6
+
+### Patch Changes
+
+- feat: add parameter 'degree' for classes AcDbSpline and AcGeSpline3d
+
 ## 2.0.5
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 2.0.6
+
+### Patch Changes
+
+- feat: add parameter 'degree' for classes AcDbSpline and AcGeSpline3d
+- Updated dependencies
+  - @mlightcad/data-model@1.1.6
+
 ## 2.0.5
 
 ### Patch Changes

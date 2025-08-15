@@ -21,6 +21,40 @@ describe('AcGeSpline3d', () => {
       expect(spline.getControlPointAt(0)).toBeDefined()
     })
 
+    it('should create spline from control points with custom degree', () => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 },
+        { x: 4, y: 0, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+      const degree = 4
+
+      const spline = new AcGeSpline3d(controlPoints, knots, undefined, degree)
+
+      expect(spline.degree).toBe(4)
+      expect(spline.closed).toBe(false)
+    })
+
+    it('should create spline from control points with degree and closed', () => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 1, 1, 1, 1]
+      const degree = 3
+      const closed = true
+
+      const spline = new AcGeSpline3d(controlPoints, knots, undefined, degree, closed)
+
+      expect(spline.degree).toBe(3)
+      expect(spline.closed).toBe(true)
+    })
+
     it('should create spline from fit points and parameterization', () => {
       const fitPoints = [
         { x: 0, y: 0, z: 0 },
@@ -35,6 +69,42 @@ describe('AcGeSpline3d', () => {
       expect(spline.degree).toBe(3)
       expect(spline.knotParameterization).toBe(parameterization)
       expect(spline.closed).toBe(false)
+    })
+
+    it('should create spline from fit points with custom degree', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 },
+        { x: 4, y: 0, z: 0 }
+      ]
+      const parameterization: AcGeKnotParameterizationType = 'Uniform'
+      const degree = 4
+
+      const spline = new AcGeSpline3d(fitPoints, parameterization, degree)
+
+      expect(spline.degree).toBe(4)
+      expect(spline.knotParameterization).toBe(parameterization)
+      expect(spline.closed).toBe(false)
+    })
+
+    it('should create spline from fit points with degree and closed', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const parameterization: AcGeKnotParameterizationType = 'Uniform'
+      const degree = 3
+      const closed = true
+
+      const spline = new AcGeSpline3d(fitPoints, parameterization, degree, closed)
+
+      expect(spline.degree).toBe(3)
+      expect(spline.knotParameterization).toBe(parameterization)
+      expect(spline.closed).toBe(true)
     })
 
     it('should create spline with chord parameterization', () => {
@@ -71,6 +141,68 @@ describe('AcGeSpline3d', () => {
       expect(() => {
         new AcGeSpline3d([{ x: 0, y: 0, z: 0 }], [0, 0, 0, 0])
       }).toThrow(AcCmErrors.ILLEGAL_PARAMETERS)
+    })
+
+    it('should throw error for insufficient control points for degree 4', () => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+      const degree = 4
+
+      expect(() => {
+        new AcGeSpline3d(controlPoints, knots, undefined, degree)
+      }).toThrow(AcCmErrors.ILLEGAL_PARAMETERS)
+    })
+
+    it('should throw error for insufficient fit points for degree 4', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const parameterization: AcGeKnotParameterizationType = 'Uniform'
+      const degree = 4
+
+      expect(() => {
+        new AcGeSpline3d(fitPoints, parameterization, degree)
+      }).toThrow(AcCmErrors.ILLEGAL_PARAMETERS)
+    })
+
+    it('should accept minimum valid control points for degree 4', () => {
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 },
+        { x: 4, y: 0, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 0, 1, 1, 1, 1, 1]
+      const degree = 4
+
+      expect(() => {
+        new AcGeSpline3d(controlPoints, knots, undefined, degree)
+      }).not.toThrow()
+    })
+
+    it('should accept minimum valid fit points for degree 4', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 },
+        { x: 4, y: 0, z: 0 }
+      ]
+      const parameterization: AcGeKnotParameterizationType = 'Uniform'
+      const degree = 4
+
+      expect(() => {
+        new AcGeSpline3d(fitPoints, parameterization, degree)
+      }).not.toThrow()
     })
   })
 
@@ -387,6 +519,48 @@ describe('AcGeSpline3d', () => {
 
       const spline = new AcGeSpline3d(fitPoints, 'SqrtChord')
       expect(spline.knotParameterization).toBe('SqrtChord')
+    })
+  })
+
+  describe('Static Methods', () => {
+    it('should create closed spline with default degree', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+
+      const spline = AcGeSpline3d.createClosedSpline(fitPoints)
+      expect(spline.closed).toBe(true)
+      expect(spline.degree).toBe(3)
+    })
+
+    it('should create closed spline with custom degree', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 },
+        { x: 4, y: 0, z: 0 }
+      ]
+
+      const spline = AcGeSpline3d.createClosedSpline(fitPoints, 'Chord')
+      expect(spline.closed).toBe(true)
+      expect(spline.degree).toBe(3)
+      expect(spline.knotParameterization).toBe('Chord')
+    })
+
+    it('should throw error for insufficient points in closed spline', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 }
+      ]
+
+      expect(() => {
+        AcGeSpline3d.createClosedSpline(fitPoints)
+      }).toThrow('At least 4 points are required for a degree 3 closed spline')
     })
   })
 })

@@ -16,53 +16,56 @@ export class AcGeSpline3d extends AcGeCurve3d {
   private _knotParameterization?: AcGeKnotParameterizationType
   private _controlPoints: AcGePoint3dLike[]
   private _closed: boolean
+  private _degree: number
 
   constructor(
     controlPoints: AcGePoint3dLike[],
     knots: number[],
     weights?: number[],
+    degree?: number,
     closed?: boolean
   )
   constructor(
     fitPoints: AcGePointLike[],
     knotParam: AcGeKnotParameterizationType,
+    degree?: number,
     closed?: boolean
   )
-  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown) {
+  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown, e?: unknown) {
     super()
-    const argsLength =
-      +(a !== undefined) +
-      +(b !== undefined) +
-      +(c !== undefined) +
-      +(d !== undefined)
+    // Count the number of arguments passed (including undefined)
+    const argsLength = arguments.length
 
-    if (argsLength < 2 || argsLength > 4) {
+    if (argsLength < 2 || argsLength > 5) {
       throw AcCmErrors.ILLEGAL_PARAMETERS
     }
 
-    // For now, we support 3 degree only
-    const degree = 3
-    this._closed = (d as boolean) || false
+    // Default degree is 3
+    this._degree = 3
+    this._closed = false
 
     if (!Array.isArray(b)) {
       // Constructor with fit points
       this._fitPoints = a as AcGePoint3dLike[]
       this._knotParameterization = b as AcGeKnotParameterizationType
 
-      // Handle closed parameter for fit points constructor
+      // Handle degree and closed parameters for fit points constructor
       if (argsLength >= 3) {
-        this._closed = c as boolean
+        this._degree = c as number || 3
+      }
+      if (argsLength >= 4) {
+        this._closed = d as boolean
       }
 
-      // Validate minimum number of fit points for degree 3
-      if (this._fitPoints.length < 4) {
+      // Validate minimum number of fit points for the specified degree
+      if (this._fitPoints.length < this._degree + 1) {
         throw AcCmErrors.ILLEGAL_PARAMETERS
       }
 
       const points = this.toNurbsPoints(this._fitPoints)
       this._nurbsCurve = AcGeNurbsCurve.byPoints(
         points,
-        degree,
+        this._degree,
         this._knotParameterization
       )
       this._controlPoints = this._nurbsCurve.controlPoints()
@@ -70,21 +73,55 @@ export class AcGeSpline3d extends AcGeCurve3d {
       // Constructor with control points
       this._controlPoints = a as AcGePoint3dLike[]
 
-      // Handle closed parameter for control points constructor
-      if (argsLength >= 4) {
-        this._closed = d as boolean
+      // Determine if c is weights or degree based on type
+      let weights: number[] | undefined
+      let degree: number = 3
+      let closed: boolean = false
+
+      if (argsLength >= 3) {
+        if (Array.isArray(c)) {
+          // c is weights array
+          weights = c as number[]
+          if (argsLength >= 4) {
+            degree = d as number || 3
+          }
+          if (argsLength >= 5) {
+            closed = e as boolean
+          }
+        } else if (c !== undefined) {
+          // c is degree (not undefined)
+          degree = c as number || 3
+          if (argsLength >= 4) {
+            closed = d as boolean
+          }
+        }
+      }
+      
+      // Handle case where c is undefined but d might be degree
+      if (c === undefined && argsLength >= 4) {
+        degree = d as number || 3
+        if (argsLength >= 5) {
+          closed = e as boolean
+        }
       }
 
-      // Validate minimum number of control points for degree 3
-      if (this._controlPoints.length < 4) {
+
+
+
+
+      this._degree = degree
+      this._closed = closed
+
+      // Validate minimum number of control points for the specified degree
+      if (this._controlPoints.length < this._degree + 1) {
         throw AcCmErrors.ILLEGAL_PARAMETERS
       }
 
       this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
-        degree,
+        this._degree,
         b as number[],
         this._controlPoints as AcGePoint3dLike[],
-        c as number[] | undefined
+        weights
       )
     }
 
@@ -98,15 +135,13 @@ export class AcGeSpline3d extends AcGeCurve3d {
    * Build the NURBS curve using stored data
    */
   private buildCurve() {
-    const degree = 3
-
     if (this._fitPoints && this._knotParameterization) {
       // Build from fit points
       if (this._closed) {
         // Create closed curve from fit points
         this._nurbsCurve = AcGeNurbsCurve.createClosedCurve(
           this._fitPoints,
-          degree,
+          this._degree,
           this._knotParameterization
         )
       } else {
@@ -114,7 +149,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
         const points = this.toNurbsPoints(this._fitPoints)
         this._nurbsCurve = AcGeNurbsCurve.byPoints(
           points,
-          degree,
+          this._degree,
           this._knotParameterization
         )
       }
@@ -126,7 +161,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
         const parameterization = this._knotParameterization || 'Chord'
         this._nurbsCurve = AcGeNurbsCurve.createClosedCurve(
           this._controlPoints,
-          degree,
+          this._degree,
           parameterization
         )
         this._controlPoints = this._nurbsCurve.controlPoints()
@@ -136,7 +171,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
         const knots = this._nurbsCurve.knots()
         const weights = this._nurbsCurve.weights()
         this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
-          degree,
+          this._degree,
           knots,
           this._controlPoints,
           weights
@@ -162,7 +197,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
    * Degree of the spline to be created.
    */
   get degree() {
-    return this._nurbsCurve.degree()
+    return this._degree
   }
 
   get knotParameterization() {
@@ -315,17 +350,19 @@ export class AcGeSpline3d extends AcGeCurve3d {
    * Create a closed spline from fit points using AcGeNurbsCurve.createClosedCurve
    * @param fitPoints - Array of fit points defining the curve
    * @param parameterization - Knot parameterization type for NURBS
+   * @param degree - Optional degree of the spline (default: 3)
    * @returns A closed spline
    */
   static createClosedSpline(
     fitPoints: AcGePoint3dLike[],
-    parameterization: AcGeKnotParameterizationType = 'Uniform'
+    parameterization: AcGeKnotParameterizationType = 'Uniform',
+    degree: number = 3
   ): AcGeSpline3d {
-    if (fitPoints.length < 4) {
-      throw new Error('At least 4 points are required for a closed spline')
+    if (fitPoints.length < degree + 1) {
+      throw new Error(`At least ${degree + 1} points are required for a degree ${degree} closed spline`)
     }
 
-    // Create spline using the constructor with fit points and closed=true
-    return new AcGeSpline3d(fitPoints, parameterization, true)
+    // Create spline using the constructor with fit points, degree, and closed=true
+    return new AcGeSpline3d(fitPoints, parameterization, degree, true)
   }
 }

@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.6
+
+### Patch Changes
+
+- feat: add parameter 'degree' for classes AcDbSpline and AcGeSpline3d
+
 ## 1.1.5
 
 ### Patch Changes

@@ -48,6 +48,7 @@ export class AcDbSpline extends AcDbCurve {
    * @param controlPoints - Array of control points in WCS coordinates
    * @param knots - Array of knot values that define the spline's parameterization
    * @param weights - Optional array of weights for each control point (default: 1 for all)
+   * @param degree - Optional degree of the spline (default: 3)
    * @param closed - Whether the spline should be closed (default: false)
    * 
    * @example
@@ -65,6 +66,7 @@ export class AcDbSpline extends AcDbCurve {
     controlPoints: AcGePoint3dLike[],
     knots: number[],
     weights?: number[],
+    degree?: number,
     closed?: boolean
   )
   /**
@@ -75,6 +77,7 @@ export class AcDbSpline extends AcDbCurve {
    * 
    * @param fitPoints - Array of fit points in WCS coordinates
    * @param knotParam - Knot parameterization type that defines how knots are generated
+   * @param degree - Optional degree of the spline (default: 3)
    * @param closed - Whether the spline should be closed (default: false)
    * 
    * @example
@@ -90,35 +93,39 @@ export class AcDbSpline extends AcDbCurve {
   constructor(
     fitPoints: AcGePoint3dLike[],
     knotParam: AcGeKnotParameterizationType,
+    degree?: number,
     closed?: boolean
   )
-  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown) {
+  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown, e?: unknown) {
     super()
     const argsLength =
       +(a !== undefined) +
       +(b !== undefined) +
       +(c !== undefined) +
-      +(d !== undefined)
+      +(d !== undefined) +
+      +(e !== undefined)
 
-    if (argsLength < 2 || argsLength > 4) {
+    if (argsLength < 2 || argsLength > 5) {
       throw AcCmErrors.ILLEGAL_PARAMETERS
     }
 
-    // Determine if this is the fitPoints constructor (2 or 3 args, second arg is not an array)
-    const isFitPointsConstructor = argsLength <= 3 && !Array.isArray(b)
+    // Determine if this is the fitPoints constructor (second arg is not an array)
+    const isFitPointsConstructor = !Array.isArray(b)
 
     if (isFitPointsConstructor) {
       this._geo = new AcGeSpline3d(
         a as AcGePoint3dLike[],
         b as AcGeKnotParameterizationType,
-        c as boolean
+        c as number | undefined,
+        d as boolean | undefined
       )
     } else {
       this._geo = new AcGeSpline3d(
         a as AcGePoint3dLike[],
         b as number[],
         c as number[] | undefined,
-        d as boolean
+        d as number | undefined,
+        e as boolean | undefined
       )
     }
   }
