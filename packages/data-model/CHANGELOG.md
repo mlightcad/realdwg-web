@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.7
+
+### Patch Changes
+
+- feat: regularize block space name and paper space name
+
 ## 1.1.6
 
 ### Patch Changes

@@ -32,6 +32,32 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
   }
 
   /**
+   * Adds a block table record and indexes it by a regularized name key.
+   *
+   * - For model space: indexed under `*MODEL_SPACE`.
+   * - For paper space: indexed under `*PAPER_SPACE` plus the original name suffix after the prefix.
+   * - For other blocks: indexed under the record's `name` as-is.
+   *
+   * Note: Only the internal index key is regularized; the record's `name` is not mutated.
+   *
+   * @param record - The record to add to the table
+   * 
+   */
+  add(record: AcDbBlockTableRecord) {
+    record.database = this.database
+    let regularizedName = record.name
+    if (record.isModelSapce) {
+      regularizedName = AcDbBlockTableRecord.MODEL_SPACE_NAME
+    } else if (record.isPaperSapce) {
+      const prefix = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+      const suffix = record.name.substring(prefix.length)
+      regularizedName = prefix + suffix
+    }
+    this._recordsByName.set(regularizedName, record)
+    this._recordsById.set(record.objectId, record)
+  }
+
+  /**
    * Gets the MODEL_SPACE block table record.
    * 
    * This method returns the model space block table record, creating it

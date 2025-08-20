@@ -10,8 +10,8 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  * 
  * Block table records (BTRs) are used to organize and group entities together.
  * There are two special BTRs that are always present in every database:
- * - *Model_Space: Contains entities in model space
- * - *Paper_Space: Contains entities in paper space
+ * - *MODEL_SPACE: Contains entities in model space
+ * - *PAPER_SPACE: Contains entities in paper space
  * 
  * Each block table record has an origin point and can contain multiple entities.
  * 
@@ -25,9 +25,9 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  */
 export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   /** Name constant for model space block table record */
-  static MODEL_SPACE_NAME = '*Model_Space'
+  static MODEL_SPACE_NAME = '*MODEL_SPACE'
   /** Name prefix for paper space block table records */
-  static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
+  static PAPER_SPACE_NAME_PREFIX = '*PAPER_SPACE'
   
   /** The base point of the block in WCS coordinates */
   private _origin: AcGePoint3d
