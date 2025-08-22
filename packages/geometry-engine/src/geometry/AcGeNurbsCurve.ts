@@ -1,4 +1,4 @@
-import { AcGePoint3dLike } from '../math'
+import { AcGePoint3d, AcGePoint3dLike } from '../math'
 import {
   calculateCurveLength,
   evaluateNurbsPoint,
@@ -177,13 +177,11 @@ export class AcGeNurbsCurve {
   }
 
   /**
-   * Create a closed NURBS curve using Catmull-Rom interpolation for smooth closure
+   * Create fit points for a closed NURBS curve using Catmull-Rom interpolation
    */
-  static createClosedCurve(
-    points: AcGePoint3dLike[],
-    degree: number,
-    parameterization: AcGeKnotParameterizationType = 'Chord'
-  ): AcGeNurbsCurve {
+  static createFitPointsForClosedCurve(
+    points: AcGePoint3dLike[]
+  ): AcGePoint3d[] {
     if (points.length < 4) {
       throw new Error('At least 4 points are required for a closed NURBS curve')
     }
@@ -198,7 +196,18 @@ export class AcGeNurbsCurve {
     // Get points along the curve for NURBS interpolation
     // Use more divisions for smoother curve
     const divisions = Math.max(50, points.length * 2)
-    const curvePoints = catmullRomCurve.getPoints(divisions)
+    return catmullRomCurve.getPoints(divisions)
+  }
+
+  /**
+   * Create a closed NURBS curve using Catmull-Rom interpolation for smooth closure
+   */
+  static createClosedCurve(
+    points: AcGePoint3dLike[],
+    degree: number,
+    parameterization: AcGeKnotParameterizationType = 'Chord'
+  ): AcGeNurbsCurve {
+    const curvePoints = this.createFitPointsForClosedCurve(points)
 
     // Convert AcGePoint3d[] back to number[][]
     const nurbsPoints = curvePoints.map(point => [point.x, point.y, point.z])

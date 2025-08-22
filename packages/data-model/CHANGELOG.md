@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.1.8
+
+### Patch Changes
+
+- fix: normalizes the name of a block table record and use verb-nurbs-web to implement spline
+
 ## 1.1.7
 
 ### Patch Changes

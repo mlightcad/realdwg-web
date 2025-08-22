@@ -34,6 +34,50 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
 
+
+  /**
+   * Returns true if the specified name is the name of the model space block table record.
+   * 
+   * Model space is the primary drawing area where most entities are created.
+   * 
+   * @param name - The name of one block table record.
+   * @returns True if the specified name is the name of the model space block table record.
+   * 
+   * @example
+   * ```typescript
+   * if (AcDbBlockTableRecord.isModelSapceName('*Model_Space')) {
+   *   console.log('This is the name of the model space block table record.');
+   * }
+   * ```
+   */
+  static isModelSapceName(name: string) {
+    return (
+      name.toLowerCase() ==
+      AcDbBlockTableRecord.MODEL_SPACE_NAME.toLowerCase()
+    )
+  }
+
+  /**
+   * Returns true if the specified name is the name of a paper space block table record.
+   * 
+   * Paper space is used for creating layouts for printing and plotting.
+   * 
+   * @param name - The name of one block table record.
+   * @returns True if the specified name is the name of a paper space block table record.
+   * 
+   * @example
+   * ```typescript
+   * if (AcDbBlockTableRecord.isPaperSapceName('*Paper_Space1')) {
+   *   console.log('This is the name of the paper space block table record.');
+   * }
+   * ```
+   */
+  static isPaperSapceName(name: string) {
+    return name
+      .toLowerCase()
+      .startsWith(AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX.toLowerCase())
+  }
+
   /**
    * Creates a new AcDbBlockTableRecord instance.
    * 
@@ -63,10 +107,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   get isModelSapce() {
-    return (
-      this.name.toLowerCase() ==
-      AcDbBlockTableRecord.MODEL_SPACE_NAME.toLowerCase()
-    )
+    return AcDbBlockTableRecord.isModelSapceName(this.name)
   }
 
   /**
@@ -84,9 +125,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   get isPaperSapce() {
-    return this.name
-      .toLowerCase()
-      .startsWith(AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX.toLowerCase())
+    return AcDbBlockTableRecord.isPaperSapceName(this.name)
   }
 
   /**

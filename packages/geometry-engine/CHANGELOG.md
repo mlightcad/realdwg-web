@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 2.0.7
+
+### Patch Changes
+
+- fix: normalizes the name of a block table record and use verb-nurbs-web to implement spline
+
 ## 2.0.6
 
 ### Patch Changes

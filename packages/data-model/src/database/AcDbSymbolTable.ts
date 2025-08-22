@@ -59,7 +59,8 @@ export class AcDbSymbolTable<
    */
   add(record: RecordType) {
     record.database = this.database
-    this._recordsByName.set(record.name, record)
+    const normalizedName = this.normalizeName(record.name)
+    this._recordsByName.set(normalizedName, record)
     this._recordsById.set(record.objectId, record)
   }
 
@@ -78,7 +79,8 @@ export class AcDbSymbolTable<
    * ```
    */
   remove(name: string) {
-    const record = this._recordsByName.get(name)
+    const normalizedName = this.normalizeName(name)
+    const record = this._recordsByName.get(normalizedName)
     if (record) {
       this._recordsById.delete(record.objectId)
       this._recordsByName.delete(name)
@@ -139,7 +141,8 @@ export class AcDbSymbolTable<
    * ```
    */
   has(name: string) {
-    return this._recordsByName.has(name)
+    const normalizedName = this.normalizeName(name)
+    return this._recordsByName.has(normalizedName)
   }
 
   /**
@@ -174,7 +177,8 @@ export class AcDbSymbolTable<
    * ```
    */
   getAt(name: string) {
-    return this._recordsByName.get(name)
+    const normalizedName = this.normalizeName(name)
+    return this._recordsByName.get(normalizedName)
   }
 
   /**
@@ -228,5 +232,22 @@ export class AcDbSymbolTable<
    */
   newIterator(): AcDbObjectIterator<RecordType> {
     return new AcDbObjectIterator(this._recordsByName)
+  }
+
+  /**
+   * Normalizes the name of a symbol table record.  
+   * 
+   * Some symbol table records require name normalization. For example, the
+   * model space block table record may appear as either `*Model_Space` or
+   * `*MODEL_SPACE`, and should be standardized to a consistent form.  
+   * 
+   * Subclasses should override this method to implement record-specific
+   * normalization rules.
+   *
+   * @param name - The raw name of the symbol table record.
+   * @returns The normalized symbol table record name.
+   */
+  protected normalizeName(name: string) {
+    return name
   }
 }

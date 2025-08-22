@@ -1,4 +1,5 @@
 import { AcCmErrors } from '@mlightcad/common'
+import verb from 'verb-nurbs-web'
 
 import {
   AcGeBox3d,
@@ -11,7 +12,7 @@ import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
 
 export class AcGeSpline3d extends AcGeCurve3d {
-  private _nurbsCurve: AcGeNurbsCurve
+  private _nurbsCurve: verb.geom.NurbsCurve
   private _fitPoints?: AcGePoint3dLike[]
   private _knotParameterization?: AcGeKnotParameterizationType
   private _controlPoints: AcGePoint3dLike[]
@@ -63,12 +64,8 @@ export class AcGeSpline3d extends AcGeCurve3d {
       }
 
       const points = this.toNurbsPoints(this._fitPoints)
-      this._nurbsCurve = AcGeNurbsCurve.byPoints(
-        points,
-        this._degree,
-        this._knotParameterization
-      )
-      this._controlPoints = this._nurbsCurve.controlPoints()
+      this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
+      this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
     } else {
       // Constructor with control points
       this._controlPoints = a as AcGePoint3dLike[]
@@ -105,10 +102,6 @@ export class AcGeSpline3d extends AcGeCurve3d {
         }
       }
 
-
-
-
-
       this._degree = degree
       this._closed = closed
 
@@ -117,18 +110,19 @@ export class AcGeSpline3d extends AcGeCurve3d {
         throw AcCmErrors.ILLEGAL_PARAMETERS
       }
 
-      this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
+      const points = this.toVerbPoints(this._controlPoints)
+      this._nurbsCurve = verb.geom.NurbsCurve.byKnotsControlPointsWeights(
         this._degree,
-        b as number[],
-        this._controlPoints as AcGePoint3dLike[],
+        b as verb.core.Data.KnotArray,
+        points,
         weights
       )
     }
 
     // Apply closed state if specified
-    if (this._closed) {
-      this.buildCurve()
-    }
+    // if (this._closed) {
+    //   this.buildCurve()
+    // }
   }
 
   /**
@@ -138,42 +132,33 @@ export class AcGeSpline3d extends AcGeCurve3d {
     if (this._fitPoints && this._knotParameterization) {
       // Build from fit points
       if (this._closed) {
-        // Create closed curve from fit points
-        this._nurbsCurve = AcGeNurbsCurve.createClosedCurve(
-          this._fitPoints,
-          this._degree,
-          this._knotParameterization
-        )
+        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(this._fitPoints)
+        const points = this.toNurbsPoints(newFitPoints)
+        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
       } else {
         // Create open curve from fit points
         const points = this.toNurbsPoints(this._fitPoints)
-        this._nurbsCurve = AcGeNurbsCurve.byPoints(
-          points,
-          this._degree,
-          this._knotParameterization
-        )
+        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
       }
-      this._controlPoints = this._nurbsCurve.controlPoints()
+      this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
     } else if (this._controlPoints) {
       // Build from control points
       if (this._closed) {
         // Create closed curve from control points
-        const parameterization = this._knotParameterization || 'Chord'
-        this._nurbsCurve = AcGeNurbsCurve.createClosedCurve(
-          this._controlPoints,
-          this._degree,
-          parameterization
-        )
-        this._controlPoints = this._nurbsCurve.controlPoints()
+        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(this._controlPoints)
+        const points = this.toNurbsPoints(newFitPoints)
+        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
+        this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
       } else {
         // Create open curve from control points
         // Get knots and weights from the current NURBS curve
         const knots = this._nurbsCurve.knots()
         const weights = this._nurbsCurve.weights()
-        this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
+        const points = this.toVerbPoints(this._controlPoints)
+        this._nurbsCurve = verb.geom.NurbsCurve.byKnotsControlPointsWeights(
           this._degree,
           knots,
-          this._controlPoints,
+          points,
           weights
         )
       }
@@ -344,6 +329,32 @@ export class AcGeSpline3d extends AcGeCurve3d {
       nurbsPoints[index] = [point.x, point.y, point.z || 0]
     })
     return nurbsPoints
+  }
+
+  /**
+   * Convert input points to points in verb-nurbs-web format
+   * @param points Input points to convert
+   * @returns Return converted points
+   */
+  private toVerbPoints(points: AcGePointLike[]): number[][] {
+    const verbPoints = new Array(points.length)
+    points.forEach((point, index) => {
+      verbPoints[index] = [point.x, point.y, point.z || 0]
+    })
+    return verbPoints
+  }
+
+  /**
+   * Convert input points to points in geometry engine format
+   * @param points Input points to convert
+   * @returns Return converted points
+   */
+  private toGePoints(points: number[][]): AcGePoint3dLike[] {
+    const gePoints = new Array<AcGePoint3dLike>(points.length)
+    points.forEach((point, index) => {
+      gePoints[index] = { x: point[0], y: point[1], z: point[2] }
+    })
+    return gePoints
   }
 
   /**
