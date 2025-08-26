@@ -1,5 +1,11 @@
 # @mlightcad/libredwg-converter
 
+## 2.0.9
+
+### Patch Changes
+
+- fix: upgrade libredwg-web to fix some bugs on decoding texts
+
 ## 2.0.8
 
 ### Patch Changes

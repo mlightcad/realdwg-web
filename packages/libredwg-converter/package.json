@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/libredwg-converter",
-  "version": "2.0.8",
+  "version": "2.0.9",
   "type": "module",
   "repository": {
     "type": "git",
@@ -43,6 +43,6 @@
   },
   "peerDependencies": {
     "@mlightcad/data-model": "workspace:*",
-    "@mlightcad/libredwg-web": "0.1.6"
+    "@mlightcad/libredwg-web": "0.1.8"
   }
 }
