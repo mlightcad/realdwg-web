@@ -1,5 +1,11 @@
 # @mlightcad/libredwg-converter
 
+## 2.0.11
+
+### Patch Changes
+
+- fix: upgrade libredwg-web to fix some bugs on getting entity layer name and line type name
+
 ## 2.0.10
 
 ### Patch Changes
