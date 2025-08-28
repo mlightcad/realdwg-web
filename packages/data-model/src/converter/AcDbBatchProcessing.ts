@@ -3,11 +3,11 @@ type AcDbChunkProcessingCallback = (start: number, end: number) => Promise<void>
 
 /**
  * Class used to break up work into smaller chunks that are executed asynchronously.
- * 
+ *
  * This is often referred to as "batch processing" or "cooperative multitasking," where the
  * time-consuming task is broken into smaller pieces and executed in small intervals to allow
  * the UI to remain responsive.
- * 
+ *
  * @example
  * ```typescript
  * const batchProcessor = new AcDbBatchProcessing(1000, 10, 50);
@@ -31,12 +31,12 @@ export class AcDbBatchProcessing {
 
   /**
    * Creates a new AcDbBatchProcessing instance.
-   * 
+   *
    * @param count - The total number of items to process
    * @param numerOfChunk - The number of chunks to process
    * @param minimumChunkSize - The minimum number of items in one chunk. If it is greater
    * than the total number of items to process, the total number is used.
-   * 
+   *
    * @example
    * ```typescript
    * const batchProcessor = new AcDbBatchProcessing(1000, 10, 50);
@@ -51,9 +51,9 @@ export class AcDbBatchProcessing {
 
   /**
    * Gets the total number of items to process.
-   * 
+   *
    * @returns The total number of items to process
-   * 
+   *
    * @example
    * ```typescript
    * const totalItems = batchProcessor.count;
@@ -65,9 +65,9 @@ export class AcDbBatchProcessing {
 
   /**
    * Gets the number of chunks to process.
-   * 
+   *
    * @returns The number of chunks to process
-   * 
+   *
    * @example
    * ```typescript
    * const numberOfChunks = batchProcessor.numerOfChunk;
@@ -79,9 +79,9 @@ export class AcDbBatchProcessing {
 
   /**
    * Gets the minimum number of items in one chunk.
-   * 
+   *
    * @returns The minimum number of items in one chunk
-   * 
+   *
    * @example
    * ```typescript
    * const minChunkSize = batchProcessor.minimumChunkSize;
@@ -93,9 +93,9 @@ export class AcDbBatchProcessing {
 
   /**
    * Sets the minimum number of items in one chunk.
-   * 
+   *
    * @param value - The new minimum chunk size
-   * 
+   *
    * @example
    * ```typescript
    * batchProcessor.minimumChunkSize = 100;
@@ -108,9 +108,9 @@ export class AcDbBatchProcessing {
 
   /**
    * Gets the number of items in one chunk.
-   * 
+   *
    * @returns The number of items in one chunk
-   * 
+   *
    * @example
    * ```typescript
    * const chunkSize = batchProcessor.chunkSize;
@@ -122,7 +122,7 @@ export class AcDbBatchProcessing {
 
   /**
    * Calculates the chunk size based on the total count, number of chunks, and minimum chunk size.
-   * 
+   *
    * @example
    * ```typescript
    * batchProcessor.calculateChunkSize();
@@ -139,13 +139,13 @@ export class AcDbBatchProcessing {
 
   /**
    * Schedules a task to be executed asynchronously.
-   * 
+   *
    * This method uses requestAnimationFrame in browser environments or setTimeout
    * in Node.js environments to schedule the task.
-   * 
+   *
    * @param callback - The callback function to schedule
    * @returns Promise that resolves when the task completes
-   * 
+   *
    * @example
    * ```typescript
    * await batchProcessor.scheduleTask(async () => {
@@ -157,9 +157,7 @@ export class AcDbBatchProcessing {
     return new Promise<void>((resolve, reject) => {
       const executeCallback = () => {
         // Execute the callback and handle the result
-        Promise.resolve(callback())
-          .then(resolve)
-          .catch(reject)
+        Promise.resolve(callback()).then(resolve).catch(reject)
       }
 
       if (
@@ -177,13 +175,13 @@ export class AcDbBatchProcessing {
 
   /**
    * Processes items in chunks using the provided callback function.
-   * 
+   *
    * This method breaks up the work into chunks and processes each chunk
    * asynchronously, allowing the UI to remain responsive.
-   * 
+   *
    * @param callback - The callback function to execute for each chunk
    * @returns Promise that resolves when all chunks have been processed
-   * 
+   *
    * @example
    * ```typescript
    * await batchProcessor.processChunk(async (start, end) => {

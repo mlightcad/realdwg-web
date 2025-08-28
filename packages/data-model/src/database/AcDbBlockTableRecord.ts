@@ -7,14 +7,14 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
  * Block table record that serves as a container for entities within drawing databases.
- * 
+ *
  * Block table records (BTRs) are used to organize and group entities together.
  * There are two special BTRs that are always present in every database:
  * - *MODEL_SPACE: Contains entities in model space
  * - *PAPER_SPACE: Contains entities in paper space
- * 
+ *
  * Each block table record has an origin point and can contain multiple entities.
- * 
+ *
  * @example
  * ```typescript
  * const blockRecord = new AcDbBlockTableRecord();
@@ -28,21 +28,20 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   static MODEL_SPACE_NAME = '*MODEL_SPACE'
   /** Name prefix for paper space block table records */
   static PAPER_SPACE_NAME_PREFIX = '*PAPER_SPACE'
-  
+
   /** The base point of the block in WCS coordinates */
   private _origin: AcGePoint3d
   /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
 
-
   /**
    * Returns true if the specified name is the name of the model space block table record.
-   * 
+   *
    * Model space is the primary drawing area where most entities are created.
-   * 
+   *
    * @param name - The name of one block table record.
    * @returns True if the specified name is the name of the model space block table record.
-   * 
+   *
    * @example
    * ```typescript
    * if (AcDbBlockTableRecord.isModelSapceName('*Model_Space')) {
@@ -52,19 +51,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    */
   static isModelSapceName(name: string) {
     return (
-      name.toLowerCase() ==
-      AcDbBlockTableRecord.MODEL_SPACE_NAME.toLowerCase()
+      name.toLowerCase() == AcDbBlockTableRecord.MODEL_SPACE_NAME.toLowerCase()
     )
   }
 
   /**
    * Returns true if the specified name is the name of a paper space block table record.
-   * 
+   *
    * Paper space is used for creating layouts for printing and plotting.
-   * 
+   *
    * @param name - The name of one block table record.
    * @returns True if the specified name is the name of a paper space block table record.
-   * 
+   *
    * @example
    * ```typescript
    * if (AcDbBlockTableRecord.isPaperSapceName('*Paper_Space1')) {
@@ -80,7 +78,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Creates a new AcDbBlockTableRecord instance.
-   * 
+   *
    * @example
    * ```typescript
    * const blockRecord = new AcDbBlockTableRecord();
@@ -94,11 +92,11 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Returns true if this is a model space block table record.
-   * 
+   *
    * Model space is the primary drawing area where most entities are created.
-   * 
+   *
    * @returns True if this is a model space block table record
-   * 
+   *
    * @example
    * ```typescript
    * if (blockRecord.isModelSapce) {
@@ -112,11 +110,11 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Returns true if this is a paper space block table record.
-   * 
+   *
    * Paper space is used for creating layouts for printing and plotting.
-   * 
+   *
    * @returns True if this is a paper space block table record
-   * 
+   *
    * @example
    * ```typescript
    * if (blockRecord.isPaperSapce) {
@@ -130,12 +128,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets or sets the base point of the block in WCS coordinates.
-   * 
+   *
    * This point is the origin of the MCS (Model Coordinate System), which is the
    * local WCS for the entities within the block table record.
-   * 
+   *
    * @returns The origin point of the block
-   * 
+   *
    * @example
    * ```typescript
    * const origin = blockRecord.origin;
@@ -151,12 +149,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Appends the specified entity to this block table record.
-   * 
+   *
    * This method adds an entity to the block and sets up the necessary
    * relationships between the entity and the block table record.
-   * 
+   *
    * @param entity - The entity to append to this block table record
-   * 
+   *
    * @example
    * ```typescript
    * const line = new AcDbLine();
@@ -180,9 +178,9 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Creates an iterator object that can be used to iterate over the entities in the block table record.
-   * 
+   *
    * @returns An iterator object that can be used to iterate over the entities
-   * 
+   *
    * @example
    * ```typescript
    * const iterator = blockRecord.newIterator();
@@ -197,10 +195,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Searches for an entity in this block table record with the specified ID.
-   * 
+   *
    * @param id - The entity ID to search for
    * @returns The entity with the specified ID, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const entity = blockRecord.getIdAt('some-entity-id');

@@ -3,10 +3,10 @@ import { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
 
 /**
  * Returns the singleton instance of the host application services.
- * 
+ *
  * This function provides access to the global AcDbHostApplicationServices instance
  * that manages various services for host applications at runtime.
- * 
+ *
  * @returns The singleton instance of AcDbHostApplicationServices
  * @example
  * ```typescript
@@ -20,12 +20,12 @@ export function acdbHostApplicationServices() {
 
 /**
  * The AcDbHostApplicationServices class provides various services to host applications at runtime.
- * 
+ *
  * This class implements the singleton pattern and manages:
  * - Working database reference
  * - Layout manager instance
  * - Other application-wide services
- * 
+ *
  * @example
  * ```typescript
  * const services = acdbHostApplicationServices();
@@ -36,10 +36,10 @@ export function acdbHostApplicationServices() {
 export class AcDbHostApplicationServices {
   /** The current working database instance */
   private _workingDatabase: AcDbDatabase | null = null
-  
+
   /** The layout manager instance */
   private _layoutManager: AcDbLayoutManager
-  
+
   /** The singleton instance of AcDbHostApplicationServices */
   public static instance: AcDbHostApplicationServices =
     new AcDbHostApplicationServices()
@@ -54,10 +54,10 @@ export class AcDbHostApplicationServices {
 
   /**
    * Gets the current working database.
-   * 
+   *
    * The working database is the primary database that the application
    * is currently operating on. This must be set before it can be accessed.
-   * 
+   *
    * @returns The current working database
    * @throws {Error} When the working database has not been set
    * @example
@@ -83,10 +83,10 @@ export class AcDbHostApplicationServices {
 
   /**
    * Sets the working database.
-   * 
+   *
    * This method sets the database that will be used as the current working database
    * for the application. This database will be returned by the workingDatabase getter.
-   * 
+   *
    * @param database - The database to make the new working database
    * @example
    * ```typescript
@@ -101,11 +101,11 @@ export class AcDbHostApplicationServices {
 
   /**
    * Gets the layout manager instance.
-   * 
+   *
    * The layout manager is responsible for managing layout objects in the application.
    * This is a singleton instance that is created when the AcDbHostApplicationServices
    * is instantiated.
-   * 
+   *
    * @returns The layout manager instance
    * @example
    * ```typescript

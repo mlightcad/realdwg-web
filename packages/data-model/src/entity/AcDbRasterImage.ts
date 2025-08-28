@@ -38,16 +38,16 @@ export enum AcDbRasterImageImageDisplayOpt {
 
 /**
  * Represents a raster image entity in AutoCAD.
- * 
+ *
  * The AcDbRasterImage entity (or "image entity") works with the AcDbRasterImageDef object
  * (or "image definition object") to implement raster images inside AutoCAD. The relationship
  * between these two classes is much like the relationship between an AutoCAD block definition
  * object and a block insert entity.
- * 
+ *
  * Two or more image entities can be linked to a single image definition object. Since each
  * image entity has its own clip boundary, this is an efficient way to display different
  * regions of a single raster image at different positions in the drawing.
- * 
+ *
  * @example
  * ```typescript
  * // Create a raster image entity
@@ -59,7 +59,7 @@ export enum AcDbRasterImageImageDisplayOpt {
  * rasterImage.rotation = 0;
  * rasterImage.brightness = 50;
  * rasterImage.contrast = 50;
- * 
+ *
  * // Access raster image properties
  * console.log(`Position: ${rasterImage.position}`);
  * console.log(`Width: ${rasterImage.width}`);
@@ -100,11 +100,11 @@ export class AcDbRasterImage extends AcDbEntity {
 
   /**
    * Creates a new raster image entity.
-   * 
+   *
    * This constructor initializes a raster image with default values.
    * The brightness and contrast are set to 50, fade to 0, position to origin,
    * scale to (1,1), rotation to 0, and clip boundary type to Rect.
-   * 
+   *
    * @example
    * ```typescript
    * const rasterImage = new AcDbRasterImage();
@@ -133,9 +133,9 @@ export class AcDbRasterImage extends AcDbEntity {
 
   /**
    * Gets the current brightness value of the image.
-   * 
+   *
    * @returns The brightness value (0-100)
-   * 
+   *
    * @example
    * ```typescript
    * const brightness = rasterImage.brightness;

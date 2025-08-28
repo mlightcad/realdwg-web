@@ -1,29 +1,29 @@
 /**
  * @fileoverview Task scheduling and execution system for the AutoCAD Common library.
- * 
+ *
  * This module provides a type-safe task scheduler that can execute a chain of named tasks
  * in sequence, with progress reporting, error handling, and data flow between tasks.
- * 
+ *
  * @module AcCmTaskScheduler
  * @version 1.0.0
  */
 
 /**
  * Represents a named unit of work with an asynchronous or synchronous execution function.
- * 
+ *
  * Tasks can be chained together in a scheduler to create complex workflows with
  * proper data flow and error handling.
- * 
+ *
  * @template TIn - Input type for the task.
  * @template TOut - Output type for the task.
- * 
+ *
  * @example
  * ```typescript
  * class LoadFileTask extends AcCmTask<string, ArrayBuffer> {
  *   constructor() {
  *     super('LoadFile')
  *   }
- * 
+ *
  *   async run(url: string): Promise<ArrayBuffer> {
  *     const response = await fetch(url)
  *     return response.arrayBuffer()
@@ -39,7 +39,7 @@ export class AcCmTask<TIn, TOut> {
 
   /**
    * Creates a new task with the specified name.
-   * 
+   *
    * @param {string} name - The name identifier for this task.
    */
   constructor(name: string) {
@@ -48,10 +48,10 @@ export class AcCmTask<TIn, TOut> {
 
   /**
    * Executes the task with the given input.
-   * 
+   *
    * This method must be implemented by subclasses to define the actual work
    * performed by the task. Can return either a synchronous result or a Promise.
-   * 
+   *
    * @param {TIn} _input - The input data for the task.
    * @returns {TOut | Promise<TOut>} The task result, either synchronous or asynchronous.
    * @throws {Error} When the method is not implemented by a subclass.
@@ -63,7 +63,7 @@ export class AcCmTask<TIn, TOut> {
 
 /**
  * Callback function that reports progress after a task completes.
- * 
+ *
  * @param {number} progress - A number between 0 and 1 indicating task completion.
  * @param {AcCmTask<unknown, unknown>} task - The task that was just completed.
  */
@@ -74,7 +74,7 @@ type AcCmProgressCallback = (
 
 /**
  * Callback function to handle the final output after all tasks complete successfully.
- * 
+ *
  * @template T - The type of the final result.
  * @param {T} finalResult - The final result from the task chain.
  */
@@ -82,7 +82,7 @@ export type AcCmCompleteCallback<T> = (finalResult: T) => void
 
 /**
  * Callback function that handles errors during task execution.
- * 
+ *
  * @param {unknown} error - The error that was thrown.
  * @param {number} taskIndex - Index of the failed task in the task queue.
  * @param {AcCmTask<unknown, unknown>} task - The task that failed.
@@ -95,32 +95,32 @@ type AcCmErrorCallback = (
 
 /**
  * Type-safe task scheduler that executes a chain of named tasks in order.
- * 
+ *
  * The scheduler passes results between tasks, reports progress, and stops
  * execution on the first failure. Supports both synchronous and asynchronous tasks.
  *
  * @template TInitial - Initial input type for the first task.
  * @template TFinal - Final output type from the last task.
- * 
+ *
  * @example
  * ```typescript
  * // Create scheduler with string input and object output
  * const scheduler = new AcCmTaskScheduler<string, ParsedData>()
- * 
+ *
  * // Add tasks
  * scheduler.addTask(new LoadFileTask())
  * scheduler.addTask(new ParseDataTask())
  * scheduler.addTask(new ValidateDataTask())
- * 
+ *
  * // Set callbacks
  * scheduler.setProgressCallback((progress, task) => {
  *   console.log(`${task.name}: ${(progress * 100).toFixed(1)}%`)
  * })
- * 
+ *
  * scheduler.setCompleteCallback((result) => {
  *   console.log('All tasks completed:', result)
  * })
- * 
+ *
  * // Execute
  * await scheduler.execute('file.dwg')
  * ```
@@ -133,10 +133,10 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
 
   /**
    * Schedules a task to be executed asynchronously.
-   * 
+   *
    * This method uses requestAnimationFrame in browser environments or setTimeout
    * in Node.js environments to schedule the task.
-   * 
+   *
    * @param callback - The callback function to schedule
    * @returns Promise that resolves with the result of the callback
    */
@@ -144,9 +144,7 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
     return new Promise<T>((resolve, reject) => {
       const executeCallback = () => {
         // Execute the callback and handle the result
-        Promise.resolve(callback())
-          .then(resolve)
-          .catch(reject)
+        Promise.resolve(callback()).then(resolve).catch(reject)
       }
 
       if (

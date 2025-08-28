@@ -4,11 +4,11 @@ import { AcDbObject } from '../../base'
 
 /**
  * Represents the stored characteristics of each paperspace layout.
- * 
+ *
  * Layout objects are stored in an AcDbDictionary object with an ACAD_LAYOUT key,
  * allowing easy iteration and indexing. Each layout represents a paperspace
  * configuration that can be used for printing or plotting.
- * 
+ *
  * @example
  * ```typescript
  * const layout = new AcDbLayout();
@@ -33,7 +33,7 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Creates a new AcDbLayout instance.
-   * 
+   *
    * @example
    * ```typescript
    * const layout = new AcDbLayout();
@@ -51,12 +51,12 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets the user-friendly layout name that is displayed in the tab control.
-   * 
+   *
    * Currently there is no restriction on the name except that the length
    * is limited to 256 characters.
-   * 
+   *
    * @returns The layout name
-   * 
+   *
    * @example
    * ```typescript
    * const name = layout.layoutName;
@@ -69,9 +69,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets the user-friendly layout name that is displayed in the tab control.
-   * 
+   *
    * @param value - The new layout name (limited to 256 characters)
-   * 
+   *
    * @example
    * ```typescript
    * layout.layoutName = 'A4 Landscape';
@@ -83,11 +83,11 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets the tab order field, which controls the order in which layouts are displayed.
-   * 
+   *
    * The tab order should be unique and sequential for each layout in the database.
-   * 
+   *
    * @returns The tab order value
-   * 
+   *
    * @example
    * ```typescript
    * const order = layout.tabOrder;
@@ -99,9 +99,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets the tab order field, which controls the order in which layouts are displayed.
-   * 
+   *
    * @param value - The new tab order value
-   * 
+   *
    * @example
    * ```typescript
    * layout.tabOrder = 1;
@@ -113,13 +113,13 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets whether the layout tab is included in the selection set for operations.
-   * 
+   *
    * This flag indicates whether the layout tab is included in the selection set
    * for operations that affect multiple tabs. The user can perform multiple
    * selection via the user interface using shift-click.
-   * 
+   *
    * @returns True if the tab is selected, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const isSelected = layout.tabSelected;
@@ -131,9 +131,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets whether the layout tab is included in the selection set for operations.
-   * 
+   *
    * @param value - True to select the tab, false to deselect it
-   * 
+   *
    * @example
    * ```typescript
    * layout.tabSelected = true;
@@ -145,9 +145,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets the associated block table record ID of this layout.
-   * 
+   *
    * @returns The block table record ID
-   * 
+   *
    * @example
    * ```typescript
    * const blockId = layout.blockTableRecordId;
@@ -159,9 +159,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets the associated block table record ID of this layout.
-   * 
+   *
    * @param value - The new block table record ID
-   * 
+   *
    * @example
    * ```typescript
    * layout.blockTableRecordId = 'some-block-id';
@@ -173,11 +173,11 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets the limits for this layout.
-   * 
+   *
    * Limits are defined by LIMMAX while this layout is current.
-   * 
+   *
    * @returns The layout limits as a 2D bounding box
-   * 
+   *
    * @example
    * ```typescript
    * const limits = layout.limits;
@@ -190,9 +190,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets the limits for this layout.
-   * 
+   *
    * @param value - The new layout limits as a 2D bounding box
-   * 
+   *
    * @example
    * ```typescript
    * layout.limits = new AcGeBox2d();
@@ -204,12 +204,12 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Gets the current extents setting of the layout.
-   * 
+   *
    * This value may not be the actual extents of the geometry in the layout,
    * it is just the value last saved in the layout.
-   * 
+   *
    * @returns The layout extents as a 3D bounding box
-   * 
+   *
    * @example
    * ```typescript
    * const extents = layout.extents;
@@ -222,9 +222,9 @@ export class AcDbLayout extends AcDbObject {
 
   /**
    * Sets the current extents setting of the layout.
-   * 
+   *
    * @param value - The new layout extents as a 3D bounding box
-   * 
+   *
    * @example
    * ```typescript
    * layout.extents = new AcGeBox3d();

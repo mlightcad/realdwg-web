@@ -92,12 +92,12 @@ import {
 
 /**
  * Converts DXF entities to AcDbEntity objects.
- * 
+ *
  * This class provides functionality to convert various DXF entity types
  * (such as lines, circles, arcs, text, etc.) into their corresponding
  * AcDbEntity objects. It handles the conversion of geometric data,
  * properties, and attributes from DXF format to the internal database format.
- * 
+ *
  * @example
  * ```typescript
  * const converter = new AcDbEntityConverter();
@@ -108,14 +108,14 @@ import {
 export class AcDbEntityConverter {
   /**
    * Converts a DXF entity to an AcDbEntity.
-   * 
+   *
    * This method takes a DXF entity and converts it to the corresponding
    * AcDbEntity type. It first creates the entity using createEntity(),
    * then processes common attributes using processCommonAttrs().
-   * 
+   *
    * @param entity - The DXF entity to convert
    * @returns The converted AcDbEntity, or null if conversion fails
-   * 
+   *
    * @example
    * ```typescript
    * const dxfLine = { type: 'LINE', startPoint: [0, 0, 0], endPoint: [10, 10, 0] };
@@ -135,14 +135,14 @@ export class AcDbEntityConverter {
 
   /**
    * Creates the corresponding drawing database entity from DXF format data.
-   * 
+   *
    * This method acts as a factory that routes DXF entities to their specific
    * conversion methods based on the entity type. It handles all supported
    * DXF entity types including geometric entities, text entities, and special entities.
-   * 
+   *
    * @param entity - Input entity data in DXF format
    * @returns The converted drawing database entity, or null if the entity type is not supported
-   * 
+   *
    * @example
    * ```typescript
    * const dxfEntity = { type: 'CIRCLE', center: [0, 0, 0], radius: 5 };
@@ -196,10 +196,10 @@ export class AcDbEntityConverter {
 
   /**
    * Converts a DXF arc entity to an AcDbArc.
-   * 
+   *
    * @param arc - The DXF arc entity to convert
    * @returns The converted AcDbArc entity
-   * 
+   *
    * @example
    * ```typescript
    * const dxfArc = { type: 'ARC', center: [0, 0, 0], radius: 5, startAngle: 0, endAngle: 90 };
@@ -218,10 +218,10 @@ export class AcDbEntityConverter {
 
   /**
    * Converts a DXF circle entity to an AcDbCircle.
-   * 
+   *
    * @param circle - The DXF circle entity to convert
    * @returns The converted AcDbCircle entity
-   * 
+   *
    * @example
    * ```typescript
    * const dxfCircle = { type: 'CIRCLE', center: [0, 0, 0], radius: 5 };
@@ -235,10 +235,10 @@ export class AcDbEntityConverter {
 
   /**
    * Converts a DXF ellipse entity to an AcDbEllipse.
-   * 
+   *
    * @param ellipse - The DXF ellipse entity to convert
    * @returns The converted AcDbEllipse entity
-   * 
+   *
    * @example
    * ```typescript
    * const dxfEllipse = { type: 'ELLIPSE', center: [0, 0, 0], majorAxisEndPoint: [5, 0, 0] };
@@ -285,7 +285,12 @@ export class AcDbEntityConverter {
         spline.numberOfFitPoints
       )
       if (fitPoints != null) {
-        return new AcDbSpline(fitPoints, 'Uniform', spline.degree, !!(spline.flag & 0x01))
+        return new AcDbSpline(
+          fitPoints,
+          'Uniform',
+          spline.degree,
+          !!(spline.flag & 0x01)
+        )
       }
     }
     return null
@@ -682,14 +687,14 @@ export class AcDbEntityConverter {
 
   /**
    * Processes common attributes from a DXF entity to an AcDbEntity.
-   * 
+   *
    * This method copies common properties like layer, object ID, owner ID,
    * linetype, lineweight, color, visibility, and transparency from the
    * DXF entity to the corresponding AcDbEntity.
-   * 
+   *
    * @param entity - The source DXF entity
    * @param dbEntity - The target AcDbEntity to populate
-   * 
+   *
    * @example
    * ```typescript
    * converter.processCommonAttrs(dxfEntity, acDbEntity);
@@ -727,16 +732,16 @@ export class AcDbEntityConverter {
 
   /**
    * Converts a number array to an array of 3D points.
-   * 
+   *
    * This utility method takes a flat array of numbers and converts it to
    * an array of AcGePoint3dLike objects. It automatically detects whether
    * the input represents 2D or 3D points based on the array length and
    * number of points.
-   * 
+   *
    * @param numbers - Flat array of numbers representing point coordinates
    * @param numberOfPoints - Expected number of points in the array
    * @returns Array of AcGePoint3dLike objects, or undefined if the conversion fails
-   * 
+   *
    * @example
    * ```typescript
    * const numbers = [0, 0, 10, 10, 20, 20]; // 3 points in 2D

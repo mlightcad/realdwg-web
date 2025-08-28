@@ -19,12 +19,12 @@ import { AcDbEntity } from './AcDbEntity'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.
- * 
+ *
  * A multiline text entity is a 2D geometric object that displays formatted text
  * with support for multiple lines, word wrapping, and rich text formatting.
  * MText entities are more advanced than regular text entities and support
  * features like background fills, line spacing, and attachment points.
- * 
+ *
  * @example
  * ```typescript
  * // Create a multiline text entity
@@ -34,7 +34,7 @@ import { AcDbEntity } from './AcDbEntity'
  * mtext.width = 20;
  * mtext.location = new AcGePoint3d(0, 0, 0);
  * mtext.attachmentPoint = AcGiMTextAttachmentPoint.TopLeft;
- * 
+ *
  * // Access mtext properties
  * console.log(`Contents: ${mtext.contents}`);
  * console.log(`Height: ${mtext.height}`);
@@ -75,10 +75,10 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Creates a new multiline text entity.
-   * 
+   *
    * This constructor initializes an mtext entity with default values.
    * The contents are empty, height and width are 0, and the location is at the origin.
-   * 
+   *
    * @example
    * ```typescript
    * const mtext = new AcDbMText();
@@ -108,12 +108,12 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Gets the contents of the mtext object.
-   * 
+   *
    * This returns a string that contains the contents of the mtext object.
    * Formatting data used for word wrap calculations is removed.
-   * 
+   *
    * @returns The text contents
-   * 
+   *
    * @example
    * ```typescript
    * const contents = mtext.contents;
@@ -126,9 +126,9 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Sets the contents of the mtext object.
-   * 
+   *
    * @param value - The new text contents
-   * 
+   *
    * @example
    * ```typescript
    * mtext.contents = "New multiline\ntext content";
@@ -140,9 +140,9 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Gets the height of the text.
-   * 
+   *
    * @returns The text height
-   * 
+   *
    * @example
    * ```typescript
    * const height = mtext.height;
@@ -155,9 +155,9 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Sets the height of the text.
-   * 
+   *
    * @param value - The new text height
-   * 
+   *
    * @example
    * ```typescript
    * mtext.height = 5.0;
@@ -169,13 +169,13 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Gets the maximum width setting used by the MText object for word wrap formatting.
-   * 
+   *
    * It is possible that none of the lines resulting from word wrap formatting will
    * reach this width value. Words which exceed this width value will not be broken,
    * but will extend beyond the given width.
-   * 
+   *
    * @returns The maximum width for word wrap
-   * 
+   *
    * @example
    * ```typescript
    * const width = mtext.width;
@@ -188,9 +188,9 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Sets the maximum width setting used by the MText object for word wrap formatting.
-   * 
+   *
    * @param value - The new maximum width for word wrap
-   * 
+   *
    * @example
    * ```typescript
    * mtext.width = 25;
@@ -202,12 +202,12 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Gets the rotation angle of the text.
-   * 
+   *
    * The rotation angle is relative to the X axis of the text's OCS, with positive
    * angles going counterclockwise when looking down the Z axis toward the origin.
-   * 
+   *
    * @returns The rotation angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const rotation = mtext.rotation;

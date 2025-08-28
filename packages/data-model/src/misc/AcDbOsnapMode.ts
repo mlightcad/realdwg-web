@@ -1,6 +1,6 @@
 /**
  * Enumeration of object snap modes used in AutoCAD.
- * 
+ *
  * Object snap modes define the types of geometric points that can be
  * snapped to when drawing or editing entities. These modes help ensure
  * precise positioning and alignment of objects.

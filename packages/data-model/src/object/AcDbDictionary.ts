@@ -4,7 +4,7 @@ import { AcDbObjectIterator } from '../misc'
 
 /**
  * A database-resident object dictionary that maintains a map between text strings and database objects.
- * 
+ *
  * An instance of this class represents a single object, such as Drawing Symbol Table, to which objects
  * derived from AcDbObject may be added, accessed, and removed. Entries in an AcDbDictionary must be unique.
  * Entries consist of a unique AcDbObject and string, which comprises the entry's key name. The key may be
@@ -14,9 +14,9 @@ import { AcDbObjectIterator } from '../misc'
  * established as the object's owner, the lookup key string is associated with the object's object ID, and
  * the dictionary itself is attached to the object as a persistent reactor so that the dictionary is notified
  * when the object is erased.
- * 
+ *
  * @template TObjectType - The type of objects stored in this dictionary
- * 
+ *
  * @example
  * ```typescript
  * const dictionary = new AcDbDictionary<AcDbLayout>(database);
@@ -35,9 +35,9 @@ export class AcDbDictionary<
 
   /**
    * Creates a new AcDbDictionary instance.
-   * 
+   *
    * @param db - The database this dictionary belongs to
-   * 
+   *
    * @example
    * ```typescript
    * const dictionary = new AcDbDictionary(database);
@@ -52,9 +52,9 @@ export class AcDbDictionary<
 
   /**
    * Gets the number of entries in the dictionary.
-   * 
+   *
    * @returns The number of entries in the dictionary
-   * 
+   *
    * @example
    * ```typescript
    * const count = dictionary.numEntries;
@@ -67,13 +67,13 @@ export class AcDbDictionary<
 
   /**
    * Adds a new entry to the dictionary.
-   * 
+   *
    * If an entry with the specified key already exists, the existing entry is erased
    * and replaced with the new one.
-   * 
+   *
    * @param key - String representing the object's search key name
    * @param value - The new object to add to the dictionary
-   * 
+   *
    * @example
    * ```typescript
    * const layout = new AcDbLayout();
@@ -88,10 +88,10 @@ export class AcDbDictionary<
 
   /**
    * Removes the entry specified by name from the dictionary.
-   * 
+   *
    * @param name - String representing the entry's key (or name)
    * @returns True if the entry was found and removed, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const removed = dictionary.remove('MyLayout');
@@ -112,10 +112,10 @@ export class AcDbDictionary<
 
   /**
    * Removes the entry specified by object ID from the dictionary.
-   * 
+   *
    * @param id - ID of the object to delete
    * @returns True if the entry was found and removed, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const removed = dictionary.removeId('some-object-id');
@@ -135,7 +135,7 @@ export class AcDbDictionary<
 
   /**
    * Removes all records from the dictionary.
-   * 
+   *
    * @example
    * ```typescript
    * dictionary.removeAll();
@@ -148,10 +148,10 @@ export class AcDbDictionary<
 
   /**
    * Checks if the dictionary contains an object with the specified name.
-   * 
+   *
    * @param name - Name to search for
    * @returns True if the dictionary contains an object with the specified name, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (dictionary.has('MyLayout')) {
@@ -165,10 +165,10 @@ export class AcDbDictionary<
 
   /**
    * Checks if the dictionary contains an object with the specified ID.
-   * 
+   *
    * @param id - ID to search for
    * @returns True if the dictionary contains an object with the specified ID, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (dictionary.hasId('some-object-id')) {
@@ -182,10 +182,10 @@ export class AcDbDictionary<
 
   /**
    * Gets the object with the specified name from the dictionary.
-   * 
+   *
    * @param name - Name of the object to retrieve
    * @returns The object with the specified name, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const layout = dictionary.getAt('MyLayout');
@@ -200,10 +200,10 @@ export class AcDbDictionary<
 
   /**
    * Gets the object with the specified ID from the dictionary.
-   * 
+   *
    * @param id - ID of the object to retrieve
    * @returns The object with the specified ID, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const object = dictionary.getIdAt('some-object-id');
@@ -215,9 +215,9 @@ export class AcDbDictionary<
 
   /**
    * Creates a new iterator for traversing the dictionary entries.
-   * 
+   *
    * @returns A new AcDbObjectIterator for this dictionary
-   * 
+   *
    * @example
    * ```typescript
    * const iterator = dictionary.newIterator();

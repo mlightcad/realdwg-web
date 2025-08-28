@@ -43,11 +43,11 @@ export enum AcDbTextVerticalMode {
 
 /**
  * Represents a text entity in AutoCAD.
- * 
+ *
  * A text entity is a 2D geometric object that displays text strings in drawings.
  * Text entities can have various properties including position, height, rotation,
  * alignment, and style. Text is always drawn in the plane defined by its normal vector.
- * 
+ *
  * @example
  * ```typescript
  * // Create a text entity
@@ -57,7 +57,7 @@ export enum AcDbTextVerticalMode {
  * text.height = 2.5;
  * text.horizontalMode = AcDbTextHorizontalMode.CENTER;
  * text.verticalMode = AcDbTextVerticalMode.BASELINE;
- * 
+ *
  * // Access text properties
  * console.log(`Text: ${text.textString}`);
  * console.log(`Position: ${text.position}`);
@@ -88,10 +88,10 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Creates a new text entity.
-   * 
+   *
    * This constructor initializes a text entity with default values.
    * The text string is empty, height is 0, and position is at the origin.
-   * 
+   *
    * @example
    * ```typescript
    * const text = new AcDbText();
@@ -116,9 +116,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the text string content of this entity.
-   * 
+   *
    * @returns The text string
-   * 
+   *
    * @example
    * ```typescript
    * const content = text.textString;
@@ -131,9 +131,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the text string content of this entity.
-   * 
+   *
    * @param value - The new text string
-   * 
+   *
    * @example
    * ```typescript
    * text.textString = "New text content";
@@ -145,12 +145,12 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the thickness of the text.
-   * 
+   *
    * The thickness is the text's dimension along its normal vector direction
    * (sometimes called the extrusion direction).
-   * 
+   *
    * @returns The thickness value
-   * 
+   *
    * @example
    * ```typescript
    * const thickness = text.thickness;
@@ -163,9 +163,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the thickness of the text.
-   * 
+   *
    * @param value - The new thickness value
-   * 
+   *
    * @example
    * ```typescript
    * text.thickness = 2.0;
@@ -177,12 +177,12 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the height of the text.
-   * 
+   *
    * The height value is used as a scale factor for both height and width
    * of the text.
-   * 
+   *
    * @returns The height value
-   * 
+   *
    * @example
    * ```typescript
    * const height = text.height;
@@ -195,9 +195,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the height of the text.
-   * 
+   *
    * @param value - The new height value
-   * 
+   *
    * @example
    * ```typescript
    * text.height = 5.0;
@@ -209,9 +209,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the insertion point of the text in WCS coordinates.
-   * 
+   *
    * @returns The insertion point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const position = text.position;
@@ -224,9 +224,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the insertion point of the text in WCS coordinates.
-   * 
+   *
    * @param value - The new insertion point
-   * 
+   *
    * @example
    * ```typescript
    * text.position = new AcGePoint3d(15, 25, 0);
@@ -238,13 +238,13 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the rotation angle of the text.
-   * 
+   *
    * The rotation angle is relative to the X axis of the text's OCS,
    * with positive angles going counterclockwise when looking down the Z axis
    * toward the origin.
-   * 
+   *
    * @returns The rotation angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const rotation = text.rotation;
@@ -257,9 +257,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the rotation angle of the text.
-   * 
+   *
    * @param value - The new rotation angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * text.rotation = Math.PI / 4; // 45 degrees
@@ -271,13 +271,13 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the oblique angle of the text.
-   * 
+   *
    * The oblique angle is the angle from the text's vertical; that is, the top
    * of the text "slants" relative to the bottom, similar to italic text.
    * Positive angles slant characters forward at their tops.
-   * 
+   *
    * @returns The oblique angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const oblique = text.oblique;
@@ -290,9 +290,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the oblique angle of the text.
-   * 
+   *
    * @param value - The new oblique angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * text.oblique = Math.PI / 6; // 30 degrees
@@ -304,9 +304,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the horizontal alignment mode of the text.
-   * 
+   *
    * @returns The horizontal alignment mode
-   * 
+   *
    * @example
    * ```typescript
    * const horizontalMode = text.horizontalMode;
@@ -319,9 +319,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the horizontal alignment mode of the text.
-   * 
+   *
    * @param value - The new horizontal alignment mode
-   * 
+   *
    * @example
    * ```typescript
    * text.horizontalMode = AcDbTextHorizontalMode.CENTER;
@@ -333,9 +333,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the vertical alignment mode of the text.
-   * 
+   *
    * @returns The vertical alignment mode
-   * 
+   *
    * @example
    * ```typescript
    * const verticalMode = text.verticalMode;
@@ -348,9 +348,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the vertical alignment mode of the text.
-   * 
+   *
    * @param value - The new vertical alignment mode
-   * 
+   *
    * @example
    * ```typescript
    * text.verticalMode = AcDbTextVerticalMode.BASELINE;
@@ -362,9 +362,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the style name used by this text entity.
-   * 
+   *
    * @returns The text style name
-   * 
+   *
    * @example
    * ```typescript
    * const styleName = text.styleName;
@@ -377,9 +377,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the style name for this text entity.
-   * 
+   *
    * @param value - The new text style name
-   * 
+   *
    * @example
    * ```typescript
    * text.styleName = "Standard";
@@ -391,13 +391,13 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the width factor of the text.
-   * 
+   *
    * The width factor is applied to the text's width to allow the width to be
    * adjusted independently of the height. For example, if the widthFactor value
    * is 0.8, then the text is drawn with a width that is 80% of its normal width.
-   * 
+   *
    * @returns The width factor value
-   * 
+   *
    * @example
    * ```typescript
    * const widthFactor = text.widthFactor;
@@ -410,9 +410,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Sets the width factor of the text.
-   * 
+   *
    * @param value - The new width factor value
-   * 
+   *
    * @example
    * ```typescript
    * text.widthFactor = 0.8; // 80% width
@@ -424,9 +424,9 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the geometric extents (bounding box) of this text.
-   * 
+   *
    * @returns The bounding box that encompasses the text
-   * 
+   *
    * @example
    * ```typescript
    * const extents = text.geometricExtents;
@@ -440,12 +440,12 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Gets the text style for this text entity.
-   * 
+   *
    * This method retrieves the text style from the text style table.
    * If the specified style is not found, it falls back to the 'STANDARD' style.
-   * 
+   *
    * @returns The text style object
-   * 
+   *
    * @example
    * ```typescript
    * const textStyle = text.getTextStyle();
@@ -463,13 +463,13 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Draws this text using the specified renderer.
-   * 
+   *
    * This method renders the text as a multiline text entity using the text's
    * current style properties.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered text entity, or undefined if drawing failed
-   * 
+   *
    * @example
    * ```typescript
    * const renderedText = text.draw(renderer);

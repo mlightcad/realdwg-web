@@ -1,6 +1,6 @@
 /**
  * Enumeration of arrowhead types used in dimension lines.
- * 
+ *
  * This enum defines the various arrowhead styles that can be displayed
  * at the ends of dimension lines in AutoCAD drawings.
  */

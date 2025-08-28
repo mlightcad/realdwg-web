@@ -5,13 +5,13 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
  * Base class for all symbol tables in AutoCAD.
- * 
+ *
  * AcDbSymbolTable is the base class for all classes used to manage AutoCAD's
  * built-in symbol tables. Symbol tables organize and store various types of
  * records such as layers, linetypes, text styles, dimension styles, etc.
- * 
+ *
  * @template RecordType - The type of records this symbol table manages
- * 
+ *
  * @example
  * ```typescript
  * class MySymbolTable extends AcDbSymbolTable<MySymbolTableRecord> {
@@ -31,9 +31,9 @@ export class AcDbSymbolTable<
 
   /**
    * Creates a new AcDbSymbolTable instance.
-   * 
+   *
    * @param db - The database this symbol table belongs to
-   * 
+   *
    * @example
    * ```typescript
    * const symbolTable = new AcDbSymbolTable(database);
@@ -48,9 +48,9 @@ export class AcDbSymbolTable<
 
   /**
    * Adds a record to both the database containing the table and the table itself.
-   * 
+   *
    * @param record - The record to add to the table
-   * 
+   *
    * @example
    * ```typescript
    * const record = new AcDbSymbolTableRecord({ name: 'MyRecord' });
@@ -66,10 +66,10 @@ export class AcDbSymbolTable<
 
   /**
    * Removes the record with the specified name.
-   * 
+   *
    * @param name - The name of the record to remove
    * @returns True if the record was found and removed, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const removed = symbolTable.remove('MyRecord');
@@ -91,10 +91,10 @@ export class AcDbSymbolTable<
 
   /**
    * Removes the record with the specified ID.
-   * 
+   *
    * @param id - The object ID of the record to remove
    * @returns True if the record was found and removed, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const removed = symbolTable.removeId('some-object-id');
@@ -115,7 +115,7 @@ export class AcDbSymbolTable<
 
   /**
    * Removes all records from the table.
-   * 
+   *
    * @example
    * ```typescript
    * symbolTable.removeAll();
@@ -129,10 +129,10 @@ export class AcDbSymbolTable<
 
   /**
    * Checks if the table contains a record with the specified name.
-   * 
+   *
    * @param name - The name to search for
    * @returns True if a record with the specified name exists, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (symbolTable.has('MyRecord')) {
@@ -147,10 +147,10 @@ export class AcDbSymbolTable<
 
   /**
    * Checks if the table contains a record with the specified ID.
-   * 
+   *
    * @param id - The ID to search for
    * @returns True if a record with the specified ID exists, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (symbolTable.hasId('some-object-id')) {
@@ -164,10 +164,10 @@ export class AcDbSymbolTable<
 
   /**
    * Searches the table for a record with the specified name.
-   * 
+   *
    * @param name - The name to search for
    * @returns The record with the specified name, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const record = symbolTable.getAt('MyRecord');
@@ -183,10 +183,10 @@ export class AcDbSymbolTable<
 
   /**
    * Searches the table for a record with the specified ID.
-   * 
+   *
    * @param id - The ID to search for
    * @returns The record with the specified ID, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const record = symbolTable.getIdAt('some-object-id');
@@ -201,10 +201,10 @@ export class AcDbSymbolTable<
 
   /**
    * Gets the owner ID of a record with the specified ID.
-   * 
+   *
    * @param id - The ID to search for
    * @returns The record with the specified ID, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const record = symbolTable.getOwnerIdAt('some-object-id');
@@ -219,9 +219,9 @@ export class AcDbSymbolTable<
 
   /**
    * Creates an iterator object that can be used to iterate over the records in the table.
-   * 
+   *
    * @returns An iterator object that can be used to iterate over the records
-   * 
+   *
    * @example
    * ```typescript
    * const iterator = symbolTable.newIterator();
@@ -235,12 +235,12 @@ export class AcDbSymbolTable<
   }
 
   /**
-   * Normalizes the name of a symbol table record.  
-   * 
+   * Normalizes the name of a symbol table record.
+   *
    * Some symbol table records require name normalization. For example, the
    * model space block table record may appear as either `*Model_Space` or
-   * `*MODEL_SPACE`, and should be standardized to a consistent form.  
-   * 
+   * `*MODEL_SPACE`, and should be standardized to a consistent form.
+   *
    * Subclasses should override this method to implement record-specific
    * normalization rules.
    *

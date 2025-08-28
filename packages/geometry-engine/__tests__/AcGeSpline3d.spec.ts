@@ -49,7 +49,13 @@ describe('AcGeSpline3d', () => {
       const degree = 3
       const closed = true
 
-      const spline = new AcGeSpline3d(controlPoints, knots, undefined, degree, closed)
+      const spline = new AcGeSpline3d(
+        controlPoints,
+        knots,
+        undefined,
+        degree,
+        closed
+      )
 
       expect(spline.degree).toBe(3)
       expect(spline.closed).toBe(true)
@@ -100,7 +106,12 @@ describe('AcGeSpline3d', () => {
       const degree = 3
       const closed = true
 
-      const spline = new AcGeSpline3d(fitPoints, parameterization, degree, closed)
+      const spline = new AcGeSpline3d(
+        fitPoints,
+        parameterization,
+        degree,
+        closed
+      )
 
       expect(spline.degree).toBe(3)
       expect(spline.knotParameterization).toBe(parameterization)

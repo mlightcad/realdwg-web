@@ -1,10 +1,10 @@
 /**
  * @fileoverview Loading management system for the AutoCAD Common library.
- * 
+ *
  * This module provides a centralized loading manager that tracks and coordinates
  * multiple file loading operations with progress reporting, error handling, and
  * URL modification capabilities.
- * 
+ *
  * @module AcCmLoadingManager
  * @version 1.0.0
  */
@@ -13,7 +13,7 @@ import { AcCmLoader } from './AcCmLoader'
 
 /**
  * Callback function that is called when loading starts.
- * 
+ *
  * @param {string} url - The URL of the item that just started loading.
  * @param {number} itemsLoaded - The number of items already loaded so far.
  * @param {number} itemsTotal - The total number of items to be loaded.
@@ -31,7 +31,7 @@ export type AcCmOnLoadCallback = () => void
 
 /**
  * Callback function that is called when an individual item completes loading.
- * 
+ *
  * @param {string} url - The URL of the item that just finished loading.
  * @param {number} itemsLoaded - The number of items loaded so far.
  * @param {number} itemsTotal - The total number of items to be loaded.
@@ -44,17 +44,17 @@ export type AcCmOnProgressCallback = (
 
 /**
  * Callback function that is called when any loading operation encounters an error.
- * 
+ *
  * @param {string} url - The URL of the item that failed to load.
  */
 export type AcCmOnErrorCallback = (url: string) => void
 
 /**
  * Function that modifies URLs before loading requests are sent.
- * 
+ *
  * This callback allows intercepting and modifying URLs to implement custom loading
  * behavior, such as adding authentication tokens or redirecting to different servers.
- * 
+ *
  * @param {string} url - The original URL.
  * @returns {string} The modified URL or the original URL if no changes are needed.
  */
@@ -62,34 +62,34 @@ export type AcCmUrlModifier = (url: string) => string
 
 /**
  * Centralized loading manager that handles and tracks multiple loading operations.
- * 
+ *
  * This class manages the loading state across multiple file operations, providing
  * progress tracking, error handling, and URL modification capabilities. A default
  * global instance is created and used by loaders if not supplied manually.
- * 
+ *
  * Separate loading managers can be useful when you need independent loading progress
  * tracking (e.g., separate progress bars for different types of resources).
- * 
+ *
  * @example
  * ```typescript
  * import { AcCmLoadingManager } from './AcCmLoadingManager'
- * 
+ *
  * // Create a custom loading manager
  * const manager = new AcCmLoadingManager()
- * 
+ *
  * // Set up callbacks
  * manager.onStart = (url, loaded, total) => {
  *   console.log(`Started loading: ${url} (${loaded}/${total})`)
  * }
- * 
+ *
  * manager.onProgress = (url, loaded, total) => {
  *   console.log(`Progress: ${url} (${loaded}/${total})`)
  * }
- * 
+ *
  * manager.onLoad = () => {
  *   console.log('All loading completed!')
  * }
- * 
+ *
  * manager.onError = (url) => {
  *   console.error(`Failed to load: ${url}`)
  * }

@@ -1,5 +1,16 @@
 # @mlightcad/graphic-interface
 
+## 3.0.0
+
+### Minor Changes
+
+- fix: upgrade libredwg-web to fix bugs on getting layer name and line type name again
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.0.0
+
 ## 2.0.7
 
 ### Patch Changes

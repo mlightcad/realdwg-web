@@ -11,12 +11,12 @@ import { AcDbCurve } from './AcDbCurve'
 
 /**
  * Represents an ellipse entity in AutoCAD.
- * 
+ *
  * An ellipse is a 2D geometric object defined by its center point, major and minor axes,
  * and optional start and end angles. Ellipses are curved shapes that can be used to
  * create elliptical shapes in drawings. The ellipse is always drawn in the plane
  * defined by its normal vector.
- * 
+ *
  * @example
  * ```typescript
  * // Create a full ellipse
@@ -29,7 +29,7 @@ import { AcDbCurve } from './AcDbCurve'
  *   0,  // start angle
  *   2 * Math.PI // end angle (full ellipse)
  * );
- * 
+ *
  * // Access ellipse properties
  * console.log(`Center: ${ellipse.center}`);
  * console.log(`Major radius: ${ellipse.majorAxisRadius}`);
@@ -42,10 +42,10 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Creates a new ellipse entity.
-   * 
+   *
    * This constructor creates an ellipse using the specified center point, normal vector,
    * major axis, and radii. The center point must be in World Coordinate System (WCS) coordinates.
-   * 
+   *
    * @param center - The center point of the ellipse in WCS coordinates
    * @param normal - The normal vector defining the plane of the ellipse
    * @param majorAxis - The major axis vector in WCS coordinates
@@ -53,7 +53,7 @@ export class AcDbEllipse extends AcDbCurve {
    * @param minorAxisRadius - The radius of the minor axis (must be positive)
    * @param startAngle - The starting angle in radians (0 to 2π)
    * @param endAngle - The ending angle in radians (0 to 2π)
-   * 
+   *
    * @example
    * ```typescript
    * // Create a full ellipse in the XY plane
@@ -66,7 +66,7 @@ export class AcDbEllipse extends AcDbCurve {
    *   0,
    *   2 * Math.PI
    * );
-   * 
+   *
    * // Create a quarter ellipse
    * const quarterEllipse = new AcDbEllipse(
    *   new AcGePoint3d(10, 20, 0),
@@ -102,9 +102,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets the center point of this ellipse.
-   * 
+   *
    * @returns The center point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const centerPoint = ellipse.center;
@@ -117,9 +117,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Sets the center point of this ellipse.
-   * 
+   *
    * @param value - The new center point
-   * 
+   *
    * @example
    * ```typescript
    * ellipse.center = new AcGePoint3d(5, 5, 0);
@@ -131,9 +131,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets the major axis radius of this ellipse.
-   * 
+   *
    * @returns The major axis radius value
-   * 
+   *
    * @example
    * ```typescript
    * const majorRadius = ellipse.majorAxisRadius;
@@ -146,9 +146,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Sets the major axis radius of this ellipse.
-   * 
+   *
    * @param value - The new major axis radius value (must be positive)
-   * 
+   *
    * @example
    * ```typescript
    * ellipse.majorAxisRadius = 25;
@@ -160,9 +160,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets the minor axis radius of this ellipse.
-   * 
+   *
    * @returns The minor axis radius value
-   * 
+   *
    * @example
    * ```typescript
    * const minorRadius = ellipse.minorAxisRadius;
@@ -175,9 +175,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Sets the minor axis radius of this ellipse.
-   * 
+   *
    * @param value - The new minor axis radius value (must be positive)
-   * 
+   *
    * @example
    * ```typescript
    * ellipse.minorAxisRadius = 12;
@@ -189,11 +189,11 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets the normal vector of this ellipse.
-   * 
+   *
    * The normal vector defines the plane in which the ellipse lies.
-   * 
+   *
    * @returns The unit normal vector in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const normal = ellipse.normal;
@@ -206,9 +206,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Sets the normal vector of this ellipse.
-   * 
+   *
    * @param value - The new normal vector
-   * 
+   *
    * @example
    * ```typescript
    * ellipse.normal = AcGeVector3d.Y_AXIS;
@@ -220,9 +220,9 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets the geometric extents (bounding box) of this ellipse.
-   * 
+   *
    * @returns The bounding box that encompasses the entire ellipse
-   * 
+   *
    * @example
    * ```typescript
    * const extents = ellipse.geometricExtents;
@@ -235,10 +235,10 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Gets whether this ellipse is closed.
-   * 
+   *
    * An ellipse is considered closed if the start and end angles are the same
    * (forming a complete ellipse).
-   * 
+   *
    * @returns True if the ellipse is closed (forms a complete ellipse), false otherwise
    */
   get closed(): boolean {
@@ -247,13 +247,13 @@ export class AcDbEllipse extends AcDbCurve {
 
   /**
    * Draws this ellipse using the specified renderer.
-   * 
+   *
    * This method renders the ellipse as an elliptical arc using the ellipse's
    * current style properties.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered ellipse entity, or undefined if drawing failed
-   * 
+   *
    * @example
    * ```typescript
    * const renderedEllipse = ellipse.draw(renderer);

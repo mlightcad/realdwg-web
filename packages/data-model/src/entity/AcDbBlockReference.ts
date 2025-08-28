@@ -13,12 +13,12 @@ import { AcDbEntity } from './AcDbEntity'
 
 /**
  * Represents a block reference entity in AutoCAD.
- * 
+ *
  * A block reference is used to place, size, and display an instance of the collection
  * of entities within the block table record that it references. Block references allow
  * you to reuse complex geometry by referencing a block definition multiple times with
  * different positions, rotations, and scales.
- * 
+ *
  * @example
  * ```typescript
  * // Create a block reference
@@ -26,7 +26,7 @@ import { AcDbEntity } from './AcDbEntity'
  * blockRef.position = new AcGePoint3d(10, 20, 0);
  * blockRef.rotation = Math.PI / 4; // 45 degrees
  * blockRef.scaleFactors = new AcGePoint3d(2, 2, 1); // 2x scale
- * 
+ *
  * // Access block reference properties
  * console.log(`Block name: ${blockRef.blockTableRecord?.name}`);
  * console.log(`Position: ${blockRef.position}`);
@@ -47,12 +47,12 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Creates a new block reference entity.
-   * 
+   *
    * This constructor initializes a block reference with the specified block name.
    * The position is set to the origin, rotation to 0, normal to Z-axis, and scale factors to 1.
-   * 
+   *
    * @param blockName - The name of the block table record to reference
-   * 
+   *
    * @example
    * ```typescript
    * const blockRef = new AcDbBlockReference("MyBlock");
@@ -71,9 +71,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the WCS position point (insertion point) of the block reference.
-   * 
+   *
    * @returns The position point in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const position = blockRef.position;
@@ -86,9 +86,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Sets the WCS position point (insertion point) of the block reference.
-   * 
+   *
    * @param value - The new position point
-   * 
+   *
    * @example
    * ```typescript
    * blockRef.position = new AcGePoint3d(15, 25, 0);
@@ -100,14 +100,14 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the rotation value of the block reference.
-   * 
+   *
    * The rotation value is relative to the X axis of a coordinate system that is parallel
    * to the OCS of the block reference, but has its origin at the position point of the
    * block reference. The rotation axis is the Z axis of this coordinate system with
    * positive rotations going counterclockwise when looking down the Z axis towards the origin.
-   * 
+   *
    * @returns The rotation value in radians
-   * 
+   *
    * @example
    * ```typescript
    * const rotation = blockRef.rotation;
@@ -120,9 +120,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Sets the rotation value of the block reference.
-   * 
+   *
    * @param value - The new rotation value in radians
-   * 
+   *
    * @example
    * ```typescript
    * blockRef.rotation = Math.PI / 4; // 45 degrees
@@ -134,9 +134,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the X, Y, and Z scale factors for the block reference.
-   * 
+   *
    * @returns The scale factors as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const scaleFactors = blockRef.scaleFactors;
@@ -149,9 +149,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Sets the X, Y, and Z scale factors for the block reference.
-   * 
+   *
    * @param value - The new scale factors
-   * 
+   *
    * @example
    * ```typescript
    * blockRef.scaleFactors = new AcGePoint3d(2, 1.5, 1); // 2x X scale, 1.5x Y scale
@@ -163,9 +163,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the normal vector of the plane containing the block reference.
-   * 
+   *
    * @returns The normal vector
-   * 
+   *
    * @example
    * ```typescript
    * const normal = blockRef.normal;
@@ -178,9 +178,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Sets the normal vector of the plane containing the block reference.
-   * 
+   *
    * @param value - The new normal vector
-   * 
+   *
    * @example
    * ```typescript
    * blockRef.normal = new AcGeVector3d(0, 0, 1);
@@ -192,11 +192,11 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the block table record referenced by this block reference.
-   * 
+   *
    * The referenced block table record contains the entities that the block reference will display.
-   * 
+   *
    * @returns The block table record, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const blockRecord = blockRef.blockTableRecord;
@@ -211,13 +211,13 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /**
    * Gets the geometric extents (bounding box) of this block reference.
-   * 
+   *
    * This method calculates the bounding box by transforming the geometric extents
    * of all entities in the referenced block according to the block reference's
    * position, rotation, and scale factors.
-   * 
+   *
    * @returns The bounding box that encompasses the entire block reference
-   * 
+   *
    * @example
    * ```typescript
    * const extents = blockRef.geometricExtents;

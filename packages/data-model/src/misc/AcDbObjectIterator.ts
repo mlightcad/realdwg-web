@@ -1,10 +1,10 @@
 /**
  * Iterator used for iterating over database objects.
- * 
+ *
  * This class provides an iterator interface for traversing collections
  * of database objects. It implements both IterableIterator and provides
  * additional methods for checking if more items are available.
- * 
+ *
  * @template ResultType - The type of objects being iterated over
  */
 export class AcDbObjectIterator<ResultType>
@@ -17,9 +17,9 @@ export class AcDbObjectIterator<ResultType>
 
   /**
    * Creates a new AcDbObjectIterator instance.
-   * 
+   *
    * @param records - Array of objects to iterate over
-   * 
+   *
    * @example
    * ```typescript
    * const entities = [entity1, entity2, entity3];
@@ -28,14 +28,14 @@ export class AcDbObjectIterator<ResultType>
    */
   constructor(records: Map<string, ResultType>) {
     this._records = records
-  this._keys = Array.from(records.keys())
+    this._keys = Array.from(records.keys())
   }
 
   /**
    * Returns the iterator itself, allowing it to be used in for...of loops.
-   * 
+   *
    * @returns This iterator instance
-   * 
+   *
    * @example
    * ```typescript
    * for (const entity of iterator) {
@@ -49,9 +49,9 @@ export class AcDbObjectIterator<ResultType>
 
   /**
    * Increments the iterator to the next entry.
-   * 
+   *
    * @returns Iterator result containing the next value or null if done
-   * 
+   *
    * @example
    * ```typescript
    * const result = iterator.next();

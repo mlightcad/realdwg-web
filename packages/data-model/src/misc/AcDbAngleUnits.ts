@@ -1,6 +1,6 @@
 /**
  * Enumeration of angle units used in AutoCAD drawings.
- * 
+ *
  * This enum defines the various units that can be used to represent
  * angles in AutoCAD drawings, including degrees, radians, gradians,
  * and surveyor's units.

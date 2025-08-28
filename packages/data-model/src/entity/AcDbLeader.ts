@@ -24,12 +24,12 @@ export enum AcDbLeaderAnnotationType {
 
 /**
  * Represents a leader entity in AutoCAD.
- * 
+ *
  * A leader is a dimension-like entity that consists of a line or spline with an arrowhead
  * pointing to a specific object or location, and an annotation (text, block, or feature
  * control frame) at the other end. Leaders are controlled by dimension variable settings
  * and dimension styles.
- * 
+ *
  * @example
  * ```typescript
  * // Create a leader entity
@@ -40,7 +40,7 @@ export enum AcDbLeaderAnnotationType {
  * leader.hasArrowHead = true;
  * leader.hasHookLine = true;
  * leader.annoType = AcDbLeaderAnnotationType.MText;
- * 
+ *
  * // Access leader properties
  * console.log(`Number of vertices: ${leader.numVertices}`);
  * console.log(`Has arrow head: ${leader.hasArrowHead}`);
@@ -67,11 +67,11 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Creates a new leader entity.
-   * 
+   *
    * This constructor initializes a leader with default values.
    * The leader is not spline-fit, has no arrowhead, no hook line,
    * and no annotation type.
-   * 
+   *
    * @example
    * ```typescript
    * const leader = new AcDbLeader();
@@ -92,9 +92,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets whether this leader is spline-fit.
-   * 
+   *
    * @returns True if the leader is spline-fit, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const isSplined = leader.isSplined;
@@ -107,9 +107,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Sets whether this leader is spline-fit.
-   * 
+   *
    * @param value - True to make the leader spline-fit, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * leader.isSplined = true;
@@ -121,9 +121,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets whether this leader has an arrowhead.
-   * 
+   *
    * @returns True if the leader has an arrowhead, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const hasArrowHead = leader.hasArrowHead;
@@ -136,9 +136,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Sets whether this leader has an arrowhead.
-   * 
+   *
    * @param value - True to enable arrowhead, false to disable
-   * 
+   *
    * @example
    * ```typescript
    * leader.hasArrowHead = true;
@@ -150,12 +150,12 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets whether this leader has a hook line.
-   * 
+   *
    * The "hookline" is the small horizontal line at the end of the leader line
    * just before the annotation.
-   * 
+   *
    * @returns True if the leader has a hook line, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const hasHookLine = leader.hasHookLine;
@@ -168,9 +168,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Sets whether this leader has a hook line.
-   * 
+   *
    * @param value - True to enable hook line, false to disable
-   * 
+   *
    * @example
    * ```typescript
    * leader.hasHookLine = true;
@@ -182,9 +182,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets the number of vertices in the leader's vertex list.
-   * 
+   *
    * @returns The number of vertices
-   * 
+   *
    * @example
    * ```typescript
    * const numVertices = leader.numVertices;
@@ -197,9 +197,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets the dimension style applied to this leader.
-   * 
+   *
    * @returns The dimension style name
-   * 
+   *
    * @example
    * ```typescript
    * const dimensionStyle = leader.dimensionStyle;
@@ -212,9 +212,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Sets the dimension style applied to this leader.
-   * 
+   *
    * @param value - The new dimension style name
-   * 
+   *
    * @example
    * ```typescript
    * leader.dimensionStyle = "Standard";
@@ -226,9 +226,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Gets the leader's annotation type.
-   * 
+   *
    * @returns The annotation type
-   * 
+   *
    * @example
    * ```typescript
    * const annoType = leader.annoType;
@@ -241,9 +241,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Sets the leader's annotation type.
-   * 
+   *
    * @param value - The new annotation type
-   * 
+   *
    * @example
    * ```typescript
    * leader.annoType = AcDbLeaderAnnotationType.MText;

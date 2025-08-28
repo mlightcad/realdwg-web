@@ -6,13 +6,13 @@ import { AcDbBlockTableRecord } from '../database'
 
 /**
  * Internal class used to cache rendered results to avoid duplicated rendering.
- * 
+ *
  * This class can be used to improve performance when rendering block references.
  * Because different colors will result in different materials, the block name and
  * color are used together to create the cache key.
- * 
+ *
  * @internal
- * 
+ *
  * @example
  * ```typescript
  * const cache = AcDbRenderingCache.instance;
@@ -28,9 +28,9 @@ export class AcDbRenderingCache {
 
   /**
    * Gets the singleton instance of the rendering cache.
-   * 
+   *
    * @returns The singleton instance of AcDbRenderingCache
-   * 
+   *
    * @example
    * ```typescript
    * const cache = AcDbRenderingCache.instance;
@@ -45,7 +45,7 @@ export class AcDbRenderingCache {
 
   /**
    * Creates a new AcDbRenderingCache instance.
-   * 
+   *
    * @example
    * ```typescript
    * const cache = new AcDbRenderingCache();
@@ -57,11 +57,11 @@ export class AcDbRenderingCache {
 
   /**
    * Creates a cache key by combining the block name and color.
-   * 
+   *
    * @param name - The block name
    * @param color - The color value
    * @returns A unique key for the cache entry
-   * 
+   *
    * @example
    * ```typescript
    * const key = cache.createKey('MyBlock', 0xFF0000);
@@ -74,11 +74,11 @@ export class AcDbRenderingCache {
 
   /**
    * Stores rendering results of a block in the cache.
-   * 
+   *
    * @param key - The key for the rendering results
    * @param group - The rendering results to store
    * @returns The stored rendering results (deep cloned)
-   * 
+   *
    * @example
    * ```typescript
    * const renderedEntity = cache.set(key, entity);
@@ -92,10 +92,10 @@ export class AcDbRenderingCache {
 
   /**
    * Gets rendering results with the specified key.
-   * 
+   *
    * @param name - The key of the rendering results
    * @returns The rendering results with the specified key, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const cachedEntity = cache.get('MyBlock_16711680');
@@ -114,10 +114,10 @@ export class AcDbRenderingCache {
 
   /**
    * Checks if rendering results with the specified key exist in the cache.
-   * 
+   *
    * @param name - The key to check
    * @returns True if the key exists in the cache, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (cache.has('MyBlock_16711680')) {
@@ -131,7 +131,7 @@ export class AcDbRenderingCache {
 
   /**
    * Clears all cached rendering results.
-   * 
+   *
    * @example
    * ```typescript
    * cache.clear();
@@ -144,10 +144,10 @@ export class AcDbRenderingCache {
 
   /**
    * Draws a block table record and optionally caches the result.
-   * 
+   *
    * This method renders the block table record using the specified renderer
    * and color, and optionally stores the result in the cache for future use.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @param blockTableRecord - The block table record to draw
    * @param color - The color to use for rendering
@@ -155,7 +155,7 @@ export class AcDbRenderingCache {
    * @param transform - Optional transformation matrix to apply
    * @param normal - Optional normal vector
    * @returns The rendered entity
-   * 
+   *
    * @example
    * ```typescript
    * const renderedEntity = cache.draw(

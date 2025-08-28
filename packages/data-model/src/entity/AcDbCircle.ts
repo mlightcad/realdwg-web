@@ -13,11 +13,11 @@ import { AcDbCurve } from './AcDbCurve'
 
 /**
  * Represents a circle entity in AutoCAD.
- * 
+ *
  * A circle is a 2D geometric object defined by its center point and radius.
  * Circles are closed curves that can be used to create circular shapes
  * in drawings. The circle is always drawn in the plane defined by its normal vector.
- * 
+ *
  * @example
  * ```typescript
  * // Create a circle with center at (0,0,0) and radius 5
@@ -25,7 +25,7 @@ import { AcDbCurve } from './AcDbCurve'
  *   new AcGePoint3d(0, 0, 0),
  *   5
  * );
- * 
+ *
  * // Access circle properties
  * console.log(`Center: ${circle.center}`);
  * console.log(`Radius: ${circle.radius}`);
@@ -38,15 +38,15 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Creates a new circle entity.
-   * 
+   *
    * This constructor creates a circle using the specified center point and radius.
    * The center point must be in World Coordinate System (WCS) coordinates.
    * The circle is created as a full circle (0 to 2π radians).
-   * 
+   *
    * @param center - The center point of the circle in WCS coordinates
    * @param radius - The radius of the circle (must be positive)
    * @param normal - The normal vector defining the plane of the circle (defaults to Z-axis)
-   * 
+   *
    * @example
    * ```typescript
    * // Create a circle in the XY plane
@@ -54,7 +54,7 @@ export class AcDbCircle extends AcDbCurve {
    *   new AcGePoint3d(10, 20, 0),
    *   15
    * );
-   * 
+   *
    * // Create a circle in a different plane
    * const circleInYZ = new AcDbCircle(
    *   new AcGePoint3d(0, 0, 0),
@@ -81,9 +81,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets the center point of this circle.
-   * 
+   *
    * @returns The center point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const centerPoint = circle.center;
@@ -96,9 +96,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Sets the center point of this circle.
-   * 
+   *
    * @param value - The new center point
-   * 
+   *
    * @example
    * ```typescript
    * circle.center = new AcGePoint3d(5, 5, 0);
@@ -110,9 +110,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets the radius of this circle.
-   * 
+   *
    * @returns The radius value
-   * 
+   *
    * @example
    * ```typescript
    * const radius = circle.radius;
@@ -125,9 +125,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Sets the radius of this circle.
-   * 
+   *
    * @param value - The new radius value (must be positive)
-   * 
+   *
    * @example
    * ```typescript
    * circle.radius = 25;
@@ -139,11 +139,11 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets the normal vector of this circle.
-   * 
+   *
    * The normal vector defines the plane in which the circle lies.
-   * 
+   *
    * @returns The unit normal vector in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const normal = circle.normal;
@@ -156,9 +156,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets the geometric extents (bounding box) of this circle.
-   * 
+   *
    * @returns The bounding box that encompasses the entire circle
-   * 
+   *
    * @example
    * ```typescript
    * const extents = circle.geometricExtents;
@@ -171,9 +171,9 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets whether this circle is closed.
-   * 
+   *
    * Circles are always closed entities, so this always returns true.
-   * 
+   *
    * @returns Always true for circles
    */
   get closed(): boolean {
@@ -182,12 +182,12 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Gets the grip points for this circle.
-   * 
+   *
    * Grip points are control points that can be used to modify the circle.
    * For a circle, the grip point is the center point.
-   * 
+   *
    * @returns Array of grip points (center point)
-   * 
+   *
    * @example
    * ```typescript
    * const gripPoints = circle.subGetGripPoints();
@@ -202,13 +202,13 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Transforms this circle by the specified matrix.
-   * 
+   *
    * This method applies a geometric transformation to the circle, updating
    * the center point, radius, and normal vector according to the transformation matrix.
-   * 
+   *
    * @param matrix - The transformation matrix to apply
    * @returns This circle after transformation
-   * 
+   *
    * @example
    * ```typescript
    * const translationMatrix = AcGeMatrix3d.translation(10, 0, 0);
@@ -223,13 +223,13 @@ export class AcDbCircle extends AcDbCurve {
 
   /**
    * Draws this circle using the specified renderer.
-   * 
+   *
    * This method renders the circle as a circular arc using the circle's
    * current style properties.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered circle entity, or undefined if drawing failed
-   * 
+   *
    * @example
    * ```typescript
    * const renderedCircle = circle.draw(renderer);

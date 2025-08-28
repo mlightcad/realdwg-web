@@ -14,12 +14,12 @@ import { AcDbDimension } from './AcDbDimension'
 
 /**
  * Represents a diametric dimension entity in AutoCAD.
- * 
+ *
  * This dimension type measures the diameter of a circle or arc by defining two points
  * that lie on the curve and are diametrically opposite each other. Diametric dimensions
  * are essential for circular features in mechanical drawings, architectural plans, and
  * other technical documentation.
- * 
+ *
  * The dimension behavior varies based on text placement:
  * - If the text is inside the curve being dimensioned, the dimension line will be drawn
  *   from the farChordPoint to the chordPoint, with a break for the annotation text.
@@ -37,7 +37,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Creates a new diametric dimension.
-   * 
+   *
    * @param chordPoint - The point (in WCS coordinates) on the curve being dimensioned
    *                     where the dimension line intersects and extends outside the curve
    *                     (if the text is outside the curve)
@@ -73,11 +73,11 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets or sets the chord point where the dimension line intersects the curve.
-   * 
+   *
    * This is the point (in WCS coordinates) where the dimension line intersects the curve
    * being dimensioned and extends outside the curve, if the text is outside the curve.
    * It represents one end of the diameter measurement.
-   * 
+   *
    * @returns The chord point of the dimension
    */
   get chordPoint() {
@@ -89,11 +89,11 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets or sets the far chord point of the curve being dimensioned.
-   * 
+   *
    * This is the point (in WCS coordinates) on the curve that is diametrically opposite
    * the point where the dimension line extends outside the curve. It represents the other
    * end of the diameter measurement.
-   * 
+   *
    * @returns The far chord point of the dimension
    */
   get farChordPoint() {
@@ -105,10 +105,10 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets or sets the extension arc start angle.
-   * 
+   *
    * This angle defines the starting point of the extension arc that may be drawn
    * to connect the dimension line to the curve being dimensioned.
-   * 
+   *
    * @returns The extension arc start angle in radians
    */
   get extArcStartAngle() {
@@ -120,10 +120,10 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets or sets the extension arc end angle.
-   * 
+   *
    * This angle defines the ending point of the extension arc that may be drawn
    * to connect the dimension line to the curve being dimensioned.
-   * 
+   *
    * @returns The extension arc end angle in radians
    */
   get extArcEndAngle() {
@@ -135,12 +135,12 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets the leader length for the dimension.
-   * 
+   *
    * The leader length is the distance from the chordPoint dimension definition point,
    * out to where the dimension will do a horizontal dogleg to the annotation text
    * (or stop if no dogleg is necessary). This is only used when the text is outside
    * the curve being dimensioned.
-   * 
+   *
    * @returns The leader length in drawing units
    */
   get leaderLength() {
@@ -149,11 +149,11 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Gets the geometric extents (bounding box) of this dimension entity.
-   * 
+   *
    * The geometric extents define the minimum bounding box that completely contains
    * the dimension entity, including all its components like extension lines,
    * dimension lines, arrows, and text.
-   * 
+   *
    * @returns A 3D bounding box containing the dimension entity
    * @inheritdoc
    */
@@ -164,11 +164,11 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Draws the dimension lines with appropriate arrow styles.
-   * 
+   *
    * This method handles the rendering of dimension lines based on the number of
    * line segments. It applies different arrow styles to the first and last lines
    * when appropriate, and sorts the lines for proper visual representation.
-   * 
+   *
    * @param renderer - The graphics renderer used to draw the dimension lines
    * @param lines - Array of line entities that make up the dimension
    * @returns Array of rendered graphics entities
@@ -206,7 +206,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Draws a single line with optional arrow styling.
-   * 
+   *
    * @param renderer - The graphics renderer used to draw the line
    * @param line - The line entity to draw
    * @param lineArrowStyle - Optional arrow style configuration for the line
@@ -231,10 +231,10 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   /**
    * Sorts the dimension lines for proper visual representation.
-   * 
+   *
    * This method sorts the line segments based on their start and end points to ensure
    * they are drawn in the correct order for proper dimension visualization.
-   * 
+   *
    * @param lines - Array of line entities to sort
    * @private
    */

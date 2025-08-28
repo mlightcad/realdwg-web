@@ -7,11 +7,11 @@ import { AcDbLayout, AcDbRasterImageDef } from '../object'
 
 /**
  * Converts DXF objects to AcDbObject instances.
- * 
+ *
  * This class provides functionality to convert various DXF object types
  * (such as layouts and image definitions) into their corresponding
  * AcDbObject instances.
- * 
+ *
  * @example
  * ```typescript
  * const converter = new AcDbObjectConverter();
@@ -22,10 +22,10 @@ import { AcDbLayout, AcDbRasterImageDef } from '../object'
 export class AcDbObjectConverter {
   /**
    * Converts a DXF layout object to an AcDbLayout.
-   * 
+   *
    * @param layout - The DXF layout object to convert
    * @returns The converted AcDbLayout instance
-   * 
+   *
    * @example
    * ```typescript
    * const dxfLayout = { layoutName: 'Model', tabOrder: 1, ... };
@@ -47,10 +47,10 @@ export class AcDbObjectConverter {
 
   /**
    * Converts a DXF image definition object to an AcDbRasterImageDef.
-   * 
+   *
    * @param image - The DXF image definition object to convert
    * @returns The converted AcDbRasterImageDef instance
-   * 
+   *
    * @example
    * ```typescript
    * const dxfImageDef = { fileName: 'image.jpg', ... };
@@ -66,13 +66,13 @@ export class AcDbObjectConverter {
 
   /**
    * Processes common attributes from a DXF object to an AcDbObject.
-   * 
+   *
    * This method copies common properties like object ID and owner ID
    * from the DXF object to the corresponding AcDbObject.
-   * 
+   *
    * @param object - The source DXF object
    * @param dbObject - The target AcDbObject to populate
-   * 
+   *
    * @example
    * ```typescript
    * converter.processCommonAttrs(dxfObject, acDbObject);

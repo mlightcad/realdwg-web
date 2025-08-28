@@ -1,10 +1,10 @@
 /**
  * @fileoverview HTTP-based file loader implementation for the AutoCAD Common library.
- * 
+ *
  * This module provides a concrete implementation of the loader interface using
  * the Fetch API for loading files over HTTP. Supports various response types
  * and provides comprehensive error handling.
- * 
+ *
  * @module AcCmFileLoader
  * @version 1.0.0
  */
@@ -30,16 +30,16 @@ const loading: Record<
 
 /**
  * Custom error class for HTTP-related failures.
- * 
+ *
  * @internal
  */
 class HttpError extends Error {
   /** The HTTP response object that caused the error. */
   response: Response
-  
+
   /**
    * Creates a new HttpError.
-   * 
+   *
    * @param {string} message - The error message.
    * @param {Response} response - The HTTP response that caused the error.
    */
@@ -51,7 +51,7 @@ class HttpError extends Error {
 
 /**
  * The supported response types for file loading operations.
- * 
+ *
  * - `''` or `'text'` - Returns the data as a string (default).
  * - `'arraybuffer'` - Loads the data into an ArrayBuffer.
  * - `'blob'` - Returns the data as a Blob.
@@ -68,19 +68,19 @@ type AcCmResponseType =
 
 /**
  * HTTP-based file loader using the Fetch API.
- * 
+ *
  * A low-level class for loading resources over HTTP, used internally by most loaders.
  * It can also be used directly to load any file type that does not have a specialized loader.
- * 
+ *
  * Supports various response types, custom MIME types, and provides comprehensive error handling
  * with automatic retry mechanisms for failed requests.
- * 
+ *
  * @example
  * ```typescript
  * import { AcCmFileLoader } from './AcCmFileLoader'
- * 
+ *
  * const loader = new AcCmFileLoader()
- * 
+ *
  * // Load a text file
  * loader.load(
  *   'data.txt',
@@ -88,7 +88,7 @@ type AcCmResponseType =
  *   (progress) => console.log('Progress:', progress.loaded / progress.total),
  *   (error) => console.error('Error:', error)
  * )
- * 
+ *
  * // Load binary data
  * loader.setResponseType('arraybuffer')
  * loader.load('file.dwg', (arrayBuffer) => {

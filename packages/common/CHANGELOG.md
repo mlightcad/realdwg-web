@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.0
+
+### Minor Changes
+
+- fix: upgrade libredwg-web to fix bugs on getting layer name and line type name again
+
 ## 1.1.4
 
 ### Patch Changes

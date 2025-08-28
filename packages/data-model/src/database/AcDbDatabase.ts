@@ -653,9 +653,11 @@ export class AcDbDatabase extends AcDbObject {
       stageStatus: 'END'
     })
     if (!response.ok) {
-      throw new Error(`Failed to fetch file '${url}' with HTTP status codee '${response.status}'!`)
+      throw new Error(
+        `Failed to fetch file '${url}' with HTTP status codee '${response.status}'!`
+      )
     }
-  
+
     const fileExtension = url.toLowerCase().split('.').pop()
     if (fileExtension === 'dwg') {
       // DWG files are binary, read as ArrayBuffer

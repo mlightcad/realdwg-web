@@ -41,12 +41,12 @@ const DEFAULT_VIEW: AcGiView = {
 
 /**
  * Represents a viewport table record in AutoCAD.
- * 
+ *
  * This class represents viewport arrangements in AutoCAD, which define how
  * the drawing is displayed in different areas of the screen or paper space.
  * Viewports can have their own zoom levels, pan positions, grid settings,
  * and other display properties.
- * 
+ *
  * @example
  * ```typescript
  * const viewportRecord = new AcDbViewportTableRecord();
@@ -84,7 +84,7 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Creates a new AcDbViewportTableRecord instance.
-   * 
+   *
    * @example
    * ```typescript
    * const viewportRecord = new AcDbViewportTableRecord();
@@ -108,13 +108,13 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets or sets the circle zoom percent.
-   * 
+   *
    * This controls the number of sides to the tessellation used when displaying
    * curves. The value can be between 1 and 20000, with higher settings using
    * more sides in the curve tessellation.
-   * 
+   *
    * @returns The number of sides used for circle tessellation
-   * 
+   *
    * @example
    * ```typescript
    * const sides = viewportRecord.circleSides;
@@ -130,9 +130,9 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the center point of the viewport.
-   * 
+   *
    * @returns The center point of the viewport
-   * 
+   *
    * @example
    * ```typescript
    * const center = viewportRecord.center;
@@ -144,16 +144,16 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets or sets the lower left corner of the viewport window.
-   * 
+   *
    * The X and Y values of this point are expressed as a value between (0.0, 0.0)
    * for the lower left corner of the AutoCAD graphics area and (1.0, 1.0) for
    * the upper right corner of the AutoCAD graphics area. For example, a lower
    * left corner value of (0.5, 0.0) indicates that the viewport's lower left
    * corner is along the bottom of the AutoCAD graphics area, midway between
    * the left and right edges of the graphics area.
-   * 
+   *
    * @returns The lower left corner point
-   * 
+   *
    * @example
    * ```typescript
    * const corner = viewportRecord.lowerLeftCorner;

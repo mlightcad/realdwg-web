@@ -4,11 +4,11 @@ import { AcDbSymbolTable } from './AcDbSymbolTable'
 
 /**
  * Symbol table for block table records.
- * 
+ *
  * This class manages block table records which represent block definitions
  * within a drawing database. Blocks are reusable collections of entities
  * that can be inserted multiple times into a drawing.
- * 
+ *
  * @example
  * ```typescript
  * const blockTable = new AcDbBlockTable(database);
@@ -19,9 +19,9 @@ import { AcDbSymbolTable } from './AcDbSymbolTable'
 export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
   /**
    * Creates a new AcDbBlockTable instance.
-   * 
+   *
    * @param db - The database this block table belongs to
-   * 
+   *
    * @example
    * ```typescript
    * const blockTable = new AcDbBlockTable(database);
@@ -33,13 +33,13 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
 
   /**
    * Gets the MODEL_SPACE block table record.
-   * 
+   *
    * This method returns the model space block table record, creating it
    * if it doesn't exist. Model space is the primary drawing area where
    * most entities are created and stored.
-   * 
+   *
    * @returns The MODEL_SPACE block table record
-   * 
+   *
    * @example
    * ```typescript
    * const modelSpace = blockTable.modelSpace;
@@ -58,7 +58,7 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
 
   /**
    * Normalizes the specified block table record name if it is one paper spacce or model space
-   * block table record. 
+   * block table record.
    *
    * @override
    * @param name - The name of the block table record.

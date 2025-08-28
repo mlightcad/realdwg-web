@@ -5,12 +5,12 @@ import { AcDbRasterImage } from './AcDbRasterImage'
 
 /**
  * Entity that creates a blank area in the drawing.
- * 
+ *
  * The AcDbWipeout entity creates a blank area that covers other entities
  * in the drawing. It's commonly used to hide parts of the drawing or
  * create clean areas for annotations. The wipeout area is defined by
  * a boundary path and is rendered as a solid black fill.
- * 
+ *
  * @example
  * ```typescript
  * const wipeout = new AcDbWipeout();
@@ -21,14 +21,14 @@ import { AcDbRasterImage } from './AcDbRasterImage'
 export class AcDbWipeout extends AcDbRasterImage {
   /**
    * Draws the wipeout entity.
-   * 
+   *
    * This method creates a solid black area based on the boundary path
    * of the wipeout entity. The area covers all entities behind it,
    * effectively "wiping out" that portion of the drawing.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered entity or undefined if rendering fails
-   * 
+   *
    * @example
    * ```typescript
    * const wipeout = new AcDbWipeout();

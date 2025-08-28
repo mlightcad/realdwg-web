@@ -28,12 +28,12 @@ export enum AcDbLineSpacingStyle {
 
 /**
  * Abstract base class for all dimension entity types in AutoCAD.
- * 
+ *
  * This class provides the fundamental functionality for all dimension entities,
  * including dimension text, style management, arrow handling, and measurement
  * calculations. The appearance of dimensions is controlled by dimension variable
  * settings and dimension styles.
- * 
+ *
  * @example
  * ```typescript
  * class MyDimension extends AcDbDimension {
@@ -66,10 +66,10 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Creates a new dimension entity.
-   * 
+   *
    * This constructor initializes a dimension with default values.
    * Subclasses should override this constructor to set up dimension-specific properties.
-   * 
+   *
    * @example
    * ```typescript
    * const dimension = new MyDimension();
@@ -90,9 +90,9 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Gets the block table record ID containing the entities that this dimension displays.
-   * 
+   *
    * @returns The block table record ID, or null if not set
-   * 
+   *
    * @example
    * ```typescript
    * const blockId = dimension.dimBlockId;
@@ -105,9 +105,9 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Sets the block table record ID for this dimension.
-   * 
+   *
    * @param value - The block table record ID, or null to clear
-   * 
+   *
    * @example
    * ```typescript
    * dimension.dimBlockId = "MyDimensionBlock";
@@ -119,9 +119,9 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Gets the dimension style name used by this dimension.
-   * 
+   *
    * @returns The dimension style name, or null if not set
-   * 
+   *
    * @example
    * ```typescript
    * const styleName = dimension.dimensionStyleName;
@@ -134,9 +134,9 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Sets the dimension style name for this dimension.
-   * 
+   *
    * @param value - The dimension style name, or null to use default
-   * 
+   *
    * @example
    * ```typescript
    * dimension.dimensionStyleName = "Standard";
@@ -148,12 +148,12 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Gets the dimension style used by this dimension.
-   * 
+   *
    * This method returns the dimension style record associated with this dimension.
    * If no style is specified, it returns the default dimension style.
-   * 
+   *
    * @returns The dimension style record
-   * 
+   *
    * @example
    * ```typescript
    * const style = dimension.dimensionStyle;
@@ -176,15 +176,15 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /**
    * Gets the user-supplied dimension annotation text string.
-   * 
+   *
    * This string can contain multiline text formatting characters. The text can be:
    * - Empty string ('') for default text only
    * - Text with angle brackets for mixed default and user text (e.g., 'This is the default text <>')
    * - Period ('.') for no text
    * - User-defined text only
-   * 
+   *
    * @returns The dimension text string
-   * 
+   *
    * @example
    * ```typescript
    * const text = dimension.dimensionText;

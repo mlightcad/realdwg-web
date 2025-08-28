@@ -192,7 +192,12 @@ export class AcDbEntityConverter {
         !!(spline.flag & 0x01)
       )
     } else if (spline.numberOfFitPoints > 0) {
-      return new AcDbSpline(spline.fitPoints, 'Uniform', spline.degree, !!(spline.flag & 0x01))
+      return new AcDbSpline(
+        spline.fitPoints,
+        'Uniform',
+        spline.degree,
+        !!(spline.flag & 0x01)
+      )
     }
     return null
   }

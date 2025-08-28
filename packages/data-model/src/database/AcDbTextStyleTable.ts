@@ -4,11 +4,11 @@ import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
 
 /**
  * Symbol table for text style table records.
- * 
+ *
  * This class manages text style table records which represent text styles
  * within a drawing database. Text styles define the appearance and properties
  * of text entities, including font, size, and other formatting options.
- * 
+ *
  * @example
  * ```typescript
  * const textStyleTable = new AcDbTextStyleTable(database);
@@ -19,9 +19,9 @@ import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
 export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord> {
   /**
    * Creates a new AcDbTextStyleTable instance.
-   * 
+   *
    * @param db - The database this text style table belongs to
-   * 
+   *
    * @example
    * ```typescript
    * const textStyleTable = new AcDbTextStyleTable(database);
@@ -33,13 +33,13 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
 
   /**
    * Gets all fonts used in text styles.
-   * 
+   *
    * This method iterates through all text style table records and extracts
    * the font names from both the primary font file and big font file.
    * Font names are normalized by removing file extensions and converting to lowercase.
-   * 
+   *
    * @returns Array of unique font names used in text styles
-   * 
+   *
    * @example
    * ```typescript
    * const fonts = textStyleTable.fonts;

@@ -1,10 +1,10 @@
 /**
  * @fileoverview This module provides color handling functionality for AutoCAD files,
  * including color representation, color name mapping, and color index conversion.
- * 
+ *
  * The module supports various color formats including RGB values, named colors,
  * AutoCAD color indices, and special values like "ByLayer" and "ByBlock".
- * 
+ *
  * @module AcCmColor
  * @version 1.0.0
  */
@@ -12,7 +12,7 @@
 /**
  * Mapping of CSS color names to their corresponding RGB values.
  * These are standard web color names that can be used for color representation.
- * 
+ *
  * @internal
  */
 const _colorKeywords: Record<string, number> = {
@@ -169,7 +169,7 @@ const _colorKeywords: Record<string, number> = {
  * values in AutoCAD so they should not be used for index color lookups:
  * - Index 0: "ByBlock" - entity uses color of the block reference
  * - Index 256: "ByLayer" - entity uses color specified in the layer
- * 
+ *
  * @internal
  */
 const AUTO_CAD_COLOR_INDEX = [
@@ -208,7 +208,7 @@ const AUTO_CAD_COLOR_INDEX = [
 
 /**
  * Clamps a value between a minimum and maximum value.
- * 
+ *
  * @param {number} value - The value to clamp.
  * @param {number} min - The minimum value.
  * @param {number} max - The maximum value.
@@ -221,7 +221,7 @@ function clamp(value: number, min: number, max: number): number {
 
 /**
  * Represents a color in AutoCAD, supporting various color formats.
- * 
+ *
  * @class AcCmColor
  * @version 1.0.0
  */
@@ -243,7 +243,7 @@ export class AcCmColor {
 
   /**
    * Gets the current color value.
-   * 
+   *
    * @returns {number | null} The color value (RGB or index).
    */
   get color() {
@@ -252,7 +252,7 @@ export class AcCmColor {
 
   /**
    * Sets the color value.
-   * 
+   *
    * @param {number | null} value - The color value to set (RGB or index).
    */
   set color(value: number | null) {
@@ -267,7 +267,7 @@ export class AcCmColor {
 
   /**
    * Gets the hexadecimal representation of the current color.
-   * 
+   *
    * @returns {string} The hexadecimal color string (e.g., "0xFFFFFF").
    */
   get hexColor() {
@@ -285,7 +285,7 @@ export class AcCmColor {
 
   /**
    * Gets the CSS RGB color string representation.
-   * 
+   *
    * @returns {string} The CSS RGB color string (e.g., "rgb(255,255,255)").
    */
   get cssColor() {
@@ -294,7 +294,7 @@ export class AcCmColor {
 
   /**
    * Gets the red component of the current color.
-   * 
+   *
    * @returns {number | null} The red component (0-255).
    */
   get red() {
@@ -303,7 +303,7 @@ export class AcCmColor {
 
   /**
    * Gets the green component of the current color.
-   * 
+   *
    * @returns {number | null} The green component (0-255).
    */
   get green() {
@@ -312,7 +312,7 @@ export class AcCmColor {
 
   /**
    * Gets the blue component of the current color.
-   * 
+   *
    * @returns {number | null} The blue component (0-255).
    */
   get blue() {
@@ -322,7 +322,7 @@ export class AcCmColor {
   /**
    * Gets the AutoCAD color index value. The index value will be in the range 0 to 256.
    * 0 and 256 are special values.
-   * 
+   *
    * @returns {number | null} The color index.
    */
   get colorIndex() {
@@ -335,7 +335,7 @@ export class AcCmColor {
    * is not displayed through a block reference (for example, it is directly owned by the model space
    * block table record) and its color is 0, then it will display as though its color were 7.
    * - 256 indicates that the entity uses the color specified in the layer table record it references.
-   * 
+   *
    * @param {number | null} value - The color index to set (0-256).
    */
   set colorIndex(value: number | null) {
@@ -350,7 +350,7 @@ export class AcCmColor {
 
   /**
    * Gets the name of the current color.
-   * 
+   *
    * @returns {string | null} The color name.
    */
   get colorName() {
@@ -358,7 +358,7 @@ export class AcCmColor {
   }
   /**
    * Sets the color by name.
-   * 
+   *
    * @param {string | null} value - The color name to set.
    */
   set colorName(value: string | null) {
@@ -380,7 +380,7 @@ export class AcCmColor {
 
   /**
    * Checks if the color has a name.
-   * 
+   *
    * @returns {boolean} True if the color has no name, false otherwise.
    */
   get hasColorName() {
@@ -389,7 +389,7 @@ export class AcCmColor {
 
   /**
    * Checks if the color has an index.
-   * 
+   *
    * @returns {boolean} True if the color has no index, false otherwise.
    */
   get hasColorIndex() {
@@ -398,7 +398,7 @@ export class AcCmColor {
 
   /**
    * Checks if the color is set to "ByLayer".
-   * 
+   *
    * @returns {boolean} True if the color is "ByLayer", false otherwise.
    */
   get isByLayer() {
@@ -406,7 +406,7 @@ export class AcCmColor {
   }
   /**
    * Sets the color to "ByLayer".
-   * 
+   *
    * @returns {AcCmColor} The current instance.
    */
   setByLayer() {
@@ -416,7 +416,7 @@ export class AcCmColor {
 
   /**
    * Checks if the color is set to "ByBlock".
-   * 
+   *
    * @returns {boolean} True if the color is "ByBlock", false otherwise.
    */
   get isByBlock() {
@@ -424,7 +424,7 @@ export class AcCmColor {
   }
   /**
    * Sets the color to "ByBlock".
-   * 
+   *
    * @returns {AcCmColor} The current instance.
    */
   setByBlock() {
@@ -434,7 +434,7 @@ export class AcCmColor {
 
   /**
    * Sets the color using a scalar value (RGB).
-   * 
+   *
    * @param {number} scalar - The scalar value (0-255).
    * @returns {AcCmColor} The current instance.
    */
@@ -445,7 +445,7 @@ export class AcCmColor {
 
   /**
    * Sets the color using RGB values.
-   * 
+   *
    * @param {number} r - The red component (0-255).
    * @param {number} g - The green component (0-255).
    * @param {number} b - The blue component (0-255).
@@ -461,7 +461,7 @@ export class AcCmColor {
 
   /**
    * Sets the color by name.
-   * 
+   *
    * @param {string} style - The color name to set.
    * @returns {AcCmColor} The current instance.
    */
@@ -479,7 +479,7 @@ export class AcCmColor {
 
   /**
    * Clones the current AcCmColor instance.
-   * 
+   *
    * @returns {AcCmColor} A new AcCmColor instance with the same color and index.
    */
   clone() {
@@ -492,7 +492,7 @@ export class AcCmColor {
 
   /**
    * Copies the color from another AcCmColor instance.
-   * 
+   *
    * @param {AcCmColor} color - The color to copy from.
    * @returns {AcCmColor} The current instance.
    */
@@ -505,7 +505,7 @@ export class AcCmColor {
 
   /**
    * Checks if two AcCmColor instances are equal.
-   * 
+   *
    * @param {AcCmColor} c - The color to compare with.
    * @returns {boolean} True if the colors and their indices are the same.
    */
@@ -519,7 +519,7 @@ export class AcCmColor {
 
   /**
    * Returns a string representation of the color.
-   * 
+   *
    * @returns {string} The color name or hexadecimal string.
    */
   toString() {
@@ -536,7 +536,7 @@ export class AcCmColor {
 
   /**
    * Finds the color name associated with a given RGB value.
-   * 
+   *
    * @private
    * @param {number} target - The RGB value to find a name for.
    * @returns {string | null} The color name if found, null otherwise.
@@ -552,7 +552,7 @@ export class AcCmColor {
 
   /**
    * Finds the AutoCAD color index associated with a given RGB value.
-   * 
+   *
    * @private
    * @param {number} target - The RGB value to find an index for.
    * @returns {number | null} The color index if found, null otherwise.

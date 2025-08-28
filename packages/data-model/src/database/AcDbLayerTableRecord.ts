@@ -7,7 +7,7 @@ import {
 
 /**
  * Interface defining the attributes for layer table records.
- * 
+ *
  * Extends the base AcDbSymbolTableRecordAttrs interface and adds layer-specific
  * properties such as color, visibility, linetype, and other layer settings.
  */
@@ -38,11 +38,11 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
 
 /**
  * Represents a record in the layer table.
- * 
+ *
  * This class contains information about a layer in the drawing database,
  * including color, visibility settings, linetype, and other layer properties.
  * Layers are used to organize and control the display of entities in the drawing.
- * 
+ *
  * @example
  * ```typescript
  * const layer = new AcDbLayerTableRecord({
@@ -56,10 +56,10 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
 export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRecordAttrs> {
   /**
    * Creates a new AcDbLayerTableRecord instance.
-   * 
+   *
    * @param attrs - Input attribute values for this layer table record
    * @param defaultAttrs - Default values for attributes of this layer table record
-   * 
+   *
    * @example
    * ```typescript
    * const layer = new AcDbLayerTableRecord({
@@ -98,9 +98,9 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the color value of this layer.
-   * 
+   *
    * @returns The color of the layer
-   * 
+   *
    * @example
    * ```typescript
    * const color = layer.color;
@@ -116,9 +116,9 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the description of this layer.
-   * 
+   *
    * @returns The description of the layer
-   * 
+   *
    * @example
    * ```typescript
    * const description = layer.description;
@@ -134,7 +134,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the standard flags for this layer.
-   * 
+   *
    * Standard flags are bit-coded values:
    * - 1 = Layer is frozen; otherwise layer is thawed
    * - 2 = Layer is frozen by default in new viewports
@@ -142,9 +142,9 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * - 16 = If set, table entry is externally dependent on an xref
    * - 32 = If both this bit and bit 16 are set, the externally dependent xref has been successfully resolved
    * - 64 = If set, the table entry was referenced by at least one entity in the drawing the last time the drawing was edited
-   * 
+   *
    * @returns The standard flags value
-   * 
+   *
    * @example
    * ```typescript
    * const flags = layer.standardFlags;
@@ -160,11 +160,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is frozen.
-   * 
+   *
    * When a layer is frozen, its entities are not displayed and cannot be modified.
-   * 
+   *
    * @returns True if the layer is frozen, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isFrozen) {
@@ -183,12 +183,12 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is hidden.
-   * 
+   *
    * When a layer is hidden, it isn't shown in the user interface of
    * the host application, but entities on the layer are still displayed.
-   * 
+   *
    * @returns True if the layer is hidden, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isHidden) {
@@ -206,12 +206,12 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is in use.
-   * 
+   *
    * A layer is considered in use if it contains entities or is referenced
    * by other objects in the drawing.
-   * 
+   *
    * @returns True if the layer is in use, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isInUse) {
@@ -228,11 +228,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is locked.
-   * 
+   *
    * When a layer is locked, its entities cannot be modified but are still visible.
-   * 
+   *
    * @returns True if the layer is locked, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isLocked) {
@@ -251,11 +251,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is turned off.
-   * 
+   *
    * When a layer is turned off, its entities are not displayed but can still be modified.
-   * 
+   *
    * @returns True if the layer is turned off, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isOff) {
@@ -273,11 +273,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets whether this layer is plottable.
-   * 
+   *
    * When a layer is plottable, its entities will be included when the drawing is plotted or printed.
-   * 
+   *
    * @returns True if the layer is plottable, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * if (layer.isPlottable) {
@@ -295,11 +295,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the transparency level of this layer.
-   * 
+   *
    * Transparency values range from 0 (opaque) to 1 (fully transparent).
-   * 
+   *
    * @returns The transparency level (0-1)
-   * 
+   *
    * @example
    * ```typescript
    * const transparency = layer.transparency;
@@ -315,12 +315,12 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the linetype name for this layer.
-   * 
+   *
    * The linetype defines the pattern of dashes, dots, and spaces used
    * to display lines and curves on this layer.
-   * 
+   *
    * @returns The linetype name
-   * 
+   *
    * @example
    * ```typescript
    * const linetype = layer.linetype;
@@ -336,11 +336,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the line weight for this layer.
-   * 
+   *
    * Line weight determines the thickness of lines and curves on this layer.
-   * 
+   *
    * @returns The line weight value
-   * 
+   *
    * @example
    * ```typescript
    * const weight = layer.lineWeight;
@@ -356,11 +356,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
 
   /**
    * Gets or sets the material ID associated with this layer.
-   * 
+   *
    * Material IDs are used for rendering and visualization purposes.
-   * 
+   *
    * @returns The material ID
-   * 
+   *
    * @example
    * ```typescript
    * const materialId = layer.materialId;

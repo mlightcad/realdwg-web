@@ -1,27 +1,27 @@
 /**
  * @fileoverview Standard error definitions for the AutoCAD Common library.
- * 
+ *
  * This module provides a centralized collection of commonly used error types
  * with descriptive messages for consistent error handling across the library.
- * 
+ *
  * @module AcCmErrors
  * @version 1.0.0
  */
 
 /**
  * Collection of standard error types used throughout the AutoCAD Common library.
- * 
+ *
  * Each error getter returns a new instance of the error to prevent shared state issues.
  * Use these predefined errors for consistent error handling and messaging.
- * 
+ *
  * @example
  * ```typescript
  * import { AcCmErrors } from './AcCmErrors'
- * 
+ *
  * // Throw standard errors
  * throw AcCmErrors.ILLEGAL_PARAMETERS
  * throw AcCmErrors.NOT_IMPLEMENTED
- * 
+ *
  * // Check error types
  * try {
  *   // some operation

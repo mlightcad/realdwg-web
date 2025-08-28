@@ -1,6 +1,6 @@
 /**
  * Enumeration of linear units used in AutoCAD drawings.
- * 
+ *
  * This enum defines the various units that can be used to represent
  * linear measurements in AutoCAD drawings, including metric, imperial,
  * and survey units.
@@ -68,14 +68,14 @@ export enum AcDbUnitsValue {
 
 /**
  * Checks if the specified units value represents metric units.
- * 
+ *
  * This function returns true if the units are part of the metric system,
  * including millimeters, centimeters, meters, kilometers, and their
  * decimal multiples and submultiples.
- * 
+ *
  * @param units - The units value to check
  * @returns True if the units are metric, false otherwise
- * 
+ *
  * @example
  * ```typescript
  * const isMetric = isMetricUnits(AcDbUnitsValue.Millimeters); // true
@@ -99,13 +99,13 @@ export function isMetricUnits(units: AcDbUnitsValue) {
 
 /**
  * Checks if the specified units value represents imperial units.
- * 
+ *
  * This function returns true if the units are part of the imperial system,
  * including inches, feet, miles, yards, and US survey units.
- * 
+ *
  * @param units - The units value to check
  * @returns True if the units are imperial, false otherwise
- * 
+ *
  * @example
  * ```typescript
  * const isImperial = isImperialUnits(AcDbUnitsValue.Inches); // true

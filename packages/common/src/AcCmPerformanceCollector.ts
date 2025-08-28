@@ -1,9 +1,9 @@
 /**
  * @fileoverview Performance monitoring and collection system for the AutoCAD Common library.
- * 
+ *
  * This module provides a singleton-based performance collector that can store,
  * retrieve, and format performance metrics for debugging and optimization purposes.
- * 
+ *
  * @module AcCmPerformanceCollector
  * @version 1.0.0
  */
@@ -13,7 +13,7 @@
  * and a method to format the data into a human-readable string.
  *
  * @template T - The type of the performance data.
- * 
+ *
  * @example
  * ```typescript
  * // Create a custom performance entry

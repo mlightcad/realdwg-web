@@ -11,11 +11,11 @@ import { AcDbCurve } from './AcDbCurve'
 
 /**
  * Represents an arc entity in AutoCAD.
- * 
+ *
  * An arc is a 2D geometric object defined by its center point, radius, start angle,
  * and end angle. Arcs are portions of circles that can be used to create curved
  * line segments in drawings. The arc is always drawn in the plane defined by its normal vector.
- * 
+ *
  * @example
  * ```typescript
  * // Create a 90-degree arc from 0 to π/2 radians
@@ -25,7 +25,7 @@ import { AcDbCurve } from './AcDbCurve'
  *   0,
  *   Math.PI / 2
  * );
- * 
+ *
  * // Access arc properties
  * console.log(`Center: ${arc.center}`);
  * console.log(`Radius: ${arc.radius}`);
@@ -39,16 +39,16 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Creates a new arc entity.
-   * 
+   *
    * This constructor creates an arc using the specified center point, radius,
    * start angle, and end angle. The center point must be in World Coordinate
    * System (WCS) coordinates. Angles are specified in radians.
-   * 
+   *
    * @param center - The center point of the arc in WCS coordinates
    * @param radius - The radius of the arc (must be positive)
    * @param startAngle - The starting angle in radians (0 to 2π)
    * @param endAngle - The ending angle in radians (0 to 2π)
-   * 
+   *
    * @example
    * ```typescript
    * // Create a quarter circle arc (0 to 90 degrees)
@@ -58,7 +58,7 @@ export class AcDbArc extends AcDbCurve {
    *   0,
    *   Math.PI / 2
    * );
-   * 
+   *
    * // Create a semicircle arc (0 to 180 degrees)
    * const semicircle = new AcDbArc(
    *   new AcGePoint3d(10, 20, 0),
@@ -87,9 +87,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the center point of this arc.
-   * 
+   *
    * @returns The center point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const centerPoint = arc.center;
@@ -102,9 +102,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Sets the center point of this arc.
-   * 
+   *
    * @param value - The new center point
-   * 
+   *
    * @example
    * ```typescript
    * arc.center = new AcGePoint3d(5, 5, 0);
@@ -116,9 +116,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the radius of this arc.
-   * 
+   *
    * @returns The radius value
-   * 
+   *
    * @example
    * ```typescript
    * const radius = arc.radius;
@@ -131,9 +131,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Sets the radius of this arc.
-   * 
+   *
    * @param value - The new radius value (must be positive)
-   * 
+   *
    * @example
    * ```typescript
    * arc.radius = 25;
@@ -145,9 +145,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the start angle of this arc.
-   * 
+   *
    * @returns The start angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const startAngle = arc.startAngle;
@@ -160,9 +160,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Sets the start angle of this arc.
-   * 
+   *
    * @param value - The new start angle in radians (0 to 2π)
-   * 
+   *
    * @example
    * ```typescript
    * arc.startAngle = Math.PI / 4; // 45 degrees
@@ -174,9 +174,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the end angle of this arc.
-   * 
+   *
    * @returns The end angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const endAngle = arc.endAngle;
@@ -189,9 +189,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Sets the end angle of this arc.
-   * 
+   *
    * @param value - The new end angle in radians (0 to 2π)
-   * 
+   *
    * @example
    * ```typescript
    * arc.endAngle = Math.PI; // 180 degrees
@@ -203,11 +203,11 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the start point of this arc.
-   * 
+   *
    * The start point is calculated based on the center, radius, and start angle.
-   * 
+   *
    * @returns The start point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const startPoint = arc.startPoint;
@@ -220,11 +220,11 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the end point of this arc.
-   * 
+   *
    * The end point is calculated based on the center, radius, and end angle.
-   * 
+   *
    * @returns The end point as a 3D point
-   * 
+   *
    * @example
    * ```typescript
    * const endPoint = arc.endPoint;
@@ -237,9 +237,9 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the geometric extents (bounding box) of this arc.
-   * 
+   *
    * @returns The bounding box that encompasses the entire arc
-   * 
+   *
    * @example
    * ```typescript
    * const extents = arc.geometricExtents;
@@ -252,10 +252,10 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets whether this arc is closed.
-   * 
+   *
    * An arc is considered closed if the start and end angles are the same
    * (forming a complete circle).
-   * 
+   *
    * @returns True if the arc is closed (forms a complete circle), false otherwise
    */
   get closed(): boolean {
@@ -264,12 +264,12 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Gets the grip points for this arc.
-   * 
+   *
    * Grip points are control points that can be used to modify the arc.
    * For an arc, the grip points are the center point, start point, and end point.
-   * 
+   *
    * @returns Array of grip points (center, start point, end point)
-   * 
+   *
    * @example
    * ```typescript
    * const gripPoints = arc.subGetGripPoints();
@@ -286,13 +286,13 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Transforms this arc by the specified matrix.
-   * 
+   *
    * This method applies a geometric transformation to the arc, updating
    * the center point, radius, and angles according to the transformation matrix.
-   * 
+   *
    * @param matrix - The transformation matrix to apply
    * @returns This arc after transformation
-   * 
+   *
    * @example
    * ```typescript
    * const translationMatrix = AcGeMatrix3d.translation(10, 0, 0);
@@ -307,13 +307,13 @@ export class AcDbArc extends AcDbCurve {
 
   /**
    * Draws this arc using the specified renderer.
-   * 
+   *
    * This method renders the arc as a circular arc using the arc's
    * current style properties.
-   * 
+   *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered arc entity, or undefined if drawing failed
-   * 
+   *
    * @example
    * ```typescript
    * const renderedArc = arc.draw(renderer);

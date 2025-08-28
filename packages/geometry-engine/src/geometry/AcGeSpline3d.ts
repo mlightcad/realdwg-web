@@ -52,7 +52,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
 
       // Handle degree and closed parameters for fit points constructor
       if (argsLength >= 3) {
-        this._degree = c as number || 3
+        this._degree = (c as number) || 3
       }
       if (argsLength >= 4) {
         this._closed = d as boolean
@@ -80,23 +80,23 @@ export class AcGeSpline3d extends AcGeCurve3d {
           // c is weights array
           weights = c as number[]
           if (argsLength >= 4) {
-            degree = d as number || 3
+            degree = (d as number) || 3
           }
           if (argsLength >= 5) {
             closed = e as boolean
           }
         } else if (c !== undefined) {
           // c is degree (not undefined)
-          degree = c as number || 3
+          degree = (c as number) || 3
           if (argsLength >= 4) {
             closed = d as boolean
           }
         }
       }
-      
+
       // Handle case where c is undefined but d might be degree
       if (c === undefined && argsLength >= 4) {
-        degree = d as number || 3
+        degree = (d as number) || 3
         if (argsLength >= 5) {
           closed = e as boolean
         }
@@ -132,7 +132,9 @@ export class AcGeSpline3d extends AcGeCurve3d {
     if (this._fitPoints && this._knotParameterization) {
       // Build from fit points
       if (this._closed) {
-        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(this._fitPoints)
+        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(
+          this._fitPoints
+        )
         const points = this.toNurbsPoints(newFitPoints)
         this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
       } else {
@@ -145,7 +147,9 @@ export class AcGeSpline3d extends AcGeCurve3d {
       // Build from control points
       if (this._closed) {
         // Create closed curve from control points
-        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(this._controlPoints)
+        const newFitPoints = AcGeNurbsCurve.createFitPointsForClosedCurve(
+          this._controlPoints
+        )
         const points = this.toNurbsPoints(newFitPoints)
         this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
         this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
@@ -370,7 +374,9 @@ export class AcGeSpline3d extends AcGeCurve3d {
     degree: number = 3
   ): AcGeSpline3d {
     if (fitPoints.length < degree + 1) {
-      throw new Error(`At least ${degree + 1} points are required for a degree ${degree} closed spline`)
+      throw new Error(
+        `At least ${degree + 1} points are required for a degree ${degree} closed spline`
+      )
     }
 
     // Create spline using the constructor with fit points, degree, and closed=true

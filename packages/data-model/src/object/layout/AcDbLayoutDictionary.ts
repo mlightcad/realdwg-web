@@ -4,11 +4,11 @@ import { AcDbLayout } from './AcDbLayout'
 
 /**
  * Dictionary for storing and managing AcDbLayout objects.
- * 
+ *
  * This class extends AcDbDictionary to provide specialized functionality
  * for managing layout objects, including searching by block table record ID
  * and tracking the maximum tab order.
- * 
+ *
  * @example
  * ```typescript
  * const layoutDict = new AcDbLayoutDictionary(database);
@@ -19,10 +19,10 @@ import { AcDbLayout } from './AcDbLayout'
 export class AcDbLayoutDictionary extends AcDbDictionary<AcDbLayout> {
   /**
    * Searches the dictionary for a layout associated with the specified block table record ID.
-   * 
+   *
    * @param id - The block table record ID to search for
    * @returns The layout associated with the block table record ID, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const layout = layoutDict.getBtrIdAt('some-block-id');
@@ -40,9 +40,9 @@ export class AcDbLayoutDictionary extends AcDbDictionary<AcDbLayout> {
 
   /**
    * Gets the maximum tab order value of layouts in the layout dictionary.
-   * 
+   *
    * @returns The maximum tab order value, or -1 if no layouts exist
-   * 
+   *
    * @example
    * ```typescript
    * const maxOrder = layoutDict.maxTabOrder;

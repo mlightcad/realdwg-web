@@ -29,12 +29,12 @@ export interface AcDbDatabaseConverterManagerEventArgs {
 
 /**
  * Manager for registering and managing database converters by file type.
- * 
+ *
  * This class provides a centralized way to register database converters for
  * different file types (DXF, DWG, etc.) and retrieve the appropriate converter
  * for a given file type. It implements the singleton pattern and provides
  * event notifications when converters are registered or unregistered.
- * 
+ *
  * @example
  * ```typescript
  * const manager = AcDbDatabaseConverterManager.instance;
@@ -52,7 +52,7 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Events that can be triggered by the converter manager.
-   * 
+   *
    * These events allow applications to respond to converter registration
    * and unregistration.
    */
@@ -65,9 +65,9 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Creates a new instance of AcDbDatabaseConverterManager.
-   * 
+   *
    * @returns The singleton instance of AcDbDatabaseConverterManager
-   * 
+   *
    * @example
    * ```typescript
    * const manager = AcDbDatabaseConverterManager.createInstance();
@@ -83,9 +83,9 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Gets the singleton instance of this class.
-   * 
+   *
    * @returns The singleton instance of AcDbDatabaseConverterManager
-   * 
+   *
    * @example
    * ```typescript
    * const manager = AcDbDatabaseConverterManager.instance;
@@ -101,7 +101,7 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Private constructor to enforce singleton pattern.
-   * 
+   *
    * Initializes the manager with a default DXF converter.
    */
   private constructor() {
@@ -111,9 +111,9 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Gets all registered file types.
-   * 
+   *
    * @returns An iterator of all registered file types
-   * 
+   *
    * @example
    * ```typescript
    * const fileTypes = manager.fileTypes;
@@ -128,10 +128,10 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Registers a database converter for the specified file type.
-   * 
+   *
    * @param fileType - The file type to register the converter for
    * @param converter - The database converter to register
-   * 
+   *
    * @example
    * ```typescript
    * const converter = new MyCustomConverter();
@@ -148,10 +148,10 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Gets the database converter associated with the specified file type.
-   * 
+   *
    * @param fileType - The file type to get the converter for
    * @returns The database converter associated with the specified file type, or undefined if not found
-   * 
+   *
    * @example
    * ```typescript
    * const converter = manager.get(AcDbFileType.DXF);
@@ -166,9 +166,9 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Unregisters the database converter for the specified file type.
-   * 
+   *
    * @param fileType - The file type to unregister the converter for
-   * 
+   *
    * @example
    * ```typescript
    * manager.unregister(AcDbFileType.DWG);

@@ -43,12 +43,12 @@ import { AcDbObjectConverter } from './AcDbObjectConverter'
 
 /**
  * Default database converter for DXF files.
- * 
+ *
  * This class extends AcDbDatabaseConverter to provide specialized functionality
  * for converting DXF (Drawing Exchange Format) files into AcDbDatabase objects.
  * It handles parsing DXF data, processing entities, blocks, tables, and other
  * DXF-specific structures.
- * 
+ *
  * @example
  * ```typescript
  * const converter = new AcDbDxfConverter();
@@ -58,10 +58,10 @@ import { AcDbObjectConverter } from './AcDbObjectConverter'
 export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   /**
    * Parses DXF data string into a ParsedDxf object.
-   * 
+   *
    * @param data - The DXF data as a string
    * @returns Parsed DXF object containing all the parsed data
-   * 
+   *
    * @example
    * ```typescript
    * const parsed = converter.parse(dxfString);
@@ -74,13 +74,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Gets all fonts used by entities in model space and paper space.
-   * 
+   *
    * This method analyzes the DXF data to extract all font names used by
    * text entities, MText entities, and insert entities throughout the drawing.
-   * 
+   *
    * @param dxf - Input parsed DXF model
    * @returns Array of font names used in the drawing
-   * 
+   *
    * @example
    * ```typescript
    * const fonts = converter.getFonts(parsedDxf);
@@ -116,15 +116,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Iterates through entities in a block to get fonts used by text, MText, and insert entities.
-   * 
+   *
    * This is a helper method that recursively processes entities to extract font information
    * from text-based entities and block references.
-   * 
+   *
    * @param entities - Array of DXF entities to process
    * @param blockMap - Map of block definitions
    * @param styleMap - Map of text styles to font names
    * @param fonts - Set to collect font names
-   * 
+   *
    * @example
    * ```typescript
    * const fonts = new Set<string>();
@@ -162,18 +162,18 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes entities in batches to maintain UI responsiveness.
-   * 
+   *
    * This method breaks up the entity processing work into smaller chunks that are
    * executed asynchronously. This is often referred to as "batch processing" or
    * "cooperative multitasking," where the time-consuming task is broken into
    * smaller pieces and executed in small intervals to allow the UI to remain responsive.
-   * 
+   *
    * @param dxf - Parsed DXF data
    * @param db - Target database to add entities to
    * @param minimumChunkSize - Minimum number of entities to process in each chunk
    * @param startPercentage - Object containing the starting percentage for progress tracking
    * @param progress - Optional callback for progress updates
-   * 
+   *
    * @example
    * ```typescript
    * await converter.processEntities(dxf, database, 100, { value: 0 }, progressCallback);
@@ -229,14 +229,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes entities within a specific block.
-   * 
+   *
    * This method handles the conversion and addition of entities to a specific
    * block table record.
-   * 
+   *
    * @param entities - Array of DXF entities to process
    * @param defaultBlockTableRecord - Default block table record to use
    * @param blockTable - Block table reference
-   * 
+   *
    * @example
    * ```typescript
    * await converter.processEntitiesInBlock(entities, blockRecord, blockTable);
@@ -266,13 +266,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes blocks defined in the DXF file.
-   * 
+   *
    * This method iterates through all blocks in the DXF data and creates
    * corresponding AcDbBlockTableRecord objects in the database.
-   * 
+   *
    * @param model - Parsed DXF model containing block definitions
    * @param db - Target database to add blocks to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processBlocks(parsedDxf, database);
@@ -302,13 +302,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes header variables from the DXF file.
-   * 
+   *
    * This method extracts and sets various header variables such as color settings,
    * angle base, angle direction, units, and point display settings.
-   * 
+   *
    * @param model - Parsed DXF model containing header information
    * @param db - Target database to set header variables on
-   * 
+   *
    * @example
    * ```typescript
    * converter.processHeader(parsedDxf, database);
@@ -330,13 +330,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes block table records from the DXF file.
-   * 
+   *
    * This method creates AcDbBlockTableRecord objects for each block record
    * defined in the DXF tables section.
-   * 
+   *
    * @param dxf - Parsed DXF data
    * @param db - Target database to add block table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processBlockTables(parsedDxf, database);
@@ -357,13 +357,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes objects defined in the DXF file.
-   * 
+   *
    * This method handles the conversion of DXF objects such as layouts and
    * image definitions into their corresponding AcDb objects.
-   * 
+   *
    * @param model - Parsed DXF model containing object definitions
    * @param db - Target database to add objects to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processObjects(parsedDxf, database);
@@ -394,14 +394,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes viewport table records from the DXF file.
-   * 
+   *
    * This method creates AcDbViewportTableRecord objects for each viewport
    * defined in the DXF tables section, including their properties like
    * center, corners, snap settings, and grid settings.
-   * 
+   *
    * @param model - Parsed DXF model containing viewport definitions
    * @param db - Target database to add viewport table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processViewports(parsedDxf, database);
@@ -518,14 +518,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes layer table records from the DXF file.
-   * 
+   *
    * This method creates AcDbLayerTableRecord objects for each layer
    * defined in the DXF tables section, including their properties like
    * color, linetype, lineweight, and visibility settings.
-   * 
+   *
    * @param model - Parsed DXF model containing layer definitions
    * @param db - Target database to add layer table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processLayers(parsedDxf, database);
@@ -554,13 +554,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes linetype table records from the DXF file.
-   * 
+   *
    * This method creates AcDbLinetypeTableRecord objects for each linetype
    * defined in the DXF tables section.
-   * 
+   *
    * @param model - Parsed DXF model containing linetype definitions
    * @param db - Target database to add linetype table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processLineTypes(parsedDxf, database);
@@ -580,13 +580,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes text style table records from the DXF file.
-   * 
+   *
    * This method creates AcDbTextStyleTableRecord objects for each text style
    * defined in the DXF tables section.
-   * 
+   *
    * @param model - Parsed DXF model containing text style definitions
    * @param db - Target database to add text style table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processTextStyles(parsedDxf, database);
@@ -605,14 +605,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes dimension style table records from the DXF file.
-   * 
+   *
    * This method creates AcDbDimStyleTableRecord objects for each dimension style
    * defined in the DXF tables section, including all dimension-related properties
    * like text positioning, arrow settings, and tolerance settings.
-   * 
+   *
    * @param model - Parsed DXF model containing dimension style definitions
    * @param db - Target database to add dimension style table records to
-   * 
+   *
    * @example
    * ```typescript
    * converter.processDimStyles(parsedDxf, database);
@@ -703,13 +703,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
   /**
    * Processes common table entry attributes from DXF data.
-   * 
+   *
    * This helper method sets the common attributes (name, objectId, ownerId)
    * that are shared across all table entries.
-   * 
+   *
    * @param entry - DXF table entry containing the source data
    * @param dbEntry - AcDbSymbolTableRecord to populate with the data
-   * 
+   *
    * @example
    * ```typescript
    * converter.processCommonTableEntryAttrs(dxfEntry, dbRecord);

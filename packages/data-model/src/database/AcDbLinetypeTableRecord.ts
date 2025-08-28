@@ -4,7 +4,7 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
  * Represents a record in the line type table within the AutoCAD drawing database.
- * 
+ *
  * Each line type table record contains the information necessary to define a specific line type,
  * including its pattern, description, and rendering characteristics. Line types define how lines
  * are drawn, including patterns of dashes, dots, and spaces.
@@ -21,7 +21,7 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Creates a new line type table record.
-   * 
+   *
    * @param linetype - The line type style object that defines the visual characteristics
    *                   and pattern of this line type
    */
@@ -33,10 +33,10 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the number of dash elements in the line type pattern.
-   * 
+   *
    * This value represents the total count of dashes, spaces, dots, and other pattern elements
    * that make up the line type. It corresponds to DXF group code 73 in the AutoCAD file format.
-   * 
+   *
    * @returns The number of pattern elements in the line type
    */
   get numDashes() {
@@ -45,13 +45,13 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the total pattern length in AutoCAD drawing units.
-   * 
+   *
    * The pattern length represents the total length of all dashes and spaces when the line type
    * scale is 1.0. This value is used to calculate how the pattern repeats along a line.
-   * 
+   *
    * Note: Embedded shapes or text strings do not add to the pattern length because they are
    * overlaid and do not interrupt the actual dash pattern.
-   * 
+   *
    * @returns The total length of the line type pattern in drawing units
    */
   get patternLength() {
@@ -60,10 +60,10 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the description or comments associated with this line type.
-   * 
+   *
    * This property provides additional information about the line type, such as its intended
    * use or any special characteristics.
-   * 
+   *
    * @returns The description text for the line type
    */
   get comments() {
@@ -72,10 +72,10 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the line type style object used by the renderer.
-   * 
+   *
    * This property provides access to the underlying line type definition that contains
    * all the visual characteristics and rendering information.
-   * 
+   *
    * @returns The line type style object
    */
   get linetype() {
@@ -84,11 +84,11 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
 
   /**
    * Gets the length of a specific dash element in the line type pattern.
-   * 
+   *
    * Each dash element in the pattern has a specific length that determines how it appears
    * when the line type is rendered. Positive values represent visible dashes, while negative
    * values represent spaces (pen up).
-   * 
+   *
    * @param index - Zero-based index of the dash element. Must be greater than or equal to zero,
    *                but less than the value of property 'numDashes'
    * @returns The length of the specified dash element in drawing units

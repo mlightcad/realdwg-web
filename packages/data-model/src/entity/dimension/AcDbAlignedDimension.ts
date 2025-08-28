@@ -10,15 +10,15 @@ import { AcDbDimension } from './AcDbDimension'
 
 /**
  * Represents an aligned dimension entity in AutoCAD.
- * 
+ *
  * An aligned dimension measures the distance between two points located anywhere in space.
  * The dimension's normal vector must be perpendicular to the line between the two points.
  * The two selected points are also used as the definition points for the start of the
  * two dimension extension lines.
- * 
+ *
  * Aligned dimensions are commonly used to measure distances that are not parallel to
  * the X or Y axes, providing accurate measurements regardless of the orientation.
- * 
+ *
  * @example
  * ```typescript
  * // Create an aligned dimension
@@ -29,7 +29,7 @@ import { AcDbDimension } from './AcDbDimension'
  *   "10.0",                      // Dimension text
  *   "Standard"                   // Dimension style
  * );
- * 
+ *
  * // Access dimension properties
  * console.log(`Dimension line point: ${alignedDim.dimLinePoint}`);
  * console.log(`Extension line 1 point: ${alignedDim.xLine1Point}`);
@@ -50,16 +50,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Creates a new aligned dimension entity.
-   * 
+   *
    * This constructor initializes an aligned dimension using the specified points.
    * The extension line obliquing angle is set to 0.0 by default.
-   * 
+   *
    * @param xLine1Point - Start point (in WCS coordinates) of first extension line
    * @param xLine2Point - Start point (in WCS coordinates) of second extension line
    * @param dimLinePoint - Point (in WCS coordinates) on dimension line itself
    * @param dimText - Text string to use as the dimension annotation (optional)
    * @param dimStyle - String name of dimension style table record to use (optional)
-   * 
+   *
    * @example
    * ```typescript
    * // Create an aligned dimension with default text and style
@@ -68,7 +68,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    *   new AcGePoint3d(10, 5, 0),
    *   new AcGePoint3d(5, 2.5, 0)
    * );
-   * 
+   *
    * // Create an aligned dimension with custom text and style
    * const alignedDim2 = new AcDbAlignedDimension(
    *   new AcGePoint3d(0, 0, 0),
@@ -100,12 +100,12 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Gets the definition point that specifies where the dimension line will be.
-   * 
+   *
    * This point will be somewhere on the dimension line and determines the position
    * of the dimension text and arrows.
-   * 
+   *
    * @returns The dimension line point in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const dimLinePoint = alignedDim.dimLinePoint;
@@ -118,9 +118,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Sets the definition point that specifies where the dimension line will be.
-   * 
+   *
    * @param value - The new dimension line point
-   * 
+   *
    * @example
    * ```typescript
    * alignedDim.dimLinePoint = new AcGePoint3d(5, 2.5, 0);
@@ -132,9 +132,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Gets the start point for the first extension line of the dimension.
-   * 
+   *
    * @returns The first extension line point in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const xLine1Point = alignedDim.xLine1Point;
@@ -147,9 +147,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Sets the start point for the first extension line of the dimension.
-   * 
+   *
    * @param value - The new first extension line point
-   * 
+   *
    * @example
    * ```typescript
    * alignedDim.xLine1Point = new AcGePoint3d(0, 0, 0);
@@ -161,9 +161,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Gets the start point for the second extension line of the dimension.
-   * 
+   *
    * @returns The second extension line point in WCS coordinates
-   * 
+   *
    * @example
    * ```typescript
    * const xLine2Point = alignedDim.xLine2Point;
@@ -176,9 +176,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Sets the start point for the second extension line of the dimension.
-   * 
+   *
    * @param value - The new second extension line point
-   * 
+   *
    * @example
    * ```typescript
    * alignedDim.xLine2Point = new AcGePoint3d(10, 5, 0);
@@ -190,9 +190,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Gets the dimension's rotation angle.
-   * 
+   *
    * @returns The rotation angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const rotation = alignedDim.rotation;
@@ -205,9 +205,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Sets the dimension's rotation angle.
-   * 
+   *
    * @param value - The new rotation angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * alignedDim.rotation = Math.PI / 4; // 45 degrees
@@ -219,9 +219,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Gets the extension line obliquing angle.
-   * 
+   *
    * @returns The obliquing angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * const oblique = alignedDim.oblique;
@@ -234,9 +234,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   /**
    * Sets the extension line obliquing angle.
-   * 
+   *
    * @param value - The new obliquing angle in radians
-   * 
+   *
    * @example
    * ```typescript
    * alignedDim.oblique = Math.PI / 6; // 30 degrees

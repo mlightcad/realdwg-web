@@ -1,9 +1,9 @@
 /**
  * @fileoverview Utility functions for AutoCAD color index mapping and manipulation.
- * 
+ *
  * This module provides functions to convert between AutoCAD color indices and RGB values,
  * supporting the standard AutoCAD color palette used in DWG files.
- * 
+ *
  * @module AcCmColorUtil
  * @version 1.0.0
  */
@@ -13,9 +13,9 @@
  * Each value corresponds to a color. Index 1 is red, that is 16711680 or 0xFF0000.
  * Index 0 and 256, while included in this array, are actually reserved for inheritance
  * values in AutoCAD so they should not be used for index color lookups:
- * - Index 0: "ByBlock" - entity uses color of the block reference  
+ * - Index 0: "ByBlock" - entity uses color of the block reference
  * - Index 256: "ByLayer" - entity uses color specified in the layer
- * 
+ *
  * @internal
  */
 const AUTO_CAD_COLOR_INDEX = [
@@ -54,26 +54,26 @@ const AUTO_CAD_COLOR_INDEX = [
 
 /**
  * Utility class for AutoCAD color index operations.
- * 
+ *
  * Provides static methods to convert between AutoCAD color indices and RGB values,
  * supporting the standard 256-color palette used in AutoCAD files.
- * 
+ *
  * @class AcCmColorUtil
  * @version 1.0.0
  */
 export class AcCmColorUtil {
   /**
    * Returns the RGB color value for a given AutoCAD color index.
-   * 
+   *
    * @param {number} index - The AutoCAD color index value (0-255).
    * @returns {number} The RGB color value as a 24-bit integer.
-   * 
+   *
    * @example
    * ```typescript
    * // Get the RGB value for color index 1 (red)
    * const redColor = AcCmColorUtil.getAcadColor(1); // returns 16711680 (0xFF0000)
    * ```
-   * 
+   *
    * @example
    * ```typescript
    * // Get special inheritance colors

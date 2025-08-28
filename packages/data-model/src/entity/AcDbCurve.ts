@@ -2,11 +2,11 @@ import { AcDbEntity } from './AcDbEntity'
 
 /**
  * Abstract base class for all curve entities.
- * 
+ *
  * This class provides the fundamental functionality for all curve entities,
  * including the ability to determine if a curve is closed. A curve is
  * considered closed if its start point is identical to its end point.
- * 
+ *
  * @example
  * ```typescript
  * class MyCurve extends AcDbCurve {
@@ -20,18 +20,18 @@ import { AcDbEntity } from './AcDbEntity'
 export abstract class AcDbCurve extends AcDbEntity {
   /**
    * Returns true if the curve is closed.
-   * 
+   *
    * A curve is considered closed if its start point is identical to its end point.
    * This property is used by various operations that need to know if a curve
    * forms a complete loop.
-   * 
+   *
    * @returns True if the curve is closed, false otherwise
-   * 
+   *
    * @example
    * ```typescript
    * const curve = new AcDbCircle();
    * console.log('Is circle closed?', curve.closed); // true
-   * 
+   *
    * const line = new AcDbLine();
    * console.log('Is line closed?', line.closed); // false
    * ```
