@@ -33,6 +33,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbCircle extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Circle'
+
   /** The underlying geometric circular arc object */
   private _geo: AcGeCircArc3d
 

@@ -17,6 +17,9 @@ import { AcDbDimension } from './AcDbDimension'
  * angles of arcs, or any angular measurement that requires three reference points.
  */
 export class AcDb3PointAngularDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = '3PointAngularDimension'
+
   private _arcPoint: AcGePoint3d
   private _centerPoint: AcGePoint3d
   private _xLine1Point: AcGePoint3d

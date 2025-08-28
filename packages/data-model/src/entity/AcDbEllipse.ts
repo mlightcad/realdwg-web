@@ -37,6 +37,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbEllipse extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Ellipse'
+
   /** The underlying geometric ellipse arc object */
   private _geo: AcGeEllipseArc3d
 

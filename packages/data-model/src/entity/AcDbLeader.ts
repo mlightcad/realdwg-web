@@ -48,6 +48,9 @@ export enum AcDbLeaderAnnotationType {
  * ```
  */
 export class AcDbLeader extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Leader'
+
   /** Whether this leader is spline-fit */
   private _isSplined: boolean
   /** The spline geometry if this leader is spline-fit */

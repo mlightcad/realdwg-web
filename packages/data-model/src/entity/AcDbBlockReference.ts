@@ -34,6 +34,9 @@ import { AcDbEntity } from './AcDbEntity'
  * ```
  */
 export class AcDbBlockReference extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'BlockReference'
+
   /** The WCS position point (insertion point) of the block reference */
   private _position: AcGePoint3d
   /** The rotation value in radians */

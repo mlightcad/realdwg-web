@@ -29,6 +29,9 @@ import { AcDbDimension } from './AcDbDimension'
  *   to the annotation text.
  */
 export class AcDbDiametricDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = 'DiametricDimension'
+
   private _chordPoint: AcGePoint3d
   private _farChordPoint: AcGePoint3d
   private _extArcStartAngle: number

@@ -30,6 +30,9 @@ import { AcDbEntity } from './AcDbEntity'
  * ```
  */
 export class AcDbPoint extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'Point'
+
   /** The underlying geometric point object */
   private _geo: AcGePoint3d
 

@@ -18,6 +18,9 @@ import { AcDbEntity } from './AcDbEntity'
  * ```
  */
 export abstract class AcDbCurve extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'Curve'
+
   /**
    * Returns true if the curve is closed.
    *

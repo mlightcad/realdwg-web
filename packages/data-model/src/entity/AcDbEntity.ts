@@ -35,6 +35,8 @@ import { AcDbOsnapMode, ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc'
  * ```
  */
 export abstract class AcDbEntity extends AcDbObject {
+  /** The entity type name */
+  static typeName: string = 'Entity'
   /** The layer name this entity belongs to */
   private _layer: string = '0'
   /** The color of this entity */
@@ -65,7 +67,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get type() {
-    return this.constructor.name.substring(4)
+    return (this.constructor as typeof AcDbEntity).typeName
   }
 
   /**

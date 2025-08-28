@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.1
+
+### Patch Changes
+
+- feat: use static string to define entity type because constructor name will be changed by building tool
+
 ## 1.2.0
 
 ### Minor Changes

@@ -83,6 +83,9 @@ const tempVector = /*@__PURE__*/ new AcGeVector3d()
  * tabular information in technical drawings and documentation.
  */
 export class AcDbTable extends AcDbBlockReference {
+  /** The entity type name */
+  static override typeName: string = 'Table'
+
   private _attachmentPoint: AcGiMTextAttachmentPoint
   private _numRows: number
   private _numColumns: number

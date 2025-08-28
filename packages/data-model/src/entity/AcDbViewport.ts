@@ -30,6 +30,9 @@ import { AcDbEntity } from './AcDbEntity'
  * ```
  */
 export class AcDbViewport extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'Viewport'
+
   private _centerPoint: AcGePoint3d
   private _height: number
   private _width: number

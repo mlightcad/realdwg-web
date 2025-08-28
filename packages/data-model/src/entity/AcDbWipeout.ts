@@ -19,6 +19,8 @@ import { AcDbRasterImage } from './AcDbRasterImage'
  * ```
  */
 export class AcDbWipeout extends AcDbRasterImage {
+  /** The entity type name */
+  static override typeName: string = 'Wipeout'
   /**
    * Draws the wipeout entity.
    *

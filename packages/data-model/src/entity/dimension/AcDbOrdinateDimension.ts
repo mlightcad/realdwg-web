@@ -20,6 +20,9 @@ import { AcDbDimension } from './AcDbDimension'
  * need to be positioned relative to a common reference point.
  */
 export class AcDbOrdinateDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = 'OrdinateDimension'
+
   private _definingPoint: AcGePoint3d
   private _leaderEndPoint: AcGePoint3d
 

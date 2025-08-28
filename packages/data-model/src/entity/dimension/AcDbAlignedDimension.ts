@@ -37,6 +37,9 @@ import { AcDbDimension } from './AcDbDimension'
  * ```
  */
 export class AcDbAlignedDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = 'AlignedDimension'
+
   /** The definition point that specifies where the dimension line will be */
   private _dimLinePoint: AcGePoint3d
   /** The start point for the first extension line */

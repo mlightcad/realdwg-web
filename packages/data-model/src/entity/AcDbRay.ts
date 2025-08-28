@@ -27,6 +27,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbRay extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Ray'
+
   /** The base point of the ray */
   private _basePoint: AcGePoint3d
   /** The unit direction vector of the ray */

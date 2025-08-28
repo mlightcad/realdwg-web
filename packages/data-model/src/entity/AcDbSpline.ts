@@ -36,6 +36,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbSpline extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Spline'
+
   /** The underlying geometric spline object */
   private _geo: AcGeSpline3d
 

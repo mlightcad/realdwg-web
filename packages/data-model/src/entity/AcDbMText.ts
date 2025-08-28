@@ -42,6 +42,9 @@ import { AcDbEntity } from './AcDbEntity'
  * ```
  */
 export class AcDbMText extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'MText'
+
   /** The height of the text */
   private _height: number
   /** The maximum width for word wrap formatting */

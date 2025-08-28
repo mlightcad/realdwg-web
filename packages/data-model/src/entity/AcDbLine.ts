@@ -32,6 +32,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbLine extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Line'
+
   /** The underlying geometric line object */
   private _geo: AcGeLine3d
 

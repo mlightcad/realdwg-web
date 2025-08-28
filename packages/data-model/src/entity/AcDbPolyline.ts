@@ -54,6 +54,9 @@ interface AcDbPolylineVertex extends AcGePolyline2dVertex {
  * ```
  */
 export class AcDbPolyline extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Polyline'
+
   /** The elevation (Z-coordinate) of the polyline plane */
   private _elevation: number
   /** The underlying geometric polyline object */

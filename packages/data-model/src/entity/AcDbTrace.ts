@@ -35,6 +35,9 @@ import { AcDbCurve } from './AcDbCurve'
  * ```
  */
 export class AcDbTrace extends AcDbCurve {
+  /** The entity type name */
+  static override typeName: string = 'Trace'
+
   /** The elevation (Z-coordinate) of the trace plane */
   private _elevation: number
   /** The four vertices of the trace */

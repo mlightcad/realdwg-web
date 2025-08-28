@@ -97,6 +97,9 @@ export enum AcDbHatchStyle {
  * ```
  */
 export class AcDbHatch extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'Hatch'
+
   /** The underlying geometric area object */
   private _geo: AcGeArea2d
   /** The elevation (Z-coordinate) of the hatch plane */

@@ -45,6 +45,9 @@ export enum AcDbLineSpacingStyle {
  * ```
  */
 export abstract class AcDbDimension extends AcDbEntity {
+  /** The entity type name */
+  static override typeName: string = 'Dimension'
+
   /** The block table record ID containing the dimension entities */
   private _dimBlockId: string | null
   /** The dimension style name used by this dimension */

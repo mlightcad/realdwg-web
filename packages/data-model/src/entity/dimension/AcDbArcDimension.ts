@@ -18,6 +18,9 @@ import { AcDbDimension } from './AcDbDimension'
  * lines, dimension lines, and arrows positioned to clearly indicate the arc being measured.
  */
 export class AcDbArcDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = 'ArcDimension'
+
   private _arcPoint: AcGePoint3d
   private _centerPoint: AcGePoint3d
   private _xLine1Point: AcGePoint3d

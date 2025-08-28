@@ -36,6 +36,9 @@ import { AcDbDimension } from './AcDbDimension'
  * ```
  */
 export class AcDbRadialDimension extends AcDbDimension {
+  /** The entity type name */
+  static override typeName: string = 'RadialDimension'
+
   /** The center point of the curve being dimensioned */
   private _center: AcGePoint3d
   /** The point where the dimension line intersects the curve being dimensioned */
