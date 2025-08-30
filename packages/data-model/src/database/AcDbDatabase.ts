@@ -26,6 +26,11 @@ import {
 import { AcDbLinetypeTable } from './AcDbLinetypeTable'
 import { AcDbTextStyleTable } from './AcDbTextStyleTable'
 import { AcDbViewportTable } from './AcDbViewportTable'
+import {
+  AcGeBox3d,
+  AcGePoint3d,
+  AcGePoint3dLike
+} from '@mlightcad/geometry-engine'
 
 /**
  * Event arguments for entity-related events.
@@ -236,6 +241,8 @@ export class AcDbDatabase extends AcDbObject {
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
   private _celtscale: number
+  /** The extents of current Model Space */
+  private _extents: AcGeBox3d
   /** Insertion units for the database */
   private _insunits: AcDbUnitsValue
   /** Global linetype scale */
@@ -287,6 +294,7 @@ export class AcDbDatabase extends AcDbObject {
     this._aunits = AcDbAngleUnits.DecimalDegrees
     this._celtscale = 1
     this._cecolor = new AcCmColor()
+    this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
     this._ltscale = 1
@@ -537,6 +545,28 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * The current Model Space EXTMAX value
+   */
+  get extmax(): AcGePoint3d {
+    return this._extents.max
+  }
+  set extmax(value: AcGePoint3dLike) {
+    this._extents.expandByPoint(value)
+    this.triggerHeaderSysVarChangedEvent('extmax')
+  }
+
+  /**
+   * The current Model Space EXTMIN value
+   */
+  get extmin(): AcGePoint3d {
+    return this._extents.min
+  }
+  set extmin(value: AcGePoint3dLike) {
+    this._extents.expandByPoint(value)
+    this.triggerHeaderSysVarChangedEvent('extmin')
+  }
+
+  /**
    * Point display mode. Please get more details on value of this property from [this page](https://help.autodesk.com/view/ACDLT/2022/ENU/?guid=GUID-82F9BB52-D026-4D6A-ABA6-BF29641F459B).
    */
   get pdmode(): number {
@@ -691,6 +721,7 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.viewportTable.removeAll()
     this._dictionaries.layouts.removeAll()
     this._currentSpace = undefined
+    this._extents.makeEmpty()
   }
 
   /**

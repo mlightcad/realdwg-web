@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.2
+
+### Patch Changes
+
+- feat: add properties 'extmin' and 'extmax' for class AcDbDatabase
+- Updated dependencies
+  - @mlightcad/data-model@1.2.2
+
 ## 3.0.1
 
 ### Patch Changes

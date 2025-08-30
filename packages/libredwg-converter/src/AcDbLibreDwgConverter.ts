@@ -462,6 +462,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.angBase = header.ANGBASE ?? 0
     db.angDir = header.ANGDIR ?? 0
     db.aunits = header.AUNITS ?? 0
+    db.extmax = header.EXTMAX!
+    db.extmin = header.EXTMIN!
     // Initial value of INSUNITS:	1 (imperial) or 4 (metric)
     db.insunits = header.INSUNITS ?? 1
     db.pdmode = header.PDMODE ?? 0
