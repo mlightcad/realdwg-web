@@ -1,5 +1,12 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.2.3
+
 ## 3.0.2
 
 ### Patch Changes

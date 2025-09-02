@@ -2,6 +2,7 @@ import {
   AcCmPerformanceCollector,
   AcCmPerformanceEntry,
   AcCmTask,
+  AcCmTaskError,
   AcCmTaskScheduler
 } from '@mlightcad/common'
 
@@ -75,7 +76,7 @@ export type AcDbConversionStage =
 /**
  * Represents the status of a stage.
  */
-export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS'
+export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS' | 'ERROR'
 
 /**
  * Callback function to update progress when parsing one file.
@@ -123,7 +124,11 @@ export type AcDbConversionProgressCallback = (
    *
    * Note: For now, 'FONT' stage uses this field only.
    */
-  data?: unknown
+  data?: unknown,
+  /**
+   * Represents an error that occurred during task execution in the scheduler.
+   */
+  error?: AcCmTaskError
 ) => Promise<void>
 
 /**
@@ -294,7 +299,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     const percentage = { value: 0 }
     const scheduler = new AcCmTaskScheduler<string | ArrayBuffer, void>()
     scheduler.setCompleteCallback(() => this.onFinished())
-    scheduler.setErrorCallback(() => this.onFinished())
+    scheduler.setErrorCallback((error: AcCmTaskError) => this.onError(error))
     scheduler.addTask(
       new AcDbConversionTask(
         {
@@ -499,6 +504,30 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     const t = Date.now()
     await scheduler.run(data)
     loadDbTimeEntry.data.total = Date.now() - t
+  }
+
+  protected onError(error: AcCmTaskError) {
+    if (this.progress) {
+      const task = error.task as AcDbConversionTask<unknown, unknown>
+      this.progress(
+        task.data.progress.value,
+        task.data.stage,
+        'ERROR',
+        undefined,
+        error
+      )
+    }
+    console.error(
+      `Error occurred in conversion stage '${error.task.name}': `,
+      error.error
+    )
+
+    // Tasks to convert entities are not critical to the conversion process
+    // If failed to convert certain entities, we can still continue to convert
+    // the rest of entities.
+    if (error.task.name != 'ENTITY') {
+      this.onFinished()
+    }
   }
 
   protected onFinished() {

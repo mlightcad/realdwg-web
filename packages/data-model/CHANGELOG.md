@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.3
+
+### Patch Changes
+
+- feat: pass error in AcDbConversionProgressCallback if one error occurs when opening one file
+
 ## 1.2.2
 
 ### Patch Changes

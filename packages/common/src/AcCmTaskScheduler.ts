@@ -9,6 +9,46 @@
  */
 
 /**
+ * Represents an error that occurred during task execution in the scheduler.
+ *
+ * This interface provides detailed information about task failures, including
+ * the original error, the position of the failed task in the execution queue,
+ * and a reference to the task that caused the failure.
+ *
+ * @example
+ * ```typescript
+ * const errorHandler = (taskError: AcCmTaskError) => {
+ *   console.error(`Task "${taskError.task.name}" failed at position ${taskError.taskIndex}:`, taskError.error)
+ * }
+ * ```
+ */
+export interface AcCmTaskError {
+  /**
+   * The error that was thrown during task execution.
+   *
+   * This can be any type of error (Error, string, object, etc.) that was
+   * thrown by the task's run() method or during task execution.
+   */
+  error: unknown
+
+  /**
+   * The zero-based index of the failed task in the task execution queue.
+   *
+   * This indicates the position of the failed task relative to the start
+   * of the task chain, useful for debugging and error reporting.
+   */
+  taskIndex: number
+
+  /**
+   * The task instance that failed during execution.
+   *
+   * Provides access to the task's name and other properties for
+   * detailed error reporting and debugging.
+   */
+  task: AcCmTask<unknown, unknown>
+}
+
+/**
  * Represents a named unit of work with an asynchronous or synchronous execution function.
  *
  * Tasks can be chained together in a scheduler to create complex workflows with
@@ -87,11 +127,7 @@ export type AcCmCompleteCallback<T> = (finalResult: T) => void
  * @param {number} taskIndex - Index of the failed task in the task queue.
  * @param {AcCmTask<unknown, unknown>} task - The task that failed.
  */
-type AcCmErrorCallback = (
-  error: unknown,
-  taskIndex: number,
-  task: AcCmTask<unknown, unknown>
-) => void
+type AcCmErrorCallback = (error: AcCmTaskError) => void
 
 /**
  * Type-safe task scheduler that executes a chain of named tasks in order.
@@ -207,7 +243,7 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
           return output
         })
       } catch (error) {
-        this.onError(error, i, task)
+        this.onError({ error, taskIndex: i, task })
         return
       }
     }
