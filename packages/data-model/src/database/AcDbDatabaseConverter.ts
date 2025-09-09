@@ -226,6 +226,52 @@ class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
 }
 
 /**
+ * Configuration options for database converters.
+ *
+ * This interface defines the configuration parameters that can be passed
+ * to database converters to customize their behavior during the conversion
+ * process.
+ */
+export interface AcDbDatabaseConverterConfig {
+  /**
+   * Optional URL for web worker scripts used in the conversion process.
+   *
+   * When provided, this URL points to a web worker script that can be used
+   * for offloading computationally intensive parsing tasks to a background
+   * thread, improving performance and preventing UI blocking.
+   *
+   * @example
+   * ```typescript
+   * const config: AcDbDatabaseConverterConfig = {
+   *   parserWorkerUrl: '/assets/dxf-parser-worker.js'
+   * };
+   * ```
+   */
+  parserWorkerUrl?: string
+  /**
+   * Whether to use web workers for computationally intensive tasks.
+   *
+   * When set to `true`, the converter will attempt to use web workers
+   * for computationally intensive tasks, which can improve performance
+   * by offloading work to background threads and preventing UI blocking.
+   *
+   * When set to `false`, all computationally intensive operations will be
+   * performed on the main thread.
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const config: AcDbDatabaseConverterConfig = {
+   *   useWorker: true,
+   *   parserWorkerUrl: '/assets/dxf-parser-worker.js'
+   * };
+   * ```
+   */
+  useWorker?: boolean
+}
+
+/**
  * Abstract base class for database converters.
  *
  * This class provides the foundation for converting various file formats
@@ -241,6 +287,8 @@ class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
  *     // Implementation for parsing data
  *   }
  *
+ *   ......
+ *
  *   protected processEntities(model: MyModel, db: AcDbDatabase) {
  *     // Implementation for processing entities
  *   }
@@ -250,6 +298,31 @@ class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
 export abstract class AcDbDatabaseConverter<TModel = unknown> {
   /** Optional progress callback for tracking conversion progress */
   progress?: AcDbConversionProgressCallback
+
+  /** Configuration for the converter */
+  readonly config: AcDbDatabaseConverterConfig
+
+  /**
+   * Creates a new instance of the database converter.
+   *
+   * @param config - Configuration options for the converter. This includes settings
+   *                 such as worker URL for web workers used in the conversion process.
+   *                 If not provided, an empty configuration object will be used.
+   *
+   * @example
+   * ```typescript
+   * // Create converter with default configuration
+   * const converter = new AcDbDxfConverter();
+   *
+   * // Create converter with custom worker URL
+   * const converter = new AcDbDxfConverter({
+   *   parserWorkerUrl: '/assets/dxf-parser-worker.js'
+   * });
+   * ```
+   */
+  constructor(config: AcDbDatabaseConverterConfig = {}) {
+    this.config = config
+  }
 
   /**
    * Reads and converts data into an AcDbDatabase.
@@ -538,7 +611,10 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     }
   }
 
-  protected parse(_data: string | ArrayBuffer): TModel {
+  protected async parse(
+    _data: string | ArrayBuffer,
+    _workerUrl?: string
+  ): Promise<TModel | undefined> {
     throw new Error('Not impelemented yet!')
   }
 

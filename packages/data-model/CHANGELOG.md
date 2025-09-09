@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.4
+
+### Patch Changes
+
+- feat: enable web worker for dxf parser
+
 ## 1.2.3
 
 ### Patch Changes

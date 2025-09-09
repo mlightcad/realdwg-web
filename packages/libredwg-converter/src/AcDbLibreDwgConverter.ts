@@ -51,7 +51,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.libredwg = LibreDwg.createByWasmInstance(instance)
   }
 
-  protected parse(data: string): DwgDatabase {
+  protected async parse(data: string): Promise<DwgDatabase> {
     if (this.libredwg == null) {
       throw new Error('libredwg is not loaded!')
     }

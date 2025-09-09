@@ -66,7 +66,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     }
   }
 
-  protected parse(data: string | ArrayBuffer): DRW_Database {
+  protected async parse(data: string | ArrayBuffer): Promise<DRW_Database> {
     if (this.librefrw == null) {
       throw new Error('librefrw is not loaded!')
     }

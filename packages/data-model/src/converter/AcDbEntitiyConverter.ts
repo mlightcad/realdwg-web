@@ -662,7 +662,9 @@ export class AcDbEntityConverter {
       blockReference.rotation != null
         ? AcGeMathUtil.degToRad(blockReference.rotation)
         : 0
-    dbBlockReference.normal.copy(blockReference.extrusionDirection)
+    dbBlockReference.normal.copy(
+      blockReference.extrusionDirection ?? { x: 0, y: 0, z: 1 }
+    )
     return dbBlockReference
   }
 

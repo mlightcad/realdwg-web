@@ -20,6 +20,7 @@ import {
   AcDbBlockTable,
   AcDbBlockTableRecord,
   AcDbDatabase,
+  AcDbDatabaseConverterConfig,
   AcDbDimStyleTableRecord,
   AcDbDimStyleTableRecordAttrs,
   AcDbDimTextHorizontal,
@@ -40,6 +41,7 @@ import {
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
+import { createWorkerApi } from './worker'
 
 /**
  * Default database converter for DXF files.
@@ -56,6 +58,13 @@ import { AcDbObjectConverter } from './AcDbObjectConverter'
  * ```
  */
 export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
+  constructor(config: AcDbDatabaseConverterConfig = {}) {
+    super(config)
+    if (!config.parserWorkerUrl) {
+      config.parserWorkerUrl = '/assets/dxf-parser-worker.js'
+    }
+  }
+
   /**
    * Parses DXF data string into a ParsedDxf object.
    *
@@ -67,9 +76,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * const parsed = converter.parse(dxfString);
    * ```
    */
-  protected parse(data: string): ParsedDxf {
-    const parser = new DxfParser()
-    return parser.parseSync(data)
+  protected async parse(data: string) {
+    if (this.config.useWorker && this.config.parserWorkerUrl) {
+      const api = createWorkerApi({ workerUrl: this.config.parserWorkerUrl })
+      const result = await api.execute<string, ParsedDxf>(data)
+      return result.data
+    } else {
+      const parser = new DxfParser()
+      return parser.parseSync(data)
+    }
   }
 
   /**
