@@ -1,5 +1,11 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.6
+
+### Patch Changes
+
+- feat: let AcDbLibreDwgConverter run in web worker only
+
 ## 3.0.5
 
 ### Patch Changes

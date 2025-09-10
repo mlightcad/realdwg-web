@@ -1,4 +1,4 @@
-import { Dwg_File_Type,DwgDatabase, LibreDwg } from '@mlightcad/libredwg-web'
+import { Dwg_File_Type, DwgDatabase, LibreDwg } from '@mlightcad/libredwg-web'
 export async function parseDwg(data: string): Promise<DwgDatabase> {
   const libredwg = await LibreDwg.create()
   if (libredwg == null) {

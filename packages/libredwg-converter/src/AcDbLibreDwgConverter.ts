@@ -39,7 +39,6 @@ import {
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
-import { parseDwg } from './AcDbLibreDwgConverterUtil'
 
 /**
  * Database converter for DWG files based on [libredwg-web](https://github.com/mlight-lee/libredwg-web).
@@ -59,7 +58,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       const result = await api.execute<string, DwgDatabase>(data)
       return result.data!
     } else {
-      return await parseDwg(data)
+      throw new Error('dwg converter can run in web worker only!')
     }
   }
 
