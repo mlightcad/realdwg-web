@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/libredwg-converter",
-  "version": "3.0.4",
+  "version": "3.0.5",
   "type": "module",
   "repository": {
     "type": "git",
@@ -34,7 +34,9 @@
   },
   "scripts": {
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",
-    "build": "tsc && vite build",
+    "build": "tsc && vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
+    "build:main": "vite build -c vite.config.main.ts",
+    "build:worker": "vite build -c vite.config.worker.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix --quiet src/"
   },

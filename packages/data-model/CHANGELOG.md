@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.5
+
+### Patch Changes
+
+- feat: enable web worker for libredwg-converter
+
 ## 1.2.4
 
 ### Patch Changes

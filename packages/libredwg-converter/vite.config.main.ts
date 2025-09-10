@@ -1,8 +1,9 @@
-import { defineConfig } from 'vite'
+import { defineConfig, PluginOption } from 'vite'
 import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 
 export default defineConfig({
   build: {
+    emptyOutDir: false,
     outDir: 'dist',
     lib: {
       entry: 'src/index.ts',
@@ -10,5 +11,5 @@ export default defineConfig({
       fileName: 'libredwg-converter'
     }
   },
-  plugins: [peerDepsExternal()]
+  plugins: [peerDepsExternal() as PluginOption]
 })

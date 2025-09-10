@@ -5,6 +5,7 @@ import {
   AcDbConversionProgressCallback,
   AcDbDatabase,
   AcDbDatabaseConverter,
+  AcDbDatabaseConverterConfig,
   AcDbDimStyleTableRecord,
   AcDbDimStyleTableRecordAttrs,
   AcDbDimTextHorizontal,
@@ -23,7 +24,8 @@ import {
   AcGiBaseLineStyle,
   AcGiDefaultLightingType,
   AcGiOrthographicType,
-  AcGiRenderMode
+  AcGiRenderMode,
+  createWorkerApi
 } from '@mlightcad/data-model'
 import {
   DwgBlockRecordTableEntry,
@@ -35,35 +37,30 @@ import {
   DwgMTextEntity,
   DwgTextEntity
 } from '@mlightcad/libredwg-web'
-import { Dwg_File_Type, LibreDwg, LibreDwgEx } from '@mlightcad/libredwg-web'
-import { MainModule } from '@mlightcad/libredwg-web/wasm/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
+import { parseDwg } from './AcDbLibreDwgConverterUtil'
 
 /**
  * Database converter for DWG files based on [libredwg-web](https://github.com/mlight-lee/libredwg-web).
  */
 export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
-  libredwg: LibreDwgEx
-
-  constructor(instance: MainModule) {
-    super()
-    this.libredwg = LibreDwg.createByWasmInstance(instance)
+  constructor(config: AcDbDatabaseConverterConfig = {}) {
+    super(config)
+    config.useWorker = true
+    if (!config.parserWorkerUrl) {
+      config.parserWorkerUrl = '/assets/libredwg-parser-worker.js'
+    }
   }
 
   protected async parse(data: string): Promise<DwgDatabase> {
-    if (this.libredwg == null) {
-      throw new Error('libredwg is not loaded!')
+    if (this.config.useWorker && this.config.parserWorkerUrl) {
+      const api = createWorkerApi({ workerUrl: this.config.parserWorkerUrl })
+      const result = await api.execute<string, DwgDatabase>(data)
+      return result.data!
+    } else {
+      return await parseDwg(data)
     }
-
-    const dwgDataPtr = this.libredwg.dwg_read_data(data, Dwg_File_Type.DWG)
-    if (dwgDataPtr == null) {
-      throw new Error('Failed to read dwg data!')
-    }
-    const model = this.libredwg.convert(dwgDataPtr)
-    this.libredwg.dwg_free(dwgDataPtr)
-
-    return model
   }
 
   /**
