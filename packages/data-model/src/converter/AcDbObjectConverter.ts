@@ -1,3 +1,4 @@
+import { ParsedDxf } from '@mlightcad/dxf-json'
 import { CommonDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/common'
 import { ImageDefDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/imageDef'
 import { LayoutDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/layout'
@@ -32,11 +33,19 @@ export class AcDbObjectConverter {
    * const acDbLayout = converter.convertLayout(dxfLayout);
    * ```
    */
-  convertLayout(layout: LayoutDXFObject) {
+  convertLayout(layout: LayoutDXFObject, model: ParsedDxf) {
     const dbObject = new AcDbLayout()
     dbObject.layoutName = layout.layoutName
     dbObject.tabOrder = layout.tabOrder
-    dbObject.blockTableRecordId = layout.ownerObjectId
+    // layout.paperSpaceTableId doesn't point to the block table record asscicated with
+    // this layout. So let's get the assocated block table record id from block table.
+    model.tables.BLOCK_RECORD?.entries.some(btr => {
+      if (btr.layoutObjects === layout.handle) {
+        dbObject.blockTableRecordId = btr.handle
+        return true
+      }
+      return false
+    })
     dbObject.limits.min.copy(layout.minLimit)
     dbObject.limits.max.copy(layout.maxLimit)
     dbObject.extents.min.copy(layout.minExtent)

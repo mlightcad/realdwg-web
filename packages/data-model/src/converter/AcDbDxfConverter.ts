@@ -367,6 +367,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         const dbBlock = new AcDbBlockTableRecord()
         dbBlock.objectId = btr.handle
         dbBlock.name = btr.name
+        dbBlock.layoutId = btr.layoutObjects
         db.tables.blockTable.add(dbBlock)
       })
     }
@@ -393,7 +394,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       const layoutDict = db.dictionaries.layouts
       objects['LAYOUT'].forEach(layout => {
         const dbLayout = objectConverter.convertLayout(
-          layout as LayoutDXFObject
+          layout as LayoutDXFObject,
+          model
         )
         layoutDict.setAt(dbLayout.layoutName, dbLayout)
       })

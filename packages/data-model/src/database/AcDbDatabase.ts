@@ -33,6 +33,18 @@ import {
 } from '@mlightcad/geometry-engine'
 
 /**
+ * Event arguments for object events in the dictionary.
+ */
+export interface AcDbDictObjectEventArgs {
+  /** The database that triggered the event */
+  database: AcDbDatabase
+  /** The object involved in the event */
+  object: AcDbObject
+  /** The key name of the object */
+  key: string
+}
+
+/**
  * Event arguments for entity-related events.
  */
 export interface AcDbEntityEventArgs {
@@ -268,6 +280,10 @@ export class AcDbDatabase extends AcDbObject {
    * such as entity modifications, layer changes, and progress updates.
    */
   public readonly events = {
+    /** Fired when an object is set to the dictionary */
+    dictObjetSet: new AcCmEventManager<AcDbDictObjectEventArgs>(),
+    /** Fired when an object in the dictionary is removed */
+    dictObjectErased: new AcCmEventManager<AcDbDictObjectEventArgs>(),
     /** Fired when an entity is appended to the database */
     entityAppended: new AcCmEventManager<AcDbEntityEventArgs>(),
     /** Fired when an entity is modified in the database */

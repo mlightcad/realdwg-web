@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.7
+
+### Patch Changes
+
+- feat: add property layoutId for class AcDbBlockTableRecord and set property blockTableRecordId value of AcDbLayout correctly when converting DXF/DWG
+- Updated dependencies
+  - @mlightcad/data-model@1.2.6
+
 ## 3.0.6
 
 ### Patch Changes

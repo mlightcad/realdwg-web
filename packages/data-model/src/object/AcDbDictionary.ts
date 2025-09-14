@@ -84,6 +84,11 @@ export class AcDbDictionary<
     value.database = this.database
     this._recordsByName.set(key, value)
     this._recordsById.set(value.objectId, value)
+    this.database.events.dictObjetSet.dispatch({
+      database: this.database,
+      object: value,
+      key: key
+    })
   }
 
   /**
@@ -105,6 +110,11 @@ export class AcDbDictionary<
     if (object) {
       this._recordsByName.delete(name.toUpperCase())
       this._recordsById.delete(this.objectId)
+      this.database.events.dictObjectErased.dispatch({
+        database: this.database,
+        object: object,
+        key: name
+      })
       return true
     }
     return false
@@ -126,7 +136,14 @@ export class AcDbDictionary<
     if (object) {
       this._recordsById.delete(this.objectId)
       this._recordsByName.forEach((value, key) => {
-        if (value === object) this._recordsByName.delete(key)
+        if (value === object) {
+          this._recordsByName.delete(key)
+          this.database.events.dictObjectErased.dispatch({
+            database: this.database,
+            object: object,
+            key: key
+          })
+        }
       })
       return true
     }
@@ -142,6 +159,13 @@ export class AcDbDictionary<
    * ```
    */
   removeAll() {
+    this._recordsByName.forEach((value, key) => {
+      this.database.events.dictObjectErased.dispatch({
+        database: this.database,
+        object: value,
+        key: key
+      })
+    })
     this._recordsByName.clear()
     this._recordsById.clear()
   }

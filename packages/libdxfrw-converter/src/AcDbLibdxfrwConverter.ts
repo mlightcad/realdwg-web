@@ -305,6 +305,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
         const dbBlock = new AcDbBlockTableRecord()
         dbBlock.objectId = block.handle.toString()
         dbBlock.name = block.name.toUpperCase()
+        // TODO: Add logic to set the associated layout id
         db.tables.blockTable.add(dbBlock)
 
         if (block.entities) {

@@ -1,6 +1,6 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
-import { AcDbObjectId } from 'base/AcDbObject'
 
+import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
@@ -31,6 +31,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   /** The base point of the block in WCS coordinates */
   private _origin: AcGePoint3d
+  /** The object id of the associated AcDbLayout object in the Layouts dictionary.*/
+  private _layoutId: AcDbObjectId
   /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
 
@@ -87,6 +89,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   constructor() {
     super()
     this._origin = new AcGePoint3d()
+    this._layoutId = ''
     this._entities = new Map<string, AcDbEntity>()
   }
 
@@ -145,6 +148,29 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
   set origin(value: AcGePoint3d) {
     this._origin.copy(value)
+  }
+
+  /**
+   * Gets or sets the object ID of the associated AcDbLayout object in the Layouts dictionary.
+   *
+   * This property links the block table record to its corresponding layout object,
+   * which defines the viewport configuration and display settings for the block.
+   * For model space blocks, this is typically empty, while paper space blocks
+   * have a corresponding layout ID.
+   *
+   * @returns The object ID of the associated layout
+   *
+   * @example
+   * ```typescript
+   * const layoutId = blockRecord.layoutId;
+   * blockRecord.layoutId = 'some-layout-object-id';
+   * ```
+   */
+  get layoutId() {
+    return this._layoutId
+  }
+  set layoutId(value: AcDbObjectId) {
+    this._layoutId = value
   }
 
   /**

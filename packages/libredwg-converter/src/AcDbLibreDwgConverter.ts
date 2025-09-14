@@ -369,8 +369,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock = new AcDbBlockTableRecord()
         dbBlock.objectId = btr.handle.toString()
         dbBlock.name = btr.name
-        // dbBlock.ownerId = btr.ownerHandle
-        // dbBlock.origin.copy(btr.position)
+        dbBlock.ownerId = btr.ownerHandle.toString()
+        dbBlock.origin.copy(btr.basePoint)
+        dbBlock.layoutId = btr.layout.toString()
         db.tables.blockTable.add(dbBlock)
       }
 
@@ -487,7 +488,19 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       const dbLayout = new AcDbLayout()
       dbLayout.layoutName = layout.layoutName
       dbLayout.tabOrder = layout.tabOrder
-      dbLayout.blockTableRecordId = layout.ownerHandle.toString()
+      // layout.paperSpaceTableId doesn't point to the block table record asscicated with
+      // this layout. So let's get the assocated block table record id from block table.
+      const btrs = db.tables.blockTable.newIterator()
+      dbLayout.objectId = layout.handle.toString()
+      for (const btr of btrs) {
+        // Because the type of layout id (number) block table record and layout id (BingInt)
+        // in layout dictionary are different, so the converted data are used to compare.
+        // In the future, we will use BigInt type for object id.
+        if (btr.layoutId === dbLayout.objectId) {
+          dbLayout.blockTableRecordId = btr.objectId
+          break
+        }
+      }
       dbLayout.limits.min.copy(layout.minLimit)
       dbLayout.limits.max.copy(layout.maxLimit)
       dbLayout.extents.min.copy(layout.minExtent)

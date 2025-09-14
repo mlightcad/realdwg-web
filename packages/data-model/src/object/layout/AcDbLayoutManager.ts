@@ -8,10 +8,20 @@ import { AcDbLayout } from './AcDbLayout'
  * Event arguments for layout-related events.
  */
 export interface AcDbLayoutEventArgs {
-  /** The previous layout */
-  oldLayout: AcDbLayout
-  /** The new layout */
-  newLayout: AcDbLayout
+  /** The layout involved in the event */
+  layout: AcDbLayout
+}
+
+/**
+ * Event arguments for layout-renamed events.
+ */
+export interface AcDbLayoutRenamedEventArgs {
+  /** The layout involved in the event */
+  layout: AcDbLayout
+  /** The old name of the layout */
+  oldName: string
+  /** The new name of the layout */
+  newName: string
 }
 
 /**
@@ -35,6 +45,12 @@ export class AcDbLayoutManager {
    * These events allow applications to respond to layout changes.
    */
   public readonly events = {
+    /** Fired when the layout is created */
+    layoutCreated: new AcCmEventManager<AcDbLayoutEventArgs>(),
+    /** Fired when the layout is removed */
+    layoutRemoved: new AcCmEventManager<AcDbLayoutEventArgs>(),
+    /** Fired when the layout is renamed */
+    layoutRenamed: new AcCmEventManager<AcDbLayoutRenamedEventArgs>(),
     /** Fired when the layout is switched */
     layoutSwitched: new AcCmEventManager<AcDbLayoutEventArgs>()
   }
@@ -167,6 +183,11 @@ export class AcDbLayoutManager {
     const layout = currentDb.dictionaries.layouts.getAt(oldName)
     if (layout) {
       layout.layoutName = newName
+      this.events.layoutRenamed.dispatch({
+        layout: layout,
+        oldName: oldName,
+        newName: newName
+      })
       return true
     }
     return false
@@ -192,7 +213,18 @@ export class AcDbLayoutManager {
    * @returns
    */
   deleteLayout(name: string, db?: AcDbDatabase) {
-    return this.getWorkingDatabase(db).dictionaries.layouts.remove(name)
+    const layouts = this.getWorkingDatabase(db).dictionaries.layouts
+    const layout = layouts.getAt(name)
+    let result = false
+    if (layout) {
+      result = layouts.remove(name)
+      if (result) {
+        this.events.layoutRemoved.dispatch({
+          layout: layout
+        })
+      }
+    }
+    return result
   }
 
   /**
@@ -213,6 +245,10 @@ export class AcDbLayoutManager {
     currentDb.tables.blockTable.add(btr)
 
     currentDb.dictionaries.layouts.setAt(name, layout)
+
+    this.events.layoutCreated.dispatch({
+      layout: layout
+    })
 
     return { layout: layout, btr: btr }
   }
@@ -237,8 +273,7 @@ export class AcDbLayoutManager {
   ) {
     if (layout) {
       this.events.layoutSwitched.dispatch({
-        oldLayout: this.getActiveLayout()!,
-        newLayout: layout
+        layout: layout
       })
       currentDb.currentSpaceId = layout.blockTableRecordId
       return true

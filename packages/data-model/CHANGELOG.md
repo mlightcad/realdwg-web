@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.6
+
+### Patch Changes
+
+- feat: add property layoutId for class AcDbBlockTableRecord and set property blockTableRecordId value of AcDbLayout correctly when converting DXF/DWG
+
 ## 1.2.5
 
 ### Patch Changes
