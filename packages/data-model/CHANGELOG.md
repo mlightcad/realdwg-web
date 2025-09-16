@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.7
+
+### Patch Changes
+
+- feat: support batch append for entities
+
 ## 1.2.6
 
 ### Patch Changes

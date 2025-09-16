@@ -12,6 +12,7 @@ import {
   AcDbDimVerticalJustification,
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular,
+  AcDbEntity,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
   AcDbSymbolTableRecord,
@@ -374,15 +375,18 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     blockTableRecord: AcDbBlockTableRecord
   ) {
     const converter = new AcDbEntityConverter()
+    const dbEntities: AcDbEntity[] = []
     for (let index = 0, size = entities.size(); index < size; ++index) {
       const entity = entities.get(index)
       if (entity != null) {
         const dbEntity = converter.convert(entity)
         if (dbEntity) {
-          blockTableRecord.appendEntity(dbEntity)
+          dbEntities.push(dbEntity)
         }
       }
     }
+    // Use batch append to improve performance
+    blockTableRecord.appendEntity(dbEntities)
   }
 
   protected async processEntities(
@@ -408,15 +412,18 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
       const blockTableRecord = db.tables.blockTable.modelSpace
       await batchProcessor.processChunk(async (start, end) => {
         // Logic for processing each chunk of entities
+        const dbEntities: AcDbEntity[] = []
         for (let i = start; i < end; i++) {
           const entity = entities.get(i)
           if (entity) {
             const dbEntity = converter.convert(entity)
             if (dbEntity) {
-              blockTableRecord.appendEntity(dbEntity)
+              dbEntities.push(dbEntity)
             }
           }
         }
+        // Use batch append to improve performance
+        blockTableRecord.appendEntity(dbEntities)
 
         // Update progress
         if (progress) {

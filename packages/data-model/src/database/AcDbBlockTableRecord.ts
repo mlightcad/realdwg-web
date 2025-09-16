@@ -174,12 +174,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
-   * Appends the specified entity to this block table record.
+   * Appends the specified entity or entities to this block table record.
    *
    * This method adds an entity to the block and sets up the necessary
    * relationships between the entity and the block table record.
    *
-   * @param entity - The entity to append to this block table record
+   * @param entity - The entity or entities to append to this block table record
    *
    * @example
    * ```typescript
@@ -187,10 +187,19 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * blockRecord.appendEntity(line);
    * ```
    */
-  appendEntity(entity: AcDbEntity) {
-    entity.database = this.database
-    entity.ownerId = this.objectId
-    this._entities.set(entity.objectId, entity)
+  appendEntity(entity: AcDbEntity | AcDbEntity[]) {
+    if (Array.isArray(entity)) {
+      for (let i = 0; i < entity.length; ++i) {
+        const item = entity[i]
+        item.database = this.database
+        item.ownerId = this.objectId
+        this._entities.set(item.objectId, item)
+      }
+    } else {
+      entity.database = this.database
+      entity.ownerId = this.objectId
+      this._entities.set(entity.objectId, entity)
+    }
 
     // When creating one block, it will also go to this function. But we don't want `entityAppended` event
     // tiggered in this case. So check whether the block name is name of the model space.

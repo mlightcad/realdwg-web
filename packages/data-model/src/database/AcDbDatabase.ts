@@ -38,8 +38,8 @@ import {
 export interface AcDbDictObjectEventArgs {
   /** The database that triggered the event */
   database: AcDbDatabase
-  /** The object involved in the event */
-  object: AcDbObject
+  /** The object (or objects) involved in the event */
+  object: AcDbObject | AcDbObject[]
   /** The key name of the object */
   key: string
 }
@@ -50,8 +50,8 @@ export interface AcDbDictObjectEventArgs {
 export interface AcDbEntityEventArgs {
   /** The database that triggered the event */
   database: AcDbDatabase
-  /** The entity involved in the event */
-  entity: AcDbEntity
+  /** The entity (or entities) involved in the event */
+  entity: AcDbEntity | AcDbEntity[]
 }
 
 /**
@@ -691,29 +691,79 @@ export class AcDbDatabase extends AcDbObject {
       stage: 'FETCH_FILE',
       stageStatus: 'START'
     })
+
     const response = await fetch(url)
+    if (!response.ok) {
+      this.events.openProgress.dispatch({
+        database: this,
+        percentage: 100,
+        stage: 'FETCH_FILE',
+        stageStatus: 'ERROR'
+      })
+      throw new Error(
+        `Failed to fetch file '${url}' with HTTP status code '${response.status}'!`
+      )
+    }
+
+    const contentLength = response.headers.get('content-length')
+    const totalBytes = contentLength ? parseInt(contentLength, 10) : null
+    let loadedBytes = 0
+
+    // Create a reader to track progress
+    const reader = response.body?.getReader()
+    if (!reader) {
+      throw new Error('Failed to get response reader')
+    }
+
+    const chunks = []
+
+    while (true) {
+      const { done, value } = await reader.read()
+
+      if (done) {
+        break
+      }
+
+      chunks.push(value)
+      loadedBytes += value.length
+
+      // Calculate and report progress if we know the total size
+      if (totalBytes !== null) {
+        const percentage = Math.round((loadedBytes / totalBytes) * 100)
+        this.events.openProgress.dispatch({
+          database: this,
+          percentage: percentage,
+          stage: 'FETCH_FILE',
+          stageStatus: 'IN-PROGRESS'
+        })
+      }
+    }
+
+    // Combine all chunks into a single buffer
+    const content = new Uint8Array(loadedBytes)
+    let position = 0
+    for (const chunk of chunks) {
+      content.set(chunk, position)
+      position += chunk.length
+    }
+
+    const fileExtension = url.toLowerCase().split('.').pop()
+    if (fileExtension === 'dwg') {
+      // DWG files are binary, convert to ArrayBuffer
+      await this.read(content.buffer, options, AcDbFileType.DWG)
+    } else {
+      // Default to DXF files (text-based) or fallback
+      // Convert Uint8Array to text
+      const textContent = new TextDecoder().decode(content)
+      await this.read(textContent, options, AcDbFileType.DXF)
+    }
+
     this.events.openProgress.dispatch({
       database: this,
       percentage: 100,
       stage: 'FETCH_FILE',
       stageStatus: 'END'
     })
-    if (!response.ok) {
-      throw new Error(
-        `Failed to fetch file '${url}' with HTTP status codee '${response.status}'!`
-      )
-    }
-
-    const fileExtension = url.toLowerCase().split('.').pop()
-    if (fileExtension === 'dwg') {
-      // DWG files are binary, read as ArrayBuffer
-      const content = await response.arrayBuffer()
-      await this.read(content, options, AcDbFileType.DWG)
-    } else {
-      // Default to DXF files (text-based) or fallback
-      const content = await response.text()
-      await this.read(content, options, AcDbFileType.DXF)
-    }
   }
 
   /**

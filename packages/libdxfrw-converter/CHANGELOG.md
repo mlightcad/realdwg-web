@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.7
+
+### Patch Changes
+
+- feat: support batch append for entities
+- Updated dependencies
+  - @mlightcad/data-model@1.2.7
+
 ## 3.0.6
 
 ### Patch Changes

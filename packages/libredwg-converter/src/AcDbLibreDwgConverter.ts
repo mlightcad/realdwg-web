@@ -13,6 +13,7 @@ import {
   AcDbDimVerticalJustification,
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular,
+  AcDbEntity,
   AcDbLayerTableRecord,
   AcDbLayout,
   AcDbLinetypeTableRecord,
@@ -397,13 +398,16 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   ) {
     const converter = new AcDbEntityConverter()
     const entityCount = entities.length
+    const dbEntities: AcDbEntity[] = []
     for (let i = 0; i < entityCount; i++) {
       const entity = entities[i]
       const dbEntity = converter.convert(entity)
       if (dbEntity) {
-        blockTableRecord.appendEntity(dbEntity)
+        dbEntities.push(dbEntity)
       }
     }
+    // Use batch append to improve performance
+    blockTableRecord.appendEntity(dbEntities)
   }
 
   /**
@@ -433,13 +437,16 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const blockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
       // Logic for processing each chunk of entities
+      const dbEntities: AcDbEntity[] = []
       for (let i = start; i < end; i++) {
         const entity = entities[i]
         const dbEntity = converter.convert(entity)
         if (dbEntity) {
-          blockTableRecord.appendEntity(dbEntity)
+          dbEntities.push(dbEntity)
         }
       }
+      // Use batch append to improve performance
+      blockTableRecord.appendEntity(dbEntities)
 
       // Update progress
       if (progress) {

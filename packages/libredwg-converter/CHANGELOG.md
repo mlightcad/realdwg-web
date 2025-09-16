@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.8
+
+### Patch Changes
+
+- feat: support batch append for entities
+- Updated dependencies
+  - @mlightcad/data-model@1.2.7
+
 ## 3.0.7
 
 ### Patch Changes

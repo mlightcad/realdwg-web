@@ -15,9 +15,9 @@ import {
   AcGiOrthographicType,
   AcGiRenderMode
 } from '@mlightcad/graphic-interface'
+import { AcDbEntity } from 'entity'
 
 import {
-  AcDbBlockTable,
   AcDbBlockTableRecord,
   AcDbDatabase,
   AcDbDatabaseConverterConfig,
@@ -213,23 +213,19 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     )
 
     // Process the entities in chunks
-    const defaultBlockTableRecord = db.tables.blockTable.modelSpace
-    const blockTable = db.tables.blockTable
+    const modelSpaceBlockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
       // Logic for processing each chunk of entities
+      const dbEntities: AcDbEntity[] = []
       for (let i = start; i < end; i++) {
         const entity = entities[i]
         const dbEntity = converter.convert(entity)
         if (dbEntity) {
-          let blockTableRecord = defaultBlockTableRecord
-          if (entity.ownerBlockRecordSoftId != null) {
-            blockTableRecord =
-              blockTable.getIdAt(entity.ownerBlockRecordSoftId) ||
-              blockTableRecord
-          }
-          blockTableRecord.appendEntity(dbEntity)
+          dbEntities.push(dbEntity)
         }
       }
+      // Use batch append to improve performance
+      modelSpaceBlockTableRecord.appendEntity(dbEntities)
 
       // Update progress
       if (progress) {
@@ -249,34 +245,29 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * block table record.
    *
    * @param entities - Array of DXF entities to process
-   * @param defaultBlockTableRecord - Default block table record to use
-   * @param blockTable - Block table reference
+   * @param blockTableRecord - The block table record to use
    *
    * @example
    * ```typescript
-   * await converter.processEntitiesInBlock(entities, blockRecord, blockTable);
+   * await converter.processEntitiesInBlock(entities, blockRecord);
    * ```
    */
   private async processEntitiesInBlock(
     entities: CommonDxfEntity[],
-    defaultBlockTableRecord: AcDbBlockTableRecord,
-    blockTable: AcDbBlockTable
+    blockTableRecord: AcDbBlockTableRecord
   ) {
     const converter = new AcDbEntityConverter()
     const entityCount = entities.length
+    const dbEntities: AcDbEntity[] = []
     for (let i = 0; i < entityCount; i++) {
       const entity = entities[i]
       const dbEntity = converter.convert(entity)
       if (dbEntity) {
-        let blockTableRecord = defaultBlockTableRecord
-        if (entity.ownerBlockRecordSoftId != null) {
-          blockTableRecord =
-            blockTable.getIdAt(entity.ownerBlockRecordSoftId) ||
-            blockTableRecord
-        }
-        blockTableRecord.appendEntity(dbEntity)
+        dbEntities.push(dbEntity)
       }
     }
+    // Use batch append to improve performance
+    blockTableRecord.appendEntity(dbEntities)
   }
 
   /**
@@ -306,11 +297,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         db.tables.blockTable.add(dbBlock)
       }
       if (block.entities) {
-        this.processEntitiesInBlock(
-          block.entities,
-          dbBlock,
-          db.tables.blockTable
-        )
+        this.processEntitiesInBlock(block.entities, dbBlock)
       }
     }
   }
