@@ -26,6 +26,7 @@ import {
   DRW_Database,
   DRW_DoubleList,
   DRW_DwgR,
+  DRW_Entity,
   DRW_EntityList,
   DRW_FileHandler,
   DRW_ImageList,
@@ -399,14 +400,24 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     if (model.mBlock) {
       const converter = new AcDbEntityConverter()
 
+      let entities: DRW_Entity[] = []
+      const entityList = model.mBlock.entities
+      const entityCount = entityList.size()
+      for (let i = 0; i < entityCount; i++) {
+        const entity = entityList.get(i)
+        if (entity) entities.push(entity)
+      }
+
       // Create an instance of AcDbBatchProcessing
-      const entities = model.mBlock.entities
-      const entityCount = entities.size()
       const batchProcessor = new AcDbBatchProcessing(
-        entityCount,
+        entities.length,
         100 - startPercentage.value,
         minimumChunkSize
       )
+      // Groups entities by their `type` property and flattens the result into a single array.
+      if (this.config.convertByEntityType) {
+        entities = this.groupAndFlattenByType(entities)
+      }
 
       // Process the entities in chunks
       const blockTableRecord = db.tables.blockTable.modelSpace
@@ -414,12 +425,10 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
         // Logic for processing each chunk of entities
         const dbEntities: AcDbEntity[] = []
         for (let i = start; i < end; i++) {
-          const entity = entities.get(i)
-          if (entity) {
-            const dbEntity = converter.convert(entity)
-            if (dbEntity) {
-              dbEntities.push(dbEntity)
-            }
+          const entity = entities[i]
+          const dbEntity = converter.convert(entity)
+          if (dbEntity) {
+            dbEntities.push(dbEntity)
           }
         }
         // Use batch append to improve performance
@@ -435,5 +444,36 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
         }
       })
     }
+  }
+
+  /**
+   * Groups entities by their `type` property and flattens the result into a single array.
+   *
+   * The order of `type` groups follows the order in which they first appear in the input array.
+   * Items within each group preserve their original order.
+   *
+   * This runs in O(n) time, which is generally faster than sorting when you
+   * don't care about alphabetical order of types.
+   *
+   * @param entities - The array of entities to group and flatten.
+   *
+   * @returns A new array of entities grouped by their `type` property.
+   */
+  private groupAndFlattenByType(entities: DRW_Entity[]) {
+    const groups: Record<number, DRW_Entity[]> = {}
+    const order: number[] = []
+
+    const length = entities.length
+    for (let i = 0; i < length; i++) {
+      const entity = entities[i]
+      const entityType = entity.eType.value
+      if (!groups[entityType]) {
+        groups[entityType] = []
+        order.push(entityType)
+      }
+      groups[entityType].push(entity)
+    }
+
+    return order.flatMap(type => groups[type])
   }
 }

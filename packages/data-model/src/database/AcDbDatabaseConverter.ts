@@ -269,6 +269,27 @@ export interface AcDbDatabaseConverterConfig {
    * ```
    */
   useWorker?: boolean
+  /**
+   * Whether to convert entities grouped by type.
+   *
+   * When set to `true`, the converter will process entities one type
+   * at a time (e.g., all lines, then all circles, then all polylines),
+   * which can help optimize rendering performance or simplify debugging by
+   * handling each entity type in isolation.
+   *
+   * When set to `false`, entities are converted in the order they
+   * appear in the source file.
+   *
+   * @default false
+   *
+   * @example
+   * ```typescript
+   * const config: AcDbDatabaseConverterConfig = {
+   *   convertByEntityType: true
+   * };
+   * ```
+   */
+  convertByEntityType?: boolean
 }
 
 /**

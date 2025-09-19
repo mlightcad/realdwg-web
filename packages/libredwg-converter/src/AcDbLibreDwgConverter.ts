@@ -55,8 +55,14 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
   protected async parse(data: string): Promise<DwgDatabase> {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
-      const api = createWorkerApi({ workerUrl: this.config.parserWorkerUrl })
+      const api = createWorkerApi({
+        workerUrl: this.config.parserWorkerUrl,
+        // One concurrent worker needed for parser
+        maxConcurrentWorkers: 1
+      })
       const result = await api.execute<string, DwgDatabase>(data)
+      // Release worker
+      api.destroy()
       return result.data!
     } else {
       throw new Error('dwg converter can run in web worker only!')
@@ -425,15 +431,19 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const converter = new AcDbEntityConverter()
 
     // Create an instance of AcDbBatchProcessing
-    const entities = model.entities
+    let entities = model.entities
     const entityCount = entities.length
     const batchProcessor = new AcDbBatchProcessing(
       entityCount,
       100 - startPercentage.value,
       minimumChunkSize
     )
+    // Groups entities by their `type` property and flattens the result into a single array.
+    if (this.config.convertByEntityType) {
+      entities = this.groupAndFlattenByType(entities)
+    }
 
-    // Process the entities in chunks
+    // Process the ordered entities in chunks
     const blockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
       // Logic for processing each chunk of entities
@@ -534,5 +544,33 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   ) {
     dbObject.objectId = object.handle.toString()
     dbObject.ownerId = object.ownerHandle.toString()
+  }
+
+  /**
+   * Groups entities by their `type` property and flattens the result into a single array.
+   *
+   * The order of `type` groups follows the order in which they first appear in the input array.
+   * Items within each group preserve their original order.
+   *
+   * This runs in O(n) time, which is generally faster than sorting when you
+   * don't care about alphabetical order of types.
+   *
+   * @param entities - The array of entities to group and flatten.
+   *
+   * @returns A new array of entities grouped by their `type` property.
+   */
+  private groupAndFlattenByType(entities: DwgEntity[]) {
+    const groups: Record<string, DwgEntity[]> = {}
+    const order: string[] = []
+
+    for (const entity of entities) {
+      if (!groups[entity.type]) {
+        groups[entity.type] = []
+        order.push(entity.type)
+      }
+      groups[entity.type].push(entity)
+    }
+
+    return order.flatMap(type => groups[type])
   }
 }

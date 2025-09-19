@@ -78,8 +78,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    */
   protected async parse(data: string) {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
-      const api = createWorkerApi({ workerUrl: this.config.parserWorkerUrl })
+      const api = createWorkerApi({
+        workerUrl: this.config.parserWorkerUrl,
+        // One concurrent worker needed for parser
+        maxConcurrentWorkers: 1
+      })
       const result = await api.execute<string, ParsedDxf>(data)
+      // Release worker
+      api.destroy()
       return result.data
     } else {
       const parser = new DxfParser()
@@ -204,7 +210,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     const converter = new AcDbEntityConverter()
 
     // Create an instance of AcDbBatchProcessing
-    const entities = dxf.entities
+    let entities = dxf.entities
     const entityCount = entities.length
     const batchProcessor = new AcDbBatchProcessing(
       entityCount,
@@ -212,15 +218,26 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       minimumChunkSize
     )
 
-    // Process the entities in chunks
+    // Groups entities by their `type` property and flattens the result into a single array.
+    if (this.config.convertByEntityType) {
+      entities = this.groupAndFlattenByType(entities)
+    }
+
+    // Process the ordered entities in chunks
     const modelSpaceBlockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
       // Logic for processing each chunk of entities
-      const dbEntities: AcDbEntity[] = []
+      let dbEntities: AcDbEntity[] = []
+      let entityType = start < end ? entities[start].type : ''
       for (let i = start; i < end; i++) {
         const entity = entities[i]
         const dbEntity = converter.convert(entity)
         if (dbEntity) {
+          if (this.config.convertByEntityType && entity.type !== entityType) {
+            modelSpaceBlockTableRecord.appendEntity(dbEntities)
+            dbEntities = []
+            entityType = entity.type
+          }
           dbEntities.push(dbEntity)
         }
       }
@@ -728,5 +745,33 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     dbEntry.name = entry.name
     dbEntry.objectId = entry.handle
     dbEntry.ownerId = entry.ownerObjectId
+  }
+
+  /**
+   * Groups entities by their `type` property and flattens the result into a single array.
+   *
+   * The order of `type` groups follows the order in which they first appear in the input array.
+   * Items within each group preserve their original order.
+   *
+   * This runs in O(n) time, which is generally faster than sorting when you
+   * don't care about alphabetical order of types.
+   *
+   * @param entities - The array of entities to group and flatten.
+   *
+   * @returns A new array of entities grouped by their `type` property.
+   */
+  private groupAndFlattenByType(entities: CommonDxfEntity[]) {
+    const groups: Record<string, CommonDxfEntity[]> = {}
+    const order: string[] = []
+
+    for (const entity of entities) {
+      if (!groups[entity.type]) {
+        groups[entity.type] = []
+        order.push(entity.type)
+      }
+      groups[entity.type].push(entity)
+    }
+
+    return order.flatMap(type => groups[type])
   }
 }

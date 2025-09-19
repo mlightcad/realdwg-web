@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.8
+
+### Patch Changes
+
+- feat: destory parser web worker once parsing finished
+
 ## 1.2.7
 
 ### Patch Changes
