@@ -12,6 +12,14 @@ import { AcGeCurve2d } from './AcGeCurve2d'
 
 /**
  * Represent a circular arc.
+ *
+ * The angle system behavior depends on the clockwise property:
+ * - If clockwise = false (counterclockwise): Angles are stored in normal mathematical sense
+ *   (0° = +X axis, 90° = +Y axis, 180° = -X axis, 270° = -Y axis)
+ * - If clockwise = true: Angles are stored in a mirrored system where positive angles go clockwise
+ *   (0° = +X axis, 270° = +Y axis, 180° = -X axis, 90° = -Y axis)
+ *
+ * This means a "90° above X axis" in counterclockwise mode becomes "270°" in clockwise mode.
  */
 export class AcGeCircArc2d extends AcGeCurve2d {
   private _center!: AcGePoint2d
@@ -59,9 +67,14 @@ export class AcGeCircArc2d extends AcGeCurve2d {
       const center = a as AcGePoint2dLike
       this.center = new AcGePoint2d(center.x, center.y)
       this.radius = b as number
-      this.startAngle = c as number
-      this.endAngle = d as number
-      this.clockwise = e as boolean
+      this._clockwise = e as boolean
+      // Store internal angles (unmirrored)
+      this._startAngle = this._clockwise
+        ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(c as number))
+        : AcGeMathUtil.normalizeAngle(c as number)
+      this._endAngle = this._clockwise
+        ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(d as number))
+        : AcGeMathUtil.normalizeAngle(d as number)
     } else {
       throw AcCmErrors.ILLEGAL_PARAMETERS
     }
@@ -134,9 +147,10 @@ export class AcGeCircArc2d extends AcGeCurve2d {
 
     this.center = center
     this.radius = radius
-    this.startAngle = startAngle
-    this.endAngle = endAngle
-    this.clockwise = !isCounterclockwise
+    this._clockwise = !isCounterclockwise
+    // Store internal angles (unmirrored)
+    this._startAngle = startAngle
+    this._endAngle = endAngle
   }
 
   /**
@@ -198,13 +212,13 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     // Add points between start start and eng angle relative
     // to the center point
     if (bulge < 0) {
-      this.startAngle = Math.atan2(a.y - d.y, a.x - d.x)
-      this.endAngle = Math.atan2(b.y - d.y, b.x - d.x)
+      this._startAngle = Math.atan2(a.y - d.y, a.x - d.x)
+      this._endAngle = Math.atan2(b.y - d.y, b.x - d.x)
     } else {
-      this.startAngle = Math.atan2(b.y - d.y, b.x - d.x)
-      this.endAngle = Math.atan2(a.y - d.y, a.x - d.x)
+      this._startAngle = Math.atan2(b.y - d.y, b.x - d.x)
+      this._endAngle = Math.atan2(a.y - d.y, a.x - d.x)
     }
-    this.clockwise = bulge < 0
+    this._clockwise = bulge < 0
     this.center = d
     this.radius = b.sub(d).length()
   }
@@ -233,36 +247,71 @@ export class AcGeCircArc2d extends AcGeCurve2d {
 
   /**
    * Start angle in radians of circular arc in the range 0 to 2 * PI.
+   * If clockwise=true, angles are mirrored (0 = +X, 270° = +Y, 180° = -X, 90° = -Y).
+   * If clockwise=false, angles are in normal mathematical sense (0 = +X, 90° = +Y, 180° = -X, 270° = -Y).
    */
   get startAngle(): number {
-    return this._startAngle
+    return this._clockwise
+      ? this._mirrorAngle(this._startAngle)
+      : this._startAngle
   }
   set startAngle(value: number) {
-    this._startAngle = AcGeMathUtil.normalizeAngle(value)
+    this._startAngle = this._clockwise
+      ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(value))
+      : AcGeMathUtil.normalizeAngle(value)
     this._boundingBoxNeedsUpdate = true
   }
 
   /**
    * End angle in radians of circular arc in the range 0 to 2 * PI.
+   * If clockwise=true, angles are mirrored (0 = +X, 270° = +Y, 180° = -X, 90° = -Y).
+   * If clockwise=false, angles are in normal mathematical sense (0 = +X, 90° = +Y, 180° = -X, 270° = -Y).
    */
   get endAngle(): number {
-    return this._endAngle
+    return this._clockwise ? this._mirrorAngle(this._endAngle) : this._endAngle
   }
   set endAngle(value: number) {
-    this._endAngle =
+    const normalizedValue =
       this.startAngle == 0 && value == TAU
         ? value
         : AcGeMathUtil.normalizeAngle(value)
+    this._endAngle = this._clockwise
+      ? this._mirrorAngle(normalizedValue)
+      : normalizedValue
     this._boundingBoxNeedsUpdate = true
+  }
+
+  /**
+   * Mirror an angle for clockwise mode: 0° stays 0°, 90° becomes 270°, 180° stays 180°, 270° becomes 90°
+   * @param angle Input angle in radians
+   * @returns Mirrored angle in radians
+   */
+  private _mirrorAngle(angle: number): number {
+    // Convert to degrees for easier calculation
+    const degrees = (angle * 180) / Math.PI
+    // Mirror: 0°→0°, 90°→270°, 180°→180°, 270°→90°
+    const mirroredDegrees = (360 - degrees) % 360
+    return (mirroredDegrees * Math.PI) / 180
+  }
+
+  /**
+   * Get the internal (unmirrored) angle for calculations
+   * @param angle Input angle (may be mirrored)
+   * @returns Internal angle for calculations
+   */
+  private _getInternalAngle(angle: number): number {
+    return this._clockwise ? this._mirrorAngle(angle) : angle
   }
 
   /**
    * Angle between endAngle and startAngle in range 0 to 2*PI
    */
   get deltaAngle() {
+    const internalStartAngle = this._getInternalAngle(this.startAngle)
+    const internalEndAngle = this._getInternalAngle(this.endAngle)
     return this.clockwise
-      ? AcGeMathUtil.normalizeAngle(this.startAngle - this.endAngle)
-      : AcGeMathUtil.normalizeAngle(this.endAngle - this.startAngle)
+      ? AcGeMathUtil.normalizeAngle(internalStartAngle - internalEndAngle)
+      : AcGeMathUtil.normalizeAngle(internalEndAngle - internalStartAngle)
   }
 
   /**
@@ -294,9 +343,14 @@ export class AcGeCircArc2d extends AcGeCurve2d {
    * Middle point of circular arc
    */
   get midPoint(): AcGePoint2d {
-    const midAngle = AcGeMathUtil.normalizeAngle(
-      (this.startAngle + this.endAngle) / 2
+    const internalStartAngle = this._getInternalAngle(this.startAngle)
+    const internalEndAngle = this._getInternalAngle(this.endAngle)
+    const internalMidAngle = AcGeMathUtil.normalizeAngle(
+      (internalStartAngle + internalEndAngle) / 2
     )
+    const midAngle = this._clockwise
+      ? this._mirrorAngle(internalMidAngle)
+      : internalMidAngle
     return this.getPointAtAngle(midAngle)
   }
 
@@ -304,7 +358,9 @@ export class AcGeCircArc2d extends AcGeCurve2d {
    * Return true if its start point is identical to its end point. Otherwise, return false.
    */
   get closed() {
-    return (Math.abs(this.endAngle - this.startAngle) / Math.PI) % 2 == 0
+    const internalStartAngle = this._getInternalAngle(this.startAngle)
+    const internalEndAngle = this._getInternalAngle(this.endAngle)
+    return (Math.abs(internalEndAngle - internalStartAngle) / Math.PI) % 2 == 0
   }
 
   /**
@@ -315,11 +371,12 @@ export class AcGeCircArc2d extends AcGeCurve2d {
 
     const criticalAngles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
     for (const angle of criticalAngles) {
+      const internalAngle = this._getInternalAngle(angle)
       if (
         AcGeMathUtil.isBetweenAngle(
-          angle,
-          this.startAngle,
-          this.endAngle,
+          internalAngle,
+          this._getInternalAngle(this.startAngle),
+          this._getInternalAngle(this.endAngle),
           this.clockwise
         )
       ) {
@@ -359,8 +416,8 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     return new AcGeCircArc2d(
       this.center.clone(),
       this.radius,
-      this.startAngle,
-      this.endAngle,
+      this._startAngle,
+      this._endAngle,
       this.clockwise
     )
   }
@@ -371,8 +428,9 @@ export class AcGeCircArc2d extends AcGeCurve2d {
    * @returns Return the 2d coordinates of the point on the circular arc.
    */
   getPointAtAngle(angle: number): AcGePoint2d {
-    const x = this.center.x + this.radius * Math.cos(angle)
-    const y = this.center.y + this.radius * Math.sin(angle)
+    const internalAngle = this._getInternalAngle(angle)
+    const x = this.center.x + this.radius * Math.cos(internalAngle)
+    const y = this.center.y + this.radius * Math.sin(internalAngle)
     return new AcGePoint2d(x, y)
   }
 
@@ -384,20 +442,26 @@ export class AcGeCircArc2d extends AcGeCurve2d {
   getPoints(numPoints: number = 100): AcGePoint2d[] {
     const points: AcGePoint2d[] = []
     let deltaAngle = this.deltaAngle
-    let startAngle = this.startAngle
+    let internalStartAngle = this._getInternalAngle(this.startAngle)
     if (this.closed) {
       deltaAngle = TAU
-      startAngle = 0
+      internalStartAngle = 0
     }
     if (this.clockwise) {
       for (let i = 0; i <= numPoints; i++) {
-        const angle = startAngle - deltaAngle * (i / numPoints)
+        const internalAngle = internalStartAngle - deltaAngle * (i / numPoints)
+        const angle = this._clockwise
+          ? this._mirrorAngle(internalAngle)
+          : internalAngle
         const point = this.getPointAtAngle(angle)
         points.push(new AcGePoint2d(point.x, point.y))
       }
     } else {
       for (let i = 0; i <= numPoints; i++) {
-        const angle = startAngle + deltaAngle * (i / numPoints)
+        const internalAngle = internalStartAngle + deltaAngle * (i / numPoints)
+        const angle = this._clockwise
+          ? this._mirrorAngle(internalAngle)
+          : internalAngle
         const point = this.getPointAtAngle(angle)
         points.push(new AcGePoint2d(point.x, point.y))
       }

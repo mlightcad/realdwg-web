@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 3.0.1
+
+### Patch Changes
+
+- feat: correct the angle system behavior of class AcGeCircArc2d
+
 ## 3.0.0
 
 ### Minor Changes

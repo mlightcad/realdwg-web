@@ -109,7 +109,7 @@ describe('Test AcGeCircArc2d', () => {
     expect(arc1.center.x).toBe(1)
     expect(AcGeTol.equalToZero(arc1.center.y)).toBeTruthy()
     expect(arc1.startAngle).toBe(Math.PI)
-    expect(arc1.endAngle).toBe(0)
+    expect(AcGeTol.equalToZero(arc1.endAngle)).toBeTruthy()
     expect(arc1.clockwise).toBe(false)
 
     const arc2 = new AcGeCircArc2d({ x: 0, y: 0 }, { x: 2, y: 0 }, -1)
@@ -117,7 +117,7 @@ describe('Test AcGeCircArc2d', () => {
     expect(arc2.center.x).toBe(1)
     expect(AcGeTol.equalToZero(arc2.center.y)).toBeTruthy()
     expect(arc2.startAngle).toBe(Math.PI)
-    expect(arc2.endAngle).toBe(0)
+    expect(AcGeTol.equalToZero(arc2.endAngle)).toBeTruthy()
     expect(arc2.clockwise).toBe(true)
   })
 })
