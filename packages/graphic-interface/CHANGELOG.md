@@ -1,5 +1,11 @@
 # @mlightcad/graphic-interface
 
+## 3.0.2
+
+### Patch Changes
+
+- feat: add one flag to delay creating one rendered entity in function AcDbEntity.draw
+
 ## 3.0.1
 
 ### Patch Changes

@@ -1,6 +1,7 @@
 import { AcCmColor } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
+import { AcDbEntity } from 'entity'
 
 import { AcDbBlockTableRecord } from '../database'
 
@@ -191,12 +192,10 @@ export class AcDbRenderingCache {
           if (entity.color.isByBlock && color) {
             _tmpColor.copy(entity.color)
             entity.color.color = color
-            const object = entity.draw(renderer)
-            if (object) results.push(object)
+            this.addEntity(entity, results, renderer)
             entity.color.copy(_tmpColor)
           } else {
-            const object = entity.draw(renderer)
-            if (object) results.push(object)
+            this.addEntity(entity, results, renderer)
           }
         }
         block = renderer.group(results)
@@ -214,6 +213,25 @@ export class AcDbRenderingCache {
     } else {
       return renderer.group(results)
     }
+  }
+
+  private addEntity(
+    entity: AcDbEntity,
+    results: AcGiEntity[],
+    renderer: AcGiRenderer
+  ) {
+    const object = entity.draw(renderer)
+    if (object) {
+      this.attachEntityInfo(object, entity)
+      results.push(object)
+    }
+  }
+
+  private attachEntityInfo(target: AcGiEntity, source: AcDbEntity) {
+    target.objectId = source.objectId
+    target.ownerId = source.ownerId
+    target.layerName = source.layer
+    target.visible = source.visibility
   }
 }
 

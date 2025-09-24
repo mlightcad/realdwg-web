@@ -31,6 +31,7 @@ import {
   AcDbTextVerticalMode,
   AcDbTrace,
   AcDbViewport,
+  AcDbWipeout,
   AcDbXline,
   AcGeCircArc2d,
   AcGeEllipseArc2d,
@@ -78,6 +79,7 @@ import {
   DwgTableEntity,
   DwgTextEntity,
   DwgViewportEntity,
+  DwgWipeoutEntity,
   DwgXlineEntity
 } from '@mlightcad/libredwg-web'
 
@@ -132,8 +134,8 @@ export class AcDbEntityConverter {
       return this.convertSolid(entity as DwgSolidEntity)
     } else if (entity.type == 'VIEWPORT') {
       return this.convertViewport(entity as DwgViewportEntity)
-      // } else if (entity.type == 'WIPEOUT') {
-      //   return this.convertWipeout(entity as WipeoutEntity)
+    } else if (entity.type == 'WIPEOUT') {
+      return this.convertWipeout(entity as DwgWipeoutEntity)
     } else if (entity.type == 'XLINE') {
       return this.convertXline(entity as DwgXlineEntity)
     } else if (entity.type == 'INSERT') {
@@ -509,7 +511,10 @@ export class AcDbEntityConverter {
     return null
   }
 
-  private processImage(image: DwgImageEntity, dbImage: AcDbRasterImage) {
+  private processImage(
+    image: DwgImageEntity | DwgWipeoutEntity,
+    dbImage: AcDbRasterImage
+  ) {
     dbImage.position.copy(image.position)
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
@@ -545,11 +550,11 @@ export class AcDbEntityConverter {
     return dbImage
   }
 
-  // private convertWipeout(wipeout: WipeoutEntity) {
-  //   const dbWipeout = new AcDbWipeout()
-  //   this.processImage(wipeout, dbWipeout)
-  //   return dbWipeout
-  // }
+  private convertWipeout(wipeout: DwgWipeoutEntity) {
+    const dbWipeout = new AcDbWipeout()
+    this.processImage(wipeout, dbWipeout)
+    return dbWipeout
+  }
 
   private convertViewport(viewport: DwgViewportEntity) {
     const dbViewport = new AcDbViewport()

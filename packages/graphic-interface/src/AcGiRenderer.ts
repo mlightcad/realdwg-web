@@ -90,9 +90,12 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
    * Draw multiple line texts
    * @param mtext Input multiple line text data to draw
    * @param style Input text style applied to the text string
+   * @param delay The flag to delay creating one rendered entity and just create one dummy
+   * entity. Renderer can delay heavy calculation operation to avoid blocking UI when this
+   * flag is true.
    * @returns Return an object which can be added to scene
    */
-  mtext(mtext: AcGiMTextData, style: AcGiTextStyle): T
+  mtext(mtext: AcGiMTextData, style: AcGiTextStyle, delay?: boolean): T
 
   /**
    * Draw image

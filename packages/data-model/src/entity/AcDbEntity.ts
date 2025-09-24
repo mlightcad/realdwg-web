@@ -397,6 +397,10 @@ export abstract class AcDbEntity extends AcDbObject {
    * entity-specific drawing behavior.
    *
    * @param renderer - The renderer to use for drawing
+   * @param delay - The flag to delay creating one rendered entity and just create one dummy
+   * entity. Renderer can delay heavy calculation operation to avoid blocking UI when this flag
+   * is true. For now, text and mtext entity supports this flag only. Other types of entities
+   * just ignore this flag.
    * @returns The rendered entity, or undefined if drawing failed
    *
    * @example
@@ -404,7 +408,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * const renderedEntity = entity.draw(renderer);
    * ```
    */
-  abstract draw(renderer: AcGiRenderer): AcGiEntity | undefined
+  abstract draw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined
 
   /**
    * Triggers a modified event for this entity.

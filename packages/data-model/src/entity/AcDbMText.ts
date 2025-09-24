@@ -357,9 +357,20 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
-   * @inheritdoc
+   * Draws this entity using the specified renderer.
+   *
+   * @param renderer - The renderer to use for drawing
+   * @param delay - The flag to delay creating one rendered entity and just create one dummy
+   * entity. Renderer can delay heavy calculation operation to avoid blocking UI when this flag
+   * is true.
+   * @returns The rendered entity, or undefined if drawing failed
+   *
+   * @example
+   * ```typescript
+   * const renderedEntity = entity.draw(renderer);
+   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  draw(renderer: AcGiRenderer, delay?: boolean) {
     const mtextData: AcGiMTextData = {
       text: this.contents,
       height: this.height,
@@ -375,6 +386,6 @@ export class AcDbMText extends AcDbEntity {
       ...this.getTextStyle(),
       color: this.rgbColor
     }
-    return renderer.mtext(mtextData, textStyle)
+    return renderer.mtext(mtextData, textStyle, delay)
   }
 }
