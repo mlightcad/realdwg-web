@@ -507,4 +507,24 @@ export abstract class AcDbEntity extends AcDbObject {
     }
     return null
   }
+
+  /**
+   * Attaches entity information to a graphic interface entity.
+   *
+   * This method transfers essential entity properties (object ID, owner ID,
+   * layer name, and visibility) from this entity to the target graphic
+   * interface entity. This is typically used during the rendering process
+   * to ensure the graphic entity has the correct metadata.
+   *
+   * @param target - The graphic interface entity to attach information to
+   *
+   */
+  protected attachEntityInfo(target: AcGiEntity | null | undefined) {
+    if (target) {
+      target.objectId = this.objectId
+      target.ownerId = this.ownerId
+      target.layerName = this.layer
+      target.visible = this.visibility
+    }
+  }
 }

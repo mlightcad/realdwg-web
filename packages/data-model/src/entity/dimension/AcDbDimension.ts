@@ -265,15 +265,19 @@ export abstract class AcDbDimension extends AcDbEntity {
         this.dimBlockId
       )
       if (blockTableRecord) {
-        return AcDbRenderingCache.instance.draw(
+        const group = AcDbRenderingCache.instance.draw(
           renderer,
           blockTableRecord,
           this.rgbColor,
           false
         )
+        this.attachEntityInfo(group)
+        return group
       }
     }
-    return renderer.group([])
+    const group = renderer.group([])
+    this.attachEntityInfo(group)
+    return group
   }
 
   protected drawFirstArrow(renderer: AcGiRenderer) {

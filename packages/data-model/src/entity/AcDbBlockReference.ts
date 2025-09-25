@@ -263,9 +263,12 @@ export class AcDbBlockReference extends AcDbEntity {
         matrix,
         this.normal
       )
+      this.attachEntityInfo(block)
       return block
     } else {
-      return renderer.group(results)
+      const block = renderer.group(results)
+      this.attachEntityInfo(block)
+      return block
     }
   }
 

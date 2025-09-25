@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.13
+
+### Patch Changes
+
+- feat: attach entity info after created one 'group' grpahic interface entity
+
 ## 1.2.12
 
 ### Patch Changes
