@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.15
+
+### Patch Changes
+
+- feat: adjust dependencies of libreddwg-converter
+
 ## 1.2.14
 
 ### Patch Changes
