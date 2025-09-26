@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.16
+
+### Patch Changes
+
+- feat: upgrade version of lbredwg-web to fix type of clipping boundary path of wipeout entity
+- Updated dependencies
+  - @mlightcad/data-model@1.2.16
+
 ## 3.0.15
 
 ### Patch Changes

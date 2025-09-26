@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.16
+
+### Patch Changes
+
+- feat: upgrade version of lbredwg-web to fix type of clipping boundary path of wipeout entity
+
 ## 1.2.15
 
 ### Patch Changes
