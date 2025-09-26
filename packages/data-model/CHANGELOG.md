@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.14
+
+### Patch Changes
+
+- feat: upgrade version of libredwg-web to support wipeout entity
+
 ## 1.2.13
 
 ### Patch Changes

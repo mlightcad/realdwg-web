@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.14
+
+### Patch Changes
+
+- feat: upgrade version of libredwg-web to support wipeout entity
+- Updated dependencies
+  - @mlightcad/data-model@1.2.14
+
 ## 3.0.13
 
 ### Patch Changes
