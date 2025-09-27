@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.18
+
+### Patch Changes
+
+- fix: fix bug on parsing color
+
 ## 1.2.17
 
 ### Patch Changes

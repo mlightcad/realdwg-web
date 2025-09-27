@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.18
+
+### Patch Changes
+
+- fix: fix bug on parsing color
+- Updated dependencies
+  - @mlightcad/data-model@1.2.18
+
 ## 3.0.17
 
 ### Patch Changes

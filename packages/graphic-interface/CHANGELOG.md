@@ -1,5 +1,13 @@
 # @mlightcad/graphic-interface
 
+## 3.0.3
+
+### Patch Changes
+
+- fix: fix bug on parsing color
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.0.2
+
 ## 3.0.2
 
 ### Patch Changes

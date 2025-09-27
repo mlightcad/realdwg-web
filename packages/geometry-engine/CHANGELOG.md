@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.0.2
+
+### Patch Changes
+
+- fix: fix bug on parsing color
+- Updated dependencies
+  - @mlightcad/common@1.2.1
+
 ## 3.0.1
 
 ### Patch Changes

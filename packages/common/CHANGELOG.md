@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.1
+
+### Patch Changes
+
+- fix: fix bug on parsing color
+
 ## 1.2.0
 
 ### Minor Changes

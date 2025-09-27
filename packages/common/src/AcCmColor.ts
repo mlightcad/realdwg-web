@@ -343,8 +343,14 @@ export class AcCmColor {
       this._colorIndex = null
     } else {
       this._colorIndex = clamp(value, 0, 256)
-      this._color = AUTO_CAD_COLOR_INDEX[value]
-      this._colorName = this.getColorNameByValue(this._color)
+      if (this._colorIndex > 0 && this._colorIndex < 256) {
+        this._color = AUTO_CAD_COLOR_INDEX[value]
+        this._colorName = this.getColorNameByValue(this._color)
+      } else {
+        // If it is ByBlock and ByLayer, value of color and colorName can't be inferenced.
+        this._color = null
+        this._colorName = null
+      }
     }
   }
 
