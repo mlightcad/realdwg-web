@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.17
+
+### Patch Changes
+
+- feat: upgrade package dxf-json
+
 ## 1.2.16
 
 ### Patch Changes

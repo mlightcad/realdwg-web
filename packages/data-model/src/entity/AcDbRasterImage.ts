@@ -94,6 +94,8 @@ export class AcDbRasterImage extends AcDbEntity {
   private _imageDefId: AcDbObjectId
   /** Whether the image is clipped */
   private _isClipped: boolean
+  /** Whether to use clipping boundary */
+  private _isShownClipped: boolean
   /** Whether the image is shown */
   private _isImageShown: boolean
   /** Whether the image is transparent */
@@ -129,6 +131,7 @@ export class AcDbRasterImage extends AcDbEntity {
     this._clipBoundaryType = AcDbRasterImageClipBoundaryType.Rect
     this._clipBoundary = []
     this._isClipped = false
+    this._isShownClipped = false
     this._isImageShown = true
     this._isImageTransparent = false
     this._imageDefId = ''
@@ -251,6 +254,16 @@ export class AcDbRasterImage extends AcDbEntity {
   }
   set isClipped(value: boolean) {
     this._isClipped = value
+  }
+
+  /**
+   * The flag whether to use clipping boundary.
+   */
+  get isShownClipped() {
+    return this._isShownClipped
+  }
+  set isShownClipped(value: boolean) {
+    this._isShownClipped = value
   }
 
   /**

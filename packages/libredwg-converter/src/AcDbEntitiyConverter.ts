@@ -520,7 +520,8 @@ export class AcDbEntityConverter {
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
     dbImage.imageDefId = image.imageDefHandle.toString()
-    dbImage.isClipped = (image.flags | 0x0004) > 0
+    dbImage.isClipped = image.clipping > 0
+    dbImage.isShownClipped = (image.flags | 0x0004) > 0
     dbImage.isImageShown = (image.flags | 0x0003) > 0
     dbImage.isImageTransparent = (image.flags | 0x0008) > 0
     image.clippingBoundaryPath.forEach(point => {

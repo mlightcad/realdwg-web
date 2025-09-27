@@ -5,11 +5,11 @@ import DxfParser, {
   ParsedDxf,
   TextEntity
 } from '@mlightcad/dxf-json'
-import { DxfBlock } from '@mlightcad/dxf-json/dist/parser/blocks/types'
-import { CommonDxfEntity } from '@mlightcad/dxf-json/dist/parser/entities/shared'
-import { ImageDefDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/imageDef'
-import { LayoutDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/layout'
-import { CommonDxfTableEntry } from '@mlightcad/dxf-json/dist/parser/tables'
+import { DxfBlock } from '@mlightcad/dxf-json'
+import { CommonDxfEntity } from '@mlightcad/dxf-json'
+import { ImageDefDXFObject } from '@mlightcad/dxf-json'
+import { LayoutDXFObject } from '@mlightcad/dxf-json'
+import { CommonDxfTableEntry } from '@mlightcad/dxf-json'
 import {
   AcGiDefaultLightingType,
   AcGiOrthographicType,
@@ -162,7 +162,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     entities.forEach(entity => {
       if (entity.type == 'MTEXT') {
         const mtext = entity as MTextEntity
-        const text = mtext.text.join('')
+        const text = mtext.text
         ;[...text.matchAll(regex)].forEach(match => {
           fonts.add(match[1].toLowerCase())
         })

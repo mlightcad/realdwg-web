@@ -1,13 +1,5 @@
-import { ArcEntity } from '@mlightcad/dxf-json/dist/parser/entities/arc'
-import { CircleEntity } from '@mlightcad/dxf-json/dist/parser/entities/circle'
-import {
-  AlignedDimensionEntity,
-  AngularDimensionEntity,
-  DimensionEntityCommon,
-  OrdinateDimensionEntity,
-  RadialDiameterDimensionEntity
-} from '@mlightcad/dxf-json/dist/parser/entities/dimension/types'
-import { EllipseEntity } from '@mlightcad/dxf-json/dist/parser/entities/ellipse'
+import { ArcEntity } from '@mlightcad/dxf-json'
+import { CircleEntity } from '@mlightcad/dxf-json'
 import {
   ArcEdge,
   BoundaryPathEdge,
@@ -17,23 +9,33 @@ import {
   LineEdge,
   PolylineBoundaryPath,
   SplineEdge
-} from '@mlightcad/dxf-json/dist/parser/entities/hatch/types'
-import { ImageEntity } from '@mlightcad/dxf-json/dist/parser/entities/image'
-import { InsertEntity } from '@mlightcad/dxf-json/dist/parser/entities/insert'
-import { LeaderEntity } from '@mlightcad/dxf-json/dist/parser/entities/leader'
-import { LineEntity } from '@mlightcad/dxf-json/dist/parser/entities/line'
-import { MTextEntity } from '@mlightcad/dxf-json/dist/parser/entities/mtext'
-import { PointEntity } from '@mlightcad/dxf-json/dist/parser/entities/point'
-import { PolylineEntity } from '@mlightcad/dxf-json/dist/parser/entities/polyline'
-import { RayEntity } from '@mlightcad/dxf-json/dist/parser/entities/ray'
-import { CommonDxfEntity } from '@mlightcad/dxf-json/dist/parser/entities/shared'
-import { SolidEntity } from '@mlightcad/dxf-json/dist/parser/entities/solid'
-import { SplineEntity } from '@mlightcad/dxf-json/dist/parser/entities/spline'
-import { TableEntity } from '@mlightcad/dxf-json/dist/parser/entities/table'
-import { TextEntity } from '@mlightcad/dxf-json/dist/parser/entities/text'
-import { ViewportEntity } from '@mlightcad/dxf-json/dist/parser/entities/viewport/types'
-import { WipeoutEntity } from '@mlightcad/dxf-json/dist/parser/entities/wipeout'
-import { XlineEntity } from '@mlightcad/dxf-json/dist/parser/entities/xline'
+} from '@mlightcad/dxf-json'
+import {
+  CommonDxfEntity,
+  EllipseEntity,
+  ImageEntity,
+  InsertEntity,
+  LeaderEntity,
+  LineEntity,
+  MTextEntity,
+  PointEntity,
+  PolylineEntity,
+  RayEntity,
+  SolidEntity,
+  SplineEntity,
+  TableEntity,
+  TextEntity,
+  ViewportEntity,
+  WipeoutEntity,
+  XLineEntity
+} from '@mlightcad/dxf-json'
+import {
+  AlignedDimensionEntity,
+  AngularDimensionEntity,
+  DimensionEntityCommon,
+  OrdinateDimensionEntity,
+  RadialDiameterDimensionEntity
+} from '@mlightcad/dxf-json'
 import {
   AcGeCircArc2d,
   AcGeEllipseArc2d,
@@ -187,7 +189,7 @@ export class AcDbEntityConverter {
     } else if (entity.type == 'WIPEOUT') {
       return this.convertWipeout(entity as WipeoutEntity)
     } else if (entity.type == 'XLINE') {
-      return this.convertXline(entity as XlineEntity)
+      return this.convertXline(entity as XLineEntity)
     } else if (entity.type == 'INSERT') {
       return this.convertBlockReference(entity as InsertEntity)
     }
@@ -495,7 +497,7 @@ export class AcDbEntityConverter {
 
   private convertMText(mtext: MTextEntity) {
     const dbEntity = new AcDbMText()
-    dbEntity.contents = mtext.text.join('')
+    dbEntity.contents = mtext.text
     if (mtext.styleName != null) {
       dbEntity.styleName = mtext.styleName
     }
@@ -581,23 +583,20 @@ export class AcDbEntityConverter {
     return null
   }
 
-  private processImage(
-    image: ImageEntity | WipeoutEntity,
-    dbImage: AcDbRasterImage
-  ) {
+  private processImage(image: ImageEntity, dbImage: AcDbRasterImage) {
     dbImage.position.copy(image.position)
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
-    dbImage.imageDefId = image.imageDefHandle
-    dbImage.isClipped = (image.flags | 0x0004) > 0
+
+    dbImage.isShownClipped = (image.flags | 0x0004) > 0
     dbImage.isImageShown = (image.flags | 0x0003) > 0
     dbImage.isImageTransparent = (image.flags | 0x0008) > 0
+    dbImage.imageDefId = image.imageDefHandle
+    dbImage.isClipped = image.isClipped
     image.clippingBoundaryPath.forEach(point => {
       dbImage.clipBoundary.push(new AcGePoint2d(point))
     })
-    dbImage.clipBoundaryType =
-      image.clippingBoundaryType as unknown as AcDbRasterImageClipBoundaryType
 
     // Calculate the scale factors
     dbImage.width =
@@ -617,12 +616,50 @@ export class AcDbEntityConverter {
   private convertImage(image: ImageEntity) {
     const dbImage = new AcDbRasterImage()
     this.processImage(image, dbImage)
+    dbImage.clipBoundaryType =
+      image.clippingBoundaryType as unknown as AcDbRasterImageClipBoundaryType
     return dbImage
+  }
+
+  private processWipeout(wipeout: WipeoutEntity, dbWipeout: AcDbWipeout) {
+    dbWipeout.position.copy(wipeout.position)
+    dbWipeout.brightness = wipeout.brightness
+    dbWipeout.contrast = wipeout.contrast
+    dbWipeout.fade = wipeout.fade
+
+    dbWipeout.isShownClipped = (wipeout.displayFlag | 0x0004) > 0
+    dbWipeout.isImageShown = (wipeout.displayFlag | 0x0003) > 0
+    dbWipeout.isImageTransparent = (wipeout.displayFlag | 0x0008) > 0
+    dbWipeout.imageDefId = wipeout.imageDefHardId
+    dbWipeout.isClipped = wipeout.isClipping
+    wipeout.boundary.forEach(point => {
+      dbWipeout.clipBoundary.push(new AcGePoint2d(point))
+    })
+    dbWipeout.clipBoundaryType =
+      wipeout.boundaryType as unknown as AcDbRasterImageClipBoundaryType
+
+    // Calculate the scale factors
+    dbWipeout.width =
+      Math.sqrt(
+        wipeout.uDirection.x ** 2 +
+          wipeout.uDirection.y ** 2 +
+          wipeout.uDirection.z ** 2
+      ) * wipeout.imageSize.x
+    dbWipeout.height =
+      Math.sqrt(
+        wipeout.vDirection.x ** 2 +
+          wipeout.vDirection.y ** 2 +
+          wipeout.vDirection.z ** 2
+      ) * wipeout.imageSize.y
+
+    // Calculate the rotation angle
+    // Rotation is determined by the angle of the U-vector relative to the X-axis
+    dbWipeout.rotation = Math.atan2(wipeout.uDirection.y, wipeout.uDirection.x)
   }
 
   private convertWipeout(wipeout: WipeoutEntity) {
     const dbWipeout = new AcDbWipeout()
-    this.processImage(wipeout, dbWipeout)
+    this.processWipeout(wipeout, dbWipeout)
     return dbWipeout
   }
 
@@ -639,15 +676,15 @@ export class AcDbEntityConverter {
 
   private convertRay(ray: RayEntity) {
     const dbRay = new AcDbRay()
-    dbRay.basePoint.copy(ray.firstPoint)
-    dbRay.unitDir.copy(ray.unitDirection)
+    dbRay.basePoint.copy(ray.position)
+    dbRay.unitDir.copy(ray.direction)
     return dbRay
   }
 
-  private convertXline(xline: XlineEntity) {
+  private convertXline(xline: XLineEntity) {
     const dbXline = new AcDbXline()
-    dbXline.basePoint.copy(xline.firstPoint)
-    dbXline.unitDir.copy(xline.unitDirection)
+    dbXline.basePoint.copy(xline.position)
+    dbXline.unitDir.copy(xline.direction)
     return dbXline
   }
 

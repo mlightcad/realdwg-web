@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.17
+
+### Patch Changes
+
+- feat: upgrade package dxf-json
+- Updated dependencies
+  - @mlightcad/data-model@1.2.17
+
 ## 3.0.16
 
 ### Patch Changes

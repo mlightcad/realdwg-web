@@ -1,7 +1,9 @@
 import { ParsedDxf } from '@mlightcad/dxf-json'
-import { CommonDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/common'
-import { ImageDefDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/imageDef'
-import { LayoutDXFObject } from '@mlightcad/dxf-json/dist/parser/objects/layout'
+import {
+  CommonDXFObject,
+  ImageDefDXFObject,
+  LayoutDXFObject
+} from '@mlightcad/dxf-json'
 
 import { AcDbObject } from '../base'
 import { AcDbLayout, AcDbRasterImageDef } from '../object'
