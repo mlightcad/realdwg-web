@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.19
+
+### Patch Changes
+
+- feat: support returning statistics of parsing task
+
 ## 1.2.18
 
 ### Patch Changes

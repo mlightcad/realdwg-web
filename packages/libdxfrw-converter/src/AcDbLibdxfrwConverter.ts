@@ -68,7 +68,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     }
   }
 
-  protected async parse(data: string | ArrayBuffer): Promise<DRW_Database> {
+  protected async parse(data: string | ArrayBuffer) {
     if (this.librefrw == null) {
       throw new Error('librefrw is not loaded!')
     }
@@ -84,7 +84,12 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     // this.dwg.setDebug(libdxfrw.DRW_dbg_Level.Debug);
     this.dwg.read(this.fileHandler, false)
 
-    return this.database
+    return {
+      model: this.database,
+      data: {
+        unknownEntityCount: 0
+      }
+    }
   }
 
   protected processLineTypes(model: DRW_Database, db: AcDbDatabase) {

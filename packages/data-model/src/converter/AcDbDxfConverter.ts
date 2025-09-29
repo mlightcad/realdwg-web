@@ -71,10 +71,6 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * @param data - The DXF data as a string
    * @returns Parsed DXF object containing all the parsed data
    *
-   * @example
-   * ```typescript
-   * const parsed = converter.parse(dxfString);
-   * ```
    */
   protected async parse(data: string) {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
@@ -86,10 +82,21 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       const result = await api.execute<string, ParsedDxf>(data)
       // Release worker
       api.destroy()
-      return result.data
+      return {
+        model: result.data,
+        data: {
+          unknownEntityCount: 0
+        }
+      }
     } else {
       const parser = new DxfParser()
-      return parser.parseSync(data)
+      const result = parser.parseSync(data)
+      return {
+        model: result,
+        data: {
+          unknownEntityCount: 0
+        }
+      }
     }
   }
 

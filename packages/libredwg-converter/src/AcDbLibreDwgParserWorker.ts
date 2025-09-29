@@ -1,18 +1,24 @@
 /// <reference lib="webworker" />
 
-import { AcDbBaseWorker } from '@mlightcad/data-model'
+import { AcDbBaseWorker, AcDbParsingTaskResult } from '@mlightcad/data-model'
 import { DwgDatabase } from '@mlightcad/libredwg-web'
 
 import { parseDwg } from './AcDbLibreDwgConverterUtil'
-
 /**
- * DXF parsing worker
+ * DWG parsing worker
  */
-class AcDbDxfParserWorker extends AcDbBaseWorker<string, DwgDatabase> {
-  protected async executeTask(dxfString: string): Promise<DwgDatabase> {
-    return parseDwg(dxfString)
+class AcDbDwgParserWorker extends AcDbBaseWorker<
+  string,
+  AcDbParsingTaskResult<DwgDatabase>
+> {
+  protected async executeTask(dxfString: string) {
+    const result = await parseDwg(dxfString)
+    return {
+      model: result.database,
+      data: result.stats
+    }
   }
 }
 
 // Initialize the worker
-new AcDbDxfParserWorker()
+new AcDbDwgParserWorker()

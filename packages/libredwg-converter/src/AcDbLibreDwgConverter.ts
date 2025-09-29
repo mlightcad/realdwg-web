@@ -18,6 +18,7 @@ import {
   AcDbLayout,
   AcDbLinetypeTableRecord,
   AcDbObject,
+  AcDbParsingTaskResult,
   AcDbRasterImageDef,
   AcDbSymbolTableRecord,
   AcDbTextStyleTableRecord,
@@ -53,14 +54,17 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     }
   }
 
-  protected async parse(data: string): Promise<DwgDatabase> {
+  protected async parse(data: string) {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
       const api = createWorkerApi({
         workerUrl: this.config.parserWorkerUrl,
         // One concurrent worker needed for parser
         maxConcurrentWorkers: 1
       })
-      const result = await api.execute<string, DwgDatabase>(data)
+      const result = await api.execute<
+        string,
+        AcDbParsingTaskResult<DwgDatabase>
+      >(data)
       // Release worker
       api.destroy()
       return result.data!

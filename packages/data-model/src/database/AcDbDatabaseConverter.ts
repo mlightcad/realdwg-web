@@ -120,9 +120,10 @@ export type AcDbConversionProgressCallback = (
   stageStatus: AcDbStageStatus,
   /**
    * Store data associated with the current stage. Its meaning of different stages are as follows.
+   * - 'PARSE' stage: statistics of parsing task
    * - 'FONT' stage: fonts needed by this drawing
    *
-   * Note: For now, 'FONT' stage uses this field only.
+   * Note: For now, 'PARSE' and 'FONT' stages use this field only.
    */
   data?: unknown,
   /**
@@ -154,6 +155,25 @@ interface AcDbConversionTaskData<TIn, TOut> {
    * The function to notify progress.
    */
   task: (input: TIn) => Promise<TOut>
+}
+
+/**
+ * Statistics of parsing task
+ */
+export interface AcDbParsingTaskStats {
+  /**
+   * The number of unknown types of entities (custom entities or entities not supported
+   * by parser) in one drawing to parse
+   */
+  unknownEntityCount: number
+}
+
+/**
+ * Interface defining type of return value of parsing task.
+ */
+export interface AcDbParsingTaskResult<TModel> {
+  model: TModel | undefined
+  data: AcDbParsingTaskStats
 }
 
 /**
@@ -358,12 +378,6 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * @param progress - Optional progress callback
    * @returns Promise that resolves when conversion is complete
    *
-   * @example
-   * ```typescript
-   * const converter = new MyConverter();
-   * const database = new AcDbDatabase();
-   * await converter.read(dxfData, database, 100, progressCallback);
-   * ```
    */
   async read(
     data: string | ArrayBuffer,
@@ -414,8 +428,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: string | ArrayBuffer) => {
-            const model = await this.parse(data)
-            return { model }
+            return await this.parse(data)
           }
         },
         progress
@@ -635,7 +648,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
   protected async parse(
     _data: string | ArrayBuffer,
     _workerUrl?: string
-  ): Promise<TModel | undefined> {
+  ): Promise<AcDbParsingTaskResult<TModel>> {
     throw new Error('Not impelemented yet!')
   }
 

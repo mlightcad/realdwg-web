@@ -1,5 +1,6 @@
-import { Dwg_File_Type, DwgDatabase, LibreDwg } from '@mlightcad/libredwg-web'
-export async function parseDwg(data: string): Promise<DwgDatabase> {
+import { Dwg_File_Type, LibreDwg } from '@mlightcad/libredwg-web'
+
+export async function parseDwg(data: string) {
   const libredwg = await LibreDwg.create()
   if (libredwg == null) {
     throw new Error('libredwg is not loaded!')
@@ -9,8 +10,8 @@ export async function parseDwg(data: string): Promise<DwgDatabase> {
   if (dwgDataPtr == null) {
     throw new Error('Failed to read dwg data!')
   }
-  const model = libredwg.convert(dwgDataPtr)
+  const result = libredwg.convertEx(dwgDataPtr)
   libredwg.dwg_free(dwgDataPtr)
 
-  return model
+  return result
 }

@@ -89,8 +89,17 @@ export interface AcDbProgressdEventArgs {
   stage: AcDbOpenFileStage
   /** The current sub stage */
   subStage?: AcDbConversionStage
-  /** The status of the current stage */
-  stageStatus: AcDbStageStatus
+  /** The status of the current sub stage */
+  subStageStatus: AcDbStageStatus
+  /**
+   * Store data associated with the current sub stage. Its meaning of different sub stages 
+   * are as follows.
+   * - 'PARSE' stage: statistics of parsing task
+   * - 'FONT' stage: fonts needed by this drawing
+   *
+   * Note: For now, 'PARSE' and 'FONT' sub stages use this field only.
+   */
+  data?: unknown
 }
 
 /**
@@ -659,7 +668,8 @@ export class AcDbDatabase extends AcDbObject {
           percentage: percentage,
           stage: 'CONVERSION',
           subStage: stage,
-          stageStatus: stageStatus
+          subStageStatus: stageStatus,
+          data: data
         })
         if (
           options &&
@@ -689,7 +699,7 @@ export class AcDbDatabase extends AcDbObject {
       database: this,
       percentage: 0,
       stage: 'FETCH_FILE',
-      stageStatus: 'START'
+      subStageStatus: 'START'
     })
 
     const response = await fetch(url)
@@ -698,7 +708,7 @@ export class AcDbDatabase extends AcDbObject {
         database: this,
         percentage: 100,
         stage: 'FETCH_FILE',
-        stageStatus: 'ERROR'
+        subStageStatus: 'ERROR'
       })
       throw new Error(
         `Failed to fetch file '${url}' with HTTP status code '${response.status}'!`
@@ -734,7 +744,7 @@ export class AcDbDatabase extends AcDbObject {
           database: this,
           percentage: percentage,
           stage: 'FETCH_FILE',
-          stageStatus: 'IN-PROGRESS'
+          subStageStatus: 'IN-PROGRESS'
         })
       }
     }
@@ -762,7 +772,7 @@ export class AcDbDatabase extends AcDbObject {
       database: this,
       percentage: 100,
       stage: 'FETCH_FILE',
-      stageStatus: 'END'
+      subStageStatus: 'END'
     })
   }
 

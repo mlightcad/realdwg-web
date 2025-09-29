@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.19
+
+### Patch Changes
+
+- feat: support returning statistics of parsing task
+- Updated dependencies
+  - @mlightcad/data-model@1.2.19
+
 ## 3.0.18
 
 ### Patch Changes
