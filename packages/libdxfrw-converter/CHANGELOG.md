@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.20
+
+### Patch Changes
+
+- feat: add method createDefaultData in class AcDbDatabase
+- Updated dependencies
+  - @mlightcad/data-model@1.2.20
+
 ## 3.0.19
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.20
+
+### Patch Changes
+
+- feat: add method createDefaultData in class AcDbDatabase
+
 ## 1.2.19
 
 ### Patch Changes
