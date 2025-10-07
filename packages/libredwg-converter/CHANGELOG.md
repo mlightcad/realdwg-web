@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.21
+
+### Patch Changes
+
+- feat: refine logic to set the extents of drawing database
+- Updated dependencies
+  - @mlightcad/data-model@1.2.21
+
 ## 3.0.20
 
 ### Patch Changes

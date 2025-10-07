@@ -348,10 +348,10 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     db.cecolor.colorIndex = header['$CECOLOR'] || 256
     db.angBase = header['$ANGBASE'] || 0
     db.angDir = header['$ANGDIR'] || 0
-    db.aunits = header['$AUNITS']
-    db.extmax = header['$EXTMAX']
-    db.extmin = header['$EXTMIN']
-    db.insunits = header['$INSUNITS']
+    if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
+    if (header['$EXTMAX']) db.extmax = header['$EXTMAX']
+    if (header['$EXTMIN']) db.extmin = header['$EXTMIN']
+    if (header['$INSUNITS'] != null) db.insunits = header['$INSUNITS']
     db.pdmode = header['$PDMODE'] || 0
     db.pdsize = header['$PDSIZE'] || 0.0
   }

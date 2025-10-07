@@ -164,7 +164,7 @@ export class AcDbEntityConverter {
     const majorAxisRadius = majorAxis.length()
     const dbEntity = new AcDbEllipse(
       ellipse.center,
-      AcGeVector3d.Z_AXIS,
+      ellipse.extrusionDirection ?? AcGeVector3d.Z_AXIS,
       majorAxis,
       majorAxisRadius,
       majorAxisRadius * ellipse.axisRatio,

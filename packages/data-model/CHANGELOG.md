@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.21
+
+### Patch Changes
+
+- feat: refine logic to set the extents of drawing database
+
 ## 1.2.20
 
 ### Patch Changes
