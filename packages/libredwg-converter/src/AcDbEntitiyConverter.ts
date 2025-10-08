@@ -8,6 +8,7 @@ import {
   AcDbDimension,
   AcDbEllipse,
   AcDbEntity,
+  AcDbFace,
   AcDbHatch,
   AcDbHatchPatternType,
   AcDbHatchStyle,
@@ -48,6 +49,7 @@ import {
   AcGiMTextFlowDirection
 } from '@mlightcad/data-model'
 import {
+  Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
   DwgAngularDimensionEntity,
   DwgArcEdge,
@@ -98,7 +100,9 @@ export class AcDbEntityConverter {
    * @returns Return the converted drawing database entity
    */
   private createEntity(entity: DwgEntity): AcDbEntity | null {
-    if (entity.type == 'ARC') {
+    if (entity.type == '3DFACE') {
+      return this.convertFace(entity as Dwg3dFaceEntity)
+    } else if (entity.type == 'ARC') {
       return this.convertArc(entity as DwgArcEntity)
     } else if (entity.type == 'CIRCLE') {
       return this.convertCirle(entity as DwgCircleEntity)
@@ -142,6 +146,16 @@ export class AcDbEntityConverter {
       return this.convertBlockReference(entity as DwgInsertEntity)
     }
     return null
+  }
+
+  private convertFace(face: Dwg3dFaceEntity) {
+    const dbEntity = new AcDbFace()
+    if (face.corner1) dbEntity.setVertexAt(0, face.corner1)
+    if (face.corner2) dbEntity.setVertexAt(1, face.corner2)
+    if (face.corner3) dbEntity.setVertexAt(2, face.corner3)
+    if (face.corner4) dbEntity.setVertexAt(3, face.corner4)
+    dbEntity.setEdgeInvisibilities(face.flag)
+    return dbEntity
   }
 
   private convertArc(arc: DwgArcEntity) {

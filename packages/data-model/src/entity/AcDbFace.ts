@@ -17,8 +17,8 @@ export class AcDbFace extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Face'
 
-  /** The four vertices of the face */
-  private _vertices: [AcGePoint3d, AcGePoint3d, AcGePoint3d, AcGePoint3d]
+  /** The three or four vertices of the face */
+  private _vertices: AcGePoint3d[]
   /** The invisibility of the edges of the face */
   private _edgeInvisibilities: number
 
@@ -30,12 +30,7 @@ export class AcDbFace extends AcDbEntity {
    */
   constructor() {
     super()
-    this._vertices = [
-      new AcGePoint3d(),
-      new AcGePoint3d(),
-      new AcGePoint3d(),
-      new AcGePoint3d()
-    ]
+    this._vertices = [new AcGePoint3d(), new AcGePoint3d(), new AcGePoint3d()]
     this._edgeInvisibilities = 0
   }
 
@@ -57,7 +52,9 @@ export class AcDbFace extends AcDbEntity {
    */
   getVertexAt(index: number): AcGePoint3d {
     if (index < 0) return this._vertices[0]
-    if (index > 3) return this._vertices[3]
+    if (index > this._vertices.length) {
+      return this._vertices[this._vertices.length - 1]
+    }
     return this._vertices[index]
   }
 
@@ -80,7 +77,12 @@ export class AcDbFace extends AcDbEntity {
    */
   setVertexAt(index: number, point: AcGePointLike) {
     if (index < 0) this._vertices[0].copy(point)
-    if (index > 3) return this._vertices[3].copy(point)
+    if (index >= 3) {
+      if (this._vertices.length === 3) {
+        this._vertices.push(new AcGePoint3d())
+      }
+      return this._vertices[3].copy(point)
+    }
     this._vertices[index].copy(point)
   }
 
@@ -200,9 +202,10 @@ export class AcDbFace extends AcDbEntity {
    * ```
    */
   draw(renderer: AcGiRenderer) {
-    const buffer = new Float32Array(12)
-    const indices: Uint16Array = new Uint16Array(8)
-    for (let i = 0; i < 4; i++) {
+    const num = this._vertices.length
+    const buffer = new Float32Array(num * 3)
+    const indices: Uint16Array = new Uint16Array(num * 2)
+    for (let i = 0; i < num; i++) {
       buffer[i * 3] = this._vertices[i].x
       buffer[i * 3 + 1] = this._vertices[i].y
       buffer[i * 3 + 2] = this._vertices[i].z

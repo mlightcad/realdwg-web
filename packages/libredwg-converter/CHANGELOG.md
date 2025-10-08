@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.0.23
+
+### Patch Changes
+
+- feat: support displaying 3dface entity in dwg file
+- Updated dependencies
+  - @mlightcad/data-model@1.2.23
+
 ## 3.0.22
 
 ### Patch Changes

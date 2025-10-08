@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.23
+
+### Patch Changes
+
+- feat: support displaying 3dface entity in dwg file
+
 ## 1.2.22
 
 ### Patch Changes
