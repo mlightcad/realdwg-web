@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.22
+
+### Patch Changes
+
+- feat: support 3dface entity
+- Updated dependencies
+  - @mlightcad/data-model@1.2.22
+
 ## 3.0.21
 
 ### Patch Changes

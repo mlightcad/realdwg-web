@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.22
+
+### Patch Changes
+
+- feat: support 3dface entity
+
 ## 1.2.21
 
 ### Patch Changes

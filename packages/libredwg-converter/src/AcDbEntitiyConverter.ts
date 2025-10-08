@@ -614,7 +614,7 @@ export class AcDbEntityConverter {
   }
 
   private processCommonAttrs(entity: DwgEntity, dbEntity: AcDbEntity) {
-    dbEntity.layer = entity.layer
+    dbEntity.layer = entity.layer || '0'
     dbEntity.objectId = entity.handle.toString()
     dbEntity.ownerId = entity.ownerBlockRecordSoftId.toString()
     if (entity.lineType != null) {

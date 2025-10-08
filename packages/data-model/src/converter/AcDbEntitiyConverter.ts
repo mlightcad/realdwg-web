@@ -1,4 +1,4 @@
-import { ArcEntity } from '@mlightcad/dxf-json'
+import { ArcEntity, FaceEntity } from '@mlightcad/dxf-json'
 import { CircleEntity } from '@mlightcad/dxf-json'
 import {
   ArcEdge,
@@ -65,6 +65,7 @@ import {
   AcDbDimension,
   AcDbEllipse,
   AcDbEntity,
+  AcDbFace,
   AcDbHatch,
   AcDbHatchPatternType,
   AcDbHatchStyle,
@@ -152,7 +153,9 @@ export class AcDbEntityConverter {
    * ```
    */
   private createEntity(entity: CommonDxfEntity): AcDbEntity | null {
-    if (entity.type == 'ARC') {
+    if (entity.type == '3DFACE') {
+      return this.convertFace(entity as FaceEntity)
+    } else if (entity.type == 'ARC') {
       return this.convertArc(entity as ArcEntity)
     } else if (entity.type == 'CIRCLE') {
       return this.convertCirle(entity as CircleEntity)
@@ -194,6 +197,20 @@ export class AcDbEntityConverter {
       return this.convertBlockReference(entity as InsertEntity)
     }
     return null
+  }
+
+  /**
+   * Converts a DXF 3DFACE entity to an AcDbFace.
+   *
+   * @param face - The DXF 3DFace entity to convert
+   * @returns The converted AcDbFace entity
+   */
+  private convertFace(face: FaceEntity) {
+    const dbEntity = new AcDbFace()
+    face.vertices.forEach((vertex, index) =>
+      dbEntity.setVertexAt(index, vertex)
+    )
+    return dbEntity
   }
 
   /**
@@ -740,8 +757,10 @@ export class AcDbEntityConverter {
    * ```
    */
   private processCommonAttrs(entity: CommonDxfEntity, dbEntity: AcDbEntity) {
-    dbEntity.layer = entity.layer
-    dbEntity.objectId = entity.handle
+    dbEntity.layer = entity.layer || '0'
+    // I found some dxf file may have entity without handle. If so, let's use objectId
+    // created by AcDbObject constructor instead.
+    if (entity.handle) dbEntity.objectId = entity.handle
     dbEntity.ownerId = entity.ownerBlockRecordSoftId || ''
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType

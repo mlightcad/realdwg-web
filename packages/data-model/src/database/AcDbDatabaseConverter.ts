@@ -498,6 +498,11 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           progress: percentage,
           task: async (data: { model: TModel }) => {
             this.processLayers(data.model, db)
+
+            // Guarantee layer '0' is created at least
+            if (db.tables.layerTable.numEntries === 0) {
+              db.createDefaultData({ layer: true })
+            }
             return data
           }
         },
@@ -556,7 +561,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
             this.processObjects(data.model, db)
             // Guarantee one layout is created for MODEL_SPACE at least
             if (db.dictionaries.layouts.numEntries === 0) {
-              db.createDefaultData({ layout : true })
+              db.createDefaultData({ layout: true })
             }
             return data
           }

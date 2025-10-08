@@ -47,6 +47,15 @@ export class AcDbSymbolTable<
   }
 
   /**
+   * Gets the number of entries in the table.
+   *
+   * @returns The number of entries in the table
+   */
+  get numEntries() {
+    return this._recordsByName.size
+  }
+
+  /**
    * Adds a record to both the database containing the table and the table itself.
    *
    * @param record - The record to add to the table

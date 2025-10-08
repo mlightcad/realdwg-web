@@ -805,13 +805,15 @@ export class AcDbDatabase extends AcDbObject {
    * Create default layer, line type, dimension type, text style and layout.
    * @param - Options to specify data to create
    */
-  createDefaultData(options: AcDbCreateDefaultDataOptions = {
-    layer: true,
-    lineType: true,
-    textStyle: true,
-    dimStyle: true,
-    layout: true
-  }) {
+  createDefaultData(
+    options: AcDbCreateDefaultDataOptions = {
+      layer: true,
+      lineType: true,
+      textStyle: true,
+      dimStyle: true,
+      layout: true
+    }
+  ) {
     // Create default layer
     if (options.layer) {
       const defaultColor = new AcCmColor()
@@ -854,7 +856,7 @@ export class AcDbDatabase extends AcDbObject {
           description: 'Solid line',
           totalPatternLength: 0
         })
-      )  
+      )
     }
 
     // Create default text style
