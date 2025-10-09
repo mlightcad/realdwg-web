@@ -4,7 +4,7 @@
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "git://github.com/mlight-lee/realdwg-web"
+    "url": "https://gitlab.com/mlightcad/realdwg-web"
   },
   "keywords": [
     "autocad",
