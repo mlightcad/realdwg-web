@@ -199,21 +199,27 @@ export class AcDbEntityConverter {
   }
 
   private convertSpline(spline: DwgSplineEntity) {
-    if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-      return new AcDbSpline(
-        spline.controlPoints,
-        spline.knots,
-        spline.weights,
-        spline.degree,
-        !!(spline.flag & 0x01)
-      )
-    } else if (spline.numberOfFitPoints > 0) {
-      return new AcDbSpline(
-        spline.fitPoints,
-        'Uniform',
-        spline.degree,
-        !!(spline.flag & 0x01)
-      )
+    // Catch error to construct spline because it maybe one spline in one block.
+    // If don't catch the error, the block conversion may be interruptted.
+    try {
+      if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
+        return new AcDbSpline(
+          spline.controlPoints,
+          spline.knots,
+          spline.weights,
+          spline.degree,
+          !!(spline.flag & 0x01)
+        )
+      } else if (spline.numberOfFitPoints > 0) {
+        return new AcDbSpline(
+          spline.fitPoints,
+          'Uniform',
+          spline.degree,
+          !!(spline.flag & 0x01)
+        )
+      }
+    } catch (error) {
+      console.log(`Failed to convert spline with error: ${error}`)
     }
     return null
   }
@@ -316,6 +322,8 @@ export class AcDbEntityConverter {
         const edgePath = path as DwgEdgeBoundaryPath<DwgBoundaryPathEdge>
         const loop = new AcGeLoop2d()
         edgePath.edges.forEach(edge => {
+          // TODO: It seems there are some issue on libredwg. Sometimes 'undefined' edges are added.
+          if (edge == null) return
           if (edge.type == 1) {
             const line = edge as DwgLineEdge
             loop.add(new AcGeLine2d(line.start, line.end))

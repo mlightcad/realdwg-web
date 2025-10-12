@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.2
+
+### Patch Changes
+
+- fix: fix bug that failed to convert one entity will result in the whole conversion interruptted
+
 ## 1.2.1
 
 ### Patch Changes

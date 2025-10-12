@@ -244,7 +244,6 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
         })
       } catch (error) {
         this.onError({ error, taskIndex: i, task })
-        return
       }
     }
 

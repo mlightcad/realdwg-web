@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.24
+
+### Patch Changes
+
+- fix: fix bug that failed to convert one entity will result in the whole conversion interruptted
+
 ## 1.2.23
 
 ### Patch Changes

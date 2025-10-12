@@ -290,27 +290,33 @@ export class AcDbEntityConverter {
   }
 
   private convertSpline(spline: SplineEntity) {
-    if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-      return new AcDbSpline(
-        spline.controlPoints,
-        spline.knots,
-        spline.weights,
-        spline.degree,
-        !!(spline.flag & 0x01)
-      )
-    } else if (spline.numberOfFitPoints > 0) {
-      const fitPoints = this.numberArrayToPointArray(
-        spline.fitPoints,
-        spline.numberOfFitPoints
-      )
-      if (fitPoints != null) {
+    // Catch error to construct spline because it maybe one spline in one block.
+    // If don't catch the error, the block conversion may be interruptted.
+    try {
+      if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
         return new AcDbSpline(
-          fitPoints,
-          'Uniform',
+          spline.controlPoints,
+          spline.knots,
+          spline.weights,
           spline.degree,
           !!(spline.flag & 0x01)
         )
+      } else if (spline.numberOfFitPoints > 0) {
+        const fitPoints = this.numberArrayToPointArray(
+          spline.fitPoints,
+          spline.numberOfFitPoints
+        )
+        if (fitPoints != null) {
+          return new AcDbSpline(
+            fitPoints,
+            'Uniform',
+            spline.degree,
+            !!(spline.flag & 0x01)
+          )
+        }
       }
+    } catch (error) {
+      console.log(`Failed to convert spline with error: ${error}`)
     }
     return null
   }

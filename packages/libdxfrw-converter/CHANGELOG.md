@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.0.24
+
+### Patch Changes
+
+- fix: fix bug that failed to convert one entity will result in the whole conversion interruptted
+- Updated dependencies
+  - @mlightcad/data-model@1.2.24
+
 ## 3.0.23
 
 ### Patch Changes
