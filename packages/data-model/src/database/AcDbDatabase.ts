@@ -126,8 +126,8 @@ export interface AcDbFontInfo {
   name: string[]
   /** Font file name */
   file: string
-  /** Font type (woff or shx) */
-  type: 'woff' | 'shx'
+  /** Font type (mesh or shx) */
+  type: 'mesh' | 'shx'
   /** URL for loading the font */
   url: string
 }

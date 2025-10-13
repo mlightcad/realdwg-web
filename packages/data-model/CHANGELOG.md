@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.2.25
+
+### Patch Changes
+
+- feat: change font type values in AcDbFontInfo
+
 ## 1.2.24
 
 ### Patch Changes
