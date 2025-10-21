@@ -1,5 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
-import DxfParser, {
+import {
   InsertEntity,
   MTextEntity,
   ParsedDxf,
@@ -15,7 +15,6 @@ import {
   AcGiOrthographicType,
   AcGiRenderMode
 } from '@mlightcad/graphic-interface'
-import { AcDbEntity } from 'entity'
 
 import {
   AcDbBlockTableRecord,
@@ -38,7 +37,10 @@ import {
   AcDbConversionProgressCallback,
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
+import { AcDbEntity } from '../entity'
+import { AcDbCodePage } from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
+import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
 import { createWorkerApi } from './worker'
@@ -66,20 +68,20 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   }
 
   /**
-   * Parses DXF data string into a ParsedDxf object.
+   * Parses DXF data into a ParsedDxf object.
    *
-   * @param data - The DXF data as a string
+   * @param data - The DXF data
    * @returns Parsed DXF object containing all the parsed data
    *
    */
-  protected async parse(data: string) {
+  protected async parse(data: ArrayBuffer) {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
       const api = createWorkerApi({
         workerUrl: this.config.parserWorkerUrl,
         // One concurrent worker needed for parser
         maxConcurrentWorkers: 1
       })
-      const result = await api.execute<string, ParsedDxf>(data)
+      const result = await api.execute<ArrayBuffer, ParsedDxf>(data)
       // Release worker
       api.destroy()
       return {
@@ -89,8 +91,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         }
       }
     } else {
-      const parser = new DxfParser()
-      const result = parser.parseSync(data)
+      const parser = new AcDbDxfParser()
+      const result = parser.parse(data)
       return {
         model: result,
         data: {
@@ -342,7 +344,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    */
   protected processHeader(model: ParsedDxf, db: AcDbDatabase) {
     const header = model.header
-    // TODO: Check not supported versions
+    if (header['$ACADVER']) {
+      db.version = header['$ACADVER']
+    }
+    if (header['$DWGCODEPAGE']) {
+      db.codepage =
+        AcDbCodePage[header['$DWGCODEPAGE'] as keyof typeof AcDbCodePage]
+    }
 
     // Color index 256 is 'ByLayer'
     db.cecolor.colorIndex = header['$CECOLOR'] || 256

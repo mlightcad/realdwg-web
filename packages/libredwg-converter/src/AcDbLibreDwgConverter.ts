@@ -54,7 +54,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     }
   }
 
-  protected async parse(data: string) {
+  protected async parse(data: ArrayBuffer) {
     if (this.config.useWorker && this.config.parserWorkerUrl) {
       const api = createWorkerApi({
         workerUrl: this.config.parserWorkerUrl,
@@ -62,7 +62,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         maxConcurrentWorkers: 1
       })
       const result = await api.execute<
-        string,
+        ArrayBuffer,
         AcDbParsingTaskResult<DwgDatabase>
       >(data)
       // Release worker

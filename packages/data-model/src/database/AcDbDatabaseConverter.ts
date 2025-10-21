@@ -427,7 +427,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           stage: 'PARSE',
           step: 5,
           progress: percentage,
-          task: async (data: string | ArrayBuffer) => {
+          task: async (data: ArrayBuffer) => {
             return await this.parse(data)
           }
         },
@@ -655,7 +655,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
   }
 
   protected async parse(
-    _data: string | ArrayBuffer,
+    _data: ArrayBuffer,
     _workerUrl?: string
   ): Promise<AcDbParsingTaskResult<TModel>> {
     throw new Error('Not impelemented yet!')

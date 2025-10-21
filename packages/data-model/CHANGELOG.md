@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.0
+
+### Minor Changes
+
+- feat: support parsing dxf file with gbk encoding
+
 ## 1.2.25
 
 ### Patch Changes

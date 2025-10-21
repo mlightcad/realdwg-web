@@ -1,5 +1,6 @@
 export * from './AcDbAngleUnits'
 export * from './AcDbRenderingCache'
+export * from './AcDbCodePage'
 export * from './AcDbConstants'
 export * from './AcDbOsnapMode'
 export * from './AcDbUnitsValue'
