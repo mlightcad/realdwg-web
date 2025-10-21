@@ -1,5 +1,16 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.1.0
+
+### Minor Changes
+
+- feat: support parsing dxf file with gbk encoding
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.3.0
+
 ## 3.0.25
 
 ### Patch Changes

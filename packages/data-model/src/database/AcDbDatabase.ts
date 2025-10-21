@@ -7,7 +7,7 @@ import {
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
 import { AcDbEntity } from '../entity'
-import { AcDbAngleUnits, AcDbUnitsValue } from '../misc'
+import { AcDbAngleUnits, AcDbCodePage, AcDbUnitsValue } from '../misc'
 import {
   AcDbDictionary,
   AcDbLayout,
@@ -34,6 +34,7 @@ import {
 import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
 import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
 import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
+import { AcDbDwgVersion } from './AcDbDwgVersion'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -266,6 +267,10 @@ export interface AcDbCreateDefaultDataOptions {
  * ```
  */
 export class AcDbDatabase extends AcDbObject {
+  /** Version of the database */
+  private _version: AcDbDwgVersion
+  /** Code page of the database */
+  private _codepage: AcDbCodePage
   /** Angle base for the database */
   private _angBase: number
   /** Angle direction for the database */
@@ -328,6 +333,8 @@ export class AcDbDatabase extends AcDbObject {
    */
   constructor() {
     super()
+    this._version = new AcDbDwgVersion('AC1014')
+    this._codepage = AcDbCodePage.UTF16
     this._angBase = 0
     this._angDir = 0
     this._aunits = AcDbAngleUnits.DecimalDegrees
@@ -454,6 +461,46 @@ export class AcDbDatabase extends AcDbObject {
   set aunits(value: number) {
     this._aunits = value || 0
     this.triggerHeaderSysVarChangedEvent('aunits')
+  }
+
+  /**
+   * Gets the version of the database.
+   *
+   * @returns The version of the database
+   *
+   */
+  get version(): AcDbDwgVersion {
+    return this._version
+  }
+
+  /**
+   * Sets the version of the database.
+   *
+   * @param value - The version value of the database
+   */
+  set version(value: string | number) {
+    this._version = new AcDbDwgVersion(value)
+    this.triggerHeaderSysVarChangedEvent('version')
+  }
+
+  /**
+   * Gets the code page of the database.
+   *
+   * @returns The code page of the database
+   *
+   */
+  get codepage(): AcDbCodePage {
+    return this._codepage
+  }
+
+  /**
+   * Sets the code page of the database.
+   *
+   * @param value - The code page value of the database
+   */
+  set codepage(value: AcDbCodePage) {
+    this._codepage = value
+    this.triggerHeaderSysVarChangedEvent('codepage')
   }
 
   /**
@@ -787,10 +834,7 @@ export class AcDbDatabase extends AcDbObject {
       // DWG files are binary, convert to ArrayBuffer
       await this.read(content.buffer, options, AcDbFileType.DWG)
     } else {
-      // Default to DXF files (text-based) or fallback
-      // Convert Uint8Array to text
-      const textContent = new TextDecoder().decode(content)
-      await this.read(textContent, options, AcDbFileType.DXF)
+      await this.read(content.buffer, options, AcDbFileType.DXF)
     }
 
     this.events.openProgress.dispatch({

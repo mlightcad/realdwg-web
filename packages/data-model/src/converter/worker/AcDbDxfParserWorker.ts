@@ -1,17 +1,18 @@
 /// <reference lib="webworker" />
-import DxfParser, { ParsedDxf } from '@mlightcad/dxf-json'
+import { ParsedDxf } from '@mlightcad/dxf-json'
 
+import { AcDbDxfParser } from '../AcDbDxfParser'
 import { AcDbBaseWorker } from './AcDbBaseWorker'
 
 /**
  * DXF parsing worker
  */
-class AcDbDxfParserWorker extends AcDbBaseWorker<string, ParsedDxf> {
-  protected async executeTask(dxfString: string): Promise<ParsedDxf> {
-    const parser = new DxfParser()
-    return parser.parseSync(dxfString)
+class AcDbDxfParserWorker extends AcDbBaseWorker<ArrayBuffer, ParsedDxf> {
+  protected async executeTask(data: ArrayBuffer): Promise<ParsedDxf> {
+    const parser = new AcDbDxfParser()
+    return parser.parse(data)
   }
 }
 
 // Initialize the worker
-new AcDbDxfParserWorker()
+export const dxfParser = new AcDbDxfParserWorker()
