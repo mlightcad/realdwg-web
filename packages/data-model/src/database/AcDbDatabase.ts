@@ -2,12 +2,13 @@
 import { AcCmColor, AcCmEventManager } from '@mlightcad/common'
 
 import { AcDbObject, AcDbObjectId } from '../base'
+import { AcDbRegenerator } from '../converter'
 import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
 import { AcDbEntity } from '../entity'
-import { AcDbAngleUnits, AcDbCodePage, AcDbUnitsValue } from '../misc'
+import { AcDbAngleUnits, AcDbUnitsValue } from '../misc'
 import {
   AcDbDictionary,
   AcDbLayout,
@@ -269,8 +270,6 @@ export interface AcDbCreateDefaultDataOptions {
 export class AcDbDatabase extends AcDbObject {
   /** Version of the database */
   private _version: AcDbDwgVersion
-  /** Code page of the database */
-  private _codepage: AcDbCodePage
   /** Angle base for the database */
   private _angBase: number
   /** Angle direction for the database */
@@ -334,7 +333,6 @@ export class AcDbDatabase extends AcDbObject {
   constructor() {
     super()
     this._version = new AcDbDwgVersion('AC1014')
-    this._codepage = AcDbCodePage.UTF16
     this._angBase = 0
     this._angDir = 0
     this._aunits = AcDbAngleUnits.DecimalDegrees
@@ -481,26 +479,6 @@ export class AcDbDatabase extends AcDbObject {
   set version(value: string | number) {
     this._version = new AcDbDwgVersion(value)
     this.triggerHeaderSysVarChangedEvent('version')
-  }
-
-  /**
-   * Gets the code page of the database.
-   *
-   * @returns The code page of the database
-   *
-   */
-  get codepage(): AcDbCodePage {
-    return this._codepage
-  }
-
-  /**
-   * Sets the code page of the database.
-   *
-   * @param value - The code page value of the database
-   */
-  set codepage(value: AcDbCodePage) {
-    this._codepage = value
-    this.triggerHeaderSysVarChangedEvent('codepage')
   }
 
   /**
@@ -713,7 +691,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   async read(
-    data: string | ArrayBuffer,
+    data: ArrayBuffer,
     options: AcDbOpenDatabaseOptions,
     fileType: AcDbFileType = AcDbFileType.DXF
   ) {
@@ -843,6 +821,33 @@ export class AcDbDatabase extends AcDbObject {
       stage: 'FETCH_FILE',
       subStageStatus: 'END'
     })
+  }
+
+  /**
+   * Triggers xxxAppended events with data in the database to redraw the associated viewer.
+   */
+  async regen() {
+    const converter = new AcDbRegenerator(this)
+    await converter.read(
+      null as unknown as ArrayBuffer,
+      this,
+      500,
+      async (
+        percentage: number,
+        stage: AcDbConversionStage,
+        stageStatus: AcDbStageStatus,
+        data?: unknown
+      ) => {
+        this.events.openProgress.dispatch({
+          database: this,
+          percentage: percentage,
+          stage: 'CONVERSION',
+          subStage: stage,
+          subStageStatus: stageStatus,
+          data: data
+        })
+      }
+    )
   }
 
   /**

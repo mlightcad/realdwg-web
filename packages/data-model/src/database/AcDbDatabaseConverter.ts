@@ -223,12 +223,11 @@ class AcDbConversionTask<TIn, TOut> extends AcCmTask<TIn, TOut> {
     }
     const out = await this.data.task(input)
     if (this.progress) {
-      const outData = (out as { data?: unknown }).data
       await this.progress(
         this.data.progress.value,
         this.data.stage,
         'END',
-        outData
+        out ? (out as { data?: unknown }).data : null
       )
       this.data.progress.value += this.data.step
       if (this.data.progress.value > 100) {
@@ -372,7 +371,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * parsing, processing various components (fonts, linetypes, styles, etc.),
    * and building the final database.
    *
-   * @param data - The input data to convert (string or ArrayBuffer)
+   * @param data - The input data to convert
    * @param db - The database to populate with converted data
    * @param minimumChunkSize - Minimum chunk size for batch processing
    * @param progress - Optional progress callback
@@ -380,7 +379,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    *
    */
   async read(
-    data: string | ArrayBuffer,
+    data: ArrayBuffer,
     db: AcDbDatabase,
     minimumChunkSize: number,
     progress?: AcDbConversionProgressCallback
@@ -414,7 +413,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           stage: 'START',
           step: 1,
           progress: percentage,
-          task: async (data: string | ArrayBuffer) => {
+          task: async (data: ArrayBuffer) => {
             return data
           }
         },

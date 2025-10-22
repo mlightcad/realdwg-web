@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.1
+
+### Patch Changes
+
+- feat: add api to support redrawing the database
+
 ## 1.3.0
 
 ### Minor Changes

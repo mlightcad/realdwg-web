@@ -32,6 +32,21 @@ export class AcDbObjectIterator<ResultType>
   }
 
   /**
+   * The number of items
+   */
+  get count() {
+    return this._records.size
+  }
+
+  /**
+   * Converts values in the current iterator to one array
+   * @returns An array of values in the current iterator
+   */
+  toArray() {
+    return Array.from(this._records.values())
+  }
+
+  /**
    * Returns the iterator itself, allowing it to be used in for...of loops.
    *
    * @returns This iterator instance

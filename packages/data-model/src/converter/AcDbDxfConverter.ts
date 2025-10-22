@@ -38,7 +38,6 @@ import {
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
 import { AcDbEntity } from '../entity'
-import { AcDbCodePage } from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -346,10 +345,6 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     const header = model.header
     if (header['$ACADVER']) {
       db.version = header['$ACADVER']
-    }
-    if (header['$DWGCODEPAGE']) {
-      db.codepage =
-        AcDbCodePage[header['$DWGCODEPAGE'] as keyof typeof AcDbCodePage]
     }
 
     // Color index 256 is 'ByLayer'
