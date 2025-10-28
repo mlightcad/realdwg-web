@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.2
+
+### Patch Changes
+
+- fix: fix one error on dwg version name
+
 ## 1.3.1
 
 ### Patch Changes
