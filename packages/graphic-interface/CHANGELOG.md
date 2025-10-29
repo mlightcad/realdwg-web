@@ -1,5 +1,13 @@
 # @mlightcad/graphic-interface
 
+## 3.0.5
+
+### Patch Changes
+
+- feat: support interruptting the entire workflow if one task throw one exception
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.0.4
+
 ## 3.0.4
 
 ### Patch Changes

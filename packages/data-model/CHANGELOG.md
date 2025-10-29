@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.3
+
+### Patch Changes
+
+- feat: support interruptting the entire workflow if one task throw one exception
+
 ## 1.3.2
 
 ### Patch Changes

@@ -83,11 +83,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       const result = await api.execute<ArrayBuffer, ParsedDxf>(data)
       // Release worker
       api.destroy()
-      return {
-        model: result.data,
-        data: {
-          unknownEntityCount: 0
+      if (result.success) {
+        return {
+          model: result.data,
+          data: {
+            unknownEntityCount: 0
+          }
         }
+      } else {
+        throw new Error(`Failed to parse drawing due to error: '${result.error}'`)
       }
     } else {
       const parser = new AcDbDxfParser()

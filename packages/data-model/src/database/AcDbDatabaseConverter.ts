@@ -640,9 +640,11 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     // Tasks to convert entities are not critical to the conversion process
     // If failed to convert certain entities, we can still continue to convert
     // the rest of entities.
-    if (error.task.name != 'ENTITY') {
-      this.onFinished()
+    if (error.task.name === 'ENTITY') {
+      return false
     }
+    this.onFinished()
+    return true
   }
 
   protected onFinished() {

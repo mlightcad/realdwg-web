@@ -123,11 +123,13 @@ export type AcCmCompleteCallback<T> = (finalResult: T) => void
 /**
  * Callback function that handles errors during task execution.
  *
- * @param {unknown} error - The error that was thrown.
- * @param {number} taskIndex - Index of the failed task in the task queue.
- * @param {AcCmTask<unknown, unknown>} task - The task that failed.
+ * Returning `true` will interrupt the entire workflow.
+ * Returning `false` will allow the scheduler to continue executing remaining tasks.
+ *
+ * @param {AcCmTaskError} error - Detailed information about the task error.
+ * @returns {boolean} Whether to interrupt the task execution flow.
  */
-type AcCmErrorCallback = (error: AcCmTaskError) => void
+type AcCmErrorCallback = (error: AcCmTaskError) => boolean
 
 /**
  * Type-safe task scheduler that executes a chain of named tasks in order.
@@ -165,7 +167,7 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
   private tasks: AcCmTask<unknown, unknown>[] = []
   private onProgress: AcCmProgressCallback = () => {}
   private onComplete: AcCmCompleteCallback<TFinal> = () => {}
-  private onError: AcCmErrorCallback = () => {}
+  private onError: AcCmErrorCallback = () => false
 
   /**
    * Schedules a task to be executed asynchronously.
@@ -243,7 +245,11 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
           return output
         })
       } catch (error) {
-        this.onError({ error, taskIndex: i, task })
+        const shouldInterrupt = this.onError({ error, taskIndex: i, task })
+        if (shouldInterrupt) {
+          // Stop executing further tasks
+          break
+        }
       }
     }
 

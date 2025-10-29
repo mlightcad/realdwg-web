@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.3
+
+### Patch Changes
+
+- feat: support interruptting the entire workflow if one task throw one exception
+- Updated dependencies
+  - @mlightcad/data-model@1.3.3
+
 ## 3.1.2
 
 ### Patch Changes
