@@ -1,5 +1,13 @@
 # @mlightcad/graphic-interface
 
+## 3.0.6
+
+### Patch Changes
+
+- fix: bump version again because the wrong package was published in npm registry
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.0.5
+
 ## 3.0.5
 
 ### Patch Changes

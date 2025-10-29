@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.0.5
+
+### Patch Changes
+
+- fix: bump version again because the wrong package was published in npm registry
+- Updated dependencies
+  - @mlightcad/common@1.2.4
+
 ## 3.0.4
 
 ### Patch Changes

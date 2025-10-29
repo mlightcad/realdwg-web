@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.4
+
+### Patch Changes
+
+- fix: bump version again because the wrong package was published in npm registry
+- Updated dependencies
+  - @mlightcad/data-model@1.3.4
+
 ## 3.1.3
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.4
+
+### Patch Changes
+
+- fix: bump version again because the wrong package was published in npm registry
+
 ## 1.2.3
 
 ### Patch Changes
