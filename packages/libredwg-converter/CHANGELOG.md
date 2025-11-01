@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.5
+
+### Patch Changes
+
+- feat: refine logic to convert POLYLINE entity in dxf/dwg
+- Updated dependencies
+  - @mlightcad/data-model@1.3.5
+
 ## 3.1.4
 
 ### Patch Changes

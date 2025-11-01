@@ -1,3 +1,7 @@
+export * from './AcDb2dPolyline'
+export * from './AcDb2dVertex'
+export * from './AcDb3dPolyline'
+export * from './AcDb3dVertex'
 export * from './AcDbArc'
 export * from './AcDbBlockReference'
 export * from './AcDbCircle'

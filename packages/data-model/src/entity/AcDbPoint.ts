@@ -116,7 +116,7 @@ export class AcDbPoint extends AcDbEntity {
    * ```
    */
   transformBy(matrix: AcGeMatrix3d) {
-    this._geo.applyMatrix3d(matrix)
+    this._geo.applyMatrix4(matrix)
     return this
   }
 

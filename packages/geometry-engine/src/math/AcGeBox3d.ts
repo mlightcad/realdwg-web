@@ -379,14 +379,14 @@ export class AcGeBox3d {
     if (this.isEmpty()) return this
 
     // NOTE: I am using a binary pattern to specify all 2^3 combinations below
-    _points[0].set(this.min.x, this.min.y, this.min.z).applyMatrix3d(matrix) // 000
-    _points[1].set(this.min.x, this.min.y, this.max.z).applyMatrix3d(matrix) // 001
-    _points[2].set(this.min.x, this.max.y, this.min.z).applyMatrix3d(matrix) // 010
-    _points[3].set(this.min.x, this.max.y, this.max.z).applyMatrix3d(matrix) // 011
-    _points[4].set(this.max.x, this.min.y, this.min.z).applyMatrix3d(matrix) // 100
-    _points[5].set(this.max.x, this.min.y, this.max.z).applyMatrix3d(matrix) // 101
-    _points[6].set(this.max.x, this.max.y, this.min.z).applyMatrix3d(matrix) // 110
-    _points[7].set(this.max.x, this.max.y, this.max.z).applyMatrix3d(matrix) // 111
+    _points[0].set(this.min.x, this.min.y, this.min.z).applyMatrix4(matrix) // 000
+    _points[1].set(this.min.x, this.min.y, this.max.z).applyMatrix4(matrix) // 001
+    _points[2].set(this.min.x, this.max.y, this.min.z).applyMatrix4(matrix) // 010
+    _points[3].set(this.min.x, this.max.y, this.max.z).applyMatrix4(matrix) // 011
+    _points[4].set(this.max.x, this.min.y, this.min.z).applyMatrix4(matrix) // 100
+    _points[5].set(this.max.x, this.min.y, this.max.z).applyMatrix4(matrix) // 101
+    _points[6].set(this.max.x, this.max.y, this.min.z).applyMatrix4(matrix) // 110
+    _points[7].set(this.max.x, this.max.y, this.max.z).applyMatrix4(matrix) // 111
 
     this.setFromPoints(_points)
 

@@ -353,11 +353,11 @@ export class AcGeCircArc3d extends AcGeCurve3d {
       .applyAxisAngle(this.normal, this.endAngle)
       .multiplyScalar(this.radius)
 
-    this.center.applyMatrix3d(matrix)
-    startVec.applyMatrix3d(matrix)
-    endVec.applyMatrix3d(matrix)
-    this.normal.applyMatrix3d(matrix).normalize()
-    this.refVec.applyMatrix3d(matrix).normalize()
+    this.center.applyMatrix4(matrix)
+    startVec.applyMatrix4(matrix)
+    endVec.applyMatrix4(matrix)
+    this.normal.applyMatrix4(matrix).normalize()
+    this.refVec.applyMatrix4(matrix).normalize()
 
     this.startAngle = this.getAngle(startVec)
     this.endAngle = this.getAngle(endVec)

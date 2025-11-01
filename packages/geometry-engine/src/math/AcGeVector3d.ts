@@ -422,7 +422,7 @@ export class AcGeVector3d {
    * @param m Input one 4x4 matrix
    * @returns Return this vector
    */
-  applyMatrix3d(m: AcGeMatrix3d) {
+  applyMatrix4(m: AcGeMatrix3d) {
     const x = this.x,
       y = this.y,
       z = this.z

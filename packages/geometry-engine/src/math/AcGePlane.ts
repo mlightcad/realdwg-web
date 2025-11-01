@@ -218,7 +218,7 @@ export class AcGePlane {
     const normalMatrix =
       optionalNormalMatrix || _normalMatrix.getNormalMatrix(matrix)
 
-    const referencePoint = this.coplanarPoint(_vector1).applyMatrix3d(matrix)
+    const referencePoint = this.coplanarPoint(_vector1).applyMatrix4(matrix)
 
     const normal = this.normal.applyMatrix3(normalMatrix).normalize()
 

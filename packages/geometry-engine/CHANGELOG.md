@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.0.6
+
+### Patch Changes
+
+- feat: refine logic to convert POLYLINE entity in dxf/dwg
+- Updated dependencies
+  - @mlightcad/common@1.2.5
+
 ## 3.0.5
 
 ### Patch Changes
