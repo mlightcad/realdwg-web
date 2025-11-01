@@ -1,4 +1,4 @@
-import { ArcEntity, FaceEntity } from '@mlightcad/dxf-json'
+import { ArcEntity, FaceEntity, SmoothType, VertexFlag } from '@mlightcad/dxf-json'
 import { CircleEntity } from '@mlightcad/dxf-json'
 import {
   ArcEdge,
@@ -17,6 +17,7 @@ import {
   InsertEntity,
   LeaderEntity,
   LineEntity,
+  LWPolylineEntity,
   MTextEntity,
   PointEntity,
   PolylineEntity,
@@ -56,6 +57,8 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import {
+  AcDb2dPolyline,
+  AcDb3dPolyline,
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
@@ -76,6 +79,8 @@ import {
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
+  AcDbPoly2dType,
+  AcDbPoly3dType,
   AcDbPolyline,
   AcDbRadialDimension,
   AcDbRasterImage,
@@ -171,9 +176,11 @@ export class AcDbEntityConverter {
       return this.convertLeader(entity as LeaderEntity)
     } else if (entity.type == 'LINE') {
       return this.convertLine(entity as LineEntity)
+    } else if (entity.type == 'LWPOLYLINE') {
+      return this.convertLWPolyline(entity as LWPolylineEntity)
     } else if (entity.type == 'MTEXT') {
       return this.convertMText(entity as MTextEntity)
-    } else if (entity.type == 'POLYLINE' || entity.type == 'LWPOLYLINE') {
+    } else if (entity.type == 'POLYLINE') {
       return this.convertPolyline(entity as PolylineEntity)
     } else if (entity.type == 'POINT') {
       return this.convertPoint(entity as PointEntity)
@@ -346,6 +353,47 @@ export class AcDbEntityConverter {
     // 32 = The polygon mesh is closed in the N direction
     // 64 = The polyline is a polyface mesh
     // 128 = The linetype pattern is generated continuously around the vertices of this polyline
+    const isClosed = !!(polyline.flag & 0x01)
+    const is3dPolyline = !!(polyline.flag & 0x08)
+    // Filter out spline control points
+    const vertices: AcGePoint3dLike[] = []
+    const bulges: number[] = []
+    polyline.vertices.map(vertex => {
+      if (!(vertex.flag & VertexFlag.SPLINE_CONTROL_POINT)) {
+        vertices.push({
+          x: vertex.x,
+          y: vertex.y,
+          z: vertex.z
+        })
+        bulges.push(vertex.bulge ?? 0)
+      }
+    })
+    if (is3dPolyline) {
+      let polyType = AcDbPoly3dType.SimplePoly
+      if (polyline.flag & 0x04) {
+        if (polyline.smoothType == SmoothType.CUBIC) {
+          polyType = AcDbPoly3dType.CubicSplinePoly
+        } else if (polyline.smoothType == SmoothType.QUADRATIC) {
+          polyType = AcDbPoly3dType.QuadSplinePoly
+        }
+      }
+      return new AcDb3dPolyline(polyType, vertices, isClosed)
+    } else {
+      let polyType = AcDbPoly2dType.SimplePoly
+      if (polyline.flag & 0x02) {
+        polyType = AcDbPoly2dType.FitCurvePoly
+      } else if (polyline.flag & 0x04) {
+        if (polyline.smoothType == SmoothType.CUBIC) {
+          polyType = AcDbPoly2dType.CubicSplinePoly
+        } else if (polyline.smoothType == SmoothType.QUADRATIC) {
+          polyType = AcDbPoly2dType.QuadSplinePoly
+        }
+      }
+      return new AcDb2dPolyline(polyType, vertices, 0, isClosed, polyline.startWidth, polyline.endWidth, bulges)
+    }
+  }
+
+  private convertLWPolyline(polyline: LWPolylineEntity) {
     const dbEntity = new AcDbPolyline()
     dbEntity.closed = !!(polyline.flag & 0x01)
     polyline.vertices.forEach((vertex, index) => {

@@ -1,4 +1,6 @@
 import {
+  AcDb2dPolyline,
+  AcDb3dPolyline,
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
@@ -19,6 +21,8 @@ import {
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
+  AcDbPoly2dType,
+  AcDbPoly3dType,
   AcDbPolyline,
   AcDbRadialDimension,
   AcDbRasterImage,
@@ -75,6 +79,7 @@ import {
   DwgPolylineEntity,
   DwgRadialDiameterDimensionEntity,
   DwgRayEntity,
+  DwgSmoothType,
   DwgSolidEntity,
   DwgSplineEdge,
   DwgSplineEntity,
@@ -271,18 +276,46 @@ export class AcDbEntityConverter {
     // 32 = The polygon mesh is closed in the N direction
     // 64 = The polyline is a polyface mesh
     // 128 = The linetype pattern is generated continuously around the vertices of this polyline
-    const dbEntity = new AcDbPolyline()
-    dbEntity.closed = !!(polyline.flag & 0x01)
-    polyline.vertices.forEach((vertex, index) => {
-      dbEntity.addVertexAt(
-        index,
-        new AcGePoint2d(vertex.x, vertex.y),
-        vertex.bulge,
-        vertex.startWidth,
-        vertex.endWidth
-      )
+    const isClosed = !!(polyline.flag & 0x01)
+    const is3dPolyline = !!(polyline.flag & 0x08)
+
+    // Filter out spline control points
+    const vertices: AcGePoint3dLike[] = []
+    const bulges: number[] = []
+    polyline.vertices.map(vertex => {
+      // Check whether it is one spline control point
+      if (!(vertex.flag & 0x10)) {
+        vertices.push({
+          x: vertex.x,
+          y: vertex.y,
+          z: vertex.z
+        })
+        bulges.push(vertex.bulge ?? 0)
+      }
     })
-    return dbEntity
+    if (is3dPolyline) {
+      let polyType = AcDbPoly3dType.SimplePoly
+      if (polyline.flag & 0x04) {
+        if (polyline.smoothType == DwgSmoothType.CUBIC) {
+          polyType = AcDbPoly3dType.CubicSplinePoly
+        } else if (polyline.smoothType == DwgSmoothType.QUADRATIC) {
+          polyType = AcDbPoly3dType.QuadSplinePoly
+        }
+      }
+      return new AcDb3dPolyline(polyType, vertices, isClosed)
+    } else {
+      let polyType = AcDbPoly2dType.SimplePoly
+      if (polyline.flag & 0x02) {
+        polyType = AcDbPoly2dType.FitCurvePoly
+      } else if (polyline.flag & 0x04) {
+        if (polyline.smoothType == DwgSmoothType.CUBIC) {
+          polyType = AcDbPoly2dType.CubicSplinePoly
+        } else if (polyline.smoothType == DwgSmoothType.QUADRATIC) {
+          polyType = AcDbPoly2dType.QuadSplinePoly
+        }
+      }
+      return new AcDb2dPolyline(polyType, vertices, 0, isClosed, polyline.startWidth, polyline.endWidth, bulges)
+    }
   }
 
   private convertHatch(hatch: DwgHatchEntity) {

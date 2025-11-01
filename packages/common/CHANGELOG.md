@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.5
+
+### Patch Changes
+
+- feat: refine logic to convert POLYLINE entity in dxf/dwg
+
 ## 1.2.4
 
 ### Patch Changes

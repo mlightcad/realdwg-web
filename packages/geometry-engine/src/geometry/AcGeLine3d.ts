@@ -266,8 +266,8 @@ export class AcGeLine3d extends AcGeCurve3d {
    * @inheritdoc
    */
   transform(matrix: AcGeMatrix3d) {
-    this._start.applyMatrix3d(matrix)
-    this._end.applyMatrix3d(matrix)
+    this._start.applyMatrix4(matrix)
+    this._end.applyMatrix4(matrix)
     this._boundingBoxNeedsUpdate = true
     return this
   }

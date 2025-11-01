@@ -381,7 +381,7 @@ export class AcGeCatmullRomCurve3d extends AcGeCurve3d {
     this._points = this._points.map(point => {
       const transformedPoint = new AcGePoint3d()
       transformedPoint.copy(point)
-      transformedPoint.applyMatrix3d(matrix)
+      transformedPoint.applyMatrix4(matrix)
       return transformedPoint
     })
     this._boundingBoxNeedsUpdate = true

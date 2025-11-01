@@ -135,10 +135,18 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     }
     dxf.tables.STYLE?.entries.forEach(style => {
       const fontNames: string[] = []
-      let fontName = getFontName(style.font)
-      if (fontName) fontNames.push(fontName)
-      fontName = getFontName(style.bigFont)
-      if (fontName) fontNames.push(fontName)
+      if (style.font) {
+        const fontName = getFontName(style.font)
+        if (fontName) fontNames.push(fontName)
+      }
+      if (style.bigFont) {
+        const fontName = getFontName(style.bigFont)
+        if (fontName) fontNames.push(fontName)
+      }
+      if (style.extendedFont) {
+        const fontName = getFontName(style.extendedFont)
+        if (fontName) fontNames.push(fontName)
+      }
       styleMap.set(style.name, fontNames)
     })
 
