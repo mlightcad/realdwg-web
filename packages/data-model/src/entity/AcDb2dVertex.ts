@@ -2,12 +2,11 @@ import {
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike,
+  AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
-
 
 export enum AcDb2dVertexType {
   /**
@@ -25,7 +24,7 @@ export enum AcDb2dVertexType {
    * This type of vertex can go away or change automatically during subsequent editing
    * operations on the polyline.
    */
-  SplineFitVertex	= 8,
+  SplineFitVertex = 8,
   /**
    * A control point for a spline or curve-fit polyline.
    */
@@ -67,9 +66,9 @@ export class AcDb2dVertex extends AcDbEntity {
   }
 
   /**
-   * Gets the position value of the vertex. The position point value must be in OCS coordinates 
-   * (the OCS of the polyline containing the vertex), not WCS. The Z coordinate is kept in the 
-   * owning AcDb2dPolyline only for historical purposes. 
+   * Gets the position value of the vertex. The position point value must be in OCS coordinates
+   * (the OCS of the polyline containing the vertex), not WCS. The Z coordinate is kept in the
+   * owning AcDb2dPolyline only for historical purposes.
    *
    * @returns The position value of the vertex
    */
@@ -78,9 +77,9 @@ export class AcDb2dVertex extends AcDbEntity {
   }
 
   /**
-   * Sets the position value of the vertex. The position point value must be in OCS coordinates 
-   * (the OCS of the polyline containing the vertex), not WCS. The Z coordinate is kept in the 
-   * owning AcDb2dPolyline only for historical purposes. 
+   * Sets the position value of the vertex. The position point value must be in OCS coordinates
+   * (the OCS of the polyline containing the vertex), not WCS. The Z coordinate is kept in the
+   * owning AcDb2dPolyline only for historical purposes.
    *
    * @param value - The position value of the vertex
    */
@@ -107,7 +106,7 @@ export class AcDb2dVertex extends AcDbEntity {
   }
 
   /**
-   * Gets the start width for the vertex. The start width is used as the width at this vertex 
+   * Gets the start width for the vertex. The start width is used as the width at this vertex
    * for the polyline segment from this vertex to the next vertex.
    *
    * @returns The start width for the vertex
@@ -117,7 +116,7 @@ export class AcDb2dVertex extends AcDbEntity {
   }
 
   /**
-   * Sets the start width for the vertex. The start width is used as the width at this vertex 
+   * Sets the start width for the vertex. The start width is used as the width at this vertex
    * for the polyline segment from this vertex to the next vertex.
    *
    * @param value - The start width for the vertex

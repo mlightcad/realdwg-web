@@ -91,7 +91,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
           }
         }
       } else {
-        throw new Error(`Failed to parse drawing due to error: '${result.error}'`)
+        throw new Error(
+          `Failed to parse drawing due to error: '${result.error}'`
+        )
       }
     } else {
       const parser = new AcDbDxfParser()

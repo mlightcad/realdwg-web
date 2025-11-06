@@ -522,7 +522,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
           break
         }
       }
-      // If the layout is not found in the block table due to some unknow reason, 
+      // If the layout is not found in the block table due to some unknow reason,
       // let's set the model space block table record id.
       if (!dbLayout.blockTableRecordId) {
         if (layout.layoutName === 'Model') {

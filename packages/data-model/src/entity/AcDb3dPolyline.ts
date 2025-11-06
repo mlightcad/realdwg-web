@@ -3,7 +3,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
-  AcGePolyline2dVertex,
+  AcGePolyline2dVertex
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -22,7 +22,7 @@ export enum AcDbPoly3dType {
    */
   QuadSplinePoly,
   /**
-   * A spline-fit polyline that has a Cubic B-spline path. 
+   * A spline-fit polyline that has a Cubic B-spline path.
    */
   CubicSplinePoly
 }
@@ -45,7 +45,7 @@ export class AcDb3dPolyline extends AcDbCurve {
   constructor(
     type: AcDbPoly3dType,
     vertices: AcGePoint3dLike[],
-    closed = false,
+    closed = false
   ) {
     super()
     this._polyType = type

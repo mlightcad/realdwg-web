@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.6
+
+### Patch Changes
+
+- feat: add missed property dimBlockPosition for class AcDbDimension
+
 ## 1.3.5
 
 ### Patch Changes

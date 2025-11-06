@@ -4,7 +4,8 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGeQuaternion,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -175,7 +176,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * console.log(`Normal: ${normal.x}, ${normal.y}, ${normal.z}`);
    * ```
    */
-  get normal() {
+  get normal(): AcGeVector3d {
     return this._normal
   }
 
@@ -189,7 +190,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * blockRef.normal = new AcGeVector3d(0, 0, 1);
    * ```
    */
-  set normal(value: AcGeVector3d) {
+  set normal(value: AcGeVector3dLike) {
     this._normal.copy(value).normalize()
   }
 

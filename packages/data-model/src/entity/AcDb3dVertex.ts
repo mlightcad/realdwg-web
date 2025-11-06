@@ -2,12 +2,11 @@ import {
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike,
+  AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
-
 
 export enum AcDb3dVertexType {
   /**
@@ -19,7 +18,7 @@ export enum AcDb3dVertexType {
    */
   ControlVertex,
   /**
-   * A vertex that was automatically generated as the result of a spline or curve-fit operation. 
+   * A vertex that was automatically generated as the result of a spline or curve-fit operation.
    * This type of vertex can go away or change automatically during subsequent editing operations
    * on the mesh.
    */
@@ -48,7 +47,7 @@ export class AcDb3dVertex extends AcDbEntity {
   }
 
   /**
-   * Gets the WCS point value of this vertex. 
+   * Gets the WCS point value of this vertex.
    *
    * @returns The WCS point value of this vertex.
    */
@@ -57,7 +56,7 @@ export class AcDb3dVertex extends AcDbEntity {
   }
 
   /**
-   * Sets WCS point value of this vertex. 
+   * Sets WCS point value of this vertex.
    *
    * @param value - The WCS point value of this vertex.
    */

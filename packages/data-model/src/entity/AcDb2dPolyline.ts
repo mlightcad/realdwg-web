@@ -3,7 +3,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
-  AcGePolyline2dVertex,
+  AcGePolyline2dVertex
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -32,9 +32,9 @@ export enum AcDbPoly2dType {
 }
 
 /**
- * Represents a 2d polyline entity in AutoCAD. This is the older class used to 
+ * Represents a 2d polyline entity in AutoCAD. This is the older class used to
  * represent 2D polylines in the legacy (DXF/DWG R12 and before) format.
- * 
+ *
  * Characteristics
  * - Represents 2D polyline entities, typically planar (all vertices lie in a single plane).
  * - Each vertex is an instance of AcDb2dVertex.
@@ -42,7 +42,7 @@ export enum AcDbPoly2dType {
  * - Can represent fit curves or spline-fit polylines (via the polyline type flag).
  * - Each vertex can have flags like curve-fit vertex, spline vertex, etc.
  * - Geometry is stored as a linked list of vertex entities (not a single compact structure).
- * 
+ *
  * Typical use case
  * - Used mainly for backward compatibility and import/export of old drawings.
  */

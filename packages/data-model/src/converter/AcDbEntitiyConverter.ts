@@ -1,4 +1,9 @@
-import { ArcEntity, FaceEntity, SmoothType, VertexFlag } from '@mlightcad/dxf-json'
+import {
+  ArcEntity,
+  FaceEntity,
+  SmoothType,
+  VertexFlag
+} from '@mlightcad/dxf-json'
 import { CircleEntity } from '@mlightcad/dxf-json'
 import {
   ArcEdge,
@@ -389,7 +394,15 @@ export class AcDbEntityConverter {
           polyType = AcDbPoly2dType.QuadSplinePoly
         }
       }
-      return new AcDb2dPolyline(polyType, vertices, 0, isClosed, polyline.startWidth, polyline.endWidth, bulges)
+      return new AcDb2dPolyline(
+        polyType,
+        vertices,
+        0,
+        isClosed,
+        polyline.startWidth,
+        polyline.endWidth,
+        bulges
+      )
     }
   }
 
@@ -611,6 +624,9 @@ export class AcDbEntityConverter {
         entity.subDefinitionPoint2,
         entity.definitionPoint
       )
+      if (entity.insertionPoint) {
+        dbEntity.dimBlockPosition = { ...entity.insertionPoint, z: 0 }
+      }
       dbEntity.rotation = AcGeMathUtil.degToRad(entity.rotationAngle || 0)
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
@@ -793,6 +809,7 @@ export class AcDbEntityConverter {
     dbEntity.dimensionStyleName = entity.styleName
     dbEntity.dimensionText = entity.text || ''
     dbEntity.measurement = entity.measurement
+    dbEntity.normal.copy(entity.extrusionDirection ?? { x: 0, y: 0, z: 1 })
   }
 
   /**

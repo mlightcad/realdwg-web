@@ -1,7 +1,11 @@
 import {
   AcGeLine3d,
+  AcGeMatrix3d,
   AcGePoint2dLike,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGePoint3dLike,
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
   AcGiArrowStyle,
@@ -50,6 +54,8 @@ export abstract class AcDbDimension extends AcDbEntity {
 
   /** The block table record ID containing the dimension entities */
   private _dimBlockId: string | null
+  /** The relative position point of the block referenced by the dimension (in WCS coordinates). */
+  private _dimBlockPosition: AcGePoint3d
   /** The dimension style name used by this dimension */
   private _dimensionStyleName: string | null
   /** The user-supplied dimension annotation text */
@@ -66,6 +72,8 @@ export abstract class AcDbDimension extends AcDbEntity {
   private _textRotation: number
   /** The cached dimension style record */
   private _dimStyle?: AcDbDimStyleTableRecord
+  /** The normal vector of the plane containing the block reference */
+  private _normal: AcGeVector3d
 
   /**
    * Creates a new dimension entity.
@@ -83,12 +91,14 @@ export abstract class AcDbDimension extends AcDbEntity {
   constructor() {
     super()
     this._dimBlockId = null
+    this._dimBlockPosition = new AcGePoint3d()
     this._dimensionStyleName = null
     this._dimensionText = null
     this._textLineSpacingFactor = 1.0
     this._textLineSpacingStyle = AcDbLineSpacingStyle.AtLeast
     this._textPosition = new AcGePoint3d()
     this._textRotation = 0
+    this._normal = new AcGeVector3d(0, 0, 1)
   }
 
   /**
@@ -118,6 +128,56 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   set dimBlockId(value: string | null) {
     this._dimBlockId = value
+  }
+
+  /**
+   * Gets the relative position point of the block referenced by the dimension (in WCS coordinates).
+   * The block position is the insertion point of the block referenced by the dimension, relative to
+   * the primary definition point (DXF group code 10) of the dimension itself.
+   *
+   * The block position (in WCS) is added to the dimension primary definition point (also in WCS) to
+   * get the actual insertion point for the anonymous block that is referenced by the dimension. So,
+   * for example, changing a dimension's block position from (0,0,0) to (0,0,1) (in WCS) will cause
+   * the dimension to display as though it has been moved 1 unit along the WCS Z axis.
+   *
+   * For a dimension newly created via any dimension command, the block position will be (0,0,0).
+   * For copies of existing dimensions, or if a dimension is moved, the block position will be the
+   * offset vector (in WCS) from where the original dimension was located. For example, moving a
+   * dimension 1 unit down the WCS Y axis will cause AutoCAD to update the block position value from
+   * (0,0,0) to (0,-1,0) (in WCS coordinates).
+   *
+   * The position point is used for DXF group code 12.
+   *
+   * @returns The relative position point of the block referenced by the dimension.
+   *
+   */
+  get dimBlockPosition(): AcGePoint3d {
+    return this._dimBlockPosition
+  }
+
+  /**
+   * Sets the relative position point of the block referenced by the dimension (in WCS coordinates).
+   * The block position is the insertion point of the block referenced by the dimension, relative to
+   * the primary definition point (DXF group code 10) of the dimension itself.
+   * 
+   * The block position (in WCS) is added to the dimension primary definition point (also in WCS) to
+   * get the actual insertion point for the anonymous block that is referenced by the dimension. So,
+   * for example, changing a dimension's block position from (0,0,0) to (0,0,1) (in WCS) will cause 
+   * the dimension to display as though it has been moved 1 unit along the WCS Z axis.
+   * 
+   * For a dimension newly created via any dimension command, the block position will be (0,0,0). 
+   * For copies of existing dimensions, or if a dimension is moved, the block position will be the 
+   * offset vector (in WCS) from where the original dimension was located. For example, moving a 
+   * dimension 1 unit down the WCS Y axis will cause AutoCAD to update the block position value from 
+   * (0,0,0) to (0,-1,0) (in WCS coordinates).
+   * 
+   * The position point is used for DXF group code 12.
+   *
+   * @param value - The relative position point of the block referenced by the dimension.
+
+   */
+  set dimBlockPosition(value: AcGePoint3dLike) {
+    this._dimBlockPosition.copy(value)
   }
 
   /**
@@ -257,6 +317,24 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Gets the normal vector of the plane containing the dimension.
+   *
+   * @returns The normal vector
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+
+  /**
+   * Sets the normal vector of the plane containing the dimension.
+   *
+   * @param value - The new normal vector
+   */
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value).normalize()
+  }
+
+  /**
    * @inheritdoc
    */
   draw(renderer: AcGiRenderer) {
@@ -265,11 +343,14 @@ export abstract class AcDbDimension extends AcDbEntity {
         this.dimBlockId
       )
       if (blockTableRecord) {
+        const matrix = new AcGeMatrix3d().makeTranslation(this.dimBlockPosition)
         const group = AcDbRenderingCache.instance.draw(
           renderer,
           blockTableRecord,
           this.rgbColor,
-          false
+          false,
+          matrix,
+          this.normal
         )
         this.attachEntityInfo(group)
         return group

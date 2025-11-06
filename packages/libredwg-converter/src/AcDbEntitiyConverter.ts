@@ -314,7 +314,15 @@ export class AcDbEntityConverter {
           polyType = AcDbPoly2dType.QuadSplinePoly
         }
       }
-      return new AcDb2dPolyline(polyType, vertices, 0, isClosed, polyline.startWidth, polyline.endWidth, bulges)
+      return new AcDb2dPolyline(
+        polyType,
+        vertices,
+        0,
+        isClosed,
+        polyline.startWidth,
+        polyline.endWidth,
+        bulges
+      )
     }
   }
 
@@ -523,6 +531,13 @@ export class AcDbEntityConverter {
         entity.subDefinitionPoint2,
         entity.definitionPoint
       )
+      if (entity.insertionPoint) {
+        dbEntity.dimBlockPosition = {
+          x: entity.insertionPoint.x,
+          y: entity.insertionPoint.y,
+          z: 0
+        }
+      }
       dbEntity.rotation = entity.rotationAngle
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
