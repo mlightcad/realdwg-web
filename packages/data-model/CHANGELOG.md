@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.7
+
+### Patch Changes
+
+- feat: upgrade libredwg-web to fix bug on converting polyline2d and polyline3d entities
+
 ## 1.3.6
 
 ### Patch Changes
