@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.8
+
+### Patch Changes
+
+- feat: remove using enum DwgSmoothType in order to not bundle libredwg-web in libredwg-converter
+- Updated dependencies
+  - @mlightcad/data-model@1.3.8
+
 ## 3.1.7
 
 ### Patch Changes

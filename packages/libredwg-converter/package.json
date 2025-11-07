@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/libredwg-converter",
-  "version": "3.1.7",
+  "version": "3.1.8",
   "type": "module",
   "repository": {
     "type": "git",
@@ -33,6 +33,9 @@
     "require": "./dist/libredwg-converter.umd.cjs"
   },
   "scripts": {
+    "analyze": "pnpm run analyze:lib && pnpm run analyze:worker",
+    "analyze:lib": "vite build --mode analyze --config vite.config.main.ts",
+    "analyze:worker": "vite build --mode analyze --config vite.config.worker.ts",
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",
     "build": "tsc && vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
     "build:main": "vite build -c vite.config.main.ts",

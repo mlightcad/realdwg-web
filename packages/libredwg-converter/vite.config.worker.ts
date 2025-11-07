@@ -1,6 +1,13 @@
-import { defineConfig } from 'vite'
+import { visualizer } from 'rollup-plugin-visualizer'
+import { defineConfig, PluginOption } from 'vite'
 
-export default defineConfig(() => {
+export default defineConfig(({ mode }) => {
+  const plugins: PluginOption[] = []
+
+  if (mode === 'analyze') {
+    plugins.push(visualizer())
+  }
+
   return {
     build: {
       emptyOutDir: false,
@@ -17,6 +24,7 @@ export default defineConfig(() => {
           inlineDynamicImports: true
         }
       }
-    }
+    },
+    plugins
   }
 })

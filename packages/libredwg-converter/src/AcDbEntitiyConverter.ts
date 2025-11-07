@@ -52,7 +52,7 @@ import {
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection
 } from '@mlightcad/data-model'
-import {
+import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
   DwgAngularDimensionEntity,
@@ -80,7 +80,6 @@ import {
   DwgPolylineBoundaryPath,
   DwgRadialDiameterDimensionEntity,
   DwgRayEntity,
-  DwgSmoothType,
   DwgSolidEntity,
   DwgSplineEdge,
   DwgSplineEntity,
@@ -300,9 +299,13 @@ export class AcDbEntityConverter {
     if (polyline.flag & 0x02) {
       polyType = AcDbPoly2dType.FitCurvePoly
     } else if (polyline.flag & 0x04) {
-      if (polyline.smoothType == DwgSmoothType.CUBIC) {
+      // Please don't use enum DwgSmoothType value here.
+      // It will result in libredwg-web bundled in this package.
+      if (polyline.smoothType == 6) {
+        // DwgSmoothType.CUBIC
         polyType = AcDbPoly2dType.CubicSplinePoly
-      } else if (polyline.smoothType == DwgSmoothType.QUADRATIC) {
+      } else if (polyline.smoothType == 5) {
+        // DwgSmoothType.QUADRATIC
         polyType = AcDbPoly2dType.QuadSplinePoly
       }
     }
@@ -346,9 +349,13 @@ export class AcDbEntityConverter {
 
     let polyType = AcDbPoly3dType.SimplePoly
     if (polyline.flag & 0x04) {
-      if (polyline.smoothType == DwgSmoothType.CUBIC) {
+      // Please don't use enum DwgSmoothType value here.
+      // It will result in libredwg-web bundled in this package.
+      if (polyline.smoothType == 6) {
+        // DwgSmoothType.CUBIC
         polyType = AcDbPoly3dType.CubicSplinePoly
-      } else if (polyline.smoothType == DwgSmoothType.QUADRATIC) {
+      } else if (polyline.smoothType == 5) {
+        // DwgSmoothType.QUADRATIC
         polyType = AcDbPoly3dType.QuadSplinePoly
       }
     }
