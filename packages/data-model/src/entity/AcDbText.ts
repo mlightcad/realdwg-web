@@ -8,6 +8,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Defines the horizontal alignment mode for text entities.
@@ -439,6 +440,134 @@ export class AcDbText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     // TODO: Implement it correctly
     return new AcGeBox3d()
+  }
+
+  /**
+   * Returns the full property definition for this text entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable start/end coordinates via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the text in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'text',
+          properties: [
+            {
+              name: 'contents',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.textString,
+                set: (v: string) => {
+                  this.textString = v
+                }
+              }
+            },
+            {
+              name: 'styleName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.styleName,
+                set: (v: string) => {
+                  this.styleName = v
+                }
+              }
+            },
+            {
+              name: 'textHeight',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.height,
+                set: (v: number) => {
+                  this.height = v
+                }
+              }
+            },
+            {
+              name: 'rotation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rotation,
+                set: (v: number) => {
+                  this.rotation = v
+                }
+              }
+            },
+            {
+              name: 'widthFactor',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.widthFactor,
+                set: (v: number) => {
+                  this.widthFactor = v
+                }
+              }
+            },
+            {
+              name: 'oblique',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.oblique,
+                set: (v: number) => {
+                  this.oblique = v
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'positionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.x,
+                set: (v: number) => {
+                  this.position.x = v
+                }
+              }
+            },
+            {
+              name: 'positionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.y,
+                set: (v: number) => {
+                  this.position.y = v
+                }
+              }
+            },
+            {
+              name: 'positionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.z,
+                set: (v: number) => {
+                  this.position.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

@@ -8,6 +8,7 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents an ellipse entity in AutoCAD.
@@ -191,6 +192,64 @@ export class AcDbEllipse extends AcDbCurve {
   }
 
   /**
+   * Gets the start angle of this ellipse.
+   *
+   * @returns The start angle in radians
+   *
+   * @example
+   * ```typescript
+   * const startAngle = ellipse.startAngle;
+   * console.log(`ellipse start angle: ${startAngle} radians (${startAngle * 180 / Math.PI} degrees)`);
+   * ```
+   */
+  get startAngle(): number {
+    return this._geo.startAngle
+  }
+
+  /**
+   * Sets the start angle of this ellipse.
+   *
+   * @param value - The new start angle in radians (0 to 2π)
+   *
+   * @example
+   * ```typescript
+   * ellipse.startAngle = Math.PI / 4; // 45 degrees
+   * ```
+   */
+  set startAngle(value: number) {
+    this._geo.startAngle = value
+  }
+
+  /**
+   * Gets the end angle of this ellipse.
+   *
+   * @returns The end angle in radians
+   *
+   * @example
+   * ```typescript
+   * const endAngle = ellipse.endAngle;
+   * console.log(`ellipse end angle: ${endAngle} radians (${endAngle * 180 / Math.PI} degrees)`);
+   * ```
+   */
+  get endAngle(): number {
+    return this._geo.endAngle
+  }
+
+  /**
+   * Sets the end angle of this ellipse.
+   *
+   * @param value - The new end angle in radians (0 to 2π)
+   *
+   * @example
+   * ```typescript
+   * ellipse.endAngle = Math.PI; // 180 degrees
+   * ```
+   */
+  set endAngle(value: number) {
+    this._geo.endAngle = value
+  }
+
+  /**
    * Gets the normal vector of this ellipse.
    *
    * The normal vector defines the plane in which the ellipse lies.
@@ -246,6 +305,139 @@ export class AcDbEllipse extends AcDbCurve {
    */
   get closed(): boolean {
     return this._geo.closed
+  }
+
+  /**
+   * Returns the full property definition for this ellipse entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable properties via {@link AcDbPropertyAccessor}
+   * so the property palette can update the ellipse in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'centerX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.x,
+                set: (v: number) => {
+                  this.center.x = v
+                }
+              }
+            },
+            {
+              name: 'centerY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.y,
+                set: (v: number) => {
+                  this.center.y = v
+                }
+              }
+            },
+            {
+              name: 'centerZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.z,
+                set: (v: number) => {
+                  this.center.z = v
+                }
+              }
+            },
+            {
+              name: 'majorAxisRadius',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.majorAxisRadius,
+                set: (v: number) => {
+                  this.center.x = v
+                }
+              }
+            },
+            {
+              name: 'minorAxisRadius',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.minorAxisRadius,
+                set: (v: number) => {
+                  this.minorAxisRadius = v
+                }
+              }
+            },
+            {
+              name: 'startAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startAngle,
+                set: (v: number) => {
+                  this.startAngle = v
+                }
+              }
+            },
+            {
+              name: 'endAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endAngle,
+                set: (v: number) => {
+                  this.endAngle = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

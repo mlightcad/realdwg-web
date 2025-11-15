@@ -242,7 +242,8 @@ export class AcDbEntityConverter {
       arc.center,
       arc.radius,
       AcGeMathUtil.degToRad(arc.startAngle),
-      AcGeMathUtil.degToRad(arc.endAngle)
+      AcGeMathUtil.degToRad(arc.endAngle),
+      arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     )
     return dbEntity
   }
@@ -260,7 +261,11 @@ export class AcDbEntityConverter {
    * ```
    */
   private convertCirle(circle: CircleEntity) {
-    const dbEntity = new AcDbCircle(circle.center, circle.radius)
+    const dbEntity = new AcDbCircle(
+      circle.center,
+      circle.radius,
+      circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
+    )
     return dbEntity
   }
 

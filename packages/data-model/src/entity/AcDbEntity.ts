@@ -12,6 +12,10 @@ import {
 
 import { AcDbObject } from '../base/AcDbObject'
 import { AcDbOsnapMode, ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyGroup
+} from './AcDbEntityProperties'
 
 /**
  * Abstract base class for all drawing entities.
@@ -303,6 +307,31 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Returns the full property definition for this entity, including
+   * all property groups and runtime accessors.
+   *
+   * This getter is used by the property inspector UI to:
+   * - determine the layout and grouping of properties,
+   * - look up editable flags and metadata,
+   * - read/write live values on this entity using accessors.
+   *
+   * The returned structure contains:
+   * - static metadata (label, type, group structure),
+   * - dynamic accessor bindings that expose the actual values stored in the entity.
+   *
+   * Note: The `groups` array contains `AcDbEntityPropertyGroup` objects whose
+   * `properties` entries are runtime-resolved property descriptors that include
+   * {@link AcDbPropertyAccessor} objects. Each property object therefore
+   * conforms to `AcDbEntityRuntimeProperty`.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [this.getGeneralProperties()]
+    }
+  }
+
+  /**
    * Gets the grip points for this entity.
    *
    * Grip points are the control points that can be used to modify the entity.
@@ -425,6 +454,47 @@ export abstract class AcDbEntity extends AcDbObject {
       database: this.database,
       entity: this
     })
+  }
+
+  /**
+   * Creates the "General" property group for this entity.
+   *
+   * This group contains common metadata attributes shared by all CAD entities
+   * (e.g., handle, layer). Each property includes a runtime {@link AcDbPropertyAccessor}
+   * allowing the property inspector to read and update live values.
+   *
+   * Subclasses may override this method to append additional general-purpose
+   * properties while still preserving this base set.
+   *
+   * @returns A fully resolved property group containing runtime-accessible properties.
+   */
+  protected getGeneralProperties(): AcDbEntityPropertyGroup {
+    return {
+      groupName: 'general',
+
+      properties: [
+        {
+          name: 'handle',
+          type: 'int',
+          editable: false,
+          accessor: {
+            get: (): string => this.objectId
+          }
+        },
+
+        {
+          name: 'layer',
+          type: 'string',
+          editable: true,
+          accessor: {
+            get: (): string => this.layer,
+            set: (newVal: string): void => {
+              this.layer = newVal
+            }
+          }
+        }
+      ]
+    }
   }
 
   /**

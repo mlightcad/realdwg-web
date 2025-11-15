@@ -9,6 +9,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents a line entity in AutoCAD.
@@ -159,6 +160,97 @@ export class AcDbLine extends AcDbCurve {
    */
   get closed(): boolean {
     return false
+  }
+
+  /**
+   * Returns the full property definition for this line entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable start/end coordinates via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the line in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            // --- Start Point ---
+            {
+              name: 'startX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPoint.x,
+                set: (v: number) => {
+                  this.startPoint.x = v
+                }
+              }
+            },
+            {
+              name: 'startY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPoint.y,
+                set: (v: number) => {
+                  this.startPoint.y = v
+                }
+              }
+            },
+            {
+              name: 'startZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPoint.z,
+                set: (v: number) => {
+                  this.startPoint.z = v
+                }
+              }
+            },
+            {
+              name: 'endX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endPoint.x,
+                set: (v: number) => {
+                  this.endPoint.x = v
+                }
+              }
+            },
+            {
+              name: 'endY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endPoint.y,
+                set: (v: number) => {
+                  this.endPoint.y = v
+                }
+              }
+            },
+            {
+              name: 'endZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endPoint.z,
+                set: (v: number) => {
+                  this.endPoint.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

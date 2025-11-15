@@ -1,10 +1,10 @@
 {
   "name": "@mlightcad/libredwg-converter",
-  "version": "3.1.8",
+  "version": "3.1.11",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/mlightcad/realdwg-web"
+    "url": "https://github.com/mlightcad/realdwg-web"
   },
   "keywords": [
     "autocad",
@@ -44,7 +44,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "0.4.0"
+    "@mlightcad/libredwg-web": "0.4.1"
   },
   "devDependencies": {
     "vite": "^5.2.10"

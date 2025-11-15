@@ -3,11 +3,13 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents an arc entity in AutoCAD.
@@ -51,6 +53,7 @@ export class AcDbArc extends AcDbCurve {
    * @param radius - The radius of the arc (must be positive)
    * @param startAngle - The starting angle in radians (0 to 2π)
    * @param endAngle - The ending angle in radians (0 to 2π)
+   * @param normal - The normal vector defining the plane of the circle (defaults to Z-axis)
    *
    * @example
    * ```typescript
@@ -75,7 +78,8 @@ export class AcDbArc extends AcDbCurve {
     center: AcGePoint3dLike,
     radius: number,
     startAngle: number,
-    endAngle: number
+    endAngle: number,
+    normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
     this._geo = new AcGeCircArc3d(
@@ -83,7 +87,7 @@ export class AcDbArc extends AcDbCurve {
       radius,
       startAngle,
       endAngle,
-      AcGeVector3d.Z_AXIS,
+      normal,
       AcGeVector3d.X_AXIS
     )
   }
@@ -205,6 +209,35 @@ export class AcDbArc extends AcDbCurve {
   }
 
   /**
+   * Gets the arc's unit normal vector in WCS coordinates.
+   *
+   * @returns The arc's unit normal vector
+   *
+   * @example
+   * ```typescript
+   * const normal = arc.normal;
+   * console.log(`Normal: ${normal.x}, ${normal.y}, ${normal.z}`);
+   * ```
+   */
+  get normal(): AcGeVector3d {
+    return this._geo.normal
+  }
+
+  /**
+   * Sets the arc's unit normal vector in WCS coordinates.
+   *
+   * @param value - The new arc's unit normal vector
+   *
+   * @example
+   * ```typescript
+   * arc.normal = new AcGeVector3d(0, 0, 1);
+   * ```
+   */
+  set normal(value: AcGeVector3dLike) {
+    this._geo.normal = value
+  }
+
+  /**
    * Gets the start point of this arc.
    *
    * The start point is calculated based on the center, radius, and start angle.
@@ -263,6 +296,129 @@ export class AcDbArc extends AcDbCurve {
    */
   get closed(): boolean {
     return this._geo.closed
+  }
+
+  /**
+   * Returns the full property definition for this arc entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable properties via {@link AcDbPropertyAccessor}
+   * so the property palette can update the arc in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            // --- Cennter Point ---
+            {
+              name: 'centerX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.x,
+                set: (v: number) => {
+                  this.center.x = v
+                }
+              }
+            },
+            {
+              name: 'centerY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.y,
+                set: (v: number) => {
+                  this.center.y = v
+                }
+              }
+            },
+            {
+              name: 'centerZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.z,
+                set: (v: number) => {
+                  this.center.z = v
+                }
+              }
+            },
+            {
+              name: 'radius',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.radius,
+                set: (v: number) => {
+                  this.radius = v
+                }
+              }
+            },
+            {
+              name: 'startAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startAngle,
+                set: (v: number) => {
+                  this.startAngle = v
+                }
+              }
+            },
+            {
+              name: 'endAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endAngle,
+                set: (v: number) => {
+                  this.endAngle = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

@@ -1,11 +1,11 @@
 {
   "name": "@mlightcad/data-model",
-  "version": "1.3.8",
+  "version": "1.3.11",
   "license": "MIT",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/mlightcad/realdwg-web"
+    "url": "https://github.com/mlightcad/realdwg-web"
   },
   "keywords": [
     "autocad",

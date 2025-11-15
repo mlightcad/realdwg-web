@@ -5,11 +5,13 @@ import {
   AcGePoint3dLike,
   AcGePointLike,
   AcGeVector3d,
+  AcGeVector3dLike,
   TAU
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents a circle entity in AutoCAD.
@@ -69,7 +71,7 @@ export class AcDbCircle extends AcDbCurve {
   constructor(
     center: AcGePointLike,
     radius: number,
-    normal: AcGeVector3d = AcGeVector3d.Z_AXIS
+    normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
     this._geo = new AcGeCircArc3d(
@@ -181,6 +183,107 @@ export class AcDbCircle extends AcDbCurve {
    */
   get closed(): boolean {
     return this._geo.closed
+  }
+
+  /**
+   * Returns the full property definition for this circle entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable center coordinates and radius via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the circle in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'centerX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.x,
+                set: (v: number) => {
+                  this.center.x = v
+                }
+              }
+            },
+            {
+              name: 'centerY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.y,
+                set: (v: number) => {
+                  this.center.y = v
+                }
+              }
+            },
+            {
+              name: 'centerZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.z,
+                set: (v: number) => {
+                  this.center.z = v
+                }
+              }
+            },
+            {
+              name: 'radius',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.radius,
+                set: (v: number) => {
+                  this.radius = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

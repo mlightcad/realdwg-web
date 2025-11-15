@@ -170,13 +170,18 @@ export class AcDbEntityConverter {
       arc.center,
       arc.radius,
       arc.startAngle,
-      arc.endAngle
+      arc.endAngle,
+      arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     )
     return dbEntity
   }
 
   private convertCirle(circle: DwgCircleEntity) {
-    const dbEntity = new AcDbCircle(circle.center, circle.radius)
+    const dbEntity = new AcDbCircle(
+      circle.center,
+      circle.radius,
+      circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
+    )
     return dbEntity
   }
 

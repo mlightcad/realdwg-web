@@ -807,7 +807,8 @@ export class AcDbDatabase extends AcDbObject {
       position += chunk.length
     }
 
-    const fileExtension = url.toLowerCase().split('.').pop()
+    const fileName = this.getFileNameFromUri(url)
+    const fileExtension = fileName.toLowerCase().split('.').pop()
     if (fileExtension === 'dwg') {
       // DWG files are binary, convert to ArrayBuffer
       await this.read(content.buffer, options, AcDbFileType.DWG)
@@ -993,6 +994,27 @@ export class AcDbDatabase extends AcDbObject {
       database: this,
       name: sysVarName
     })
+  }
+
+  /**
+   * Extracts the file name from a URI.
+   *
+   * @param uri - The URI to extract the file name from
+   * @returns The extracted file name, or empty string if extraction fails
+   * @private
+   */
+  private getFileNameFromUri(uri: string): string {
+    try {
+      // Create a new URL object
+      const url = new URL(uri)
+      // Get the pathname from the URL
+      const pathParts = url.pathname.split('/')
+      // Return the last part of the pathname as the file name
+      return pathParts[pathParts.length - 1] || ''
+    } catch (error) {
+      console.error('Invalid URI:', error)
+      return ''
+    }
   }
 }
 /* eslint-enable simple-import-sort/imports */

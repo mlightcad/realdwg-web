@@ -11,6 +11,7 @@ import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbRenderingCache } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents a block reference entity in AutoCAD.
@@ -211,6 +212,147 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   get blockTableRecord() {
     return this.database.tables.blockTable.getAt(this._blockName)
+  }
+
+  /**
+   * Returns the full property definition for this block reference entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable properties via {@link AcDbPropertyAccessor}
+   * so the property palette can update the block reference in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'blockName',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._blockName
+              }
+            },
+            {
+              name: 'positionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.x,
+                set: (v: number) => {
+                  this.position.x = v
+                }
+              }
+            },
+            {
+              name: 'positionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.y,
+                set: (v: number) => {
+                  this.position.y = v
+                }
+              }
+            },
+            {
+              name: 'positionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.z,
+                set: (v: number) => {
+                  this.position.z = v
+                }
+              }
+            },
+            {
+              name: 'rotation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rotation,
+                set: (v: number) => {
+                  this.rotation = v
+                }
+              }
+            },
+            {
+              name: 'scaleFactorsX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scaleFactors.x,
+                set: (v: number) => {
+                  this.scaleFactors.x = v
+                }
+              }
+            },
+            {
+              name: 'scaleFactorsY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scaleFactors.y,
+                set: (v: number) => {
+                  this.scaleFactors.y = v
+                }
+              }
+            },
+            {
+              name: 'scaleFactorsZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scaleFactors.z,
+                set: (v: number) => {
+                  this.scaleFactors.z = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

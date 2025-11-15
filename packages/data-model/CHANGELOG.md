@@ -1,5 +1,23 @@
 # @mlightcad/data-model
 
+## 1.3.11
+
+### Patch Changes
+
+- feat: add method 'properties' for more entities
+
+## 1.3.10
+
+### Patch Changes
+
+- fix: fix bug on getting file extension from url when it contains query parameters
+
+## 1.3.9
+
+### Patch Changes
+
+- feat: add approach to show properties of one entity
+
 ## 1.3.8
 
 ### Patch Changes

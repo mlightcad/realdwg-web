@@ -6,6 +6,7 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents an xline entity in AutoCAD.
@@ -152,6 +153,96 @@ export class AcDbXline extends AcDbCurve {
       this._unitDir.clone().multiplyScalar(-10).add(this._basePoint)
     )
     return extents
+  }
+
+  /**
+   * Returns the full property definition for this xline entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable start/end coordinates via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the xline in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'basePointX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.basePoint.x,
+                set: (v: number) => {
+                  this.basePoint.x = v
+                }
+              }
+            },
+            {
+              name: 'basePointY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.basePoint.y,
+                set: (v: number) => {
+                  this.basePoint.y = v
+                }
+              }
+            },
+            {
+              name: 'basePointZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.basePoint.z,
+                set: (v: number) => {
+                  this.basePoint.z = v
+                }
+              }
+            },
+            {
+              name: 'unitDirX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.unitDir.x,
+                set: (v: number) => {
+                  this.unitDir.x = v
+                }
+              }
+            },
+            {
+              name: 'unitDirY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.unitDir.y,
+                set: (v: number) => {
+                  this.unitDir.y = v
+                }
+              }
+            },
+            {
+              name: 'unitDirZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.unitDir.z,
+                set: (v: number) => {
+                  this.unitDir.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

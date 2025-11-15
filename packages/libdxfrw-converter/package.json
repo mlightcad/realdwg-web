@@ -1,10 +1,10 @@
 {
   "name": "@mlightcad/libdxfrw-converter",
-  "version": "3.1.8",
+  "version": "3.1.11",
   "type": "module",
   "repository": {
     "type": "git",
-    "url": "https://gitlab.com/mlightcad/realdwg-web"
+    "url": "https://github.com/mlightcad/realdwg-web"
   },
   "keywords": [
     "autocad",

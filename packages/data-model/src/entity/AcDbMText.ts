@@ -16,6 +16,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.
@@ -344,6 +345,207 @@ export class AcDbMText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     // TODO: Implement it correctly
     return new AcGeBox3d()
+  }
+
+  /**
+   * Returns the full property definition for this mtext entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes editable start/end coordinates via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the mtext in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'text',
+          properties: [
+            {
+              name: 'contents',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.contents,
+                set: (v: string) => {
+                  this.contents = v
+                }
+              }
+            },
+            {
+              name: 'styleName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.styleName,
+                set: (v: string) => {
+                  this.styleName = v
+                }
+              }
+            },
+            {
+              name: 'attachmentPoint',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcGiMTextAttachmentPoint[1], value: 1 },
+                { label: AcGiMTextAttachmentPoint[2], value: 2 },
+                { label: AcGiMTextAttachmentPoint[3], value: 3 },
+                { label: AcGiMTextAttachmentPoint[4], value: 4 },
+                { label: AcGiMTextAttachmentPoint[5], value: 5 },
+                { label: AcGiMTextAttachmentPoint[6], value: 6 },
+                { label: AcGiMTextAttachmentPoint[7], value: 7 },
+                { label: AcGiMTextAttachmentPoint[8], value: 8 },
+                { label: AcGiMTextAttachmentPoint[9], value: 9 }
+              ],
+              accessor: {
+                get: () => this.attachmentPoint,
+                set: (v: AcGiMTextAttachmentPoint) => {
+                  this.attachmentPoint = v
+                }
+              }
+            },
+            {
+              name: 'drawingDirection',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcGiMTextFlowDirection[1], value: 1 },
+                { label: AcGiMTextFlowDirection[2], value: 2 },
+                { label: AcGiMTextFlowDirection[3], value: 3 },
+                { label: AcGiMTextFlowDirection[4], value: 4 },
+                { label: AcGiMTextFlowDirection[5], value: 5 }
+              ],
+              accessor: {
+                get: () => this.drawingDirection,
+                set: (v: number) => {
+                  this.drawingDirection = v
+                }
+              }
+            },
+            {
+              name: 'textHeight',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.height,
+                set: (v: number) => {
+                  this.height = v
+                }
+              }
+            },
+            {
+              name: 'rotation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rotation,
+                set: (v: number) => {
+                  this.rotation = v
+                }
+              }
+            },
+            {
+              name: 'lineSpacingFactor',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.lineSpacingFactor,
+                set: (v: number) => {
+                  this.lineSpacingFactor = v
+                }
+              }
+            },
+            {
+              name: 'definedWidth',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.width,
+                set: (v: number) => {
+                  this.width = v
+                }
+              }
+            },
+            {
+              name: 'directionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.x,
+                set: (v: number) => {
+                  this.direction.x = v
+                }
+              }
+            },
+            {
+              name: 'directionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.y,
+                set: (v: number) => {
+                  this.direction.y = v
+                }
+              }
+            },
+            {
+              name: 'directionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.z,
+                set: (v: number) => {
+                  this.direction.z = v
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'locationX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.location.x,
+                set: (v: number) => {
+                  this.location.x = v
+                }
+              }
+            },
+            {
+              name: 'locationY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.location.y,
+                set: (v: number) => {
+                  this.location.y = v
+                }
+              }
+            },
+            {
+              name: 'locationZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.location.z,
+                set: (v: number) => {
+                  this.location.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   private getTextStyle(): AcGiBaseTextStyle {
