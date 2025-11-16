@@ -179,6 +179,8 @@ export class AcDbRenderingCache {
   ) {
     const results: AcGiEntity[] = []
     if (blockTableRecord != null) {
+      const basePoint = renderer.basePoint?.clone()
+      renderer.basePoint = undefined
       const key = this.createKey(blockTableRecord.name, color)
       let block: AcGiEntity | undefined
       if (this.has(key)) {
@@ -227,6 +229,7 @@ export class AcDbRenderingCache {
           block.applyMatrix(transform)
         }
       }
+      renderer.basePoint = basePoint
       return block
     } else {
       return renderer.group(results)
