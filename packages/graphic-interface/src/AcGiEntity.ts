@@ -1,9 +1,24 @@
-import { AcGeMatrix3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 /**
  * Interface that all of display objects need to implement.
  */
 export interface AcGiEntity {
+  /**
+   * JavaScript (and WebGL) use 64‑bit floating point numbers for CPU-side calculations,
+   * but GPU shaders typically use 32‑bit floats. A 32-bit float has ~7.2 decimal digits
+   * of precision. If passing 64-bit floating vertices data to GPU directly, it will 
+   * destroy number preciesion.
+   * 
+   * So we adopt a simpler but effective version of the “origin-shift” idea. Recompute 
+   * geometry using re-centered coordinates and apply offset to its position. The base
+   * point is extractly offset value.
+   * 
+   * Get the rendering base point.
+   * @returns Return the rendering base point.
+   */
+  get basePoint(): AcGePoint3d | undefined
+  set basePoint(value: AcGePoint3d | undefined)
   /**
    * Object id of the associated entity in drawing database. When adding this entity into scene,
    * do remember setting the value of this property.

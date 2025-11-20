@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.12
+
+### Patch Changes
+
+- feat: add basePoint for renderer and renderable entity
+
 ## 1.3.11
 
 ### Patch Changes

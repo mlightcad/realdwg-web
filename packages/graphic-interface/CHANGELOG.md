@@ -1,5 +1,11 @@
 # @mlightcad/graphic-interface
 
+## 3.0.8
+
+### Patch Changes
+
+- feat: add basePoint for renderer and renderable entity
+
 ## 3.0.7
 
 ### Patch Changes

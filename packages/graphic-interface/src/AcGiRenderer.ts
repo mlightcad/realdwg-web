@@ -22,6 +22,22 @@ export type AcGiFontMapping = Record<string, string>
 
 export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
   /**
+   * JavaScript (and WebGL) use 64‑bit floating point numbers for CPU-side calculations,
+   * but GPU shaders typically use 32‑bit floats. A 32-bit float has ~7.2 decimal digits
+   * of precision. If passing 64-bit floating vertices data to GPU directly, it will 
+   * destroy number preciesion.
+   * 
+   * So we adopt a simpler but effective version of the “origin-shift” idea. Recompute 
+   * geometry using re-centered coordinates and apply offset to its position. The base
+   * point is extractly offset value.
+   * 
+   * Get the rendering base point.
+   * @returns Return the rendering base point.
+   */
+  get basePoint(): AcGePoint3d | undefined
+  set basePoint(value: AcGePoint3d | undefined)
+
+  /**
    * Create one group
    * @param entities Input entities to group together
    * @returns Return created group

@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.12
+
+### Patch Changes
+
+- feat: add basePoint for renderer and renderable entity
+- Updated dependencies
+  - @mlightcad/data-model@1.3.12
+
 ## 3.1.11
 
 ### Patch Changes

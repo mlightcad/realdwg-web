@@ -184,7 +184,10 @@ export class AcDbRenderingCache {
       if (this.has(key)) {
         block = this.get(key)
       } else {
+        const basePoint = renderer.basePoint?.clone()
+        renderer.basePoint = undefined
         const entities = blockTableRecord.newIterator()
+        let isFirstEntity = true
         for (const entity of entities) {
           // If the color of this entity is 'byBlock', then store the original color of this entity color
           // and set the color of this entity to block's color. After renderering this entity, restore
@@ -197,9 +200,16 @@ export class AcDbRenderingCache {
           } else {
             this.addEntity(entity, results, renderer)
           }
+
+          if (isFirstEntity) {
+            const firstEntity = results[0]
+            renderer.basePoint = firstEntity.basePoint
+            isFirstEntity = false
+          }
         }
         block = renderer.group(results)
         if (block && cache) this.set(key, block)
+        renderer.basePoint = basePoint
       }
 
       if (block && transform) {
