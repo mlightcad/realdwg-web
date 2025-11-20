@@ -1,5 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
-import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbEntity } from 'entity'
 
@@ -221,6 +221,14 @@ export class AcDbRenderingCache {
       }
 
       if (block && transform) {
+        if (block.basePoint && renderer.basePoint) {
+          const offset = _tmpPoint3d.copy(block.basePoint).sub(renderer.basePoint)
+          const e = transform.elements
+          e[12] += e[0] * offset.x + e[4] * offset.y + e[8]  * offset.z
+          e[13] += e[1] * offset.x + e[5] * offset.y + e[9]  * offset.z
+          e[14] += e[2] * offset.x + e[6] * offset.y + e[10] * offset.z
+        }
+
         block.applyMatrix(transform)
         if (normal && (normal.x != 0 || normal.y != 0 || normal.z != 1)) {
           transform.setFromExtrusionDirection(normal)
@@ -254,3 +262,4 @@ export class AcDbRenderingCache {
 }
 
 const _tmpColor = /*@__PURE__*/ new AcCmColor()
+const _tmpPoint3d = /*@__PURE__*/ new AcGePoint3d()
