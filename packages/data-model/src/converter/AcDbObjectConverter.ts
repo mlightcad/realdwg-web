@@ -40,9 +40,20 @@ export class AcDbObjectConverter {
     const dbObject = new AcDbLayout()
     dbObject.layoutName = layout.layoutName
     dbObject.tabOrder = layout.tabOrder
-    if (layout.ownerObjectId) {
-      dbObject.blockTableRecordId = layout.ownerObjectId
+
+    if (layout.layoutName === 'Model') {
+      // Upper case model space name
+      const modelSpaceName = AcDbBlockTableRecord.MODEL_SPACE_NAME
+      model.tables.BLOCK_RECORD?.entries.some(btr => {
+        if (btr.name.toUpperCase() === modelSpaceName) {
+          dbObject.blockTableRecordId = btr.handle
+          return true
+        }
+        return false
+      })
     } else {
+      // layout.paperSpaceTableId doesn't point to the block table record asscicated with
+      // this layout. So let's get the assocated block table record id from block table.
       model.tables.BLOCK_RECORD?.entries.some(btr => {
         if (btr.layoutObjects === layout.handle) {
           dbObject.blockTableRecordId = btr.handle
@@ -50,21 +61,11 @@ export class AcDbObjectConverter {
         }
         return false
       })
-    }
 
-    // If the layout is not found in the block table due to some unknow reason,
-    // let's set the model space block table record id.
-    if (!dbObject.blockTableRecordId) {
-      if (layout.layoutName === 'Model') {
-        // Upper case model space name
-        const modelSpaceName = AcDbBlockTableRecord.MODEL_SPACE_NAME
-        model.tables.BLOCK_RECORD?.entries.some(btr => {
-          if (btr.name.toUpperCase() === modelSpaceName) {
-            dbObject.blockTableRecordId = btr.handle
-            return true
-          }
-          return false
-        })
+      // If blockTableRecordId value is still invalid, let's try to use
+      // layout.paperSpaceTableId finally
+      if (!dbObject.blockTableRecordId) {
+        dbObject.blockTableRecordId = layout.paperSpaceTableId
       }
     }
 
