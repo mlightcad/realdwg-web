@@ -1,9 +1,8 @@
 import {
   AcGeBox3d,
-  AcGeLine3d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePointLike,
-  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDimension } from './AcDbDimension'
@@ -129,7 +128,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    * alignedDim.dimLinePoint = new AcGePoint3d(5, 2.5, 0);
    * ```
    */
-  set dimLinePoint(value: AcGePoint3d) {
+  set dimLinePoint(value: AcGePoint3dLike) {
     this._dimLinePoint.copy(value)
   }
 
@@ -158,7 +157,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    * alignedDim.xLine1Point = new AcGePoint3d(0, 0, 0);
    * ```
    */
-  set xLine1Point(value: AcGePoint3d) {
+  set xLine1Point(value: AcGePoint3dLike) {
     this._xLine1Point.copy(value)
   }
 
@@ -187,7 +186,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    * alignedDim.xLine2Point = new AcGePoint3d(10, 5, 0);
    * ```
    */
-  set xLine2Point(value: AcGePoint3d) {
+  set xLine2Point(value: AcGePoint3dLike) {
     this._xLine2Point.copy(value)
   }
 
@@ -262,77 +261,5 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   protected get isAppendArrow() {
     return false
-  }
-
-  /**
-   * Return one array which contains three lines of the alinged dimension.
-   * - The first line in the array is dimension line.
-   * - The second line and the third line in the array are extension lines.
-   * @returns Return three lines of the alinged dimension
-   */
-  protected calculateLines() {
-    const lines: AcGeLine3d[] = []
-
-    const extensionLine1 = this.createExtensionLine(this._xLine1Point)
-    const extensionLine2 = this.createExtensionLine(this._xLine2Point)
-
-    const intersectionPoint1 = this.findIntersectionPoint(
-      extensionLine1,
-      this._dimLinePoint
-    )
-    const intersectionPoint2 = this.findIntersectionPoint(
-      extensionLine2,
-      this._dimLinePoint
-    )
-    const dimensionLine = new AcGeLine3d(intersectionPoint1, intersectionPoint2)
-    lines.push(dimensionLine)
-
-    // Create the first extension line with extension
-    extensionLine1.endPoint = intersectionPoint1
-    this.adjustExtensionLine(extensionLine1)
-    lines.push(extensionLine1)
-
-    // Create the second extension line with extension
-    extensionLine2.endPoint = intersectionPoint2
-    this.adjustExtensionLine(extensionLine2)
-    lines.push(extensionLine2)
-
-    return lines
-  }
-
-  private createExtensionLine(point: AcGePoint3d) {
-    const angle = this.rotation + Math.PI / 2
-    const anotherPoint = this.findPointOnLine2(point, angle, 100)
-    return new AcGeLine3d(point, { ...anotherPoint, z: point.z })
-  }
-
-  /**
-   * Compute the intersection point between a line 'line1' and a line 'line2' that passes through
-   * a given point 'p' and is perpendicular to line 'line1'.
-   *
-   * @param line The 'line1'.
-   * @param p The point through which the perpendicular 'line2' passes.
-   * @returns Returns the intersection point of 'line1' and 'line2'.
-   */
-  private findIntersectionPoint(line1: AcGeLine3d, p: AcGeVector3d) {
-    const p1 = line1.startPoint
-    const p2 = line1.endPoint
-
-    // Direction of line1 (p1 - p2)
-    const directionOfLine1 = new AcGeVector3d().subVectors(p2, p1).normalize()
-
-    // Vector from point 'p1' to point 'p3'
-    const vectorFromP1ToP3 = new AcGeVector3d().subVectors(p, p1)
-
-    // Project vectorAP onto directionL to get the projection vector
-    const projectionLength = vectorFromP1ToP3.dot(directionOfLine1)
-    const projectionVector = new AcGeVector3d()
-      .copy(directionOfLine1)
-      .multiplyScalar(projectionLength)
-
-    // Intersection point is the point on line L at the projection
-    const intersection = new AcGeVector3d().addVectors(p1, projectionVector)
-
-    return intersection
   }
 }

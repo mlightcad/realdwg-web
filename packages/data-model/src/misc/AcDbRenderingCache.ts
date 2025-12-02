@@ -208,7 +208,12 @@ export class AcDbRenderingCache {
           }
         }
         block = renderer.group(results)
-        if (block && cache) this.set(key, block)
+        if (block && cache) {
+          // If one block is one transient block whose name starts with '*U', don't cache it
+          if (AcDbBlockTableRecord.name && !AcDbBlockTableRecord.name.startsWith('*U')) {
+            this.set(key, block)
+          }
+        }
         renderer.basePoint = basePoint
       }
 

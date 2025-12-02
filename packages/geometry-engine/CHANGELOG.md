@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 3.0.7
+
+### Patch Changes
+
+- feat: refine snap related api
+
 ## 3.0.6
 
 ### Patch Changes

@@ -226,7 +226,7 @@ export class AcGeLine3d extends AcGeCurve3d {
    * @param point Input one point to calculate the point on the line that is the closest to this point
    * @returns Return the point on the line that is the closest to the given point.
    */
-  perpPoint(point: AcGePoint3d) {
+  perpPoint(point: AcGePoint3dLike) {
     const lineDirection = this.direction
     const lineStart = this.startPoint
 

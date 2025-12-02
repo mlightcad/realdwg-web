@@ -358,7 +358,6 @@ export abstract class AcDbEntity extends AcDbObject {
    * to provide entity-specific snap points.
    *
    * @param osnapMode - The object snap mode
-   * @param gsSelectionMark - The selection mark
    * @param pickPoint - The pick point
    * @param lastPoint - The last point
    * @param snapPoints - Array to populate with snap points
@@ -373,11 +372,9 @@ export abstract class AcDbEntity extends AcDbObject {
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
     osnapMode: AcDbOsnapMode,
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-    gsSelectionMark: number,
+    pickPoint: AcGePoint3dLike,
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-    pickPoint: AcGePoint3d,
-    // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-    lastPoint: AcGePoint3d,
+    lastPoint: AcGePoint3dLike,
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
     snapPoints: AcGePoint3d[]
   ) {}
@@ -592,7 +589,9 @@ export abstract class AcDbEntity extends AcDbObject {
   protected attachEntityInfo(target: AcGiEntity | null | undefined) {
     if (target) {
       target.objectId = this.objectId
-      target.ownerId = this.ownerId
+      if (this.attrs.has('ownerId')) {
+        target.ownerId = this.ownerId
+      }
       target.layerName = this.layer
       target.visible = this.visibility
     }

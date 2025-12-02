@@ -8,7 +8,7 @@ import {
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
 import { AcDbEntity } from '../entity'
-import { AcDbAngleUnits, AcDbUnitsValue } from '../misc'
+import { AcDbAngleUnits, AcDbDataGenerator, AcDbUnitsValue } from '../misc'
 import {
   AcDbDictionary,
   AcDbLayout,
@@ -32,9 +32,6 @@ import {
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
-import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
-import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
-import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
 import { AcDbDwgVersion } from './AcDbDwgVersion'
 
 /**
@@ -864,91 +861,31 @@ export class AcDbDatabase extends AcDbObject {
       layout: true
     }
   ) {
+    const generator = new AcDbDataGenerator(this)
+
     // Create default layer
     if (options.layer) {
-      const defaultColor = new AcCmColor()
-      defaultColor.colorIndex = 7 // white
-      this._tables.layerTable.add(
-        new AcDbLayerTableRecord({
-          name: '0',
-          standardFlags: 0,
-          linetype: 'Continuous',
-          lineWeight: 0,
-          isOff: false,
-          color: defaultColor,
-          isPlottable: true
-        })
-      )
+      generator.createDefaultLayer()
     }
 
     // Create default line type
     if (options.lineType) {
-      this._tables.linetypeTable.add(
-        new AcDbLinetypeTableRecord({
-          name: 'ByBlock',
-          standardFlag: 0,
-          description: '',
-          totalPatternLength: 0
-        })
-      )
-      this._tables.linetypeTable.add(
-        new AcDbLinetypeTableRecord({
-          name: 'ByLayer',
-          standardFlag: 0,
-          description: '',
-          totalPatternLength: 0
-        })
-      )
-      this._tables.linetypeTable.add(
-        new AcDbLinetypeTableRecord({
-          name: 'Continuous',
-          standardFlag: 0,
-          description: 'Solid line',
-          totalPatternLength: 0
-        })
-      )
+      generator.createDefaultLineType()
     }
 
     // Create default text style
     if (options.textStyle) {
-      this._tables.textStyleTable.add(
-        new AcDbTextStyleTableRecord({
-          name: 'Standard',
-          standardFlag: 0,
-          fixedTextHeight: 0,
-          widthFactor: 1,
-          obliqueAngle: 0,
-          textGenerationFlag: 0,
-          lastHeight: 0.2,
-          font: 'SimKai',
-          bigFont: '',
-          extendedFont: 'SimKai'
-        })
-      )
+      generator.createDefaultTextStyle()
     }
 
     // Create default dimension style
     if (options.dimStyle) {
-      this._tables.dimStyleTable.add(
-        new AcDbDimStyleTableRecord({
-          name: 'Standard',
-          dimtxsty: 'Standard'
-        })
-      )
+      generator.createDefaultDimStyle()
     }
 
-    // Create default layer for model space
+    // Create default layout for model space
     if (options.layout) {
-      const layout = new AcDbLayout()
-      layout.layoutName = 'Model'
-      layout.tabOrder = 0
-      layout.blockTableRecordId = this._tables.blockTable.modelSpace.objectId
-      layout.limits.min.copy({ x: 0, y: 0 })
-      layout.limits.max.copy({ x: 1000000, y: 1000000 })
-      layout.extents.min.copy({ x: 0, y: 0, z: 0 })
-      layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
-      this._dictionaries.layouts.setAt(layout.layoutName, layout)
-      this._tables.blockTable.modelSpace.layoutId = layout.objectId
+      generator.createDefaultLayout()
     }
   }
 

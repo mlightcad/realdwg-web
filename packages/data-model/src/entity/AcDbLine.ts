@@ -283,7 +283,6 @@ export class AcDbLine extends AcDbCurve {
    * specified snap mode.
    *
    * @param osnapMode - The object snap mode (Endpoint, Midpoint, Nearest, Perpendicular, Tangent)
-   * @param _gsSelectionMark - The selection mark (unused)
    * @param pickPoint - The point where the user picked
    * @param _lastPoint - The last point (unused)
    * @param snapPoints - Array to populate with snap points
@@ -297,10 +296,9 @@ export class AcDbLine extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _gsSelectionMark: number,
-    pickPoint: AcGePoint3d,
-    _lastPoint: AcGePoint3d,
-    snapPoints: AcGePoint3d[]
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
   ) {
     const startPoint = this.startPoint
     const endPoint = this.endPoint
