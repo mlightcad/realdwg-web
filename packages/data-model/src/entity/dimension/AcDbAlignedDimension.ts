@@ -2,7 +2,7 @@ import {
   AcGeBox3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike,
+  AcGePointLike
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDimension } from './AcDbDimension'

@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.16
+
+### Patch Changes
+
+- feat: add system variable manager
+
 ## 1.3.15
 
 ### Patch Changes
