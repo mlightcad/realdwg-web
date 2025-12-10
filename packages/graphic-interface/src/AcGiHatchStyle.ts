@@ -7,18 +7,11 @@ export interface AcGiHatchPatternLine {
   dashPattern: number[]
 }
 
-export interface AcGiHatchType {
-  solidFill: boolean
-  patternAngle: number
-  patternLines: AcGiHatchPatternLine[]
-}
-
 /**
  * Hatch style
  */
-export interface AcGiHatchStyle extends AcGiHatchType {
-  /**
-   * Line color
-   */
-  color: number
+export interface AcGiHatchStyle {
+  solidFill: boolean
+  patternAngle: number
+  patternLines: AcGiHatchPatternLine[]
 }

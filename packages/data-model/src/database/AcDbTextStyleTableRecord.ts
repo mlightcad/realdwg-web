@@ -1,4 +1,4 @@
-import { AcGiBaseTextStyle } from '@mlightcad/graphic-interface'
+import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
@@ -19,7 +19,7 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  */
 export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   /** The text style configuration */
-  private _textStyle: AcGiBaseTextStyle
+  private _textStyle: AcGiTextStyle
   /** Whether text drawn with this style is vertical */
   private _isVertical: boolean
 
@@ -35,7 +35,7 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    * const record = new AcDbTextStyleTableRecord(textStyle);
    * ```
    */
-  constructor(textStyle: AcGiBaseTextStyle) {
+  constructor(textStyle: AcGiTextStyle) {
     super()
     this.name = textStyle.name
     this._textStyle = textStyle

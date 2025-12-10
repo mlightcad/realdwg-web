@@ -353,7 +353,7 @@ export class AcDbRasterImage extends AcDbEntity {
         roation: this._rotation
       })
     } else {
-      return renderer.lines(points, this.lineStyle)
+      return renderer.lines(points)
     }
   }
 

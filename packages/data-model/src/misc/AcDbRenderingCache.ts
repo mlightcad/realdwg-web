@@ -194,7 +194,7 @@ export class AcDbRenderingCache {
           // its original color
           if (entity.color.isByBlock && color) {
             _tmpColor.copy(entity.color)
-            entity.color.color = color
+            entity.color.setRGBValue(color)
             this.addEntity(entity, results, renderer)
             entity.color.copy(_tmpColor)
           } else {

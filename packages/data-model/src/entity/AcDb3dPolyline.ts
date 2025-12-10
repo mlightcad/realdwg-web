@@ -149,6 +149,6 @@ export class AcDb3dPolyline extends AcDbCurve {
     tmp.forEach(point =>
       points.push(new AcGePoint3d().set(point.x, point.y, 0))
     )
-    return renderer.lines(points, this.lineStyle)
+    return renderer.lines(points)
   }
 }

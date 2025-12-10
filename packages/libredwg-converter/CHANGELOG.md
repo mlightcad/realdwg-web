@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.1.17
+
+### Patch Changes
+
+- feat: support changing layer color
+- Updated dependencies
+  - @mlightcad/data-model@1.3.17
+
 ## 3.1.16
 
 ### Patch Changes

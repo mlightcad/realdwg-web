@@ -13,8 +13,4 @@ export interface AcGiPointStyle {
    * - < 0: Specifie a percentage of the viewport size
    */
   displaySize: number
-  /**
-   * Point color
-   */
-  color: number
 }

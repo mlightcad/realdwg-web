@@ -39,7 +39,6 @@ export class AcDbLayerTable extends AcDbSymbolTable<AcDbLayerTableRecord> {
     super(db)
     // The empty database should have one layer named '0'
     const defaultColor = new AcCmColor()
-    defaultColor.color = 0xffffff
     const layer0 = new AcDbLayerTableRecord({
       name: '0',
       standardFlags: 0,

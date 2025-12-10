@@ -102,6 +102,8 @@ export class AcDbHatch extends AcDbEntity {
 
   /** The underlying geometric area object */
   private _geo: AcGeArea2d
+  /** The flag to indicate whether the hatch object is configured for solid fill */
+  private _isSolidFill: boolean
   /** The elevation (Z-coordinate) of the hatch plane */
   private _elevation: number
   /** The definition lines for the hatch pattern */
@@ -135,12 +137,26 @@ export class AcDbHatch extends AcDbEntity {
     super()
     this._elevation = 0
     this._geo = new AcGeArea2d()
+    this._isSolidFill = false
     this._definitionLines = []
     this._patternName = ''
     this._patternType = AcDbHatchPatternType.Predefined
     this._patternAngle = 0
     this._patternScale = 1
     this._hatchStyle = AcDbHatchStyle.Normal
+  }
+
+  /**
+   * Gets whether the hatch object is configured for solid fill.
+   */
+  get isSolidFill() {
+    return this._isSolidFill || this._patternName.toUpperCase() === 'SOLID'
+  }
+  /**
+   * Sets whether the hatch object is configured for solid fill.
+   */
+  set isSolidFill(value: boolean) {
+    this._isSolidFill = value
   }
 
   /**
@@ -232,11 +248,12 @@ export class AcDbHatch extends AcDbEntity {
    * @inheritdoc
    */
   draw(renderer: AcGiRenderer) {
-    return renderer.area(this._geo, {
-      color: this.rgbColor,
-      solidFill: false,
+    const traits = renderer.subEntityTraits
+    traits.fillType = {
+      solidFill: this.isSolidFill,
       patternAngle: this.patternAngle,
       patternLines: this.definitionLines
-    })
+    }
+    return renderer.area(this._geo)
   }
 }

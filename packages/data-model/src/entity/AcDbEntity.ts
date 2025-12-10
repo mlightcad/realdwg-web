@@ -7,7 +7,8 @@ import {
 import {
   AcGiEntity,
   AcGiLineStyle,
-  AcGiRenderer
+  AcGiRenderer,
+  AcGiStyleType
 } from '@mlightcad/graphic-interface'
 
 import { AcDbObject } from '../base/AcDbObject'
@@ -131,7 +132,7 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
-   * Gets the RGB color of this entity after converting color index.
+   * Gets the RGB color of this entity.
    *
    * This method handles the conversion of color indices (including ByLayer and ByBlock)
    * to actual RGB colors. It resolves layer colors and block colors as needed.
@@ -149,16 +150,17 @@ export abstract class AcDbEntity extends AcDbObject {
     let color = this.database.cecolor
     if (this.color.isByLayer) {
       const layerColor = this.getLayerColor()
-      if (layerColor && layerColor.color) {
+      if (layerColor && layerColor.RGB != null) {
         color = layerColor
       }
     } else if (this.color.isByBlock) {
       // Do nothing for common entity and just use default color in database
       // Block reference entity need to override this method handle 'byBlock'.
-    } else if (this.color.color != null) {
+    } else if (this.color.RGB != null) {
       color = this.color
     }
-    return color.color == null ? 0xffffff : color.color
+    const rgb = color.RGB
+    return rgb != null ? rgb : 0xffffff
   }
 
   /**
@@ -478,7 +480,6 @@ export abstract class AcDbEntity extends AcDbObject {
             get: (): string => this.objectId
           }
         },
-
         {
           name: 'layer',
           type: 'string',
@@ -487,6 +488,17 @@ export abstract class AcDbEntity extends AcDbObject {
             get: (): string => this.layer,
             set: (newVal: string): void => {
               this.layer = newVal
+            }
+          }
+        },
+        {
+          name: 'color',
+          type: 'color',
+          editable: true,
+          accessor: {
+            get: (): AcCmColor => this.color,
+            set: (newVal: AcCmColor): void => {
+              this.color.copy(newVal)
             }
           }
         }
@@ -507,17 +519,16 @@ export abstract class AcDbEntity extends AcDbObject {
    * const lineStyle = entity.lineStyle;
    * ```
    */
-  protected get lineStyle(): AcGiLineStyle {
-    const linetypeName = this.getLineType()
-    const linetypeRecord =
-      this.database?.tables.linetypeTable.getAt(linetypeName)
-    if (linetypeRecord) {
-      return { ...linetypeRecord.linetype, color: this.rgbColor }
+  get lineStyle(): AcGiLineStyle {
+    const { type, name } = this.getLineType()
+    const lineTypeRecord = this.database?.tables.linetypeTable.getAt(name)
+    if (lineTypeRecord) {
+      return { type, ...lineTypeRecord.linetype }
     } else {
       return {
-        name: linetypeName,
+        type,
+        name,
         standardFlag: 0,
-        color: this.rgbColor,
         description: '',
         totalPatternLength: 0
       }
@@ -530,24 +541,38 @@ export abstract class AcDbEntity extends AcDbObject {
    * This method resolves the line type, handling ByLayer and ByBlock
    * references as needed.
    *
-   * @returns The resolved line type name
+   * @returns The resolved line type
    *
    * @example
    * ```typescript
    * const lineType = entity.getLineType();
    * ```
    */
-  private getLineType(): string {
+  private getLineType(): { type: AcGiStyleType; name: string } {
     if (this.lineType == ByLayer) {
       const layer = this.database.tables.layerTable.getAt(this.layer)
-      if (layer && layer.linetype) return layer.linetype
+      if (layer && layer.linetype) {
+        return {
+          type: 'ByLayer',
+          name: layer.linetype
+        }
+      }
     } else if (this.lineType == ByBlock) {
       // TODO: Get line type correctly
-      return DEFAULT_LINE_TYPE
+      return {
+        type: 'ByBlock',
+        name: DEFAULT_LINE_TYPE
+      }
     } else {
-      return this.lineType
+      return {
+        type: 'UserSpecified',
+        name: this.lineType
+      }
     }
-    return DEFAULT_LINE_TYPE
+    return {
+      type: 'UserSpecified',
+      name: DEFAULT_LINE_TYPE
+    }
   }
 
   /**

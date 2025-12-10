@@ -19,8 +19,8 @@ import {
   AcDbTextStyleTableRecord,
   AcDbViewportTableRecord,
   AcGiBaseLineStyle,
-  AcGiBaseTextStyle,
-  AcGiLineTypePatternElement
+  AcGiLineTypePatternElement,
+  AcGiTextStyle
 } from '@mlightcad/data-model'
 import {
   DRW_Database,
@@ -129,7 +129,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     for (let index = 0, size = textStyles.size(); index < size; ++index) {
       const item = textStyles.get(index)
       if (item != null) {
-        const textStyle: AcGiBaseTextStyle = {
+        const textStyle: AcGiTextStyle = {
           name: item.name,
           standardFlag: item.flags,
           fixedTextHeight: item.height,

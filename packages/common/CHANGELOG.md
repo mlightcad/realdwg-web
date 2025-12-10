@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.6
+
+### Patch Changes
+
+- feat: support changing layer color
+
 ## 1.2.5
 
 ### Patch Changes

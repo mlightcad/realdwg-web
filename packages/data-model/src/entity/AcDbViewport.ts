@@ -253,72 +253,60 @@ export class AcDbViewport extends AcDbEntity {
   private createViewportRect(viewport: AcGiViewport, renderer: AcGiRenderer) {
     const lines: AcGiEntity[] = []
     lines.push(
-      renderer.lines(
-        [
-          new AcGePoint3d(
-            viewport.centerPoint.x - viewport.width / 2,
-            viewport.centerPoint.y - viewport.height / 2,
-            0
-          ),
-          new AcGePoint3d(
-            viewport.centerPoint.x + viewport.width / 2,
-            viewport.centerPoint.y - viewport.height / 2,
-            0
-          )
-        ],
-        this.lineStyle
-      )
+      renderer.lines([
+        new AcGePoint3d(
+          viewport.centerPoint.x - viewport.width / 2,
+          viewport.centerPoint.y - viewport.height / 2,
+          0
+        ),
+        new AcGePoint3d(
+          viewport.centerPoint.x + viewport.width / 2,
+          viewport.centerPoint.y - viewport.height / 2,
+          0
+        )
+      ])
     )
     lines.push(
-      renderer.lines(
-        [
-          new AcGePoint3d(
-            viewport.centerPoint.x + viewport.width / 2,
-            viewport.centerPoint.y - viewport.height / 2,
-            0
-          ),
-          new AcGePoint3d(
-            viewport.centerPoint.x + viewport.width / 2,
-            viewport.centerPoint.y + viewport.height / 2,
-            0
-          )
-        ],
-        this.lineStyle
-      )
+      renderer.lines([
+        new AcGePoint3d(
+          viewport.centerPoint.x + viewport.width / 2,
+          viewport.centerPoint.y - viewport.height / 2,
+          0
+        ),
+        new AcGePoint3d(
+          viewport.centerPoint.x + viewport.width / 2,
+          viewport.centerPoint.y + viewport.height / 2,
+          0
+        )
+      ])
     )
     lines.push(
-      renderer.lines(
-        [
-          new AcGePoint3d(
-            viewport.centerPoint.x + viewport.width / 2,
-            viewport.centerPoint.y + viewport.height / 2,
-            0
-          ),
-          new AcGePoint3d(
-            viewport.centerPoint.x - viewport.width / 2,
-            viewport.centerPoint.y + viewport.height / 2,
-            0
-          )
-        ],
-        this.lineStyle
-      )
+      renderer.lines([
+        new AcGePoint3d(
+          viewport.centerPoint.x + viewport.width / 2,
+          viewport.centerPoint.y + viewport.height / 2,
+          0
+        ),
+        new AcGePoint3d(
+          viewport.centerPoint.x - viewport.width / 2,
+          viewport.centerPoint.y + viewport.height / 2,
+          0
+        )
+      ])
     )
     lines.push(
-      renderer.lines(
-        [
-          new AcGePoint3d(
-            viewport.centerPoint.x - viewport.width / 2,
-            viewport.centerPoint.y + viewport.height / 2,
-            0
-          ),
-          new AcGePoint3d(
-            viewport.centerPoint.x - viewport.width / 2,
-            viewport.centerPoint.y - viewport.height / 2,
-            0
-          )
-        ],
-        this.lineStyle
-      )
+      renderer.lines([
+        new AcGePoint3d(
+          viewport.centerPoint.x - viewport.width / 2,
+          viewport.centerPoint.y + viewport.height / 2,
+          0
+        ),
+        new AcGePoint3d(
+          viewport.centerPoint.x - viewport.width / 2,
+          viewport.centerPoint.y - viewport.height / 2,
+          0
+        )
+      ])
     )
     return lines
   }

@@ -126,6 +126,9 @@ importers:
 
   packages/graphic-interface:
     dependencies:
+      '@mlightcad/common':
+        specifier: workspace:*
+        version: link:../common
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
@@ -145,8 +148,8 @@ importers:
         specifier: workspace:*
         version: link:../data-model
       '@mlightcad/libredwg-web':
-        specifier: 0.4.2
-        version: 0.4.2
+        specifier: 0.4.3
+        version: 0.4.3
     devDependencies:
       vite:
         specifier: ^5.2.10
@@ -1365,8 +1368,8 @@ packages:
   '@mlightcad/libdxfrw-web@0.0.9':
     resolution: {integrity: sha512-6fqGbjKWwI93cq8vwpXiFdAzWfdJjcIlLuAYwUvgTcEjx5jPvbd+tkzY7mX2/a8iMm/b/auGVzkgf1wxezHYIw==}
 
-  '@mlightcad/libredwg-web@0.4.2':
-    resolution: {integrity: sha512-ACmRvq85lU9NQuGde+qxnWXvReDeAcMqUuSf5FKjFOuNJTYYxB2jQ2Mpr75MtIhJtb00pzrNfW7/F1yYQ7BK/A==}
+  '@mlightcad/libredwg-web@0.4.3':
+    resolution: {integrity: sha512-t0tJQYRoQsSlMijbHauacPXYiyS02UD+k0ehLaVCLnNksddm1YjGcbfSH0Bd4HiM5ipr+nqN8e0df8U4C0OBMA==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -6223,7 +6226,7 @@ snapshots:
 
   '@mlightcad/libdxfrw-web@0.0.9': {}
 
-  '@mlightcad/libredwg-web@0.4.2': {}
+  '@mlightcad/libredwg-web@0.4.3': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

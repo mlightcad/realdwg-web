@@ -1,4 +1,5 @@
 import { AcCmColor, defaults } from '@mlightcad/common'
+import { AcGiLineStyle } from '@mlightcad/graphic-interface'
 
 import {
   AcDbSymbolTableRecord,
@@ -332,6 +333,24 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   }
   set linetype(value: string) {
     this.setAttr('linetype', value)
+  }
+
+  /**
+   * Gets the line style for this layer.
+   *
+   * This method returns the line style based on the layer's linetype
+   * and other properties.
+   *
+   * @returns The line style object
+   */
+  get lineStyle(): AcGiLineStyle | undefined {
+    const lineTypeRecord = this.database?.tables.linetypeTable.getAt(
+      this.linetype
+    )
+    if (lineTypeRecord) {
+      return { type: 'UserSpecified', ...lineTypeRecord.linetype }
+    }
+    return undefined
   }
 
   /**

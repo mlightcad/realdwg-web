@@ -1,3 +1,5 @@
+import { AcGiStyleType } from 'AcGiStyleType'
+
 import { AcGiArrowType } from './AcGiArrowType'
 
 /**
@@ -95,9 +97,13 @@ export interface AcGiBaseLineStyle {
  */
 export interface AcGiLineStyle extends AcGiBaseLineStyle {
   /**
-   * Line color
+   * Indicates how the style is determined for this entity.
+   *
+   * - `ByLayer`: The style is inherited from the layer the entity belongs to.
+   * - `ByBlock`: The style is inherited from the block reference containing the entity.
+   * - `UserSpecified`: The style is explicitly defined on the entity itself.
    */
-  color: number
+  type: AcGiStyleType
   /**
    * Arrow style of arrows at the start point and end point of one line.
    * If it is undefined, no arrow style applied at the start and end points.

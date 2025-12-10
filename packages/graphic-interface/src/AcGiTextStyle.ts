@@ -33,7 +33,7 @@ export interface AcGiMTextData {
   widthFactor?: number
 }
 
-export interface AcGiBaseTextStyle {
+export interface AcGiTextStyle {
   name: string
   standardFlag: number
   fixedTextHeight: number
@@ -44,13 +44,4 @@ export interface AcGiBaseTextStyle {
   font: string
   bigFont: string
   extendedFont?: string
-}
-
-/**
- * Text style
- */
-export interface AcGiTextStyle extends AcGiBaseTextStyle {
-  color: number
-  byLayerColor?: number
-  byBlockColor?: number
 }

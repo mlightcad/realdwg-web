@@ -5,7 +5,6 @@ import {
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
 import {
-  AcGiBaseTextStyle,
   AcGiEntity,
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
@@ -399,16 +398,13 @@ export class AcDbTable extends AcDbBlockReference {
               rotation: this.rotation,
               attachmentPoint: attachmentPoint
             }
-            const textStyle: AcGiTextStyle = {
-              ...this.getTextStyle(cell),
-              color: this.color.color!
-            }
+            const textStyle: AcGiTextStyle = this.getTextStyle(cell)
             results.push(renderer.mtext(mtextData, textStyle))
           }
         }
       }
     }
-    results.push(renderer.lineSegments(points, 3, indices, this.lineStyle))
+    results.push(renderer.lineSegments(points, 3, indices))
 
     const group = renderer.group(results)
     const quaternion = new AcGeQuaternion()
@@ -460,7 +456,7 @@ export class AcDbTable extends AcDbBlockReference {
    * @returns The text style configuration for the cell
    * @private
    */
-  private getTextStyle(cell: AcDbTableCell): AcGiBaseTextStyle {
+  private getTextStyle(cell: AcDbTableCell): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
     let style: AcDbTextStyleTableRecord | undefined
     if (cell.textStyle) {

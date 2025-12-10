@@ -51,6 +51,42 @@ export function clone<T>(obj: T): T {
 }
 
 /**
+ * Deeply clones a value (object, array, Date, RegExp, or primitive)
+ * @param value The value to deep clone
+ * @returns A deep copy of the input value
+ */
+export function deepClone<T>(value: T): T {
+  // Handle primitives (string, number, boolean, null, undefined, symbol, bigint)
+  if (value === null || typeof value !== 'object') {
+    return value
+  }
+
+  // Handle Date
+  if (value instanceof Date) {
+    return new Date(value.getTime()) as T
+  }
+
+  // Handle RegExp
+  if (value instanceof RegExp) {
+    return new RegExp(value.source, value.flags) as T
+  }
+
+  // Handle Array
+  if (Array.isArray(value)) {
+    return value.map(deepClone) as T
+  }
+
+  // Handle plain objects
+  const clonedObj = {} as { [K in keyof T]: T[K] }
+  for (const key in value) {
+    if (Object.prototype.hasOwnProperty.call(value, key)) {
+      clonedObj[key] = deepClone(value[key])
+    }
+  }
+  return clonedObj
+}
+
+/**
  * Assigns own enumerable properties of source objects to the destination object
  * for all destination properties that resolve to undefined.
  *

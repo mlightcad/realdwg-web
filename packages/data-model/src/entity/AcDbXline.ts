@@ -288,6 +288,6 @@ export class AcDbXline extends AcDbCurve {
     points.push(
       this._unitDir.clone().multiplyScalar(1000000).add(this._basePoint)
     )
-    return renderer.lines(points, this.lineStyle)
+    return renderer.lines(points)
   }
 }

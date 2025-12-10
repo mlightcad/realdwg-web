@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.17
+
+### Patch Changes
+
+- feat: support changing layer color
+
 ## 1.3.16
 
 ### Patch Changes

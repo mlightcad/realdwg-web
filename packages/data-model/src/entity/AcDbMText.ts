@@ -4,11 +4,7 @@ import {
   AcGePoint3dLike,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
-import {
-  AcGiBaseTextStyle,
-  AcGiRenderer,
-  AcGiTextStyle
-} from '@mlightcad/graphic-interface'
+import { AcGiRenderer, AcGiTextStyle } from '@mlightcad/graphic-interface'
 import {
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
@@ -548,7 +544,7 @@ export class AcDbMText extends AcDbEntity {
     }
   }
 
-  private getTextStyle(): AcGiBaseTextStyle {
+  private getTextStyle(): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
     let style = textStyleTable.getAt(this.styleName)
     if (!style) {
@@ -585,8 +581,7 @@ export class AcDbMText extends AcDbEntity {
       lineSpaceFactor: this.lineSpacingFactor
     }
     const textStyle: AcGiTextStyle = {
-      ...this.getTextStyle(),
-      color: this.rgbColor
+      ...this.getTextStyle()
     }
     return renderer.mtext(mtextData, textStyle, delay)
   }

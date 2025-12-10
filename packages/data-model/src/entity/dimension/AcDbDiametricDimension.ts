@@ -223,10 +223,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
   ) {
     if (lineArrowStyle) {
       const points = [line.startPoint, line.endPoint]
-      return renderer.lines(points, {
-        ...this.lineStyle,
-        arrows: lineArrowStyle
-      })
+      return renderer.lines(points)
     } else {
       return line.draw(renderer)
     }

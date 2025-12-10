@@ -476,7 +476,13 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   protected processHeader(model: DwgDatabase, db: AcDbDatabase) {
     const header = model.header
     // Color index 256 is 'ByLayer'
-    db.cecolor.colorIndex = (header.CECOLOR as number) || 256
+    if (header.CECOLOR) {
+      if (header.CECOLOR.index >= 0 && header.CECOLOR.index <= 256) {
+        db.cecolor.colorIndex = header.CECOLOR.index
+      } else {
+        db.cecolor.setRGBValue(header.CECOLOR.rgb)
+      }
+    }
     db.angBase = header.ANGBASE ?? 0
     db.angDir = header.ANGDIR ?? 0
     db.aunits = header.AUNITS ?? 0

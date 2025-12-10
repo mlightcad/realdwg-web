@@ -1,6 +1,7 @@
 import {
   ArcEntity,
   FaceEntity,
+  HatchSolidFill,
   SmoothType,
   VertexFlag
 } from '@mlightcad/dxf-json'
@@ -437,6 +438,7 @@ export class AcDbEntityConverter {
         dashPattern: item.numberOfDashLengths > 0 ? item.dashLengths : []
       })
     })
+    dbEntity.isSolidFill = hatch.solidFill == HatchSolidFill.SolidFill
     dbEntity.hatchStyle = hatch.hatchStyle as unknown as AcDbHatchStyle
     dbEntity.patternName = hatch.patternName
     dbEntity.patternType = hatch.patternType as unknown as AcDbHatchPatternType
@@ -848,12 +850,12 @@ export class AcDbEntityConverter {
       dbEntity.linetypeScale = entity.lineTypeScale
     }
     if (entity.color != null) {
-      dbEntity.color.color = entity.color
+      dbEntity.color.setRGBValue(entity.color)
     }
     if (entity.colorIndex != null) {
       dbEntity.color.colorIndex = entity.colorIndex
     }
-    if (entity.colorName != null) {
+    if (entity.colorName) {
       dbEntity.color.colorName = entity.colorName
     }
     if (entity.isVisible != null) {

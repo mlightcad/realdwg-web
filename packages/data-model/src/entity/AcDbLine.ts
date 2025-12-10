@@ -376,6 +376,6 @@ export class AcDbLine extends AcDbCurve {
       new AcGePoint3d(start.x, start.y, 0),
       new AcGePoint3d(end.x, end.y, 0)
     ]
-    return renderer.lines(points, this.lineStyle)
+    return renderer.lines(points)
   }
 }

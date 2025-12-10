@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.0.10
+
+### Patch Changes
+
+- feat: support changing layer color
+- Updated dependencies
+  - @mlightcad/common@1.2.6
+  - @mlightcad/geometry-engine@3.0.8
+
 ## 3.0.9
 
 ### Patch Changes

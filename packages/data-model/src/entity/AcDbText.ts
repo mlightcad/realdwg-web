@@ -1,10 +1,10 @@
 import { AcGeBox3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 import {
-  AcGiBaseTextStyle,
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
   AcGiMTextFlowDirection,
-  AcGiRenderer
+  AcGiRenderer,
+  AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
@@ -583,7 +583,7 @@ export class AcDbText extends AcDbEntity {
    * const textStyle = text.getTextStyle();
    * ```
    */
-  private getTextStyle(): AcGiBaseTextStyle {
+  private getTextStyle(): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
     let style = textStyleTable.getAt(this.styleName)
     if (!style) {

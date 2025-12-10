@@ -405,12 +405,12 @@ export class AcDbEntityConverter {
       dbEntity.linetypeScale = entity.ltypeScale
     }
     if (entity.color24 != null) {
-      dbEntity.color.color = entity.color24
+      dbEntity.color.setRGBValue(entity.color24)
     }
     if (entity.color != null) {
       dbEntity.color.colorIndex = entity.color
     }
-    if (entity.colorName != null) {
+    if (entity.colorName) {
       dbEntity.color.colorName = entity.colorName
     }
     if (entity.visible != null) {

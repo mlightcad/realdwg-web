@@ -479,6 +479,6 @@ export class AcDbArc extends AcDbCurve {
    * ```
    */
   draw(renderer: AcGiRenderer) {
-    return renderer.circularArc(this._geo, this.lineStyle)
+    return renderer.circularArc(this._geo)
   }
 }

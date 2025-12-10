@@ -5,11 +5,10 @@ import {
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
+import { AcGiSubEntityTraits } from 'AcGiSubEntityTraits'
 
 import { AcGiEntity } from './AcGiEntity'
-import { AcGiHatchStyle } from './AcGiHatchStyle'
 import { AcGiImageStyle } from './AcGiImageStyle'
-import { AcGiLineStyle } from './AcGiLineStyle'
 import { AcGiPointStyle } from './AcGiPointStyle'
 import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle'
 
@@ -38,6 +37,12 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
   set basePoint(value: AcGePoint3d | undefined)
 
   /**
+   * The entity traits object gives the user control of, and access to, the attribute
+   * (color, layer, linetype, etc.) settings of the current geometry.
+   */
+  get subEntityTraits(): AcGiSubEntityTraits
+
+  /**
    * Create one group
    * @param entities Input entities to group together
    * @returns Return created group
@@ -55,26 +60,23 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
   /**
    * Draw a circular arc or full circle.
    * @param arc Input circular arc to draw
-   * @param style Input line style applied to circular arc
    * @returns Return an object which can be added to scene
    */
-  circularArc(arc: AcGeCircArc3d, style: AcGiLineStyle): T
+  circularArc(arc: AcGeCircArc3d): T
 
   /**
    * Draw an elliptical arc or full ellipse.
    * @param ellipseArc Input elliptical arc to draw
-   * @param style Input line style applied to elliptical arc
    * @returns Return an object which can be added to scene
    */
-  ellipticalArc(ellipseArc: AcGeEllipseArc3d, style: AcGiLineStyle): T
+  ellipticalArc(ellipseArc: AcGeEllipseArc3d): T
 
   /**
    * Draw lines using gl.LINE_STRIP.
    * @param points Input a point array which contains all line vertices
-   * @param style Input line style applied to lines
    * @returns Return an object which can be added to scene
    */
-  lines(points: AcGePoint3dLike[], style: AcGiLineStyle): T
+  lines(points: AcGePoint3dLike[]): T
 
   /**
    * Draw lines using gl.LINES.
@@ -84,23 +86,16 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
    * particular vertex. If the vertex is one 2d point, then itemSize should be `2`. If the vertex
    * is one 3d point, then itemSize should be `3`.
    * @param indices Index buffer.
-   * @param style Input line style applied to line segments
    * @returns Return an object which can be added to scene
    */
-  lineSegments(
-    array: Float32Array,
-    itemSize: number,
-    indices: Uint16Array,
-    style: AcGiLineStyle
-  ): T
+  lineSegments(array: Float32Array, itemSize: number, indices: Uint16Array): T
 
   /**
    * Draw one area
    * @param area Input area to draw
-   * @param style Input hatch style applied to the area
    * @returns Return an object which can be added to scene
    */
-  area(area: AcGeArea2d, style: AcGiHatchStyle): T
+  area(area: AcGeArea2d): T
 
   /**
    * Draw multiple line texts
