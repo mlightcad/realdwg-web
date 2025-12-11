@@ -1,5 +1,6 @@
 export * from './AcCmColor'
 export * from './AcCmColorMethod'
+export * from './AcCmColorUtil'
 export * from './AcCmEntityColor'
 export * from './AcCmErrors'
 export * from './AcCmEventDispatcher'
