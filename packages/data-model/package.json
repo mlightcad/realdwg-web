@@ -43,13 +43,11 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
+    "@mlightcad/common": "workspace:*",
     "@mlightcad/dxf-json": "1.0.10",
+    "@mlightcad/geometry-engine": "workspace:*",
+    "@mlightcad/graphic-interface": "workspace:*",
     "iconv-lite": "^0.7.0",
     "uid": "^2.0.2"
-  },
-  "devDependencies": {
-    "@mlightcad/common": "workspace:*",
-    "@mlightcad/geometry-engine": "workspace:*",
-    "@mlightcad/graphic-interface": "workspace:*"
   }
 }

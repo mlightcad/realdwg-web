@@ -95,25 +95,24 @@ importers:
 
   packages/data-model:
     dependencies:
-      '@mlightcad/dxf-json':
-        specifier: 1.0.10
-        version: 1.0.10
-      iconv-lite:
-        specifier: ^0.7.0
-        version: 0.7.0
-      uid:
-        specifier: ^2.0.2
-        version: 2.0.2
-    devDependencies:
       '@mlightcad/common':
         specifier: workspace:*
         version: link:../common
+      '@mlightcad/dxf-json':
+        specifier: 1.0.10
+        version: 1.0.10
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
       '@mlightcad/graphic-interface':
         specifier: workspace:*
         version: link:../graphic-interface
+      iconv-lite:
+        specifier: ^0.7.0
+        version: 0.7.0
+      uid:
+        specifier: ^2.0.2
+        version: 2.0.2
 
   packages/geometry-engine:
     dependencies:
