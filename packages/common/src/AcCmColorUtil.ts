@@ -199,13 +199,7 @@ const AUTO_CAD_COLOR_INDEX = [
 ]
 
 /**
- * Utility class for AutoCAD color index operations.
- *
- * Provides static methods to convert between AutoCAD color indices and RGB values,
- * supporting the standard 256-color palette used in AutoCAD files.
- *
- * @class AcCmColorUtil
- * @version 1.0.0
+ * Utility class for AutoCAD color operations.
  */
 export class AcCmColorUtil {
   /**
