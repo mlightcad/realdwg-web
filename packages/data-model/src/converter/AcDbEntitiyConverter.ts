@@ -1,3 +1,4 @@
+import { AcCmTransparency } from '@mlightcad/common'
 import {
   ArcEntity,
   FaceEntity,
@@ -103,7 +104,6 @@ import {
   AcDbWipeout,
   AcDbXline
 } from '../entity'
-import { AcCmTransparency } from '@mlightcad/common'
 
 /**
  * Converts DXF entities to AcDbEntity objects.

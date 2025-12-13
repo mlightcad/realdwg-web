@@ -1,4 +1,4 @@
-import { AcCmColor } from '@mlightcad/common'
+import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 
 import { AcGiHatchStyle } from './AcGiHatchStyle'
 import { AcGiLineStyle } from './AcGiLineStyle'
@@ -10,7 +10,8 @@ import { AcGiLineStyle } from './AcGiLineStyle'
 export interface AcGiSubEntityTraits {
   /**
    * The RGB color.
-   * It resolves layer colors and block colors as needed and converts color index to actual RGB color.
+   * It resolves layer colors and block colors as needed and converts color index
+   * to actual RGB color.
    */
   rgbColor: number
 
@@ -21,44 +22,47 @@ export interface AcGiSubEntityTraits {
 
   /**
    * Line type (pattern) used for drawing edges / curves of the entity.
-   * Corresponds to AutoCAD’s `AcGiLineStyle` (or linetypeTableRecord). :contentReference[oaicite:1]{index=1}
+   * Corresponds to AutoCAD’s `AcGiLineStyle` (or linetypeTableRecord).
    */
   lineType: AcGiLineStyle
 
   /**
    * Scale factor applied to the lineType.
-   * Changes how dense or stretched the pattern appears. (Equivalent to AutoCAD’s “Linetype Scale” / ltScale). :contentReference[oaicite:2]{index=2}
+   * Changes how dense or stretched the pattern appears. (Equivalent to 
+   * AutoCAD’s “Linetype Scale” / ltScale).
    */
   lineTypeScale: number
 
   /**
    * Lineweight for the entity’s drawing (i.e. the visual thickness of lines).
-   * Typically corresponds to one of AutoCAD’s predefined lineweights (e.g. “0.13 mm”, “0.30 mm”, etc.) or “ByLayer/ByBlock”. :contentReference[oaicite:3]{index=3}
+   * Typically corresponds to one of AutoCAD’s predefined lineweights (e.g. 
+   * “0.13 mm”, “0.30 mm”, etc.) or “ByLayer/ByBlock”.
    */
   lineWeight: number
 
   /**
    * Fill type / hatch style for the entity (if applicable).
-   * Corresponds to AutoCAD’s `AcGiHatchStyle`. For example, controlling whether the sub‑entity is filled or only outlined. :contentReference[oaicite:4]{index=4}
+   * Corresponds to AutoCAD’s `AcGiHatchStyle`. For example, controlling whether
+   * the sub‑entity is filled or only outlined.
    */
   fillType: AcGiHatchStyle
 
   /**
    * Transparency of the entity.
    * A numeric value controlling how transparent (or opaque) the entity is when rendered.
-   * In AutoCAD this corresponds to the transparency attribute in SubEntityTraits. :contentReference[oaicite:5]{index=5}
    */
-  transparency: number
+  transparency: AcCmTransparency
 
   /**
    * Thickness (extrusion) of the entity along the positive Z axis in WCS units.
-   * Only affects certain primitive types (e.g. polylines, arcs, circles, SHX‑text), similarly to AutoCAD’s “thickness” property. :contentReference[oaicite:6]{index=6}
+   * Only affects certain primitive types (e.g. polylines, arcs, circles, SHX‑text), 
+   * similarly to AutoCAD’s “thickness” property.
    */
   thickness: number
 
   /**
    * The name of the layer on which the entity resides.
-   * Corresponds to AutoCAD layer name (i.e. current layer in drawing). :contentReference[oaicite:7]{index=7}
+   * Corresponds to AutoCAD layer name (i.e. current layer in drawing).
    */
   layer: string
 }

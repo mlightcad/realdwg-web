@@ -1,5 +1,11 @@
 # @mlightcad/graphic-interface
 
+## 3.0.12
+
+### Patch Changes
+
+- feat: fix transparency type in interface AcGiSubEntityTraits
+
 ## 3.0.11
 
 ### Patch Changes
