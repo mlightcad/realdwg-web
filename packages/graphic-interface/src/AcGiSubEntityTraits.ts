@@ -28,14 +28,14 @@ export interface AcGiSubEntityTraits {
 
   /**
    * Scale factor applied to the lineType.
-   * Changes how dense or stretched the pattern appears. (Equivalent to 
+   * Changes how dense or stretched the pattern appears. (Equivalent to
    * AutoCAD’s “Linetype Scale” / ltScale).
    */
   lineTypeScale: number
 
   /**
    * Lineweight for the entity’s drawing (i.e. the visual thickness of lines).
-   * Typically corresponds to one of AutoCAD’s predefined lineweights (e.g. 
+   * Typically corresponds to one of AutoCAD’s predefined lineweights (e.g.
    * “0.13 mm”, “0.30 mm”, etc.) or “ByLayer/ByBlock”.
    */
   lineWeight: number
@@ -55,7 +55,7 @@ export interface AcGiSubEntityTraits {
 
   /**
    * Thickness (extrusion) of the entity along the positive Z axis in WCS units.
-   * Only affects certain primitive types (e.g. polylines, arcs, circles, SHX‑text), 
+   * Only affects certain primitive types (e.g. polylines, arcs, circles, SHX‑text),
    * similarly to AutoCAD’s “thickness” property.
    */
   thickness: number

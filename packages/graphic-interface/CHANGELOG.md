@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.1.0
+
+### Patch Changes
+
+- feat: modify common, geometry-engine, and graphic-interface as dependencies of package data-model
+- Updated dependencies
+  - @mlightcad/common@1.2.8
+  - @mlightcad/geometry-engine@3.0.10
+
 ## 3.0.12
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.2.0
+
+### Patch Changes
+
+- feat: modify common, geometry-engine, and graphic-interface as dependencies of package data-model
+- Updated dependencies
+  - @mlightcad/data-model@1.3.19
+
 ## 3.1.18
 
 ### Patch Changes

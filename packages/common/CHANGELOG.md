@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.0
+
+### Patch Changes
+
+- feat: modify common, geometry-engine, and graphic-interface as dependencies of package data-model
+
 ## 1.2.7
 
 ### Patch Changes
