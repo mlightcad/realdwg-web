@@ -1,4 +1,5 @@
 import {
+  AcCmTransparency,
   AcDbArc,
   AcDbBlockReference,
   AcDbCircle,
@@ -417,7 +418,7 @@ export class AcDbEntityConverter {
       dbEntity.visibility = entity.visible
     }
     if (entity.transparency != null) {
-      dbEntity.transparency = entity.transparency
+      dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
   }
 

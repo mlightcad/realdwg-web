@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.1.18
+
+### Patch Changes
+
+- feat: add class AcCmTransparency
+- Updated dependencies
+  - @mlightcad/data-model@1.3.18
+
 ## 3.1.17
 
 ### Patch Changes

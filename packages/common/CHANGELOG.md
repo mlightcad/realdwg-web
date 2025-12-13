@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.2.7
+
+### Patch Changes
+
+- feat: add class AcCmTransparency
+
 ## 1.2.6
 
 ### Patch Changes

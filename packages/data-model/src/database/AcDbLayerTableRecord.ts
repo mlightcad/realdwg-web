@@ -1,4 +1,4 @@
-import { AcCmColor, defaults } from '@mlightcad/common'
+import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
 import { AcGiLineStyle } from '@mlightcad/graphic-interface'
 
 import {
@@ -27,8 +27,8 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
   isOff: boolean
   /** Whether the layer is plottable */
   isPlottable: boolean
-  /** Transparency level of the layer (0-1) */
-  transparency: number
+  /** Transparency level of the layer */
+  transparency: AcCmTransparency
   /** The linetype name for the layer */
   linetype: string
   /** The line weight for the layer */
@@ -60,14 +60,6 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    *
    * @param attrs - Input attribute values for this layer table record
    * @param defaultAttrs - Default values for attributes of this layer table record
-   *
-   * @example
-   * ```typescript
-   * const layer = new AcDbLayerTableRecord({
-   *   name: 'MyLayer',
-   *   color: new AcCmColor(255, 0, 0)
-   * });
-   * ```
    */
   constructor(
     attrs?: Partial<AcDbLayerTableRecordAttrs>,
@@ -82,7 +74,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
       isInUse: true,
       isOff: false,
       isPlottable: true,
-      transparency: 0,
+      transparency: new AcCmTransparency(),
       linetype: '',
       lineWeight: 1,
       materialId: -1
@@ -297,21 +289,15 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   /**
    * Gets or sets the transparency level of this layer.
    *
-   * Transparency values range from 0 (opaque) to 1 (fully transparent).
+   * Transparency values.
    *
-   * @returns The transparency level (0-1)
-   *
-   * @example
-   * ```typescript
-   * const transparency = layer.transparency;
-   * layer.transparency = 0.5; // 50% transparent
-   * ```
+   * @returns The transparency level
    */
   get transparency() {
     return this.getAttr('transparency')
   }
-  set transparency(value: number) {
-    this.setAttr('transparency', value)
+  set transparency(value: AcCmTransparency) {
+    this.setAttr('transparency', value.clone())
   }
 
   /**

@@ -1,4 +1,4 @@
-import { AcCmColor } from '@mlightcad/common'
+import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
@@ -55,7 +55,7 @@ export abstract class AcDbEntity extends AcDbObject {
   /** Whether this entity is visible */
   private _visibility: boolean = true
   /** The transparency level of this entity (0-1) */
-  private _transparency: number = 0
+  private _transparency: AcCmTransparency = new AcCmTransparency()
 
   /**
    * Gets the type name of this entity.
@@ -283,7 +283,7 @@ export abstract class AcDbEntity extends AcDbObject {
   /**
    * Gets the transparency level of this entity.
    *
-   * @returns The transparency value (0-1, where 0 is opaque and 1 is fully transparent)
+   * @returns The transparency value.
    *
    * @example
    * ```typescript
@@ -297,15 +297,15 @@ export abstract class AcDbEntity extends AcDbObject {
   /**
    * Sets the transparency level of this entity.
    *
-   * @param value - The transparency value (0-1, where 0 is opaque and 1 is fully transparent)
+   * @param value - The transparency value.
    *
    * @example
    * ```typescript
    * entity.transparency = 0.5; // 50% transparent
    * ```
    */
-  set transparency(value: number) {
-    this._transparency = value
+  set transparency(value: AcCmTransparency) {
+    this._transparency = value.clone()
   }
 
   /**

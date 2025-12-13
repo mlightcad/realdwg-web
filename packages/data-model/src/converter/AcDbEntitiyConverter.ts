@@ -103,6 +103,7 @@ import {
   AcDbWipeout,
   AcDbXline
 } from '../entity'
+import { AcCmTransparency } from '@mlightcad/common'
 
 /**
  * Converts DXF entities to AcDbEntity objects.
@@ -862,7 +863,7 @@ export class AcDbEntityConverter {
       dbEntity.visibility = entity.isVisible
     }
     if (entity.transparency != null) {
-      dbEntity.transparency = entity.transparency
+      dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
   }
 

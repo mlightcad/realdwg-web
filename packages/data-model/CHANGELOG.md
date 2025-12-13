@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.3.18
+
+### Patch Changes
+
+- feat: add class AcCmTransparency
+
 ## 1.3.17
 
 ### Patch Changes

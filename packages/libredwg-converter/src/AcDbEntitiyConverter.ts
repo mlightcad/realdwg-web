@@ -1,4 +1,5 @@
 import {
+  AcCmTransparency,
   AcDb2dPolyline,
   AcDb3dPolyline,
   AcDb3PointAngularDimension,
@@ -752,7 +753,12 @@ export class AcDbEntityConverter {
       dbEntity.visibility = entity.isVisible
     }
     if (entity.transparency != null) {
-      dbEntity.transparency = entity.transparency
+      const transparency = new AcCmTransparency()
+      transparency.method = entity.transparencyType
+      if (transparency.isByBlock || transparency.isByBlock) {
+        transparency.alpha = entity.transparency
+      }
+      dbEntity.transparency = transparency
     }
   }
 }
