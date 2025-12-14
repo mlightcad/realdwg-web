@@ -7,6 +7,7 @@ import {
 import {
   AcGiEntity,
   AcGiLineStyle,
+  AcGiLineWeight,
   AcGiRenderer,
   AcGiStyleType
 } from '@mlightcad/graphic-interface'
@@ -49,7 +50,7 @@ export abstract class AcDbEntity extends AcDbObject {
   /** The linetype name for this entity */
   private _lineType: string = ByLayer
   /** The line weight for this entity */
-  private _lineWeight: number = 1
+  private _lineWeight: AcGiLineWeight = AcGiLineWeight.ByLayer
   /** The linetype scale factor for this entity */
   private _linetypeScale: number = -1
   /** Whether this entity is visible */
@@ -195,11 +196,6 @@ export abstract class AcDbEntity extends AcDbObject {
    * Gets the line weight used by this entity.
    *
    * @returns The line weight value
-   *
-   * @example
-   * ```typescript
-   * const weight = entity.lineWeight;
-   * ```
    */
   get lineWeight() {
     return this._lineWeight
@@ -209,13 +205,8 @@ export abstract class AcDbEntity extends AcDbObject {
    * Sets the line weight for this entity.
    *
    * @param value - The new line weight value
-   *
-   * @example
-   * ```typescript
-   * entity.lineWeight = 2;
-   * ```
    */
-  set lineWeight(value: number) {
+  set lineWeight(value: AcGiLineWeight) {
     this._lineWeight = value
   }
 
@@ -481,6 +472,17 @@ export abstract class AcDbEntity extends AcDbObject {
           }
         },
         {
+          name: 'color',
+          type: 'color',
+          editable: true,
+          accessor: {
+            get: (): AcCmColor => this.color,
+            set: (newVal: AcCmColor): void => {
+              this.color.copy(newVal)
+            }
+          }
+        },
+        {
           name: 'layer',
           type: 'string',
           editable: true,
@@ -492,13 +494,46 @@ export abstract class AcDbEntity extends AcDbObject {
           }
         },
         {
-          name: 'color',
-          type: 'color',
+          name: 'linetype',
+          type: 'linetype',
           editable: true,
           accessor: {
-            get: (): AcCmColor => this.color,
-            set: (newVal: AcCmColor): void => {
-              this.color.copy(newVal)
+            get: (): string => this.lineType,
+            set: (newVal: string): void => {
+              this.lineType = newVal
+            }
+          }
+        },
+        {
+          name: 'linetypeScale',
+          type: 'float',
+          editable: true,
+          accessor: {
+            get: (): number => this.linetypeScale,
+            set: (newVal: number): void => {
+              this.linetypeScale = newVal
+            }
+          }
+        },
+        {
+          name: 'lineWeight',
+          type: 'lineweight',
+          editable: true,
+          accessor: {
+            get: (): AcGiLineWeight => this.lineWeight,
+            set: (newVal: AcGiLineWeight): void => {
+              this.lineWeight = newVal
+            }
+          }
+        },
+        {
+          name: 'transparency',
+          type: 'transparency',
+          editable: true,
+          accessor: {
+            get: (): AcCmTransparency => this.transparency,
+            set: (newVal: AcCmTransparency): void => {
+              this.transparency = newVal
             }
           }
         }

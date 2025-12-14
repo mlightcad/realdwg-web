@@ -2,6 +2,7 @@ import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 
 import { AcGiHatchStyle } from './AcGiHatchStyle'
 import { AcGiLineStyle } from './AcGiLineStyle'
+import { AcGiLineWeight } from './AcGiLineWeight'
 
 /**
  * Trait settings for a sub‑entity in AutoCAD graphics (corresponding to AcGiSubEntityTraits).
@@ -35,10 +36,9 @@ export interface AcGiSubEntityTraits {
 
   /**
    * Lineweight for the entity’s drawing (i.e. the visual thickness of lines).
-   * Typically corresponds to one of AutoCAD’s predefined lineweights (e.g.
-   * “0.13 mm”, “0.30 mm”, etc.) or “ByLayer/ByBlock”.
+   * Typically corresponds to one of AutoCAD’s predefined lineweights.
    */
-  lineWeight: number
+  lineWeight: AcGiLineWeight
 
   /**
    * Fill type / hatch style for the entity (if applicable).

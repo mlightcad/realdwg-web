@@ -16,6 +16,7 @@ export type AcDbEntityPropertyType =
   | 'float'
   | 'enum'
   | 'color'
+  | 'transparency'
   | 'layer'
   | 'linetype'
   | 'lineweight'

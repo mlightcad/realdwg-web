@@ -1,4 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
+import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { DEFAULT_LINE_TYPE } from '../misc'
 import { AcDbDatabase } from './AcDbDatabase'
@@ -43,7 +44,7 @@ export class AcDbLayerTable extends AcDbSymbolTable<AcDbLayerTableRecord> {
       name: '0',
       standardFlags: 0,
       linetype: DEFAULT_LINE_TYPE,
-      lineWeight: 1,
+      lineWeight: AcGiLineWeight.ByLineWeightDefault,
       isOff: false,
       color: defaultColor,
       isPlottable: true

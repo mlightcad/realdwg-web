@@ -1,5 +1,11 @@
 # @mlightcad/graphic-interface
 
+## 3.1.1
+
+### Patch Changes
+
+- feat: refine class related to line weight
+
 ## 3.1.0
 
 ### Patch Changes

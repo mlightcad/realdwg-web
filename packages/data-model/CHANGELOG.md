@@ -1,5 +1,13 @@
 # @mlightcad/data-model
 
+## 1.4.1
+
+### Patch Changes
+
+- feat: refine class related to line weight
+- Updated dependencies
+  - @mlightcad/graphic-interface@3.1.1
+
 ## 1.4.0
 
 ### Patch Changes

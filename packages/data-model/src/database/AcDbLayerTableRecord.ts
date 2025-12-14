@@ -1,5 +1,5 @@
 import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
-import { AcGiLineStyle } from '@mlightcad/graphic-interface'
+import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import {
   AcDbSymbolTableRecord,
@@ -32,7 +32,7 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
   /** The linetype name for the layer */
   linetype: string
   /** The line weight for the layer */
-  lineWeight: number
+  lineWeight: AcGiLineWeight
   /** The material ID associated with the layer */
   materialId?: string
 }
@@ -345,17 +345,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * Line weight determines the thickness of lines and curves on this layer.
    *
    * @returns The line weight value
-   *
-   * @example
-   * ```typescript
-   * const weight = layer.lineWeight;
-   * layer.lineWeight = 2.0; // 2.0mm line weight
-   * ```
    */
   get lineWeight() {
     return this.getAttr('lineWeight')
   }
-  set lineWeight(value: number) {
+  set lineWeight(value: AcGiLineWeight) {
     this.setAttr('lineWeight', value)
   }
 

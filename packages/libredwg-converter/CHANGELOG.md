@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.2.1
+
+### Patch Changes
+
+- feat: refine class related to line weight
+- Updated dependencies
+  - @mlightcad/data-model@1.4.1
+
 ## 3.2.0
 
 ### Patch Changes
