@@ -180,7 +180,6 @@ export class AcDbLine extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            // --- Start Point ---
             {
               name: 'startX',
               type: 'float',
@@ -246,6 +245,14 @@ export class AcDbLine extends AcDbCurve {
                   this.endPoint.z = v
                 }
               }
+            },
+            {
+              name: 'length',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
             }
           ]
         }
@@ -282,17 +289,10 @@ export class AcDbLine extends AcDbCurve {
    * when drawing or editing. This method provides snap points based on the
    * specified snap mode.
    *
-   * @param osnapMode - The object snap mode (Endpoint, Midpoint, Nearest, Perpendicular, Tangent)
+   * @param osnapMode - The object snap mode
    * @param pickPoint - The point where the user picked
-   * @param _lastPoint - The last point (unused)
+   * @param _lastPoint - The last point
    * @param snapPoints - Array to populate with snap points
-   *
-   * @example
-   * ```typescript
-   * const snapPoints: AcGePoint3d[] = [];
-   * line.subGetOsnapPoints(AcDbOsnapMode.EndPoint, 0, pickPoint, lastPoint, snapPoints);
-   * // snapPoints now contains the start and end points
-   * ```
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
@@ -326,8 +326,7 @@ export class AcDbLine extends AcDbCurve {
         }
         break
       case AcDbOsnapMode.Tangent:
-        // Tangent snap: simply return an endpoint (depends on the geometry being connected)
-        snapPoints.push(startPoint) // Example: return the start point as a tangent point
+        // N/A for tangent snap
         break
       default:
         break

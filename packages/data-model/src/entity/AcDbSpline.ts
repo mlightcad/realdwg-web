@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 
 /**
@@ -177,6 +178,34 @@ export class AcDbSpline extends AcDbCurve {
    */
   set closed(value: boolean) {
     this._geo.closed = value
+  }
+
+  /**
+   * Gets the object snap points for this spline.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        snapPoints.push(this._geo.startPoint)
+        snapPoints.push(this._geo.endPoint)
+        break
+      default:
+        break
+    }
   }
 
   /**

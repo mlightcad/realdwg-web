@@ -1,4 +1,8 @@
-import { AcGeBox3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeBox3d,
+  AcGePoint3d,
+  AcGePoint3dLike
+} from '@mlightcad/geometry-engine'
 import {
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
@@ -7,6 +11,7 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -440,6 +445,29 @@ export class AcDbText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     // TODO: Implement it correctly
     return new AcGeBox3d()
+  }
+
+  /**
+   * Gets the object snap points for this text.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    if (AcDbOsnapMode.Insertion === osnapMode) {
+      snapPoints.push(this._position)
+    }
   }
 
   /**

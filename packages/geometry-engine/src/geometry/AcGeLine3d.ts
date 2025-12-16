@@ -67,6 +67,14 @@ export class AcGeLine3d extends AcGeCurve3d {
   }
 
   /**
+   * Returns the nerest point on this line to the given point.
+   * @param point Input point
+   */
+  nearestPoint(point: AcGePoint3dLike): AcGePoint3d {
+    return this.project(point)
+  }
+
+  /**
    * @inheritdoc
    */
   get length() {

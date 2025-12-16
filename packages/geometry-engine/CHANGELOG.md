@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 3.1.1
+
+### Patch Changes
+
+- feat: refine entity osnap and properties
+
 ## 3.1.0
 
 ### Patch Changes

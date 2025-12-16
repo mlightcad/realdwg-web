@@ -135,6 +135,51 @@ export class AcGeArea2d extends AcGeShape2d {
   }
 
   /**
+   * Calculate area of this 2d area.
+   * Outter loop area minus inner loop areas (holes).
+   */
+  get area(): number {
+    if (this._loops.length === 0) return 0
+
+    let totalArea = 0
+
+    for (let i = 0; i < this._loops.length; i++) {
+      const loop = this._loops[i]
+      // Sets the number of points used for curve segmentation to 128
+      const points = loop.getPoints(128) as AcGePoint2d[]
+
+      const loopArea = this.polygonArea(points)
+
+      if (i === 0) {
+        // outter loop
+        totalArea += Math.abs(loopArea)
+      } else {
+        // inner loop (hole)
+        totalArea -= Math.abs(loopArea)
+      }
+    }
+
+    return totalArea
+  }
+
+  /**
+   * Calculate signed area of a polygon using Shoelace formula
+   */
+  private polygonArea(points: AcGePoint2d[]): number {
+    const count = points.length
+    if (count < 3) return 0
+
+    let area = 0
+    for (let i = 0, j = count - 1; i < count; j = i++) {
+      const p1 = points[j]
+      const p2 = points[i]
+      area += p1.x * p2.y - p2.x * p1.y
+    }
+
+    return area * 0.5
+  }
+
+  /**
    * Calcuate bounding box of each loop in this area and return an array of their bounding box
    * @param pointBoundaries An array of loop consisted by points
    * @returns Return an array of bounding box

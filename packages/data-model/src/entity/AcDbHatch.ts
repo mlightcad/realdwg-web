@@ -9,6 +9,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Defines the type of hatch pattern.
@@ -225,6 +226,16 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * The elevation (Z-coordinate) of the hatch plane.
+   */
+  get elevation() {
+    return this._elevation
+  }
+  set elevation(value: number) {
+    this._elevation = value
+  }
+
+  /**
    * Append one loop to loops of this area. If it is the first loop added, it is the outter loop.
    * Otherwise, it is an inner loop.
    * @param loop Input the loop to append
@@ -242,6 +253,103 @@ export class AcDbHatch extends AcDbEntity {
       { x: box.min.x, y: box.min.y, z: this._elevation },
       { x: box.max.x, y: box.max.y, z: this._elevation }
     )
+  }
+
+  /**
+   * Returns the full property definition for this hatch entity, including
+   * general group, pattern group, and geometry group.
+   *
+   * The geometry group exposes editable start/end coordinates via
+   * {@link AcDbPropertyAccessor} so the property palette can update
+   * the hatch in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'pattern',
+          properties: [
+            {
+              name: 'patternType',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcDbHatchPatternType[0], value: 0 },
+                { label: AcDbHatchPatternType[1], value: 1 },
+                { label: AcDbHatchPatternType[2], value: 2 }
+              ],
+              accessor: {
+                get: () => this.patternType,
+                set: (v: AcDbHatchPatternType) => {
+                  this.patternType = v
+                }
+              }
+            },
+            {
+              name: 'patternName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.patternName,
+                set: (v: string) => {
+                  this.patternName = v
+                }
+              }
+            },
+            {
+              name: 'patternAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.patternAngle,
+                set: (v: number) => {
+                  this.patternAngle = v
+                }
+              }
+            },
+            {
+              name: 'patternScale',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.patternScale,
+                set: (v: number) => {
+                  this.patternScale = v
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'elevation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.elevation,
+                set: (v: number) => {
+                  this.elevation = v
+                }
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.area
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

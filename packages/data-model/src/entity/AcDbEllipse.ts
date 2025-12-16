@@ -7,6 +7,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -308,6 +309,49 @@ export class AcDbEllipse extends AcDbCurve {
   }
 
   /**
+   * Gets the object snap points for this ellipse or ellipse arc.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        if (!this.closed) {
+          snapPoints.push(this._geo.startPoint)
+          snapPoints.push(this._geo.endPoint)
+        }
+        break
+      case AcDbOsnapMode.MidPoint:
+        if (!this.closed) {
+          snapPoints.push(this._geo.midPoint)
+        }
+        break
+      case AcDbOsnapMode.Quadrant:
+        if (this.closed) {
+          snapPoints.push(this._geo.getPointAtAngle(0))
+          snapPoints.push(this._geo.getPointAtAngle(Math.PI / 2))
+          snapPoints.push(this._geo.getPointAtAngle(Math.PI))
+          snapPoints.push(this._geo.getPointAtAngle((Math.PI / 2) * 3))
+        }
+        break
+      default:
+        break
+    }
+  }
+
+  /**
    * Returns the full property definition for this ellipse entity, including
    * general group and geometry group.
    *
@@ -432,6 +476,22 @@ export class AcDbEllipse extends AcDbCurve {
                 set: (v: number) => {
                   this.normal.z = v
                 }
+              }
+            },
+            {
+              name: 'length',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.area
               }
             }
           ]

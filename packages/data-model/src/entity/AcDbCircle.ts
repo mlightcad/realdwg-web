@@ -10,6 +10,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -186,6 +187,51 @@ export class AcDbCircle extends AcDbCurve {
   }
 
   /**
+   * Gets the object snap points for this circle.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    switch (osnapMode) {
+      case AcDbOsnapMode.Center:
+      case AcDbOsnapMode.Centroid:
+        snapPoints.push(this._geo.center)
+        break
+      case AcDbOsnapMode.Quadrant:
+        snapPoints.push(this._geo.getPointAtAngle(0))
+        snapPoints.push(this._geo.getPointAtAngle(Math.PI / 2))
+        snapPoints.push(this._geo.getPointAtAngle(Math.PI))
+        snapPoints.push(this._geo.getPointAtAngle((Math.PI / 2) * 3))
+        break
+      case AcDbOsnapMode.Nearest:
+        {
+          const projectedPoint = this._geo.nearestPoint(pickPoint)
+          snapPoints.push(projectedPoint)
+        }
+        break
+      case AcDbOsnapMode.Tangent: {
+        const points = this._geo.tangentPoints(pickPoint)
+        snapPoints.push(...points)
+        break
+      }
+      default:
+        break
+    }
+  }
+
+  /**
    * Returns the full property definition for this circle entity, including
    * general group and geometry group.
    *
@@ -278,6 +324,30 @@ export class AcDbCircle extends AcDbCurve {
                 set: (v: number) => {
                   this.normal.z = v
                 }
+              }
+            },
+            {
+              name: 'diameter',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.radius * 2
+              }
+            },
+            {
+              name: 'perimeter',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.area
               }
             }
           ]

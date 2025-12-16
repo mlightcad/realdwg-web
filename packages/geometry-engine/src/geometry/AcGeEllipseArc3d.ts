@@ -216,6 +216,25 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
   }
 
   /**
+   * Compute the midpoint of the ellipse arc.
+   * The midpoint is defined at the middle parameter angle
+   * (not arc-length midpoint).
+   */
+  get midPoint(): AcGePoint3d {
+    let startAngle = this.startAngle
+    let deltaAngle = this.deltaAngle
+
+    // Closed ellipse: midpoint at PI
+    if (this.closed || Math.abs(deltaAngle - TAU) < 1e-10) {
+      startAngle = 0
+      deltaAngle = TAU
+    }
+
+    const midAngle = startAngle + deltaAngle / 2
+    return this.getPointAtAngle(midAngle)
+  }
+
+  /**
    * @inheritdoc
    */
   /**
@@ -252,6 +271,31 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
     }
 
     return length
+  }
+
+  /**
+   * Compute the area of the ellipse or ellipse arc.
+   * - Full ellipse: π * a * b
+   * - Ellipse arc: exact analytical area (not numerical integration)
+   */
+  get area(): number {
+    const a = this.majorAxisRadius
+    const b = this.minorAxisRadius
+
+    const t1 = this.startAngle
+    const t2 = t1 + this.deltaAngle
+
+    // Full ellipse
+    if (Math.abs(this.deltaAngle - TAU) < 1e-10) {
+      return Math.PI * a * b
+    }
+
+    const area =
+      ((a * b) / 2) *
+      (t2 - t1 - (Math.sin(t2) * Math.cos(t2) - Math.sin(t1) * Math.cos(t1)))
+
+    // Always return positive area
+    return Math.abs(area)
   }
 
   /**

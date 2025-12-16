@@ -1141,7 +1141,7 @@ export class AcGeMatrix3d {
    * @returns Return this matrix
    */
   compose(
-    position: AcGeVector3d,
+    position: AcGeVector3dLike,
     quaternion: AcGeQuaternion,
     scale: AcGeVector3d
   ) {
@@ -1203,7 +1203,7 @@ export class AcGeMatrix3d {
    * @returns Return this matrix
    */
   decompose(
-    position: AcGeVector3d,
+    position: AcGeVector3dLike,
     quaternion: AcGeQuaternion,
     scale: AcGeVector3d
   ) {

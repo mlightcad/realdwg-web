@@ -1,10 +1,12 @@
 import {
   AcGeBox3d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePointLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 
 /**
@@ -172,19 +174,38 @@ export class AcDbFace extends AcDbEntity {
    * For a face, the grip points are all four vertices.
    *
    * @returns Array of grip points (all four vertices)
-   *
-   * @example
-   * ```typescript
-   * const gripPoints = face.subGetGripPoints();
-   * // gripPoints contains all four vertices of the face
-   * ```
    */
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
-    for (let index = 0; index < this._vertices.length; ++index) {
-      gripPoints.push(this.getVertexAt(index))
-    }
+    gripPoints.push(...this._vertices)
     return gripPoints
+  }
+
+  /**
+   * Gets the object snap points for this face.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        snapPoints.push(...this._vertices)
+        break
+      default:
+        break
+    }
   }
 
   /**

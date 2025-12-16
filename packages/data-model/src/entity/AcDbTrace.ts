@@ -2,11 +2,13 @@ import {
   AcGeArea2d,
   AcGeBox3d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePointLike,
   AcGePolyline2d
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 
 /**
@@ -224,10 +226,35 @@ export class AcDbTrace extends AcDbCurve {
    */
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
-    for (let index = 0; index < 4; ++index) {
-      gripPoints.push(this.getPointAt(index))
-    }
+    gripPoints.push(...this._vertices)
     return gripPoints
+  }
+
+  /**
+   * Gets the object snap points for this trace.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        snapPoints.push(...this._vertices)
+        break
+      default:
+        break
+    }
   }
 
   /**

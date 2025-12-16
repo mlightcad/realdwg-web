@@ -1,5 +1,12 @@
 # @mlightcad/graphic-interface
 
+## 3.1.2
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.1.1
+
 ## 3.1.1
 
 ### Patch Changes

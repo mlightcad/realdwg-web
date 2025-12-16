@@ -14,6 +14,7 @@ import {
 
 import { AcDbTextStyleTableRecord } from '../database'
 import { AcDbBlockReference } from './AcDbBlockReference'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Interface defining the properties of a table cell within an AcDbTable entity.
@@ -291,6 +292,107 @@ export class AcDbTable extends AcDbBlockReference {
   get geometricExtents(): AcGeBox3d {
     // TODO: Implement it
     return new AcGeBox3d()
+  }
+
+  /**
+   * Returns the full property definition for this table entity, including
+   * general group, table group, and geometry group.
+   *
+   * The geometry group exposes editable properties via {@link AcDbPropertyAccessor}
+   * so the property palette can update the table in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'table',
+          properties: [
+            {
+              name: 'numRows',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.numRows,
+                set: (v: number) => {
+                  this.numRows = v
+                }
+              }
+            },
+            {
+              name: 'numColumns',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.numColumns,
+                set: (v: number) => {
+                  this.numColumns = v
+                }
+              }
+            },
+            {
+              name: 'tableWidth',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () =>
+                  this._columnWidth.reduce((total, value) => total + value, 0)
+              }
+            },
+            {
+              name: 'tableHeight',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () =>
+                  this._rowHeight.reduce((total, value) => total + value, 0)
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'positionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.x,
+                set: (v: number) => {
+                  this.position.x = v
+                }
+              }
+            },
+            {
+              name: 'positionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.y,
+                set: (v: number) => {
+                  this.position.y = v
+                }
+              }
+            },
+            {
+              name: 'positionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.z,
+                set: (v: number) => {
+                  this.position.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

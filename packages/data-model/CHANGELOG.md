@@ -1,5 +1,14 @@
 # @mlightcad/data-model
 
+## 1.4.2
+
+### Patch Changes
+
+- feat: refine entity osnap and properties
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.1.1
+  - @mlightcad/graphic-interface@3.1.2
+
 ## 1.4.1
 
 ### Patch Changes

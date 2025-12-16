@@ -3,13 +3,14 @@ import {
   AcGeEuler,
   AcGeMatrix3d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGeQuaternion,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbRenderingCache } from '../misc'
+import { AcDbOsnapMode, AcDbRenderingCache } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -85,7 +86,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * console.log(`Block position: ${position.x}, ${position.y}, ${position.z}`);
    * ```
    */
-  get position() {
+  get position(): AcGePoint3d {
     return this._position
   }
 
@@ -99,7 +100,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * blockRef.position = new AcGePoint3d(15, 25, 0);
    * ```
    */
-  set position(value: AcGePoint3d) {
+  set position(value: AcGePoint3dLike) {
     this._position.copy(value)
   }
 
@@ -148,7 +149,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * console.log(`Scale factors: ${scaleFactors.x}, ${scaleFactors.y}, ${scaleFactors.z}`);
    * ```
    */
-  get scaleFactors() {
+  get scaleFactors(): AcGePoint3d {
     return this._scaleFactors
   }
 
@@ -162,7 +163,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * blockRef.scaleFactors = new AcGePoint3d(2, 1.5, 1); // 2x X scale, 1.5x Y scale
    * ```
    */
-  set scaleFactors(value: AcGePoint3d) {
+  set scaleFactors(value: AcGePoint3dLike) {
     this._scaleFactors.copy(value)
   }
 
@@ -212,6 +213,29 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   get blockTableRecord() {
     return this.database.tables.blockTable.getAt(this._blockName)
+  }
+
+  /**
+   * Gets the object snap points for this mtext.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    if (AcDbOsnapMode.Insertion === osnapMode) {
+      snapPoints.push(this._position)
+    }
   }
 
   /**

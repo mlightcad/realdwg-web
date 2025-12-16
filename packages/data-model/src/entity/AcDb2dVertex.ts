@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 
 export enum AcDb2dVertexType {
@@ -179,6 +180,27 @@ export class AcDb2dVertex extends AcDbEntity {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this._position)
     return gripPoints
+  }
+
+  /**
+   * Gets the object snap points for this vertex.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param _osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    _osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    snapPoints.push(this._position)
   }
 
   /**

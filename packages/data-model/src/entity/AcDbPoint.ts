@@ -2,10 +2,12 @@ import {
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePointLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -98,6 +100,29 @@ export class AcDbPoint extends AcDbEntity {
    */
   get geometricExtents(): AcGeBox3d {
     return new AcGeBox3d().expandByPoint(this._geo)
+  }
+
+  /**
+   * Gets the object snap points for this point.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param _pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    if (AcDbOsnapMode.Node === osnapMode) {
+      snapPoints.push(this._geo)
+    }
   }
 
   /**

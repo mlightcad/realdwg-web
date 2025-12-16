@@ -1,5 +1,6 @@
 import {
   AcGeCircArc3d,
+  AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -8,6 +9,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -272,6 +274,13 @@ export class AcDbArc extends AcDbCurve {
   }
 
   /**
+   * The middle point of the circular arc
+   */
+  get midPoint(): AcGePoint3d {
+    return this._geo.midPoint
+  }
+
+  /**
    * Gets the geometric extents (bounding box) of this arc.
    *
    * @returns The bounding box that encompasses the entire arc
@@ -414,6 +423,30 @@ export class AcDbArc extends AcDbCurve {
                   this.normal.z = v
                 }
               }
+            },
+            {
+              name: 'arcLength',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
+            },
+            {
+              name: 'totalAngle',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => AcGeMathUtil.radToDeg(Math.abs(this._geo.deltaAngle))
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.area
+              }
             }
           ]
         }
@@ -441,6 +474,54 @@ export class AcDbArc extends AcDbCurve {
     gripPoints.push(this.startPoint)
     gripPoints.push(this.endPoint)
     return gripPoints
+  }
+
+  /**
+   * Gets the object snap points for this arc.
+   *
+   * Object snap points are precise points that can be used for positioning
+   * when drawing or editing. This method provides snap points based on the
+   * specified snap mode.
+   *
+   * @param osnapMode - The object snap mode
+   * @param pickPoint - The point where the user picked
+   * @param _lastPoint - The last point
+   * @param snapPoints - Array to populate with snap points
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    const startPoint = this.startPoint
+    const endPoint = this.endPoint
+
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        snapPoints.push(startPoint)
+        snapPoints.push(endPoint)
+        break
+      case AcDbOsnapMode.MidPoint:
+        snapPoints.push(this.midPoint)
+        break
+      case AcDbOsnapMode.Nearest:
+        {
+          const projectedPoint = this._geo.nearestPoint(pickPoint)
+          snapPoints.push(projectedPoint)
+        }
+        break
+      case AcDbOsnapMode.Perpendicular:
+        // N/A for perpendicular snap
+        break
+      case AcDbOsnapMode.Tangent: {
+        const points = this._geo.tangentPoints(pickPoint)
+        snapPoints.push(...points)
+        break
+      }
+      default:
+        break
+    }
   }
 
   /**

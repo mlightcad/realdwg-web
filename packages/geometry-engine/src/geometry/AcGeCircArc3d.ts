@@ -271,10 +271,157 @@ export class AcGeCircArc3d extends AcGeCurve3d {
   }
 
   /**
+   * The middle point of the circular arc
+   */
+  get midPoint(): AcGePoint3d {
+    let startAngle = this.startAngle
+    let deltaAngle = this.deltaAngle
+
+    // For a full circle, define midpoint at PI from start
+    if (this.closed) {
+      startAngle = 0
+      deltaAngle = TAU
+    }
+
+    const midAngle = startAngle + deltaAngle * 0.5
+    return this.getPointAtAngle(midAngle)
+  }
+
+  /**
    * @inheritdoc
    */
   get length() {
-    return Math.abs(this.deltaAngle * this.radius)
+    return this.closed
+      ? 2 * Math.PI * this.radius
+      : Math.abs(this.deltaAngle * this.radius)
+  }
+
+  /**
+   * The area of this arc
+   */
+  get area() {
+    return this.closed
+      ? Math.PI * this.radius * this.radius
+      : Math.abs(this.deltaAngle * this.radius * this.radius)
+  }
+
+  /**
+   * Returns the nerest point on this arc to the given point.
+   * @param point Input point
+   */
+  nearestPoint(point: AcGePoint3dLike): AcGePoint3d {
+    const p = new AcGeVector3d(point.x, point.y, point.z || 0)
+    const c = this.center
+    const n = this.normal
+
+    // 1. Project point onto arc plane
+    const v = p.clone().sub(c)
+    const distToPlane = v.dot(n)
+    const projected = p.clone().sub(n.clone().multiplyScalar(distToPlane))
+
+    // 2. Direction from center to projected point
+    const dir = projected.clone().sub(c)
+    if (dir.lengthSq() === 0) {
+      // Degenerate: point is at center
+      return this.startPoint.clone()
+    }
+
+    dir.normalize().multiplyScalar(this.radius)
+
+    // 3. Candidate point on full circle
+    const circlePoint = c.clone().add(dir)
+
+    // 4. Angle of candidate
+    const angle = this.getAngle(circlePoint.clone())
+
+    // Normalize angle relative to startAngle
+    const start = this.startAngle
+    const delta = this.deltaAngle
+
+    let t = AcGeMathUtil.normalizeAngle(angle - start)
+
+    // 5. Clamp to arc range
+    if (t < 0) t = 0
+    if (t > delta) t = delta
+
+    const arcPoint = this.getPointAtAngle(start + t)
+
+    // 6. Compare with endpoints (important!)
+    const dArc = arcPoint.distanceTo(p)
+    const dStart = this.startPoint.distanceTo(p)
+    const dEnd = this.endPoint.distanceTo(p)
+
+    if (dStart < dArc && dStart <= dEnd) return this.startPoint.clone()
+    if (dEnd < dArc && dEnd < dStart) return this.endPoint.clone()
+
+    return arcPoint
+  }
+
+  /**
+   * Returns tangent snap point(s) from a given point to this arc.
+   * @param point Input point
+   * @returns Array of tangent points on the arc
+   */
+  tangentPoints(point: AcGePoint3dLike): AcGePoint3d[] {
+    const result: AcGePoint3d[] = []
+
+    const P = new AcGeVector3d(point.x, point.y, point.z || 0)
+    const C = this.center
+    const n = this.normal
+    const r = this.radius
+
+    // Vector CP
+    const v = P.clone().sub(C)
+
+    // Distance from point to arc plane
+    const distToPlane = v.dot(n)
+
+    // Project point onto arc plane
+    const Pp = P.clone().sub(n.clone().multiplyScalar(distToPlane))
+    const Cp = C.clone()
+
+    const dVec = Pp.clone().sub(Cp)
+    const d = dVec.length()
+
+    // No tangent if point is inside the circle
+    if (d < r) return result
+
+    // Angle between CP and tangent line
+    const alpha = Math.acos(r / d)
+
+    // Base angle from refVec
+    const baseAngle = this.getAngle(Pp.clone())
+
+    // Two tangent angles on the full circle
+    const angles = [baseAngle + alpha, baseAngle - alpha]
+
+    for (const angle of angles) {
+      // Normalize angle into arc parameter space
+      const t = AcGeMathUtil.normalizeAngle(angle - this.startAngle)
+
+      // Check if tangent lies on the arc
+      if (t >= 0 && t <= this.deltaAngle) {
+        result.push(this.getPointAtAngle(this.startAngle + t))
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Returns the nearest tangent snap point, or null if none exists.
+   */
+  nearestTangentPoint(point: AcGePoint3dLike): AcGePoint3d | null {
+    const tangents = this.tangentPoints(point)
+    if (tangents.length === 0) return null
+
+    const P = new AcGePoint3d(point.x, point.y, point.z || 0)
+
+    if (tangents.length === 1) return tangents[0]
+
+    return tangents[0].distanceTo(P) < tangents[1].distanceTo(P)
+      ? tangents[0]
+      : tangents[1]
   }
 
   /**

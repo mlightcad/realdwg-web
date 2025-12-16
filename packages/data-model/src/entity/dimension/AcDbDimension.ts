@@ -360,37 +360,6 @@ export abstract class AcDbDimension extends AcDbEntity {
     this.attachEntityInfo(group)
     return group
   }
-
-  protected drawFirstArrow(renderer: AcGiRenderer) {
-    const blockTableRecord = this.database.tables.blockTable.getAt(
-      this.firstArrowType
-    )
-    if (blockTableRecord) {
-      return AcDbRenderingCache.instance.draw(
-        renderer,
-        blockTableRecord,
-        this.rgbColor,
-        false
-      )
-    }
-    return undefined
-  }
-
-  protected drawSecondArrow(renderer: AcGiRenderer) {
-    const blockTableRecord = this.database.tables.blockTable.getAt(
-      this.secondArrowType
-    )
-    if (blockTableRecord) {
-      return AcDbRenderingCache.instance.draw(
-        renderer,
-        blockTableRecord,
-        this.rgbColor,
-        false
-      )
-    }
-    return undefined
-  }
-
   protected get arrowScaleFactor() {
     const dimStyle = this.dimensionStyle
     // TODO:
