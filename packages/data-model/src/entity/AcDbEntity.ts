@@ -421,13 +421,42 @@ export abstract class AcDbEntity extends AcDbObject {
    * is true. For now, text and mtext entity supports this flag only. Other types of entities
    * just ignore this flag.
    * @returns The rendered entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedEntity = entity.draw(renderer);
-   * ```
    */
-  abstract draw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined
+  abstract subWorldDraw(
+    renderer: AcGiRenderer,
+    delay?: boolean
+  ): AcGiEntity | undefined
+
+  /**
+   * Called by cad application when it wants the entity to draw itself in WCS (World Coordinate
+   * System) and acts as a wrapper / dispatcher around subWorldDraw(). The children class should
+   * never overidde this method.
+   *
+   * It executes the following logic:
+   * - Handles traits (color, linetype, lineweight, transparency, etc.)
+   * - Calls subWorldDraw() to do the actual geometry output
+   *
+   * @param renderer - The renderer to use for drawing
+   * @param delay - The flag to delay creating one rendered entity and just create one dummy
+   * entity. Renderer can delay heavy calculation operation to avoid blocking UI when this flag
+   * is true. For now, text and mtext entity supports this flag only. Other types of entities
+   * just ignore this flag.
+   * @returns The rendered entity, or undefined if drawing failed
+   */
+  worldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
+    const traits = renderer.subEntityTraits
+    traits.color = this.color
+    traits.rgbColor = this.rgbColor
+    traits.lineType = this.lineStyle
+    traits.lineTypeScale = this.linetypeScale
+    traits.lineWeight = this.lineWeight
+    traits.transparency = this.transparency
+    traits.layer = this.layer
+    if ('thickness' in this) {
+      traits.thickness = this.thickness as number
+    }
+    return this.subWorldDraw(renderer, delay)
+  }
 
   /**
    * Triggers a modified event for this entity.

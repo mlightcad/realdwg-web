@@ -274,13 +274,8 @@ export class AcDbXline extends AcDbCurve {
    *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered xline entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedXline = xline.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const points: AcGePoint3d[] = []
     points.push(
       this._unitDir.clone().multiplyScalar(-1000000).add(this._basePoint)

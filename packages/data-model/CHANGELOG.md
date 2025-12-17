@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.5.0
+
+### Minor Changes
+
+- feat: rename mehtod 'draw' to 'subWorldDraw' to keep consistent with AutoCAD ObjectARX API
+
 ## 1.4.2
 
 ### Patch Changes

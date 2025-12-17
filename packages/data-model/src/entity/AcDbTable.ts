@@ -404,9 +404,8 @@ export class AcDbTable extends AcDbBlockReference {
    *
    * @param renderer - The graphics renderer used to draw the table
    * @returns The rendered graphics entity representing the table
-   * @inheritdoc
    */
-  draw(renderer: AcGiRenderer): AcGiEntity {
+  subWorldDraw(renderer: AcGiRenderer): AcGiEntity {
     let allRowHeights = 0,
       allColumnWidths = 0
     const indices = new Uint16Array(this.numColumns * this.numRows * 8)

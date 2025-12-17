@@ -195,9 +195,8 @@ export class AcDbViewport extends AcDbEntity {
    *
    * @param renderer - The renderer to use for drawing the viewport
    * @returns A render group containing the viewport border lines, or undefined if not drawn
-   * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     // Draw a rectangle if meeting the following conditions:
     // - viewport entity isn't in model space
     // - viewport id number is greater than 1

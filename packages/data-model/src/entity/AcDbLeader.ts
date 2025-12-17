@@ -320,7 +320,7 @@ export class AcDbLeader extends AcDbCurve {
   /**
    * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     if (this.isSplined && this.splineGeo) {
       const points = this.splineGeo.getPoints(100)
       return renderer.lines(points)

@@ -337,7 +337,7 @@ export abstract class AcDbDimension extends AcDbEntity {
   /**
    * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     if (this.dimBlockId) {
       const blockTableRecord = this.database.tables.blockTable.getAt(
         this.dimBlockId

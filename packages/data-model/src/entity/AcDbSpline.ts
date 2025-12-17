@@ -216,13 +216,8 @@ export class AcDbSpline extends AcDbCurve {
    *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered spline entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedSpline = spline.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const points = this._geo.getPoints(100)
     return renderer.lines(points)
   }

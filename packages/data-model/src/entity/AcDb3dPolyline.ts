@@ -178,7 +178,7 @@ export class AcDb3dPolyline extends AcDbCurve {
    * @param renderer - The renderer to use for drawing
    * @returns The rendered polyline entity, or undefined if drawing failed
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const points: AcGePoint3d[] = []
     const tmp = this._geo.getPoints(100)
     // TODO: Set the correct z value

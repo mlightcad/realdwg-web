@@ -345,7 +345,7 @@ export class AcDbRasterImage extends AcDbEntity {
   /**
    * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const points = this.boundaryPath()
     if (this._image) {
       return renderer.image(this._image, {

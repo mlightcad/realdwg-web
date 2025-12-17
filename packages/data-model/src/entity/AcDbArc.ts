@@ -559,7 +559,7 @@ export class AcDbArc extends AcDbCurve {
    * const renderedArc = arc.draw(renderer);
    * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     return renderer.circularArc(this._geo)
   }
 }

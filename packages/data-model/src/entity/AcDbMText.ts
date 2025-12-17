@@ -587,13 +587,8 @@ export class AcDbMText extends AcDbEntity {
    * entity. Renderer can delay heavy calculation operation to avoid blocking UI when this flag
    * is true.
    * @returns The rendered entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedEntity = entity.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer, delay?: boolean) {
+  subWorldDraw(renderer: AcGiRenderer, delay?: boolean) {
     const mtextData: AcGiMTextData = {
       text: this.contents,
       height: this.height,
@@ -605,9 +600,6 @@ export class AcDbMText extends AcDbEntity {
       drawingDirection: this.drawingDirection,
       lineSpaceFactor: this.lineSpacingFactor
     }
-    const textStyle: AcGiTextStyle = {
-      ...this.getTextStyle()
-    }
-    return renderer.mtext(mtextData, textStyle, delay)
+    return renderer.mtext(mtextData, this.getTextStyle(), delay)
   }
 }

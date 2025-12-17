@@ -405,13 +405,8 @@ export class AcDbCircle extends AcDbCurve {
    *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered circle entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedCircle = circle.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     return renderer.circularArc(this._geo)
   }
 }

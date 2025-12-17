@@ -508,13 +508,8 @@ export class AcDbEllipse extends AcDbCurve {
    *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered ellipse entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedEllipse = ellipse.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     return renderer.ellipticalArc(this._geo)
   }
 }

@@ -216,13 +216,8 @@ export class AcDbFace extends AcDbEntity {
    *
    * @param renderer - The renderer to use for drawing
    * @returns The rendered face entity, or undefined if drawing failed
-   *
-   * @example
-   * ```typescript
-   * const renderedFace = face.draw(renderer);
-   * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const num = this._vertices.length
     const buffer = new Float32Array(num * 3)
     const indices: Uint16Array = new Uint16Array(num * 2)

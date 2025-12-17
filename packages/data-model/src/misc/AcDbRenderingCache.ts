@@ -238,7 +238,7 @@ export class AcDbRenderingCache {
     results: AcGiEntity[],
     renderer: AcGiRenderer
   ) {
-    const object = entity.draw(renderer)
+    const object = entity.worldDraw(renderer)
     if (object) {
       this.attachEntityInfo(object, entity)
       results.push(object)

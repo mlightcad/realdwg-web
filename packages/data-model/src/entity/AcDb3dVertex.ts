@@ -139,7 +139,7 @@ export class AcDb3dVertex extends AcDbEntity {
    * @param renderer - The renderer to use for drawing
    * @returns undefined
    */
-  draw(_renderer: AcGiRenderer): undefined {
+  subWorldDraw(_renderer: AcGiRenderer): undefined {
     return undefined
   }
 }

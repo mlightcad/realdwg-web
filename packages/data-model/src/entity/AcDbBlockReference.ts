@@ -417,7 +417,7 @@ export class AcDbBlockReference extends AcDbEntity {
   /**
    * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const results: AcGiEntity[] = []
     const blockTableRecord = this.blockTableRecord
     if (blockTableRecord != null) {

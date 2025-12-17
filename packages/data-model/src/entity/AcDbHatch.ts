@@ -355,7 +355,7 @@ export class AcDbHatch extends AcDbEntity {
   /**
    * @inheritdoc
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const traits = renderer.subEntityTraits
     traits.fillType = {
       solidFill: this.isSolidFill,

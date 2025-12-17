@@ -29,15 +29,10 @@ export class AcDbWipeout extends AcDbRasterImage {
    * effectively "wiping out" that portion of the drawing.
    *
    * @param renderer - The renderer to use for drawing
-   * @returns The rendered entity or undefined if rendering fails
-   *
-   * @example
-   * ```typescript
-   * const wipeout = new AcDbWipeout();
-   * const renderedEntity = wipeout.draw(renderer);
+   * @returns The rendered entity or undefined if rendering failsenderedEntity = wipeout.draw(renderer);
    * ```
    */
-  draw(renderer: AcGiRenderer) {
+  subWorldDraw(renderer: AcGiRenderer) {
     const points = this.boundaryPath()
     const area = new AcGeArea2d()
     area.add(new AcGePolyline2d(points))

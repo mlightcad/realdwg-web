@@ -214,7 +214,6 @@ export class AcDbDiametricDimension extends AcDbDimension {
    * @param line - The line entity to draw
    * @param lineArrowStyle - Optional arrow style configuration for the line
    * @returns The rendered graphics entity
-   * @private
    */
   private drawLine(
     renderer: AcGiRenderer,
@@ -225,7 +224,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
       const points = [line.startPoint, line.endPoint]
       return renderer.lines(points)
     } else {
-      return line.draw(renderer)
+      return line.worldDraw(renderer)!
     }
   }
 
@@ -236,7 +235,6 @@ export class AcDbDiametricDimension extends AcDbDimension {
    * they are drawn in the correct order for proper dimension visualization.
    *
    * @param lines - Array of line entities to sort
-   * @private
    */
   private sortLines(lines: AcDbLine[]) {
     // Function to compare positions of points
