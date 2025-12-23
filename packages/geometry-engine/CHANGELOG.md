@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 3.1.2
+
+### Patch Changes
+
+- fix: fix issue 38 in repo cad-viewer
+
 ## 3.1.1
 
 ### Patch Changes

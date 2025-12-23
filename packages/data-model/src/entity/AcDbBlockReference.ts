@@ -216,6 +216,68 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * For a block reference, its transform matrix should be computed as follows.
+   * - Translate geometry by –blockBasePoint
+   * - Apply scale
+   * - Apply rotation (about block Z / normal)
+   * - Apply OCS (normal / extrusion)
+   * - Translate to insertion point
+   *
+   * In matrix terms (right-multiply convention):
+   *   blockTransform =
+   *     T(position)
+   *   · OCS(normal)
+   *   · R(rotation)
+   *   · S(scale)
+   *   · T(-basePoint)
+   *
+   * @returns The transform matrix of one block reference
+   */
+  get blockTransform(): AcGeMatrix3d {
+    const blockTableRecord = this.blockTableRecord
+    const basePoint = blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
+
+    // Scale
+    const mScale = new AcGeMatrix3d().makeScale(
+      this._scaleFactors.x,
+      this._scaleFactors.y,
+      this._scaleFactors.z
+    )
+
+    // Rotation about block Z
+    const qRot = new AcGeQuaternion().setFromAxisAngle(
+      AcGeVector3d.Z_AXIS,
+      this._rotation
+    )
+    const mRot = new AcGeMatrix3d().makeRotationFromQuaternion(qRot)
+
+    // OCS → WCS
+    const mOcs = new AcGeMatrix3d()
+    mOcs.setFromExtrusionDirection(this._normal)
+
+    // Base point compensation
+    const mBase = new AcGeMatrix3d().makeTranslation(
+      -basePoint.x,
+      -basePoint.y,
+      -basePoint.z
+    )
+
+    // Insertion point
+    const mInsert = new AcGeMatrix3d().makeTranslation(
+      this._position.x,
+      this._position.y,
+      this._position.z
+    )
+
+    // Final transform
+    return new AcGeMatrix3d()
+      .multiplyMatrices(mInsert, mOcs)
+      .multiply(mRot)
+      .multiply(mScale)
+      .multiply(mBase)
+  }
+
+  /**
    * Gets the object snap points for this mtext.
    *
    * Object snap points are precise points that can be used for positioning
@@ -421,14 +483,13 @@ export class AcDbBlockReference extends AcDbEntity {
     const results: AcGiEntity[] = []
     const blockTableRecord = this.blockTableRecord
     if (blockTableRecord != null) {
-      const matrix = this.computeTransformMatrix()
+      const matrix = this.blockTransform
       const block = AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
         this.rgbColor,
         true,
-        matrix,
-        this.normal
+        matrix
       )
       this.attachEntityInfo(block)
       return block
@@ -437,15 +498,5 @@ export class AcDbBlockReference extends AcDbEntity {
       this.attachEntityInfo(block)
       return block
     }
-  }
-
-  private computeTransformMatrix() {
-    const quaternion = new AcGeQuaternion()
-    quaternion.setFromAxisAngle(AcGeVector3d.Z_AXIS, this.rotation)
-    return new AcGeMatrix3d().compose(
-      this._position,
-      quaternion,
-      this._scaleFactors
-    )
   }
 }

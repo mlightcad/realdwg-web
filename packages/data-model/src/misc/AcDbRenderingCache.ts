@@ -1,5 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
-import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbEntity } from 'entity'
 
@@ -174,8 +174,7 @@ export class AcDbRenderingCache {
     blockTableRecord: AcDbBlockTableRecord,
     color: number,
     cache: boolean = true,
-    transform?: AcGeMatrix3d,
-    normal?: AcGeVector3d
+    transform?: AcGeMatrix3d
   ) {
     const results: AcGiEntity[] = []
     if (blockTableRecord != null) {
@@ -230,10 +229,6 @@ export class AcDbRenderingCache {
         }
 
         block.applyMatrix(transform)
-        if (normal && (normal.x != 0 || normal.y != 0 || normal.z != 1)) {
-          transform.setFromExtrusionDirection(normal)
-          block.applyMatrix(transform)
-        }
       }
       return block
     } else {
