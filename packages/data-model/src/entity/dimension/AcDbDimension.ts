@@ -343,14 +343,13 @@ export abstract class AcDbDimension extends AcDbEntity {
         this.dimBlockId
       )
       if (blockTableRecord) {
-        const matrix = new AcGeMatrix3d().makeTranslation(this.dimBlockPosition)
+        const matrix = this.computeDimBlockTransform()
         const group = AcDbRenderingCache.instance.draw(
           renderer,
           blockTableRecord,
           this.rgbColor,
           false,
-          matrix,
-          this.normal
+          matrix
         )
         this.attachEntityInfo(group)
         return group
@@ -360,6 +359,7 @@ export abstract class AcDbDimension extends AcDbEntity {
     this.attachEntityInfo(group)
     return group
   }
+
   protected get arrowScaleFactor() {
     const dimStyle = this.dimensionStyle
     // TODO:
@@ -515,5 +515,35 @@ export abstract class AcDbDimension extends AcDbEntity {
         ? blockTableRecord.name.toUpperCase()
         : AcGiArrowType.Closed
     ) as AcGiArrowType
+  }
+
+  private computeDimBlockTransform(): AcGeMatrix3d {
+    const blockTableRecord = this.dimBlockId
+      ? this.database.tables.blockTable.getAt(this.dimBlockId)
+      : undefined
+
+    const basePoint = blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
+
+    // 1. Insertion point (DXF 12)
+    const mInsert = new AcGeMatrix3d().makeTranslation(
+      this._dimBlockPosition.x,
+      this._dimBlockPosition.y,
+      this._dimBlockPosition.z
+    )
+
+    // 2. OCS → WCS
+    const mOcs = new AcGeMatrix3d()
+    mOcs.setFromExtrusionDirection(this._normal)
+
+    // 3. Base point compensation
+    const mBase = new AcGeMatrix3d().makeTranslation(
+      -basePoint.x,
+      -basePoint.y,
+      -basePoint.z
+    )
+
+    // Final matrix:
+    // T(insert) · OCS · T(-base)
+    return new AcGeMatrix3d().multiplyMatrices(mInsert, mOcs).multiply(mBase)
   }
 }

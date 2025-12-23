@@ -30,6 +30,10 @@ export interface AcGeVector3dLike {
  */
 export class AcGeVector3d {
   /**
+   * Origin
+   */
+  static ORIGIN = Object.freeze(new AcGeVector3d(0, 0, 0))
+  /**
    * X-Axis
    */
   static X_AXIS = Object.freeze(new AcGeVector3d(1, 0, 0))
