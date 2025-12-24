@@ -410,6 +410,16 @@ export abstract class AcDbEntity extends AcDbObject {
   abstract get geometricExtents(): AcGeBox3d
 
   /**
+   * Erase the current entity from the associated database.
+   *
+   * @returns — true if an entity in the database existed and has been removed,
+   * or false if the entity does not exist.
+   */
+  erase() {
+    return this.database.tables.blockTable.removeEntity(this.objectId)
+  }
+
+  /**
    * Draws this entity using the specified renderer.
    *
    * This method should be implemented by subclasses to provide

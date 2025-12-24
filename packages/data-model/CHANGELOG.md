@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.5.2
+
+### Patch Changes
+
+- feat: support erasing entities
+
 ## 1.5.1
 
 ### Patch Changes
