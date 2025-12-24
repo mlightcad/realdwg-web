@@ -312,6 +312,8 @@ export class AcDbDatabase extends AcDbObject {
     entityAppended: new AcCmEventManager<AcDbEntityEventArgs>(),
     /** Fired when an entity is modified in the database */
     entityModified: new AcCmEventManager<AcDbEntityEventArgs>(),
+    /** Fired when an entity is erased from the database */
+    entityErased: new AcCmEventManager<AcDbEntityEventArgs>(),
     /** Fired when a layer is appended to the database */
     layerAppended: new AcCmEventManager<AcDbLayerEventArgs>(),
     /** Fired when a layer is modified in the database */

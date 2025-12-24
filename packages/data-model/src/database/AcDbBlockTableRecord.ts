@@ -212,6 +212,41 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
+   * Removes the specified entity or entities from this block table record.
+   *
+   * Notes:
+   * Please call method AcDbEntity.erase to remove one entity instead of calling
+   * this function.
+   *
+   * AutoCAD ObjectARX API doesn't provide such one method to remove entities
+   * from the block table record. I guess it is done by friend class or function
+   * feature in C++. However, there are no similar feature in TypeScript. So
+   * we have to expose such one public method in AcDbBlockTableRecord.
+   *
+   * @param objectId - The object id or ids of entities to remove from this block table record
+   * @returns — true if an entity in the block table record existed and has been removed,
+   * or false if the entity does not exist.
+   */
+  removeEntity(objectId: AcDbObjectId | AcDbObjectId[]) {
+    const ids = Array.isArray(objectId) ? objectId : [objectId]
+    const entities: AcDbEntity[] = []
+    ids.forEach(id => {
+      const entity = this._entities.get(id)
+      if (entity) {
+        entities.push(entity)
+      }
+      this._entities.delete(id)
+    })
+    if (entities.length > 0) {
+      this.database.events.entityErased.dispatch({
+        database: this.database,
+        entity: entities
+      })
+    }
+    return entities.length > 0
+  }
+
+  /**
    * Creates an iterator object that can be used to iterate over the entities in the block table record.
    *
    * @returns An iterator object that can be used to iterate over the entities
