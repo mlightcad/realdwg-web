@@ -11,6 +11,7 @@
  * drawing attributes (color, layer, linetype, lineweight, etc.).
  */
 export type AcDbEntityPropertyType =
+  | 'array'
   | 'string'
   | 'int'
   | 'float'
@@ -77,6 +78,25 @@ export interface AcDbEntityProperty {
    * If omitted, the property defaults to editable.
    */
   editable?: boolean
+
+  /**
+   * Schema definition for array elements.
+   * Only valid when `type === "array"`.
+   */
+  itemSchema?: AcDbEntityArrayItemSchema
+}
+
+/**
+ * Describes the structure of one object inside an "array" property.
+ *
+ * Each element in the array is treated like a lightweight entity
+ * with its own set of typed properties.
+ */
+export interface AcDbEntityArrayItemSchema {
+  /**
+   * Property definitions for one array element.
+   */
+  properties: AcDbEntityProperty[]
 }
 
 /**

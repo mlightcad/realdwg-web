@@ -1,5 +1,11 @@
 # @mlightcad/geometry-engine
 
+## 3.1.3
+
+### Patch Changes
+
+- feat: add property 'properties' for entities AcDb2dPolyline, AcDb3dPolyline, and AcDbPolyline
+
 ## 3.1.2
 
 ### Patch Changes

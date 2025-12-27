@@ -35,6 +35,17 @@ export class AcGePolyline2d<
   }
 
   /**
+   * Vertices in the polyline.
+   *
+   * Notes:
+   * This property is exposed so that it is easier to iterate each vertex in this
+   * polyline. Please do not add or remove vertex through this property.
+   */
+  get vertices(): Array<T> {
+    return this._vertices
+  }
+
+  /**
    * The number of vertices in the polyline
    */
   get numberOfVertices(): number {

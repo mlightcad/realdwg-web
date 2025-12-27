@@ -1,5 +1,14 @@
 # @mlightcad/data-model
 
+## 1.5.3
+
+### Patch Changes
+
+- feat: add property 'properties' for entities AcDb2dPolyline, AcDb3dPolyline, and AcDbPolyline
+- Updated dependencies
+  - @mlightcad/geometry-engine@3.1.3
+  - @mlightcad/graphic-interface@3.1.4
+
 ## 1.5.2
 
 ### Patch Changes
