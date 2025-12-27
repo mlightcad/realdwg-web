@@ -9,6 +9,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 
 /**
  * Represents the spline-fit type for this 3D polyline.
@@ -169,6 +170,80 @@ export class AcDb3dPolyline extends AcDbCurve {
         break
       default:
         break
+    }
+  }
+
+  /**
+   * Returns the full property definition for this polyline entity, including
+   * general group and geometry group.
+   *
+   * The geometry group exposes properties via {@link AcDbPropertyAccessor} so
+   * the property palette can update the polyline in real-time.
+   *
+   * Each property is an {@link AcDbEntityRuntimeProperty}.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'vertices',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  {
+                    name: 'x',
+                    type: 'float',
+                    editable: true
+                  },
+                  {
+                    name: 'y',
+                    type: 'float',
+                    editable: true
+                  },
+                  {
+                    name: 'z',
+                    type: 'float',
+                    editable: true
+                  }
+                ]
+              },
+              accessor: {
+                get: () => this._geo.vertices
+              }
+            },
+            {
+              name: 'length',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'others',
+          properties: [
+            {
+              name: 'closed',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.closed,
+                set: (v: boolean) => {
+                  this.closed = v
+                }
+              }
+            }
+          ]
+        }
+      ]
     }
   }
 
