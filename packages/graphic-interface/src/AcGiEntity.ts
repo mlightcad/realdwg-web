@@ -10,7 +10,7 @@ export interface AcGiEntity {
    * of precision. If passing 64-bit floating vertices data to GPU directly, it will
    * destroy number preciesion.
    *
-   * So we adopt a simpler but effective version of the “origin-shift” idea. Recompute
+   * So we adopt a simpler but effective version of the "origin-shift" idea. Recompute
    * geometry using re-centered coordinates and apply offset to its position. The base
    * point is extractly offset value.
    *

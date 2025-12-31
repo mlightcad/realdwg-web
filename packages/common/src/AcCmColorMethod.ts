@@ -9,10 +9,10 @@ export enum AcCmColorMethod {
   /** AutoCAD Color Index (ACI) */
   ByACI = 2,
 
-  /** Color inherited from the entity’s layer */
+  /** Color inherited from the entity's layer */
   ByLayer = 3,
 
-  /** Color inherited from the entity’s block */
+  /** Color inherited from the entity's block */
   ByBlock = 4,
 
   /** Uninitialised or invalid color state */

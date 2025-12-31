@@ -54,8 +54,8 @@ const dwgVersions: AcDbDwgVersionEntry[] = [
    */
   { name: 'AC1014', value: 21 },
   /**
-   * AC1500 doesn’t actually correspond to any real DWG file version.
-   * it’s just a legacy or internal placeholder in the enum sequence.
+   * AC1500 doesn't actually correspond to any real DWG file version.
+   * it's just a legacy or internal placeholder in the enum sequence.
    */
   { name: 'AC1500', value: 22 },
   /**
