@@ -1,6 +1,5 @@
 import {
   AcGeBox3d,
-  AcGeEuler,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -10,6 +9,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbObjectId } from '../base'
 import { AcDbOsnapMode, AcDbRenderingCache } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -285,18 +285,32 @@ export class AcDbBlockReference extends AcDbEntity {
    * specified snap mode.
    *
    * @param osnapMode - The object snap mode
-   * @param _pickPoint - The point where the user picked
-   * @param _lastPoint - The last point
+   * @param pickPoint - The point where the user picked
+   * @param lastPoint - The last point
    * @param snapPoints - Array to populate with snap points
+   * @param gsMark - The object id of subentity. For now, it is used by INSERT
+   * entity only. In AutoCAD, it uses AcGiSubEntityTraits::setSelectionMarkerInput
+   * to set GS marker of the subentity involved in the object snap operation. For
+   * now, we don't provide such a GS marker mechanism yet. So passed id of subentity
+   * as GS marker. Maybe this behavior will change in the future.
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
-    _lastPoint: AcGePoint3dLike,
-    snapPoints: AcGePoint3dLike[]
+    pickPoint: AcGePoint3dLike,
+    lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[],
+    gsMark?: AcDbObjectId
   ) {
     if (AcDbOsnapMode.Insertion === osnapMode) {
       snapPoints.push(this._position)
+    } else if (gsMark) {
+      this.subEntityGetOsnapPoints(
+        osnapMode,
+        pickPoint,
+        lastPoint,
+        snapPoints,
+        gsMark
+      )
     }
   }
 
@@ -465,12 +479,7 @@ export class AcDbBlockReference extends AcDbEntity {
         box.union(entity.geometricExtents)
       }
     }
-
-    const quaternion = new AcGeQuaternion().setFromEuler(
-      new AcGeEuler(this.rotation, 0, 0)
-    )
-    const matrix = new AcGeMatrix3d()
-    matrix.compose(this.position, quaternion, this.scaleFactors)
+    const matrix = this.blockTransform
     box.applyMatrix4(matrix)
 
     return box
@@ -497,6 +506,39 @@ export class AcDbBlockReference extends AcDbEntity {
       const block = renderer.group(results)
       this.attachEntityInfo(block)
       return block
+    }
+  }
+
+  private subEntityGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[],
+    gsMark: AcDbObjectId
+  ) {
+    // Avoid an infinite loop
+    if (gsMark === this.objectId) return
+
+    const blockTable = this.database?.tables.blockTable
+    if (blockTable != null) {
+      const entity = blockTable.getEntityById(gsMark)
+      if (entity) {
+        const points: AcGePoint3d[] = []
+        entity.subGetOsnapPoints(
+          osnapMode,
+          pickPoint,
+          lastPoint,
+          points,
+          gsMark
+        )
+
+        // Apply matrix to all snap points
+        const matrix = this.blockTransform
+        points.forEach(point => {
+          const tmp = point.clone().applyMatrix4(matrix)
+          snapPoints.push(tmp)
+        })
+      }
     }
   }
 }

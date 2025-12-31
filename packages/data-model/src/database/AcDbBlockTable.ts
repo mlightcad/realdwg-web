@@ -58,6 +58,20 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
   }
 
   /**
+   * Searches for an entity in all of block table records with the specified ID.
+   *
+   * @param id - The entity ID to search for
+   * @returns The entity with the specified ID, or undefined if not found
+   */
+  getEntityById(id: AcDbObjectId) {
+    for (const btr of this.database.tables.blockTable.newIterator()) {
+      const entity = btr.getIdAt(id)
+      if (entity) return entity
+    }
+    return undefined
+  }
+
+  /**
    * Removes the specified entity or entities from the block table.
    *
    * Notes:
@@ -74,9 +88,12 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
    * or false if the entity does not exist.
    */
   removeEntity(objectId: AcDbObjectId | AcDbObjectId[]) {
-    let result = true
+    let result = false
     for (const btr of this.database.tables.blockTable.newIterator()) {
-      if (!btr.removeEntity(objectId)) result = false
+      if (btr.removeEntity(objectId)) {
+        result = true
+        break
+      }
     }
     return result
   }
