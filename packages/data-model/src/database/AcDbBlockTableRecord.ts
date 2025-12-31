@@ -268,16 +268,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    *
    * @param id - The entity ID to search for
    * @returns The entity with the specified ID, or undefined if not found
-   *
-   * @example
-   * ```typescript
-   * const entity = blockRecord.getIdAt('some-entity-id');
-   * if (entity) {
-   *   console.log('Found entity:', entity.type);
-   * }
-   * ```
    */
-  getIdAt(id: string) {
+  getIdAt(id: AcDbObjectId) {
     return this._entities.get(id)
   }
 }

@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.5.4
+
+### Patch Changes
+
+- feat: refiine osnap logic of insert entity
+
 ## 1.5.3
 
 ### Patch Changes

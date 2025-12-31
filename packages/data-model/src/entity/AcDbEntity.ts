@@ -354,6 +354,11 @@ export abstract class AcDbEntity extends AcDbObject {
    * @param pickPoint - The pick point
    * @param lastPoint - The last point
    * @param snapPoints - Array to populate with snap points
+   * @param gsMark - The object id of subentity. For now, it is used by INSERT
+   * entity only. In AutoCAD, it uses AcGiSubEntityTraits::setSelectionMarkerInput
+   * to set GS marker of the subentity involved in the object snap operation. For
+   * now, we don't provide such a GS marker mechanism yet. So passed id of subentity
+   * as GS marker. Maybe this behavior will change in the future.
    *
    * @example
    * ```typescript
@@ -369,7 +374,9 @@ export abstract class AcDbEntity extends AcDbObject {
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
     lastPoint: AcGePoint3dLike,
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-    snapPoints: AcGePoint3d[]
+    snapPoints: AcGePoint3dLike[],
+    // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
+    gsMark?: AcDbObjectId
   ) {}
 
   /**
