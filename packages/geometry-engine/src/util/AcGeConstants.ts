@@ -2,7 +2,7 @@ import { AcGePoint2dLike, AcGePoint3dLike } from '../math'
 
 /**
  * Floating point comparison tolerance.
- * Default value is 0.000001 (10e-6)
+ * Default value is 0.000001 (1e-6)
  */
 export const FLOAT_TOL: number = 0.000001
 

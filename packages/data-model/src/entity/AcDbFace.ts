@@ -11,7 +11,7 @@ import { AcDbEntity } from './AcDbEntity'
 
 /**
  * Represents a three-dimensional surface patch — specifically, a flat polygon that
- * can have three or four vertices (triangular or quadrilateral). It’s one of the
+ * can have three or four vertices (triangular or quadrilateral). It's one of the
  * simplest types of 3D geometry in AutoCAD — used mainly for visual representation
  * of 3D models, not for solid modeling.
  */

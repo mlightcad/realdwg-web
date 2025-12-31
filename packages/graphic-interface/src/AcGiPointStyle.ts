@@ -8,9 +8,9 @@ export interface AcGiPointStyle {
   displayMode: number
   /**
    * Point display size.
-   * - 0: Create a point at 5 percent of the drawing area height
-   * - > 0: Specifie an absolute size
-   * - < 0: Specifie a percentage of the viewport size
+   * - 0: Creates a point at 5 percent of the drawing area height
+   * - > 0: Specifies an absolute size
+   * - < 0: Specifies a percentage of the viewport size
    */
   displaySize: number
 }

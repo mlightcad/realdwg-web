@@ -29,7 +29,7 @@ export class AcGeTol {
    * <pre>
    * (v1/v1.length() - v2/v2.length() ).length() < equalVectorTol
    * </pre>
-   * 或
+   * Or
    * <pre>
    * (v1/v1.length() + v2/v2.length() ).length() < equalVectorTol
    * </pre>

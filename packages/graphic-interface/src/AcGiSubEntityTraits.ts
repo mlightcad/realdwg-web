@@ -23,26 +23,26 @@ export interface AcGiSubEntityTraits {
 
   /**
    * Line type (pattern) used for drawing edges / curves of the entity.
-   * Corresponds to AutoCAD’s `AcGiLineStyle` (or linetypeTableRecord).
+   * Corresponds to AutoCAD's `AcGiLineStyle` (or linetypeTableRecord).
    */
   lineType: AcGiLineStyle
 
   /**
    * Scale factor applied to the lineType.
    * Changes how dense or stretched the pattern appears. (Equivalent to
-   * AutoCAD’s “Linetype Scale” / ltScale).
+   * AutoCAD's "Linetype Scale" / ltScale).
    */
   lineTypeScale: number
 
   /**
-   * Lineweight for the entity’s drawing (i.e. the visual thickness of lines).
-   * Typically corresponds to one of AutoCAD’s predefined lineweights.
+   * Lineweight for the entity's drawing (i.e. the visual thickness of lines).
+   * Typically corresponds to one of AutoCAD's predefined lineweights.
    */
   lineWeight: AcGiLineWeight
 
   /**
    * Fill type / hatch style for the entity (if applicable).
-   * Corresponds to AutoCAD’s `AcGiHatchStyle`. For example, controlling whether
+   * Corresponds to AutoCAD's `AcGiHatchStyle`. For example, controlling whether
    * the sub‑entity is filled or only outlined.
    */
   fillType: AcGiHatchStyle
@@ -56,7 +56,7 @@ export interface AcGiSubEntityTraits {
   /**
    * Thickness (extrusion) of the entity along the positive Z axis in WCS units.
    * Only affects certain primitive types (e.g. polylines, arcs, circles, SHX‑text),
-   * similarly to AutoCAD’s “thickness” property.
+   * similarly to AutoCAD's "thickness" property.
    */
   thickness: number
 
