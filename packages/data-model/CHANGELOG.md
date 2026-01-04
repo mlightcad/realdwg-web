@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.5.5
+
+### Patch Changes
+
+- feat: add some utility methods for AcDbOsnapMode
+
 ## 1.5.4
 
 ### Patch Changes
