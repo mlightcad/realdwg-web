@@ -216,63 +216,134 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
-   * For a block reference, its transform matrix should be computed as follows.
-   * - Translate geometry by –blockBasePoint
-   * - Apply scale
-   * - Apply rotation (about block Z / normal)
-   * - Apply OCS (normal / extrusion)
-   * - Translate to insertion point
+   * Gets the block-local transformation matrix of this block reference.
    *
-   * In matrix terms (right-multiply convention):
-   *   blockTransform =
-   *     T(position)
-   *   · OCS(normal)
-   *   · R(rotation)
-   *   · S(scale)
-   *   · T(-basePoint)
+   * This matrix represents the **INSERT entity transform in Object Coordinate
+   * System (OCS)**, excluding the extrusion / normal transformation.
    *
-   * @returns The transform matrix of one block reference
+   * In AutoCAD, a block reference transform is conceptually applied in the
+   * following order:
+   *
+   * 1. Translate geometry by the negative block base point
+   * 2. Apply non-uniform scaling
+   * 3. Apply rotation about the block Z axis (OCS Z)
+   * 4. Translate to the insertion point
+   * 5. Finally, transform from OCS to WCS using the entity normal (extrusion)
+   *
+   * This property returns the matrix for steps **1–4 only**.
+   *
+   * The OCS → WCS transformation derived from {@link normal} **must NOT be
+   * included here**, because:
+   *
+   * - The rotation angle of an INSERT is defined in OCS
+   * - Applying OCS earlier would rotate around an incorrect axis
+   * - Cached block geometry must remain reusable for different normals
+   *
+   * Therefore, the extrusion transformation is applied **after rendering**
+   * (see {@link AcDbRenderingCache.draw}), matching AutoCAD / RealDWG behavior.
+   *
+   * ### Matrix composition (right-multiply convention)
+   *
+   * ```
+   * blockTransform =
+   *   T(position)
+   * · R(rotation about OCS Z)
+   * · S(scaleFactors)
+   * · T(-blockBasePoint)
+   * ```
+   *
+   * ### Notes
+   *
+   * - The returned matrix operates in OCS space
+   * - Rotation is always about the OCS Z axis
+   * - {@link normal} is applied later as a final orientation step
+   * - This mirrors the internal behavior of `AcDbBlockReference` in ObjectARX
+   *
+   * @returns A transformation matrix representing the block-local INSERT transform
+   *          in OCS, excluding extrusion.
    */
   get blockTransform(): AcGeMatrix3d {
+    // Retrieve the referenced block table record.
+    // The block definition contains its own local coordinate system
+    // whose origin is the block base point.
     const blockTableRecord = this.blockTableRecord
+
+    // The base point (origin) of the block definition.
+    // All entities inside the block are defined relative to this point.
+    // If the block record is missing, fall back to (0,0,0).
     const basePoint = blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
 
-    // Scale
-    const mScale = new AcGeMatrix3d().makeScale(
-      this._scaleFactors.x,
-      this._scaleFactors.y,
-      this._scaleFactors.z
-    )
-
-    // Rotation about block Z
-    const qRot = new AcGeQuaternion().setFromAxisAngle(
-      AcGeVector3d.Z_AXIS,
-      this._rotation
-    )
-    const mRot = new AcGeMatrix3d().makeRotationFromQuaternion(qRot)
-
-    // OCS → WCS
-    const mOcs = new AcGeMatrix3d()
-    mOcs.setFromExtrusionDirection(this._normal)
-
-    // Base point compensation
+    // ------------------------------------------------------------
+    // Step 1: Translate geometry by the negative block base point
+    //
+    // This moves block geometry so that the block base point
+    // coincides with the origin (0,0,0) in block-local space.
+    //
+    // AutoCAD always applies this compensation first.
+    // ------------------------------------------------------------
     const mBase = new AcGeMatrix3d().makeTranslation(
       -basePoint.x,
       -basePoint.y,
       -basePoint.z
     )
 
-    // Insertion point
+    // ------------------------------------------------------------
+    // Step 2: Apply non-uniform scaling
+    //
+    // Scale factors are applied in block-local OCS coordinates.
+    // Negative or non-uniform scales are supported.
+    // ------------------------------------------------------------
+    const mScale = new AcGeMatrix3d().makeScale(
+      this._scaleFactors.x,
+      this._scaleFactors.y,
+      this._scaleFactors.z
+    )
+
+    // ------------------------------------------------------------
+    // Step 3: Apply rotation about the block Z axis (OCS Z)
+    //
+    // IMPORTANT:
+    // - The rotation angle of an INSERT is defined in OCS
+    // - The rotation axis is always the local Z axis
+    // - The extrusion / normal is NOT applied here
+    //
+    // Rotation is therefore constructed around (0,0,1).
+    // ------------------------------------------------------------
+    const qRot = new AcGeQuaternion().setFromAxisAngle(
+      AcGeVector3d.Z_AXIS,
+      this._rotation
+    )
+    const mRot = new AcGeMatrix3d().makeRotationFromQuaternion(qRot)
+
+    // ------------------------------------------------------------
+    // Step 4: Translate to the insertion point
+    //
+    // This moves the transformed block geometry from the origin
+    // to its final insertion point, still in OCS.
+    // ------------------------------------------------------------
     const mInsert = new AcGeMatrix3d().makeTranslation(
       this._position.x,
       this._position.y,
       this._position.z
     )
 
-    // Final transform
+    // ------------------------------------------------------------
+    // Final composition (right-multiply convention)
+    //
+    // blockTransform =
+    //   T(position)
+    // · R(rotation about OCS Z)
+    // · S(scaleFactors)
+    // · T(-blockBasePoint)
+    //
+    // NOTE:
+    // - This matrix operates entirely in OCS
+    // - The OCS → WCS transform derived from `normal`
+    //   is intentionally excluded here
+    // - Extrusion is applied later at render time
+    // ------------------------------------------------------------
     return new AcGeMatrix3d()
-      .multiplyMatrices(mInsert, mOcs)
-      .multiply(mRot)
+      .multiplyMatrices(mInsert, mRot)
       .multiply(mScale)
       .multiply(mBase)
   }
@@ -498,7 +569,8 @@ export class AcDbBlockReference extends AcDbEntity {
         blockTableRecord,
         this.rgbColor,
         true,
-        matrix
+        matrix,
+        this._normal
       )
       this.attachEntityInfo(block)
       return block

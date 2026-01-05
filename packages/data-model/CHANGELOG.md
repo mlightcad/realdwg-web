@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.6.0
+
+### Minor Changes
+
+- fix: fix regression bug on handling normal in insert and dimension entities resulted by commit d5a9966
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/graphic-interface@3.2.0
+
 ## 1.5.5
 
 ### Patch Changes

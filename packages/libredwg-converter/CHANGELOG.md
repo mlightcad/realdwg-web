@@ -1,5 +1,12 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.0
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.6.0
+
 ## 3.3.5
 
 ### Patch Changes
