@@ -156,9 +156,9 @@ export class AcDbEntityConverter {
       if (definitionLine != null) {
         dbEntity.definitionLines.push({
           angle: definitionLine.angle,
-          origin: definitionLine.base,
-          delta: definitionLine.offset,
-          dashPattern: this.toNumberArray(definitionLine.dashPattern)
+          base: definitionLine.base,
+          offset: definitionLine.offset,
+          dashLengths: this.toNumberArray(definitionLine.dashPattern) // TODO: rename dashPattern to dashLengths
         })
       }
     }

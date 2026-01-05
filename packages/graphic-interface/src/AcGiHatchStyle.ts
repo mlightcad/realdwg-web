@@ -2,9 +2,9 @@ import { AcGePoint2dLike } from '@mlightcad/geometry-engine'
 
 export interface AcGiHatchPatternLine {
   angle: number
-  origin: AcGePoint2dLike
-  delta: AcGePoint2dLike
-  dashPattern: number[]
+  base: AcGePoint2dLike
+  offset: AcGePoint2dLike
+  dashLengths: number[]
 }
 
 /**
@@ -13,5 +13,5 @@ export interface AcGiHatchPatternLine {
 export interface AcGiHatchStyle {
   solidFill: boolean
   patternAngle: number
-  patternLines: AcGiHatchPatternLine[]
+  definitionLines: AcGiHatchPatternLine[]
 }

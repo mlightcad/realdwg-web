@@ -275,7 +275,7 @@ export class AcDbTrace extends AcDbCurve {
     traits.fillType = {
       solidFill: true,
       patternAngle: 0,
-      patternLines: []
+      definitionLines: []
     }
     return renderer.area(area)
   }
