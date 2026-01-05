@@ -374,9 +374,9 @@ export class AcDbEntityConverter {
     hatch.definitionLines?.forEach(item => {
       dbEntity.definitionLines.push({
         angle: item.angle,
-        origin: item.base,
-        delta: item.offset,
-        dashPattern: item.numberOfDashLengths > 0 ? item.dashLengths : []
+        base: item.base,
+        offset: item.offset,
+        dashLengths: item.numberOfDashLengths > 0 ? item.dashLengths : []
       })
     })
     // Important: Don't use DwgHatchSolidFill.SolidFill to avoid bundling libredwg-web into libredeg-converter

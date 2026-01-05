@@ -360,7 +360,7 @@ export class AcDbHatch extends AcDbEntity {
     traits.fillType = {
       solidFill: this.isSolidFill,
       patternAngle: this.patternAngle,
-      patternLines: this.definitionLines
+      definitionLines: this.definitionLines
     }
     return renderer.area(this._geo)
   }
