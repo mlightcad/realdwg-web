@@ -74,9 +74,7 @@ export enum AcDbOsnapMode {
  * // mask === 131
  * ```
  */
-export function acdbOsnapModesToMask(
-  modes: AcDbOsnapMode[]
-): number {
+export function acdbOsnapModesToMask(modes: AcDbOsnapMode[]): number {
   let mask = 0
 
   for (const mode of modes) {
@@ -106,9 +104,7 @@ export function acdbOsnapModesToMask(
  * // ]
  * ```
  */
-export function acdbMaskToOsnapModes(
-  mask: number
-): AcDbOsnapMode[] {
+export function acdbMaskToOsnapModes(mask: number): AcDbOsnapMode[] {
   const modes: AcDbOsnapMode[] = []
 
   for (const value of Object.values(AcDbOsnapMode)) {
@@ -138,10 +134,7 @@ export function acdbMaskToOsnapModes(
  * mask = acdbToggleOsnapMode(mask, AcDbOsnapMode.MidPoint)
  * ```
  */
-export function acdbToggleOsnapMode(
-  mask: number,
-  mode: AcDbOsnapMode
-): number {
+export function acdbToggleOsnapMode(mask: number, mode: AcDbOsnapMode): number {
   return mask ^ (1 << (mode - 1))
 }
 
@@ -159,10 +152,7 @@ export function acdbToggleOsnapMode(
  * }
  * ```
  */
-export function acdbHasOsnapMode(
-  mask: number,
-  mode: AcDbOsnapMode
-): boolean {
+export function acdbHasOsnapMode(mask: number, mode: AcDbOsnapMode): boolean {
   return (mask & (1 << (mode - 1))) !== 0
 }
 
@@ -178,10 +168,7 @@ export function acdbHasOsnapMode(
  * mask = acdbEnableOsnapMode(mask, AcDbOsnapMode.Tangent)
  * ```
  */
-export function acdbEnableOsnapMode(
-  mask: number,
-  mode: AcDbOsnapMode
-): number {
+export function acdbEnableOsnapMode(mask: number, mode: AcDbOsnapMode): number {
   return mask | (1 << (mode - 1))
 }
 

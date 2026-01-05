@@ -349,7 +349,8 @@ export abstract class AcDbDimension extends AcDbEntity {
           blockTableRecord,
           this.rgbColor,
           false,
-          matrix
+          matrix,
+          this._normal
         )
         this.attachEntityInfo(group)
         return group
@@ -517,33 +518,98 @@ export abstract class AcDbDimension extends AcDbEntity {
     ) as AcGiArrowType
   }
 
+  /**
+   * Computes the block-local transformation matrix for the anonymous block
+   * referenced by this dimension entity.
+   *
+   * In AutoCAD, each dimension references an **anonymous block** that contains
+   * the graphical representation of the dimension (dimension line, extension
+   * lines, arrows, and text). That block is defined in the **dimension’s Object
+   * Coordinate System (OCS)**.
+   *
+   * This method computes the transformation that positions the anonymous
+   * dimension block **within the dimension’s OCS**, excluding any extrusion
+   * (normal) transformation.
+   *
+   * Conceptually, AutoCAD applies the following steps when displaying a
+   * dimension block:
+   *
+   * 1. Translate block geometry by the negative block base point
+   * 2. Translate by the dimension block position (DXF group code 12)
+   * 3. Finally, transform from OCS to WCS using the dimension normal (DXF 210)
+   *
+   * This method implements **steps 1 and 2 only**.
+   *
+   * The OCS → WCS transformation derived from {@link normal} is **intentionally
+   * excluded** and must be applied **after rendering** (see
+   * {@link AcDbRenderingCache.draw}). This matches AutoCAD / RealDWG behavior and
+   * ensures:
+   *
+   * - Dimension text rotation remains defined in OCS
+   * - Arrow orientation and extension line directions remain correct
+   * - Anonymous dimension blocks can be safely cached and reused
+   *
+   * ### Matrix composition (right-multiply convention)
+   *
+   * ```
+   * dimBlockTransform =
+   *   T(dimBlockPosition)
+   * · T(-blockBasePoint)
+   * ```
+   *
+   * ### Notes
+   *
+   * - The returned matrix operates entirely in dimension OCS
+   * - No scaling or rotation is applied here
+   * - {@link normal} is applied later as a final orientation step
+   * - This mirrors the internal behavior of `AcDbDimension` in ObjectARX
+   *
+   * @returns A transformation matrix that positions the anonymous dimension
+   *          block in OCS space, excluding extrusion.
+   */
   private computeDimBlockTransform(): AcGeMatrix3d {
     const blockTableRecord = this.dimBlockId
       ? this.database.tables.blockTable.getAt(this.dimBlockId)
       : undefined
 
+    // The base point of the anonymous dimension block definition
     const basePoint = blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
 
-    // 1. Insertion point (DXF 12)
-    const mInsert = new AcGeMatrix3d().makeTranslation(
-      this._dimBlockPosition.x,
-      this._dimBlockPosition.y,
-      this._dimBlockPosition.z
-    )
-
-    // 2. OCS → WCS
-    const mOcs = new AcGeMatrix3d()
-    mOcs.setFromExtrusionDirection(this._normal)
-
-    // 3. Base point compensation
+    // ------------------------------------------------------------
+    // Step 1: Base point compensation
+    //
+    // Move block geometry so that the block base point
+    // coincides with the origin of dimension OCS.
+    // ------------------------------------------------------------
     const mBase = new AcGeMatrix3d().makeTranslation(
       -basePoint.x,
       -basePoint.y,
       -basePoint.z
     )
 
-    // Final matrix:
-    // T(insert) · OCS · T(-base)
-    return new AcGeMatrix3d().multiplyMatrices(mInsert, mOcs).multiply(mBase)
+    // ------------------------------------------------------------
+    // Step 2: Insertion offset (DXF group code 12)
+    //
+    // This is the relative offset of the dimension block
+    // in WCS, applied in dimension OCS coordinates.
+    // ------------------------------------------------------------
+    const mInsert = new AcGeMatrix3d().makeTranslation(
+      this._dimBlockPosition.x,
+      this._dimBlockPosition.y,
+      this._dimBlockPosition.z
+    )
+
+    // ------------------------------------------------------------
+    // Final matrix (OCS space only):
+    //
+    // dimBlockTransform =
+    //   T(dimBlockPosition)
+    // · T(-blockBasePoint)
+    //
+    // NOTE:
+    // - This matrix operates entirely in dimension OCS
+    // - The extrusion / normal is intentionally excluded
+    // ------------------------------------------------------------
+    return new AcGeMatrix3d().multiplyMatrices(mInsert, mBase)
   }
 }
