@@ -4,6 +4,7 @@ import { AcCmColor, AcCmEventManager } from '@mlightcad/common'
 import { AcDbObject, AcDbObjectId } from '../base'
 import { AcDbRegenerator } from '../converter'
 import {
+  AcDbConverterType,
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
@@ -692,7 +693,7 @@ export class AcDbDatabase extends AcDbObject {
   async read(
     data: ArrayBuffer,
     options: AcDbOpenDatabaseOptions,
-    fileType: AcDbFileType = AcDbFileType.DXF
+    fileType: AcDbConverterType = AcDbFileType.DXF
   ) {
     const converter = AcDbDatabaseConverterManager.instance.get(fileType)
     if (converter == null)
@@ -811,8 +812,10 @@ export class AcDbDatabase extends AcDbObject {
     if (fileExtension === 'dwg') {
       // DWG files are binary, convert to ArrayBuffer
       await this.read(content.buffer, options, AcDbFileType.DWG)
-    } else {
+    } else if (fileExtension === 'dxf') {
       await this.read(content.buffer, options, AcDbFileType.DXF)
+    } else {
+      await this.read(content.buffer, options, fileExtension)
     }
 
     this.events.openProgress.dispatch({
