@@ -16,7 +16,7 @@
     "analyze": "nx run-many -t analyze",
     "build": "nx run-many -t build",
     "clean": "nx run-many -t clean",
-    "dev": "nx run @mlightcad/mlightcad:dev",
+    "dev": "nx run @mlightcad/realdwg-web-example:dev",
     "doc": "typedoc",
     "format": "prettier --config ./.prettierrc.js --write \"packages/**/*.{ts,js,json}\"",
     "lint": "nx run-many -t lint",
