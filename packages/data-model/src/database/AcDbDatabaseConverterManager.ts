@@ -143,7 +143,10 @@ export class AcDbDatabaseConverterManager {
    * manager.register(AcDbFileType.DWG, converter);
    * ```
    */
-  public register(fileType: AcDbConverterType, converter: AcDbDatabaseConverter) {
+  public register(
+    fileType: AcDbConverterType,
+    converter: AcDbDatabaseConverter
+  ) {
     this._converters.set(fileType, converter)
     this.events.registered.dispatch({
       fileType,

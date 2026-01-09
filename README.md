@@ -24,11 +24,15 @@ To register a converter for a file type:
 import { AcDbDatabaseConverterManager, AcDbFileType } from '@mlightcad/data-model';
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter';
 
-// WASM module loading (async)
-import('@mlightcad/libredwg-web/wasm/libredwg-web').then(libredwgModule => {
-  const dwgConverter = new AcDbLibreDwgConverter(libredwgModule);
-  AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, dwgConverter);
-});
+const converter = new AcDbLibreDwgConverter({
+  convertByEntityType: false,
+  useWorker: true,
+  parserWorkerUrl: './assets/libredwg-parser-worker.js'
+})
+AcDbDatabaseConverterManager.instance.register(
+  AcDbFileType.DWG,
+  converter
+)
 ```
 
 ### Unregistering a Converter
@@ -49,6 +53,30 @@ To get the converter for a specific file type:
 ```ts
 const converter = AcDbDatabaseConverterManager.instance.get(AcDbFileType.DXF);
 ```
+
+
+### Read DWG/DXF File
+
+Once a File object is selected via an HTML file input control, you can read and parse the DWG/DXF file using the following code.
+
+```ts
+const buffer = await file.arrayBuffer();
+const fileExtension = file.name.split('.').pop()?.toLocaleLowerCase();
+const database = new AcDbDatabase();
+// The following step is very important. The working database must be set before parsing DWG/DXF file
+acdbHostApplicationServices().workingDatabase = database;
+const options: AcDbOpenDatabaseOptions = {
+  minimumChunkSize: 1000,
+  readOnly: true
+};
+await database.read(
+  buffer,
+  options,
+  fileExtension == 'dwg' ? AcDbFileType.DWG : AcDbFileType.DXF
+);
+```
+
+For a complete example, see the [example project](./packages/example/src/main.ts).
 
 ### Extensibility
 
