@@ -18,11 +18,16 @@ export enum AcDbFileType {
 }
 
 /**
+ * Type representing either a known file type or a custom string identifier.
+ */
+export type AcDbConverterType = AcDbFileType | string
+
+/**
  * Event arguments for database converter manager events.
  */
 export interface AcDbDatabaseConverterManagerEventArgs {
   /** The file type associated with the event */
-  fileType: AcDbFileType
+  fileType: AcDbConverterType
   /** The converter associated with the event */
   converter: AcDbDatabaseConverter
 }
@@ -48,7 +53,7 @@ export class AcDbDatabaseConverterManager {
   /** Singleton instance of the manager */
   private static _instance?: AcDbDatabaseConverterManager
   /** Map of file types to their associated converters */
-  private _converters: Map<AcDbFileType, AcDbDatabaseConverter>
+  private _converters: Map<AcDbConverterType, AcDbDatabaseConverter>
 
   /**
    * Events that can be triggered by the converter manager.
@@ -138,7 +143,7 @@ export class AcDbDatabaseConverterManager {
    * manager.register(AcDbFileType.DWG, converter);
    * ```
    */
-  public register(fileType: AcDbFileType, converter: AcDbDatabaseConverter) {
+  public register(fileType: AcDbConverterType, converter: AcDbDatabaseConverter) {
     this._converters.set(fileType, converter)
     this.events.registered.dispatch({
       fileType,
@@ -160,7 +165,7 @@ export class AcDbDatabaseConverterManager {
    * }
    * ```
    */
-  public get(fileType: AcDbFileType) {
+  public get(fileType: AcDbConverterType) {
     return this._converters.get(fileType)
   }
 
@@ -174,7 +179,7 @@ export class AcDbDatabaseConverterManager {
    * manager.unregister(AcDbFileType.DWG);
    * ```
    */
-  public unregister(fileType: AcDbFileType) {
+  public unregister(fileType: AcDbConverterType) {
     const converter = this._converters.get(fileType)
     if (converter) {
       this._converters.delete(fileType)
