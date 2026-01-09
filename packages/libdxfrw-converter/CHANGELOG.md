@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.4.1
+
+### Patch Changes
+
+- feat: update file type handling to support custom converter types
+- Updated dependencies
+  - @mlightcad/data-model@1.6.1
+
 ## 3.4.0
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.2.1
+
+### Patch Changes
+
+- feat: update file type handling to support custom converter types
+- Updated dependencies
+  - @mlightcad/common@1.3.1
+  - @mlightcad/geometry-engine@3.1.4
+
 ## 3.2.0
 
 ### Minor Changes

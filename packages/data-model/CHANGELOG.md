@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.6.1
+
+### Patch Changes
+
+- feat: update file type handling to support custom converter types
+- Updated dependencies
+  - @mlightcad/common@1.3.1
+  - @mlightcad/geometry-engine@3.1.4
+  - @mlightcad/graphic-interface@3.2.1
+
 ## 1.6.0
 
 ### Minor Changes

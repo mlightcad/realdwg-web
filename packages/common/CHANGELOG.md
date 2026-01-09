@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.1
+
+### Patch Changes
+
+- feat: update file type handling to support custom converter types
+
 ## 1.3.0
 
 ### Patch Changes
