@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.2
+
+### Patch Changes
+
+- feat: set ltscale and celtscale value in AcDbDatabase when parsing dwg/dxf file
+- Updated dependencies
+  - @mlightcad/data-model@1.6.2
+
 ## 3.4.1
 
 ### Patch Changes

@@ -366,6 +366,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     db.angBase = header['$ANGBASE'] || 0
     db.angDir = header['$ANGDIR'] || 0
     if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
+    db.celtscale = header['$CELTSCALE'] || 1
+    db.ltscale = header['$LTSCALE'] || 1
     if (header['$EXTMAX']) db.extmax = header['$EXTMAX']
     if (header['$EXTMIN']) db.extmin = header['$EXTMIN']
     if (header['$INSUNITS'] != null) db.insunits = header['$INSUNITS']
