@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.6.2
+
+### Patch Changes
+
+- feat: set ltscale and celtscale value in AcDbDatabase when parsing dwg/dxf file
+
 ## 1.6.1
 
 ### Patch Changes
