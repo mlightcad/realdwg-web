@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.6.3
+
+### Patch Changes
+
+- fix: fix bug on converting entities in paper space
+
 ## 1.6.2
 
 ### Patch Changes

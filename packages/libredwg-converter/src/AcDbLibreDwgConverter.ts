@@ -37,7 +37,8 @@ import {
   DwgEntity,
   DwgInsertEntity,
   DwgMTextEntity,
-  DwgTextEntity
+  DwgTextEntity,
+  isModelSpace
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -386,10 +387,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         db.tables.blockTable.add(dbBlock)
       }
 
-      // Don't process entities in block space and paper space until other blocks are processed
+      // Don't process entities in block space until other blocks are processed
       if (
         !dbBlock.isModelSapce &&
-        !dbBlock.isPaperSapce &&
         btr.entities &&
         btr.entities.length > 0
       ) {
@@ -434,8 +434,13 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   ) {
     const converter = new AcDbEntityConverter()
 
-    // Create an instance of AcDbBatchProcessing
-    let entities = model.entities
+    // Get all of entities in model space
+    let entities: DwgEntity[] = []
+    model.tables.BLOCK_RECORD.entries.forEach(btr => {
+      if (isModelSpace(btr.name)) entities = btr.entities
+    })
+
+    // Create an instance of AcDbBatchProcessing  
     const entityCount = entities.length
     const batchProcessor = new AcDbBatchProcessing(
       entityCount,

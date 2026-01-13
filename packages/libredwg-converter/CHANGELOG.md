@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.4
+
+### Patch Changes
+
+- fix: fix bug on converting entities in paper space
+- Updated dependencies
+  - @mlightcad/data-model@1.6.3
+
 ## 3.4.3
 
 ### Patch Changes

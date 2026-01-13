@@ -160,8 +160,8 @@ importers:
         specifier: workspace:*
         version: link:../data-model
       '@mlightcad/libredwg-web':
-        specifier: 0.4.6
-        version: 0.4.6
+        specifier: 0.5.0
+        version: 0.5.0
     devDependencies:
       vite:
         specifier: ^5.2.10
@@ -1380,8 +1380,8 @@ packages:
   '@mlightcad/libdxfrw-web@0.0.9':
     resolution: {integrity: sha512-6fqGbjKWwI93cq8vwpXiFdAzWfdJjcIlLuAYwUvgTcEjx5jPvbd+tkzY7mX2/a8iMm/b/auGVzkgf1wxezHYIw==}
 
-  '@mlightcad/libredwg-web@0.4.6':
-    resolution: {integrity: sha512-YkJv9vtB6GLE9EYHpKm/49kdsyIqQmmnLykEEKBUZezIhoUUM79aZTjW/Ct9twsfJOnEYIYdrduuTqEscZ8ivw==}
+  '@mlightcad/libredwg-web@0.5.0':
+    resolution: {integrity: sha512-GVH7u1yp7MEkgJzhr2KjrlrTYD72B9vd67T4iDwRMWPzQn6OFahncaF2D0axSPCVf2J1eBuw0nXIq2KexJ+6RA==}
 
   '@nodelib/fs.scandir@2.1.5':
     resolution: {integrity: sha512-vq24Bq3ym5HEQm2NKCr3yXDwjc7vTsEThRDnkp2DK9p1uqLR+DHurm/NOTo0KG7HYHU7eppKZj3MyqYuMBf62g==}
@@ -6281,7 +6281,7 @@ snapshots:
 
   '@mlightcad/libdxfrw-web@0.0.9': {}
 
-  '@mlightcad/libredwg-web@0.4.6': {}
+  '@mlightcad/libredwg-web@0.5.0': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

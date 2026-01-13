@@ -285,6 +285,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    *
    * @param entities - Array of DXF entities to process
    * @param blockTableRecord - The block table record to use
+   * @param checkOwner - The flag whether to check the owner of entity is the passed
+   * blockTableRecord. If yes, convert it and append it to the block table record.
+   * Otherwise, ignore the entity.
    *
    * @example
    * ```typescript
@@ -293,15 +296,17 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    */
   private async processEntitiesInBlock(
     entities: CommonDxfEntity[],
-    blockTableRecord: AcDbBlockTableRecord
+    blockTableRecord: AcDbBlockTableRecord,
+    checkOwner = false
   ) {
     const converter = new AcDbEntityConverter()
     const entityCount = entities.length
     const dbEntities: AcDbEntity[] = []
+    const btrId = blockTableRecord.objectId
     for (let i = 0; i < entityCount; i++) {
       const entity = entities[i]
       const dbEntity = converter.convert(entity)
-      if (dbEntity) {
+      if (dbEntity && (!checkOwner || entity.ownerBlockRecordSoftId === btrId)) {
         dbEntities.push(dbEntity)
       }
     }
@@ -336,7 +341,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         db.tables.blockTable.add(dbBlock)
       }
       if (block.entities) {
+        // Process entities in user-defined blocks 
         this.processEntitiesInBlock(block.entities, dbBlock)
+      } else {
+        // Process paper space block definiton. Entities in model space are 
+        // handled in method processEntities
+        if (dbBlock.isPaperSapce) {
+          this.processEntitiesInBlock(model.entities, dbBlock, true)
+        }
       }
     }
   }
