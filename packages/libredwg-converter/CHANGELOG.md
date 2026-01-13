@@ -1,5 +1,11 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.3
+
+### Patch Changes
+
+- feat: upgrade version of libredwg-web
+
 ## 3.4.2
 
 ### Patch Changes
