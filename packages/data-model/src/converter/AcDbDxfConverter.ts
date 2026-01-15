@@ -306,7 +306,10 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     for (let i = 0; i < entityCount; i++) {
       const entity = entities[i]
       const dbEntity = converter.convert(entity)
-      if (dbEntity && (!checkOwner || entity.ownerBlockRecordSoftId === btrId)) {
+      if (
+        dbEntity &&
+        (!checkOwner || entity.ownerBlockRecordSoftId === btrId)
+      ) {
         dbEntities.push(dbEntity)
       }
     }
@@ -341,10 +344,10 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         db.tables.blockTable.add(dbBlock)
       }
       if (block.entities) {
-        // Process entities in user-defined blocks 
+        // Process entities in user-defined blocks
         this.processEntitiesInBlock(block.entities, dbBlock)
       } else {
-        // Process paper space block definiton. Entities in model space are 
+        // Process paper space block definiton. Entities in model space are
         // handled in method processEntities
         if (dbBlock.isPaperSapce) {
           this.processEntitiesInBlock(model.entities, dbBlock, true)

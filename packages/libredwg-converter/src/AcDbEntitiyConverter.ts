@@ -633,7 +633,7 @@ export class AcDbEntityConverter {
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
-    dbImage.imageDefId = image.imageDefHandle.toString()
+    dbImage.imageDefId = image.imageDefHandle
     dbImage.isClipped = image.clipping > 0
     dbImage.isShownClipped = (image.flags | 0x0004) > 0
     dbImage.isImageShown = (image.flags | 0x0003) > 0
@@ -729,8 +729,8 @@ export class AcDbEntityConverter {
 
   private processCommonAttrs(entity: DwgEntity, dbEntity: AcDbEntity) {
     dbEntity.layer = entity.layer || '0'
-    dbEntity.objectId = entity.handle.toString()
-    dbEntity.ownerId = entity.ownerBlockRecordSoftId.toString()
+    dbEntity.objectId = entity.handle
+    dbEntity.ownerId = entity.ownerBlockRecordSoftId
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType
     }

@@ -174,7 +174,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     dimStyles.forEach(item => {
       const attrs: AcDbDimStyleTableRecordAttrs = {
         name: item.name,
-        ownerId: item.ownerHandle.toString(),
+        ownerId: item.ownerHandle,
         dimpost: item.DIMPOST || '',
         dimapost: item.DIMAPOST || '',
         dimscale: item.DIMSCALE,
@@ -379,20 +379,16 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       let dbBlock = db.tables.blockTable.getAt(btr.name)
       if (!dbBlock) {
         dbBlock = new AcDbBlockTableRecord()
-        dbBlock.objectId = btr.handle.toString()
+        dbBlock.objectId = btr.handle
         dbBlock.name = btr.name
-        dbBlock.ownerId = btr.ownerHandle.toString()
+        dbBlock.ownerId = btr.ownerHandle
         dbBlock.origin.copy(btr.basePoint)
-        dbBlock.layoutId = btr.layout.toString()
+        dbBlock.layoutId = btr.layout
         db.tables.blockTable.add(dbBlock)
       }
 
       // Don't process entities in block space until other blocks are processed
-      if (
-        !dbBlock.isModelSapce &&
-        btr.entities &&
-        btr.entities.length > 0
-      ) {
+      if (!dbBlock.isModelSapce && btr.entities && btr.entities.length > 0) {
         this.processEntitiesInBlock(btr.entities, dbBlock)
       }
     })
@@ -440,7 +436,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (isModelSpace(btr.name)) entities = btr.entities
     })
 
-    // Create an instance of AcDbBatchProcessing  
+    // Create an instance of AcDbBatchProcessing
     const entityCount = entities.length
     const batchProcessor = new AcDbBatchProcessing(
       entityCount,
@@ -506,8 +502,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     dbEntry: AcDbSymbolTableRecord
   ) {
     dbEntry.name = entry.name
-    dbEntry.objectId = entry.handle.toString()
-    dbEntry.ownerId = entry.ownerHandle.toString()
+    dbEntry.objectId = entry.handle
+    dbEntry.ownerId = entry.ownerHandle
   }
 
   protected processObjects(model: DwgDatabase, db: AcDbDatabase) {
@@ -525,7 +521,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       // layout.paperSpaceTableId doesn't point to the block table record asscicated with
       // this layout. So let's get the assocated block table record id from block table.
       const btrs = db.tables.blockTable.newIterator()
-      dbLayout.objectId = layout.handle.toString()
+      dbLayout.objectId = layout.handle
       for (const btr of btrs) {
         // Because the type of layout id (number) block table record and layout id (BingInt)
         // in layout dictionary are different, so the converted data are used to compare.
@@ -566,8 +562,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     object: DwgCommonObject,
     dbObject: AcDbObject
   ) {
-    dbObject.objectId = object.handle.toString()
-    dbObject.ownerId = object.ownerHandle.toString()
+    dbObject.objectId = object.handle
+    dbObject.ownerId = object.ownerHandle
   }
 
   /**
