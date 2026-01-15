@@ -37,11 +37,12 @@ import {
   DwgEntity,
   DwgInsertEntity,
   DwgMTextEntity,
-  DwgTextEntity,
-  isModelSpace
+  DwgTextEntity
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
+
+const MODEL_SPACE = '*MODEL_SPACE'
 
 /**
  * Database converter for DWG files based on [libredwg-web](https://github.com/mlight-lee/libredwg-web).
@@ -433,7 +434,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     // Get all of entities in model space
     let entities: DwgEntity[] = []
     model.tables.BLOCK_RECORD.entries.forEach(btr => {
-      if (isModelSpace(btr.name)) entities = btr.entities
+      if (this.isModelSpace(btr.name)) entities = btr.entities
     })
 
     // Create an instance of AcDbBatchProcessing
@@ -592,5 +593,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     }
 
     return order.flatMap(type => groups[type])
+  }
+
+  private isModelSpace(name: string) {
+    return name && name.toUpperCase() == MODEL_SPACE
   }
 }

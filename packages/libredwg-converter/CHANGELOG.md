@@ -1,5 +1,11 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.6
+
+### Patch Changes
+
+- feat: upgrade librdwg-web and use interfaces only in libredwg-web in AcDbLibreDwgConverter to make libredwg-web not bundled in libredwg-converter bundle
+
 ## 3.4.5
 
 ### Patch Changes
