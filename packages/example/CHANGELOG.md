@@ -1,5 +1,13 @@
 # @mlightcad/realdwg-web-example
 
+## 0.0.7
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.6.4
+  - @mlightcad/libredwg-converter@3.4.7
+
 ## 0.0.6
 
 ### Patch Changes

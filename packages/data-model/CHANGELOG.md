@@ -1,5 +1,11 @@
 # @mlightcad/data-model
 
+## 1.6.4
+
+### Patch Changes
+
+- feat: modify type of workerUrl to string | URL
+
 ## 1.6.3
 
 ### Patch Changes
