@@ -4,7 +4,7 @@
 
 export interface AcDbWorkerConfig {
   /** Worker script URL (required if useWorker is true) */
-  workerUrl: string
+  workerUrl: string | URL
   /** Timeout for worker operations in milliseconds */
   timeout?: number
   /** Maximum number of concurrent workers */
@@ -81,7 +81,7 @@ export class AcDbWorkerManager {
   private async executeInWorker<TInput, TOutput>(
     taskId: string,
     input: TInput,
-    workerUrl: string
+    workerUrl: string | URL
   ): Promise<AcDbWorkerResult<TOutput>> {
     const startTime = Date.now()
 
@@ -180,7 +180,7 @@ export class AcDbWorkerManager {
   /**
    * Get an available worker or create a new one
    */
-  private getAvailableWorker(workerUrl: string): Worker {
+  private getAvailableWorker(workerUrl: string | URL): Worker {
     // Find available worker
     for (const [_id, instance] of this.workers) {
       if (!instance.isBusy) {

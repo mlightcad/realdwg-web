@@ -266,7 +266,7 @@ export interface AcDbDatabaseConverterConfig {
    * };
    * ```
    */
-  parserWorkerUrl?: string
+  parserWorkerUrl?: string | URL
   /**
    * Whether to use web workers for computationally intensive tasks.
    *
