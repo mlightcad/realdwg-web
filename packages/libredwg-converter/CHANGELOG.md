@@ -1,5 +1,12 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.8
+
+### Patch Changes
+
+- feat: refine error handling logic
+  - @mlightcad/data-model@1.6.5
+
 ## 3.4.7
 
 ### Patch Changes

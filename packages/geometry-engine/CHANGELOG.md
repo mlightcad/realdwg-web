@@ -1,5 +1,12 @@
 # @mlightcad/geometry-engine
 
+## 3.1.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.3.2
+
 ## 3.1.4
 
 ### Patch Changes

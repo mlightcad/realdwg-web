@@ -1,5 +1,14 @@
 # @mlightcad/data-model
 
+## 1.6.5
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.3.2
+  - @mlightcad/geometry-engine@3.1.5
+  - @mlightcad/graphic-interface@3.2.2
+
 ## 1.6.4
 
 ### Patch Changes

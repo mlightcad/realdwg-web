@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.2
+
+### Patch Changes
+
+- feat: refine error handling logic
+
 ## 1.3.1
 
 ### Patch Changes
