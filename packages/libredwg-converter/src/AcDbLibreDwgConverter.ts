@@ -69,7 +69,13 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       >(data)
       // Release worker
       api.destroy()
-      return result.data!
+      if (result.success) {
+        return result.data!
+      } else {
+        throw new Error(
+          `Failed to parse drawing due to error: '${result.error}'`
+        )
+      }
     } else {
       throw new Error('dwg converter can run in web worker only!')
     }
