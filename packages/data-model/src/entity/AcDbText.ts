@@ -4,6 +4,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import {
+  AcGiEntity,
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
   AcGiMTextFlowDirection,
@@ -611,7 +612,7 @@ export class AcDbText extends AcDbEntity {
    * const textStyle = text.getTextStyle();
    * ```
    */
-  private getTextStyle(): AcGiTextStyle {
+  protected getTextStyle(): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
     let style = textStyleTable.getAt(this.styleName)
     if (!style) {
@@ -633,7 +634,10 @@ export class AcDbText extends AcDbEntity {
    * is true.
    * @returns The rendered text entity, or undefined if drawing failed
    */
-  subWorldDraw(renderer: AcGiRenderer, delay?: boolean) {
+  subWorldDraw(
+    renderer: AcGiRenderer,
+    delay?: boolean
+  ): AcGiEntity | undefined {
     const mtextData: AcGiMTextData = {
       text: this.textString,
       height: this.height,

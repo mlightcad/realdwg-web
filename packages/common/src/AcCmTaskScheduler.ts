@@ -248,7 +248,7 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
         const shouldInterrupt = this.onError({ error, taskIndex: i, task })
         if (shouldInterrupt) {
           // Stop executing further tasks
-          return Promise.reject(error);
+          return Promise.reject(error)
         }
       }
     }

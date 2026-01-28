@@ -173,6 +173,7 @@ export class AcDbRenderingCache {
     renderer: AcGiRenderer,
     blockTableRecord: AcDbBlockTableRecord,
     color: number,
+    attributes: AcGiEntity[] = [],
     cache: boolean = true,
     transform?: AcGeMatrix3d,
     normal?: AcGeVector3d
@@ -226,6 +227,9 @@ export class AcDbRenderingCache {
           transform.setFromExtrusionDirection(normal)
           block.applyMatrix(transform)
         }
+      }
+      if (block && attributes && attributes.length > 0) {
+        attributes.forEach(attrib => block.addChild(attrib))
       }
       return block
     } else {

@@ -52,6 +52,12 @@ export interface AcGiEntity {
   set userData(value: object)
 
   /**
+   * Adds one child entity for the current entity
+   * @param child - The child entity to add
+   */
+  addChild(child: AcGiEntity): void
+
+  /**
    * Apply the matrix transform to the object and updates the object's position, rotation and scale.
    * @param matrix Input the matrix to apply
    */

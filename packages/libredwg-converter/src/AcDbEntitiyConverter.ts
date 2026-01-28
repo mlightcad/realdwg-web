@@ -5,6 +5,10 @@ import {
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
+  AcDbAttribute,
+  AcDbAttributeDefinition,
+  AcDbAttributeFlags,
+  AcDbAttributeMTextFlag,
   AcDbBlockReference,
   AcDbCircle,
   AcDbDiametricDimension,
@@ -59,6 +63,8 @@ import type {
   DwgAngularDimensionEntity,
   DwgArcEdge,
   DwgArcEntity,
+  DwgAttdefEntity,
+  DwgAttribEntity,
   DwgBoundaryPathEdge,
   DwgCircleEntity,
   DwgDimensionEntityCommon,
@@ -110,6 +116,8 @@ export class AcDbEntityConverter {
       return this.convertFace(entity as Dwg3dFaceEntity)
     } else if (entity.type == 'ARC') {
       return this.convertArc(entity as DwgArcEntity)
+    } else if (entity.type == 'ATTDEF') {
+      return this.convertAttributeDefinition(entity as DwgAttdefEntity)
     } else if (entity.type == 'CIRCLE') {
       return this.convertCirle(entity as DwgCircleEntity)
     } else if (entity.type == 'DIMENSION') {
@@ -696,6 +704,48 @@ export class AcDbEntityConverter {
     return dbXline
   }
 
+  private convertAttributeCommon(
+    attrib: DwgAttribEntity | DwgAttdefEntity,
+    dbAttrib: AcDbAttribute | AcDbAttributeDefinition
+  ) {
+    const text = attrib.text
+    dbAttrib.textString = text.text
+    dbAttrib.styleName = text.styleName
+    dbAttrib.height = text.textHeight
+    dbAttrib.position.copy(text.startPoint)
+    dbAttrib.rotation = text.rotation
+    dbAttrib.oblique = text.obliqueAngle ?? 0
+    dbAttrib.thickness = text.thickness
+    dbAttrib.horizontalMode = text.halign as unknown as AcDbTextHorizontalMode
+    dbAttrib.verticalMode = text.valign as unknown as AcDbTextVerticalMode
+    dbAttrib.widthFactor = text.xScale ?? 1
+    dbAttrib.tag = attrib.tag
+    dbAttrib.fieldLength = attrib.fieldLength
+    dbAttrib.isInvisible = (attrib.flags & AcDbAttributeFlags.Invisible) !== 0
+    dbAttrib.isConst = (attrib.flags & AcDbAttributeFlags.Const) !== 0
+    dbAttrib.isVerifiable = (attrib.flags & AcDbAttributeFlags.Verifiable) !== 0
+    dbAttrib.isPreset = (attrib.flags & AcDbAttributeFlags.Preset) !== 0
+    dbAttrib.lockPositionInBlock = attrib.lockPositionFlag
+    dbAttrib.isReallyLocked = attrib.isReallyLocked
+    dbAttrib.isMTextAttribute =
+      (attrib.mtextFlag & AcDbAttributeMTextFlag.MultiLine) !== 0
+    dbAttrib.isConstMTextAttribute =
+      (attrib.mtextFlag & AcDbAttributeMTextFlag.ConstMultiLine) !== 0
+  }
+
+  private convertAttribute(attrib: DwgAttribEntity) {
+    const dbAttrib = new AcDbAttribute()
+    this.convertAttributeCommon(attrib, dbAttrib)
+    return dbAttrib
+  }
+
+  private convertAttributeDefinition(attrib: DwgAttdefEntity) {
+    const dbAttDef = new AcDbAttributeDefinition()
+    this.convertAttributeCommon(attrib, dbAttDef)
+    dbAttDef.prompt = attrib.prompt
+    return dbAttDef
+  }
+
   private convertBlockReference(blockReference: DwgInsertEntity) {
     const dbBlockReference = new AcDbBlockReference(blockReference.name)
     if (blockReference.insertionPoint)
@@ -705,6 +755,10 @@ export class AcDbEntityConverter {
     dbBlockReference.scaleFactors.z = blockReference.zScale
     dbBlockReference.rotation = blockReference.rotation
     dbBlockReference.normal.copy(blockReference.extrusionDirection)
+    blockReference.attribs.forEach(attrib => {
+      const dbAttrib = this.convertAttribute(attrib)
+      dbBlockReference.appendAttributes(dbAttrib)
+    })
     return dbBlockReference
   }
 

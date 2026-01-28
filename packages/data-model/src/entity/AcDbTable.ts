@@ -512,7 +512,6 @@ export class AcDbTable extends AcDbBlockReference {
     quaternion.setFromAxisAngle(AcGeVector3d.Z_AXIS, this.rotation)
     _tmpMatrix.compose(this.position, quaternion, this.scaleFactors)
     group.applyMatrix(_tmpMatrix)
-    this.attachEntityInfo(group)
     return group
   }
 
