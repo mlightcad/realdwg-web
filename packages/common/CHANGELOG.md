@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.4
+
+### Patch Changes
+
+- feat: support ATTDEF ATTRIB entities when reading DXF file
+
 ## 1.3.3
 
 ### Patch Changes

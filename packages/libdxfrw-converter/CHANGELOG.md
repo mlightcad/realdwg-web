@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.4.7
+
+### Patch Changes
+
+- feat: support ATTDEF ATTRIB entities when reading DXF file
+- Updated dependencies
+  - @mlightcad/data-model@1.6.7
+
 ## 3.4.6
 
 ### Patch Changes

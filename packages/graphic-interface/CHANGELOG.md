@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.2.4
+
+### Patch Changes
+
+- feat: support ATTDEF ATTRIB entities when reading DXF file
+- Updated dependencies
+  - @mlightcad/common@1.3.4
+  - @mlightcad/geometry-engine@3.1.7
+
 ## 3.2.3
 
 ### Patch Changes

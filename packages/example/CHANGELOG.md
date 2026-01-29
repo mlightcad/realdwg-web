@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.0.10
+
+### Patch Changes
+
+- feat: support ATTDEF ATTRIB entities when reading DXF file
+- Updated dependencies
+  - @mlightcad/data-model@1.6.7
+  - @mlightcad/libredwg-converter@3.4.10
+
 ## 0.0.9
 
 ### Patch Changes
