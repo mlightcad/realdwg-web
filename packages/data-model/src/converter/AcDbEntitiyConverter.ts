@@ -1,6 +1,8 @@
 import { AcCmTransparency } from '@mlightcad/common'
 import {
   ArcEntity,
+  AttdefEntity,
+  AttributeEntity,
   FaceEntity,
   HatchSolidFill,
   SmoothType,
@@ -69,6 +71,10 @@ import {
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
+  AcDbAttribute,
+  AcDbAttributeDefinition,
+  AcDbAttributeFlags,
+  AcDbAttributeMTextFlag,
   AcDbBlockReference,
   AcDbCircle,
   AcDbDiametricDimension,
@@ -169,6 +175,10 @@ export class AcDbEntityConverter {
       return this.convertFace(entity as FaceEntity)
     } else if (entity.type == 'ARC') {
       return this.convertArc(entity as ArcEntity)
+    } else if (entity.type == 'ATTDEF') {
+      return this.convertAttributeDefinition(entity as AttdefEntity)
+    } else if (entity.type == 'ATTRIB') {
+      return this.convertAttribute(entity as AttributeEntity)
     } else if (entity.type == 'CIRCLE') {
       return this.convertCirle(entity as CircleEntity)
     } else if (entity.type == 'DIMENSION') {
@@ -248,6 +258,54 @@ export class AcDbEntityConverter {
       arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     )
     return dbEntity
+  }
+
+  private convertAttributeCommon(
+    attrib: AttributeEntity | AttdefEntity,
+    dbAttrib: AcDbAttribute | AcDbAttributeDefinition
+  ) {
+    dbAttrib.textString = attrib.text
+    dbAttrib.height = attrib.textHeight
+    dbAttrib.position.copy(attrib.startPoint)
+    dbAttrib.rotation = attrib.rotation
+    dbAttrib.oblique = attrib.obliqueAngle ?? 0
+    dbAttrib.thickness = attrib.thickness
+    dbAttrib.tag = attrib.tag
+    dbAttrib.fieldLength = 0 // dxf-json doesn't have this field
+    dbAttrib.isInvisible =
+      (attrib.attributeFlag & AcDbAttributeFlags.Invisible) !== 0
+    dbAttrib.isConst = (attrib.attributeFlag & AcDbAttributeFlags.Const) !== 0
+    dbAttrib.isVerifiable =
+      (attrib.attributeFlag & AcDbAttributeFlags.Verifiable) !== 0
+    dbAttrib.isPreset = (attrib.attributeFlag & AcDbAttributeFlags.Preset) !== 0
+    dbAttrib.isReallyLocked = !!attrib.isReallyLocked
+    dbAttrib.isMTextAttribute =
+      (attrib.mtextFlag & AcDbAttributeMTextFlag.MultiLine) !== 0
+    dbAttrib.isConstMTextAttribute =
+      (attrib.mtextFlag & AcDbAttributeMTextFlag.ConstMultiLine) !== 0
+  }
+
+  private convertAttribute(attrib: AttributeEntity) {
+    const dbAttrib = new AcDbAttribute()
+    this.convertAttributeCommon(attrib, dbAttrib)
+    dbAttrib.styleName = attrib.textStyle
+    dbAttrib.horizontalMode =
+      attrib.horizontalJustification as AcDbTextHorizontalMode
+    dbAttrib.verticalMode = attrib.verticalJustification as AcDbTextVerticalMode
+    dbAttrib.widthFactor = attrib.scale ?? 1
+    dbAttrib.lockPositionInBlock = attrib.lockPositionFlag
+    return dbAttrib
+  }
+
+  private convertAttributeDefinition(attrib: AttdefEntity) {
+    const dbAttDef = new AcDbAttributeDefinition()
+    this.convertAttributeCommon(attrib, dbAttDef)
+    dbAttDef.styleName = attrib.styleName
+    dbAttDef.horizontalMode = attrib.halign as unknown as AcDbTextHorizontalMode
+    dbAttDef.verticalMode = attrib.valign as unknown as AcDbTextVerticalMode
+    dbAttDef.widthFactor = attrib.xScale ?? 1
+    dbAttDef.prompt = attrib.prompt
+    return dbAttDef
   }
 
   /**

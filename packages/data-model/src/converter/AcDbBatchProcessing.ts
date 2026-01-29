@@ -1,6 +1,9 @@
 // Callback function to execute business logic of chunk processing.
 type AcDbChunkProcessingCallback = (start: number, end: number) => Promise<void>
 
+// Callback function to execute when all of chunks are processed
+type AcDbChunkProcessingCompleteCallback = () => void | Promise<void>
+
 /**
  * Class used to break up work into smaller chunks that are executed asynchronously.
  *
@@ -192,7 +195,15 @@ export class AcDbBatchProcessing {
    * });
    * ```
    */
-  public async processChunk(callback: AcDbChunkProcessingCallback) {
+  public async processChunk(
+    callback: AcDbChunkProcessingCallback,
+    onComplete?: AcDbChunkProcessingCompleteCallback
+  ) {
+    if (this._count <= 0) {
+      await onComplete?.()
+      return
+    }
+
     let currentIndex = 0
 
     const processNextChunk = async (): Promise<void> => {
@@ -212,5 +223,8 @@ export class AcDbBatchProcessing {
 
     // Start processing the first chunk and wait for all chunks to complete
     await processNextChunk()
+
+    // Explicit completion notification
+    await onComplete?.()
   }
 }

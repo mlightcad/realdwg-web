@@ -16,6 +16,7 @@ import {
   AcGiRenderMode
 } from '@mlightcad/graphic-interface'
 
+import { AcDbObjectId } from '../base'
 import {
   AcDbBlockTableRecord,
   AcDbDatabase,
@@ -37,7 +38,7 @@ import {
   AcDbConversionProgressCallback,
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
-import { AcDbEntity } from '../entity'
+import { AcDbAttribute, AcDbBlockReference, AcDbEntity } from '../entity'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -245,6 +246,24 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       entities = this.groupAndFlattenByType(entities)
     }
 
+    // Maybe INSERT entity associated with one attribute isn't converted yet.
+    // So store it in attribute map and handle them in batch later.
+    const attributeMap: Map<AcDbObjectId, AcDbAttribute[]> = new Map()
+    for (let i = 0; i < entityCount; i++) {
+      const entity = entities[i]
+      if (entity.type === 'ATTRIB') {
+        const dbEntity = converter.convert(entity)
+        if (dbEntity && dbEntity.ownerId && dbEntity.ownerId !== '0') {
+          let attributes = attributeMap.get(dbEntity?.ownerId)
+          if (attributes == null) {
+            attributes = []
+            attributeMap.set(dbEntity.ownerId, attributes)
+          }
+          attributes.push(dbEntity as AcDbAttribute)
+        }
+      }
+    }
+
     // Process the ordered entities in chunks
     const modelSpaceBlockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
@@ -253,25 +272,37 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       let entityType = start < end ? entities[start].type : ''
       for (let i = start; i < end; i++) {
         const entity = entities[i]
-        const dbEntity = converter.convert(entity)
-        if (dbEntity) {
-          if (this.config.convertByEntityType && entity.type !== entityType) {
-            modelSpaceBlockTableRecord.appendEntity(dbEntities)
-            dbEntities = []
-            entityType = entity.type
+        if (entity.type !== 'ATTRIB') {
+          const dbEntity = converter.convert(entity)
+          if (dbEntity) {
+            if (this.config.convertByEntityType && entity.type !== entityType) {
+              modelSpaceBlockTableRecord.appendEntity(dbEntities)
+              dbEntities = []
+              entityType = entity.type
+            }
+            if (entity.type === 'INSERT') {
+              const attributes = attributeMap.get(dbEntity.objectId)
+              if (attributes && attributes.length > 0) {
+                attributes.forEach(attribute => {
+                  ;(dbEntity as AcDbBlockReference).appendAttributes(attribute)
+                })
+              }
+            }
+            dbEntities.push(dbEntity)
           }
-          dbEntities.push(dbEntity)
         }
       }
+
       // Use batch append to improve performance
       modelSpaceBlockTableRecord.appendEntity(dbEntities)
 
+      let percentage =
+        startPercentage.value +
+        (end / entityCount) * (100 - startPercentage.value)
+      if (percentage > 100) percentage = 100
+
       // Update progress
       if (progress) {
-        let percentage =
-          startPercentage.value +
-          (end / entityCount) * (100 - startPercentage.value)
-        if (percentage > 100) percentage = 100
         await progress(percentage, 'ENTITY', 'IN-PROGRESS')
       }
     })
@@ -303,16 +334,31 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     const entityCount = entities.length
     const dbEntities: AcDbEntity[] = []
     const btrId = blockTableRecord.objectId
+
+    // Maybe INSERT entity associated with one attribute isn't converted yet.
+    // So store it in array 'attributes' and handle them in batch later.
+    const attributes: AcDbAttribute[] = []
     for (let i = 0; i < entityCount; i++) {
       const entity = entities[i]
       const dbEntity = converter.convert(entity)
-      if (
-        dbEntity &&
-        (!checkOwner || entity.ownerBlockRecordSoftId === btrId)
-      ) {
-        dbEntities.push(dbEntity)
+      if (dbEntity) {
+        if (entity.type === 'ATTRIB') {
+          attributes.push(dbEntity as AcDbAttribute)
+        } else if (!checkOwner || entity.ownerBlockRecordSoftId === btrId) {
+          dbEntities.push(dbEntity)
+        }
       }
     }
+
+    attributes.forEach(attribute => {
+      const owner = blockTableRecord.getIdAt(
+        attribute.ownerId
+      ) as AcDbBlockReference
+      if (owner) {
+        owner.appendAttributes(attribute)
+      }
+    })
+
     // Use batch append to improve performance
     blockTableRecord.appendEntity(dbEntities)
   }
