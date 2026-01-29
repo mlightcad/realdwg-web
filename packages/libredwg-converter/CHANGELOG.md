@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.9
+
+### Patch Changes
+
+- feat: support ATTDEF and ATTRIB entities
+- Updated dependencies
+  - @mlightcad/data-model@1.6.6
+
 ## 3.4.8
 
 ### Patch Changes

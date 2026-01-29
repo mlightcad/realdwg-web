@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.3
+
+### Patch Changes
+
+- feat: support ATTDEF and ATTRIB entities
+
 ## 1.3.2
 
 ### Patch Changes

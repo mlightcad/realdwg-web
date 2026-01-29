@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.2.3
+
+### Patch Changes
+
+- feat: support ATTDEF and ATTRIB entities
+- Updated dependencies
+  - @mlightcad/common@1.3.3
+  - @mlightcad/geometry-engine@3.1.6
+
 ## 3.2.2
 
 ### Patch Changes

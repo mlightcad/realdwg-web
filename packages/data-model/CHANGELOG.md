@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.6.6
+
+### Patch Changes
+
+- feat: support ATTDEF and ATTRIB entities
+- Updated dependencies
+  - @mlightcad/common@1.3.3
+  - @mlightcad/geometry-engine@3.1.6
+  - @mlightcad/graphic-interface@3.2.3
+
 ## 1.6.5
 
 ### Patch Changes
