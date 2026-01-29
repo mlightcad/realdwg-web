@@ -229,6 +229,10 @@ export class AcDbRenderingCache {
         }
       }
       if (block && attributes && attributes.length > 0) {
+        // Geometry information in attribute are in WCS. So we need to bake the block
+        // reference's transformation into all of its children and resets the block
+        // reference itself to an identity transform.
+        block.bakeTransformToChildren()
         attributes.forEach(attrib => block.addChild(attrib))
       }
       return block

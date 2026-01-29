@@ -64,6 +64,20 @@ export interface AcGiEntity {
   applyMatrix(matrix: AcGeMatrix3d): void
 
   /**
+   * Bakes the current object's transformation into all of its children and
+   * resets the object itself to an identity transform.
+   *
+   * After calling this function:
+   * - All children preserve their world-space appearance.
+   * - The object's local matrix and world matrix become identity.
+   * - The scene hierarchy remains unchanged.
+   *
+   * This is useful for freezing transforms, flattening transform hierarchies,
+   * or ensuring newly added children are not affected by previous transforms.
+   */
+  bakeTransformToChildren(): void
+
+  /**
    * Highlight this entity.
    */
   highlight(): void
