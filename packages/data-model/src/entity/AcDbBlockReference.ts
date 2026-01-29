@@ -10,9 +10,13 @@ import {
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbObjectId } from '../base'
-import { AcDbOsnapMode, AcDbRenderingCache } from '../misc'
+import { AcDbObjectIterator, AcDbOsnapMode, AcDbRenderingCache } from '../misc'
+import { AcDbAttribute } from './AcDbAttribute'
 import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyGroup
+} from './AcDbEntityProperties'
 
 /**
  * Represents a block reference entity in AutoCAD.
@@ -50,6 +54,8 @@ export class AcDbBlockReference extends AcDbEntity {
   private _normal: AcGeVector3d
   /** The name of the referenced block */
   private _blockName: string
+  /** Attributes associated with this block reference */
+  private _attribs: Map<string, AcDbAttribute>
 
   /**
    * Creates a new block reference entity.
@@ -73,6 +79,7 @@ export class AcDbBlockReference extends AcDbEntity {
     this._rotation = 0.0
     this._normal = new AcGeVector3d(0, 0, 1)
     this._scaleFactors = new AcGePoint3d(1, 1, 1)
+    this._attribs = new Map()
   }
 
   /**
@@ -213,6 +220,27 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   get blockTableRecord() {
     return this.database.tables.blockTable.getAt(this._blockName)
+  }
+
+  /**
+   * Appends the specified AcDbAttribute object to the attribute list of the block reference,
+   * establishes the block reference as the attribute's owner, and adds the attribute to the
+   * AcDbDatabase that contains the block reference.
+   * @param attrib - The attribute to be appended to the attribute list of the block reference.
+   */
+  appendAttributes(attrib: AcDbAttribute) {
+    this._attribs.set(attrib.objectId, attrib)
+    attrib.ownerId = this.objectId
+  }
+
+  /**
+   * Creates an iterator object that can be used to iterate over the attributes associated
+   * with the block reference.
+   *
+   * @returns An iterator object that can be used to iterate over the attributes
+   */
+  attributeIterator(): AcDbObjectIterator<AcDbAttribute> {
+    return new AcDbObjectIterator(this._attribs)
   }
 
   /**
@@ -395,7 +423,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * Each property is an {@link AcDbEntityRuntimeProperty}.
    */
   get properties(): AcDbEntityProperties {
-    return {
+    const props: AcDbEntityProperties = {
       type: this.type,
       groups: [
         this.getGeneralProperties(),
@@ -524,6 +552,28 @@ export class AcDbBlockReference extends AcDbEntity {
         }
       ]
     }
+    if (this._attribs.size > 0) {
+      const group: AcDbEntityPropertyGroup = {
+        groupName: 'attribute',
+        properties: []
+      }
+      props.groups.push(group)
+      this._attribs.forEach(attr => {
+        group.properties.push({
+          name: attr.tag,
+          type: 'string',
+          editable: !attr.isConst,
+          skipTranslation: true,
+          accessor: {
+            get: () => attr.textString,
+            set: (v: string) => {
+              attr.textString = v
+            }
+          }
+        })
+      })
+    }
+    return props
   }
 
   /**
@@ -560,23 +610,28 @@ export class AcDbBlockReference extends AcDbEntity {
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const results: AcGiEntity[] = []
     const blockTableRecord = this.blockTableRecord
     if (blockTableRecord != null) {
       const matrix = this.blockTransform
+      const attribs: AcGiEntity[] = []
+      this._attribs.forEach(attrib => {
+        if (!attrib.isInvisible) {
+          const result = attrib.worldDraw(renderer)
+          if (result) attribs.push(result)
+        }
+      })
       const block = AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
         this.rgbColor,
+        attribs,
         true,
         matrix,
         this._normal
       )
-      this.attachEntityInfo(block)
       return block
     } else {
-      const block = renderer.group(results)
-      this.attachEntityInfo(block)
+      const block = renderer.group([])
       return block
     }
   }

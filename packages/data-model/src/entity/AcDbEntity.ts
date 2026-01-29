@@ -472,7 +472,9 @@ export abstract class AcDbEntity extends AcDbObject {
     if ('thickness' in this) {
       traits.thickness = this.thickness as number
     }
-    return this.subWorldDraw(renderer, delay)
+    const drawable = this.subWorldDraw(renderer, delay)
+    this.attachEntityInfo(drawable)
+    return drawable
   }
 
   /**
@@ -692,7 +694,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * @param target - The graphic interface entity to attach information to
    *
    */
-  protected attachEntityInfo(target: AcGiEntity | null | undefined) {
+  private attachEntityInfo(target: AcGiEntity | null | undefined) {
     if (target) {
       target.objectId = this.objectId
       if (this.attrs.has('ownerId')) {

@@ -210,7 +210,6 @@ export class AcDbViewport extends AcDbEntity {
     ) {
       const viewport = this.toGiViewport()
       const group = renderer.group(this.createViewportRect(viewport, renderer))
-      this.attachEntityInfo(group)
       return group
     }
     return undefined

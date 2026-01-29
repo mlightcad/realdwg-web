@@ -348,16 +348,15 @@ export abstract class AcDbDimension extends AcDbEntity {
           renderer,
           blockTableRecord,
           this.rgbColor,
+          [],
           false,
           matrix,
           this._normal
         )
-        this.attachEntityInfo(group)
         return group
       }
     }
     const group = renderer.group([])
-    this.attachEntityInfo(group)
     return group
   }
 

@@ -80,6 +80,16 @@ export interface AcDbEntityProperty {
   editable?: boolean
 
   /**
+   * Whether to skip translating the property name.
+   *
+   * - `true`: the property name will not be translated
+   * - `false` or `undefined`: the property name will be translated (default)
+   *
+   * @default false
+   */
+  skipTranslation?: boolean
+
+  /**
    * Schema definition for array elements.
    * Only valid when `type === "array"`.
    */
