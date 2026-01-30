@@ -22,6 +22,7 @@
     "lint": "nx run-many -t lint",
     "lint:fix": "nx run-many -t lint:fix",
     "preview": "nx run @mlightcad/mlightcad:preview",
+    "release": "node tools/release.mjs",
     "test": "jest"
   },
   "engines": {
