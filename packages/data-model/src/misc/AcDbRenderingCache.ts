@@ -202,7 +202,7 @@ export class AcDbRenderingCache {
             this.addEntity(entity, results, renderer)
           }
 
-          if (isFirstEntity) {
+          if (isFirstEntity && results.length > 0) {
             const firstEntity = results[0]
             renderer.basePoint = firstEntity.basePoint
             isFirstEntity = false
