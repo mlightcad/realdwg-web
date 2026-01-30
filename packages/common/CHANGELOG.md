@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.5
+
+### Patch Changes
+
+- fix: fix issues 89 and 90 in cad-viewer repo
+
 ## 1.3.4
 
 ### Patch Changes
