@@ -5,6 +5,8 @@ on:
   push:
     branches:
       - main
+    tags:
+      - 'v*'
   pull_request:
 
 permissions:
@@ -15,21 +17,24 @@ permissions:
 jobs:
   main:
     runs-on: ubuntu-latest
+    environment: release
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      
+
       - uses: pnpm/action-setup@v2
         with:
           version: 9
-     
-      # Cache node_modules
-      - uses: actions/setup-node@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: 'pnpm'
+          registry-url: 'https://registry.npmjs.org'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -47,6 +52,18 @@ jobs:
 
       - name: Build API docs
         run: pnpm doc
+
+      - name: Publish to npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: pnpm -r publish --access public --no-git-checks
+        
+      - name: Create github release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Release ${{ github.ref_name }}
+          generate_release_notes: true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
