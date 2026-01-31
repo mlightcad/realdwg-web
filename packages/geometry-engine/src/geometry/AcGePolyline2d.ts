@@ -142,6 +142,49 @@ export class AcGePolyline2d<
   }
 
   /**
+   * This function removes a vertex from the polyline at the specified index.
+   *
+   * @param index Input index (0 based) of the vertex to remove
+   * @throws Error if the index is out of bounds
+   */
+  removeVertexAt(index: number) {
+    if (index < 0 || index >= this._vertices.length) {
+      throw new Error(
+        `Index ${index} is out of bounds. Valid range is 0 to ${this._vertices.length - 1}.`
+      )
+    }
+    this._vertices.splice(index, 1)
+    this._boundingBoxNeedsUpdate = true
+  }
+
+  /**
+   * This function resets the polyline by optionally retaining some vertices.
+   * If reuse is true, the numVerts number of vertices are left intact and all vertices
+   * beyond that number are deleted. If reuse is false, numVerts is ignored and all
+   * existing vertex information will be deleted.
+   *
+   * @param reuse Input boolean indicating whether or not to retain some vertices
+   * @param numVerts Input number of vertices to retain (only used when reuse is true)
+   */
+  reset(reuse: boolean, numVerts?: number) {
+    if (reuse) {
+      if (numVerts !== undefined && numVerts >= 0) {
+        // Keep only the first numVerts vertices
+        if (numVerts < this._vertices.length) {
+          this._vertices = this._vertices.slice(0, numVerts)
+          this._boundingBoxNeedsUpdate = true
+        }
+        // If numVerts >= current length, no change needed
+      }
+      // If numVerts is undefined, keep all vertices (no change)
+    } else {
+      // Delete all vertices
+      this._vertices = new Array<T>()
+      this._boundingBoxNeedsUpdate = true
+    }
+  }
+
+  /**
    * Get the 2d location of the vertex index in the polyline's own object coordinate system (OCS).
    *
    * @param index Input index (0 based) of the vertex
