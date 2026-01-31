@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.6
+
+### Patch Changes
+
+- feat: enhance polyline
+
 ## 1.3.5
 
 ### Patch Changes

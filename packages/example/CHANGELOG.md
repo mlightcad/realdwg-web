@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.0.12
+
+### Patch Changes
+
+- feat: enhance polyline
+- Updated dependencies
+  - @mlightcad/data-model@1.6.9
+  - @mlightcad/libredwg-converter@3.4.12
+
 ## 0.0.11
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.6.9
+
+### Patch Changes
+
+- feat: enhance polyline
+- Updated dependencies
+  - @mlightcad/common@1.3.6
+  - @mlightcad/geometry-engine@3.1.9
+  - @mlightcad/graphic-interface@3.2.6
+
 ## 1.6.8
 
 ### Patch Changes

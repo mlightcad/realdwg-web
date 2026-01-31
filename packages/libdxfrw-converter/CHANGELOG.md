@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.4.9
+
+### Patch Changes
+
+- feat: enhance polyline
+- Updated dependencies
+  - @mlightcad/data-model@1.6.9
+
 ## 3.4.8
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.1.9
+
+### Patch Changes
+
+- feat: enhance polyline
+- Updated dependencies
+  - @mlightcad/common@1.3.6
+
 ## 3.1.8
 
 ### Patch Changes
