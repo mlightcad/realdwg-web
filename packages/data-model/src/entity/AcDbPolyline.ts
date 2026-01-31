@@ -209,6 +209,29 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
+   * This function removes a vertex from the polyline at the specified index.
+   *
+   * @param index Input index (0 based) of the vertex to remove
+   * @throws Error if the index is out of bounds
+   */
+  removeVertexAt(index: number) {
+    this._geo.removeVertexAt(index)
+  }
+
+  /**
+   * This function resets the polyline by optionally retaining some vertices.
+   * If reuse is true, the numVerts number of vertices are left intact and all vertices
+   * beyond that number are deleted. If reuse is false, numVerts is ignored and all
+   * existing vertex information will be deleted.
+   *
+   * @param reuse Input Boolean indicating whether or not to retain some vertices
+   * @param numVerts Input number of vertices to retain (only used when reuse is true)
+   */
+  reset(reuse: boolean, numVerts?: number) {
+    this._geo.reset(reuse, numVerts)
+  }
+
+  /**
    * Gets the 2D location of a vertex at the specified index.
    *
    * The point is returned in the polyline's own object coordinate system (OCS).
