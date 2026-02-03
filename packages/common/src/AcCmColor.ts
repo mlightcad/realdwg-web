@@ -440,9 +440,12 @@ export class AcCmColor {
    */
   static fromString(name: string): AcCmColor | undefined {
     if (!name) return undefined
+
     const n = name.trim()
 
+    // -------------------------------------------------
     // 1. ByLayer / ByBlock
+    // -------------------------------------------------
     if (/^bylayer$/i.test(n)) {
       return new AcCmColor(AcCmColorMethod.ByLayer)
     }
@@ -451,26 +454,66 @@ export class AcCmColor {
       return new AcCmColor(AcCmColorMethod.ByBlock)
     }
 
-    // 2. RGB: "r,g,b"
-    if (/^\d{1,3},\d{1,3},\d{1,3}$/i.test(n)) {
+    // -------------------------------------------------
+    // 2. RGB with prefix: "RGB:255,0,0" (case-insensitive)
+    // -------------------------------------------------
+    const rgbPrefixedMatch = n.match(
+      /^rgb\s*:\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})$/i
+    )
+    if (rgbPrefixedMatch) {
+      const r = Number(rgbPrefixedMatch[1])
+      const g = Number(rgbPrefixedMatch[2])
+      const b = Number(rgbPrefixedMatch[3])
+
+      const color = new AcCmColor(AcCmColorMethod.ByColor)
+      color.setRGB(r, g, b)
+      return color
+    }
+
+    // -------------------------------------------------
+    // 3. RGB without prefix: "255,0,0"
+    // -------------------------------------------------
+    if (/^\d{1,3},\d{1,3},\d{1,3}$/.test(n)) {
       const [r, g, b] = n.split(',').map(Number)
       const color = new AcCmColor(AcCmColorMethod.ByColor)
       color.setRGB(r, g, b)
       return color
     }
 
-    // 3. ACI index (must be integer)
+    // -------------------------------------------------
+    // 4. ACI index: "1" – "255"
+    // -------------------------------------------------
     if (/^\d+$/.test(n)) {
       const index = parseInt(n, 10)
       return new AcCmColor(AcCmColorMethod.ByACI, index)
     }
 
-    // 4. Named colors or color book entries
+    // -------------------------------------------------
+    // 5. Color book entry: "Book$Name" (case-insensitive prefix)
+    // -------------------------------------------------
+    if (/^book\$/i.test(n)) {
+      // Preserve original name after "Book$"
+      const bookName = n.substring(n.indexOf('$') + 1)
+
+      // Let util decide how to resolve book colors
+      const colorVal = AcCmColorUtil.getColorByName(bookName)
+      if (colorVal != null) {
+        return new AcCmColor(AcCmColorMethod.ByColor, colorVal)
+      }
+
+      console.warn('Unknown color book entry:', name)
+      return undefined
+    }
+
+    // -------------------------------------------------
+    // 6. Named colors
+    // -------------------------------------------------
     const colorVal = AcCmColorUtil.getColorByName(n)
     if (colorVal != null) {
       return new AcCmColor(AcCmColorMethod.ByColor, colorVal)
     }
 
     console.warn('Unknown color name:', name)
+    return undefined
   }
 }

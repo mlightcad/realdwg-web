@@ -278,6 +278,8 @@ export class AcDbDatabase extends AcDbObject {
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
   private _celtscale: number
+  /** Current layer for the database */
+  private _clayer: string
   /** The extents of current Model Space */
   private _extents: AcGeBox3d
   /** Insertion units for the database */
@@ -338,6 +340,7 @@ export class AcDbDatabase extends AcDbObject {
     this._aunits = AcDbAngleUnits.DecimalDegrees
     this._celtscale = 1
     this._cecolor = new AcCmColor()
+    this._clayer = '0'
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
@@ -582,6 +585,17 @@ export class AcDbDatabase extends AcDbObject {
   set celtscale(value: number) {
     this._celtscale = value || 1
     this.triggerHeaderSysVarChangedEvent('celtscale')
+  }
+
+  /**
+   * The layer of new objects as they are created.
+   */
+  get clayer(): string {
+    return this._clayer
+  }
+  set clayer(value: string) {
+    this._clayer = value || '0'
+    this.triggerHeaderSysVarChangedEvent('clayer')
   }
 
   /**

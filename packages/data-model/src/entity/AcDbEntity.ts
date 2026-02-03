@@ -44,9 +44,9 @@ export abstract class AcDbEntity extends AcDbObject {
   /** The entity type name */
   static typeName: string = 'Entity'
   /** The layer name this entity belongs to */
-  private _layer: string = '0'
+  private _layer?: string
   /** The color of this entity */
-  private _color: AcCmColor = new AcCmColor()
+  private _color?: AcCmColor
   /** The linetype name for this entity */
   private _lineType: string = ByLayer
   /** The line weight for this entity */
@@ -87,6 +87,9 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get layer() {
+    if (this._layer == null) {
+      this._layer = this.database.clayer ?? '0'
+    }
     return this._layer
   }
 
@@ -115,6 +118,12 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get color() {
+    if (this._color == null) {
+      this._color = new AcCmColor()
+      if (this.database.cecolor) {
+        this._color.copy(this.database.cecolor)
+      }
+    }
     return this._color
   }
 
@@ -129,6 +138,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   set color(value: AcCmColor) {
+    if (this._color == null) this._color = new AcCmColor()
     this._color.copy(value)
   }
 
@@ -148,17 +158,15 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   get rgbColor() {
     // Default color
-    let color = this.database.cecolor
-    if (this.color.isByLayer) {
+    let color = this.color
+    if (color.isByLayer) {
       const layerColor = this.getLayerColor()
       if (layerColor && layerColor.RGB != null) {
         color = layerColor
       }
-    } else if (this.color.isByBlock) {
+    } else if (color.isByBlock) {
       // Do nothing for common entity and just use default color in database
       // Block reference entity need to override this method handle 'byBlock'.
-    } else if (this.color.RGB != null) {
-      color = this.color
     }
     const rgb = color.RGB
     return rgb != null ? rgb : 0xffffff

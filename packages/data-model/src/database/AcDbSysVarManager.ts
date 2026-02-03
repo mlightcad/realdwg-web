@@ -1,11 +1,13 @@
-import { AcCmEventManager } from '@mlightcad/common'
+import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
+import { AcDbDatabase } from 'database'
 
 /**
  * Supported AutoCAD system variable data type name.
  */
 export type AcDbSysVarTypeName =
   | 'string'
+  | 'color'
   | 'number'
   | 'boolean'
   | 'point'
@@ -14,7 +16,12 @@ export type AcDbSysVarTypeName =
 /**
  * Supported AutoCAD system variable data type name.
  */
-export type AcDbSysVarType = string | number | boolean | AcGePointLike
+export type AcDbSysVarType =
+  | string
+  | number
+  | boolean
+  | AcGePointLike
+  | AcCmColor
 
 /**
  * Definition for a system variable in our registry.
@@ -25,6 +32,9 @@ export interface AcDbSysVarDescriptor {
 
   /** Expected variable type */
   type: AcDbSysVarTypeName
+
+  /** The flag to indicate whether it is one database-resident variable. */
+  isDbVar: boolean
 
   /** Optional description (documentation) */
   description?: string
@@ -64,7 +74,7 @@ export class AcDbSysVarManager {
   /** Registered system variable metadata */
   private registry = new Map<string, AcDbSysVarDescriptor>()
 
-  /** Cached current values */
+  /** Cached current values for non-database-resident variables. */
   private cache = new Map<string, unknown>()
 
   /** System variable related events */
@@ -78,8 +88,32 @@ export class AcDbSysVarManager {
 
   private constructor() {
     this.registerVar({
+      /**
+       * The flag whether the background color is white
+       * - false: black
+       * - true: white
+       */
+      name: 'WHITEBKCOLOR',
+      type: 'boolean',
+      isDbVar: false,
+      defaultValue: false
+    })
+    this.registerVar({
+      name: 'CECOLOR',
+      type: 'color',
+      isDbVar: true,
+      defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
+    })
+    this.registerVar({
+      name: 'CLAYER',
+      type: 'string',
+      isDbVar: true,
+      defaultValue: '0'
+    })
+    this.registerVar({
       name: 'PICKBOX',
       type: 'number',
+      isDbVar: false,
       defaultValue: 0
     })
   }
@@ -101,10 +135,15 @@ export class AcDbSysVarManager {
   /**
    * Get system variable value.
    */
-  public getVar(name: string): AcDbSysVarType | undefined {
+  public getVar(name: string, db: AcDbDatabase): AcDbSysVarType | undefined {
     name = name.toUpperCase()
-    if (this.cache.has(name)) {
-      return this.cache.get(name) as AcDbSysVarType
+    const descriptor = this.getDescriptor(name)
+    if (descriptor) {
+      if (descriptor.isDbVar) {
+        return db['name' as keyof AcDbDatabase] as AcDbSysVarType
+      } else if (this.cache.has(name)) {
+        return this.cache.get(name) as AcDbSysVarType
+      }
     }
 
     return undefined
@@ -113,12 +152,11 @@ export class AcDbSysVarManager {
   /**
    * Set system variable value.
    */
-  public setVar(name: string, value: AcDbSysVarType) {
+  public setVar(name: string, value: AcDbSysVarType, db: AcDbDatabase) {
     name = name.toUpperCase()
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
-      const oldVal = this.getVar(name)
-      this.cache.set(name, value)
+      const oldVal = this.getVar(name, db)
       if (
         descriptor.type !== 'string' &&
         (typeof value === 'string' || value instanceof String)
@@ -126,12 +164,23 @@ export class AcDbSysVarManager {
         if (descriptor.type === 'number') {
           const num = Number(value)
           if (Number.isNaN(num)) {
-            throw new Error('Invalid input!')
+            throw new Error('Invalid number input!')
           }
           value = num
         } else if (descriptor.type === 'boolean') {
           value = this.parseBoolean(value as string)
+        } else if (descriptor.type === 'color') {
+          const tmp = AcCmColor.fromString(value as string)
+          if (tmp == null) {
+            throw new Error('Invalid color value!')
+          }
+          value = tmp
         }
+      }
+      if (descriptor.isDbVar) {
+        ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value
+      } else {
+        this.cache.set(name, value)
       }
       this.events.sysVarChanged.dispatch({ name, newVal: value, oldVal })
     } else {
