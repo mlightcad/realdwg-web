@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.3.7
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+
 ## 1.3.6
 
 ### Patch Changes

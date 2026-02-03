@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.0.13
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+- Updated dependencies
+  - @mlightcad/data-model@1.6.10
+  - @mlightcad/libredwg-converter@3.4.13
+
 ## 0.0.12
 
 ### Patch Changes

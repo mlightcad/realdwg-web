@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.4.10
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+- Updated dependencies
+  - @mlightcad/data-model@1.6.10
+
 ## 3.4.9
 
 ### Patch Changes

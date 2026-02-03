@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.4.13
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+- Updated dependencies
+  - @mlightcad/data-model@1.6.10
+
 ## 3.4.12
 
 ### Patch Changes

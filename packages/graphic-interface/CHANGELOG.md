@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.2.7
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+- Updated dependencies
+  - @mlightcad/common@1.3.7
+  - @mlightcad/geometry-engine@3.1.10
+
 ## 3.2.6
 
 ### Patch Changes

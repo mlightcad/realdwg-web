@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.6.10
+
+### Patch Changes
+
+- feat: respect value of system variables 'cecolor' and 'clayer' when creating one new entity
+- Updated dependencies
+  - @mlightcad/common@1.3.7
+  - @mlightcad/geometry-engine@3.1.10
+  - @mlightcad/graphic-interface@3.2.7
+
 ## 1.6.9
 
 ### Patch Changes
