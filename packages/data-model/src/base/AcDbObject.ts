@@ -23,6 +23,11 @@ export interface AcDbObjectAttrs extends AcCmAttributes {
   objectId?: AcDbObjectId
   /** Identifier of the object that owns this object */
   ownerId?: AcDbObjectId
+  /** 
+   * The objectId of the extension dictionary owned by the object. If the object does
+   * not own an extension dictionary, then the returned objectId is set to undefined.
+   */
+  extensionDictionary?: AcDbObjectId
 }
 
 /**
@@ -204,6 +209,46 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   set ownerId(value: AcDbObjectId) {
     this._attrs.set('ownerId', value)
+  }
+
+  /**
+   * Gets the objectId of the extension dictionary owned by this object.
+   *
+   * If the object does not have an extension dictionary, this returns `undefined`.
+   *
+   * In ObjectARX terms, this is equivalent to `AcDbObject::extensionDictionary()`.
+   *
+   * @returns The extension dictionary objectId, or undefined
+   *
+   * @example
+   * ```typescript
+   * const dictId = obj.extensionDictionary
+   * if (dictId) {
+   *   console.log('Has extension dictionary:', dictId)
+   * }
+   * ```
+   */
+  get extensionDictionary(): AcDbObjectId | undefined {
+    return this.getAttrWithoutException('extensionDictionary')
+  }
+
+  /**
+   * Sets the objectId of the extension dictionary owned by this object.
+   *
+   * This does not create or delete the dictionary object itself — it only
+   * establishes or clears the ownership relationship.
+   *
+   * Passing `undefined` removes the association.
+   *
+   * @param value - The extension dictionary objectId, or undefined
+   *
+   * @example
+   * ```typescript
+   * obj.extensionDictionary = dict.objectId
+   * ```
+   */
+  set extensionDictionary(value: AcDbObjectId | undefined) {
+    this._attrs.set('extensionDictionary', value)
   }
 
   /**

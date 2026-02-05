@@ -12,9 +12,9 @@ import { AcDbEntity } from '../entity'
 import { AcDbAngleUnits, AcDbDataGenerator, AcDbUnitsValue } from '../misc'
 import {
   AcDbDictionary,
-  AcDbLayout,
   AcDbLayoutDictionary,
-  AcDbRasterImageDef
+  AcDbRasterImageDef,
+  AcDbXrecord
 } from '../object'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
@@ -228,17 +228,6 @@ export interface AcDbTables {
 }
 
 /**
- * Interface defining the dictionaries available in a drawing database.
- *
- * This interface provides access to various dictionaries in the database,
- * such as layout dictionary and image definition dictionary.
- */
-export interface AcDbDictionaries {
-  /** Layout dictionary containing layout definitions */
-  readonly layoutDictionary: AcDbDictionary<AcDbLayout>
-}
-
-/**
  * Options used to specify default data to create
  */
 export interface AcDbCreateDefaultDataOptions {
@@ -296,6 +285,7 @@ export class AcDbDatabase extends AcDbObject {
   private _dictionaries: {
     readonly layouts: AcDbLayoutDictionary
     readonly imageDefs: AcDbDictionary<AcDbRasterImageDef>
+    readonly xrecords: AcDbDictionary<AcDbXrecord>
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
@@ -357,7 +347,8 @@ export class AcDbDatabase extends AcDbObject {
     }
     this._dictionaries = {
       layouts: new AcDbLayoutDictionary(this),
-      imageDefs: new AcDbDictionary(this)
+      imageDefs: new AcDbDictionary(this),
+      xrecords: new AcDbDictionary(this)
     }
   }
 
