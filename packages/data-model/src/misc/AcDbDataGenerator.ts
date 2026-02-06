@@ -95,7 +95,7 @@ export class AcDbDataGenerator {
     layout.limits.max.copy({ x: 1000000, y: 1000000 })
     layout.extents.min.copy({ x: 0, y: 0, z: 0 })
     layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
-    this.db.dictionaries.layouts.setAt(layout.layoutName, layout)
+    this.db.objects.layout.setAt(layout.layoutName, layout)
     this.db.tables.blockTable.modelSpace.layoutId = layout.objectId
   }
 

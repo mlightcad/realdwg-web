@@ -23,7 +23,7 @@ export interface AcDbObjectAttrs extends AcCmAttributes {
   objectId?: AcDbObjectId
   /** Identifier of the object that owns this object */
   ownerId?: AcDbObjectId
-  /** 
+  /**
    * The objectId of the extension dictionary owned by the object. If the object does
    * not own an extension dictionary, then the returned objectId is set to undefined.
    */

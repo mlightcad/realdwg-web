@@ -281,11 +281,12 @@ export class AcDbDatabase extends AcDbObject {
   private _pdsize: number
   /** Tables in the database */
   private _tables: AcDbTables
-  /** Dictionaries in the database */
-  private _dictionaries: {
-    readonly layouts: AcDbLayoutDictionary
-    readonly imageDefs: AcDbDictionary<AcDbRasterImageDef>
-    readonly xrecords: AcDbDictionary<AcDbXrecord>
+  /** Nongraphical objects in the database */
+  private _objects: {
+    readonly dictionary: AcDbDictionary<AcDbObject>
+    readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
+    readonly layout: AcDbLayoutDictionary
+    readonly xrecord: AcDbDictionary<AcDbXrecord>
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
@@ -345,10 +346,11 @@ export class AcDbDatabase extends AcDbObject {
       layerTable: new AcDbLayerTable(this),
       viewportTable: new AcDbViewportTable(this)
     }
-    this._dictionaries = {
-      layouts: new AcDbLayoutDictionary(this),
-      imageDefs: new AcDbDictionary(this),
-      xrecords: new AcDbDictionary(this)
+    this._objects = {
+      dictionary: new AcDbDictionary(this),
+      imageDefinition: new AcDbDictionary(this),
+      layout: new AcDbLayoutDictionary(this),
+      xrecord: new AcDbDictionary(this)
     }
   }
 
@@ -369,18 +371,18 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Gets all named object dictionaries in this drawing database.
+   * Gets all nongraphical objects in this drawing database.
    *
-   * @returns Object containing all the dictionaries in the database
+   * @returns Object containing all nongraphical objects in the database
    *
    * @example
    * ```typescript
-   * const dictionaries = database.dictionaries;
-   * const layouts = dictionaries.layouts;
+   * const objects = database.objects;
+   * const layout = objects.layout;
    * ```
    */
-  get dictionaries() {
-    return this._dictionaries
+  get objects() {
+    return this._objects
   }
 
   /**
@@ -918,7 +920,7 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.textStyleTable.removeAll()
     this._tables.layerTable.removeAll()
     this._tables.viewportTable.removeAll()
-    this._dictionaries.layouts.removeAll()
+    this._objects.layout.removeAll()
     this._currentSpace = undefined
     this._extents.makeEmpty()
   }

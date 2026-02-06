@@ -559,7 +559,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           task: async (data: { model: TModel }) => {
             this.processObjects(data.model, db)
             // Guarantee one layout is created for MODEL_SPACE at least
-            if (db.dictionaries.layouts.numEntries === 0) {
+            if (db.objects.layout.numEntries === 0) {
               db.createDefaultData({ layout: true })
             }
             return data

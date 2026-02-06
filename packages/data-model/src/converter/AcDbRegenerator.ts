@@ -138,7 +138,7 @@ export class AcDbRegenerator extends AcDbDatabaseConverter<AcDbDatabase> {
    * ```
    */
   protected processObjects() {
-    const layouts = this._database.dictionaries.layouts.newIterator()
+    const layouts = this._database.objects.layout.newIterator()
     for (const layout of layouts) {
       this._database.events.dictObjetSet.dispatch({
         database: this._database,
@@ -147,7 +147,7 @@ export class AcDbRegenerator extends AcDbDatabaseConverter<AcDbDatabase> {
       })
     }
 
-    const imageDefs = this._database.dictionaries.imageDefs.newIterator()
+    const imageDefs = this._database.objects.imageDefinition.newIterator()
     for (const imageDef of imageDefs) {
       this._database.events.dictObjetSet.dispatch({
         database: this._database,
