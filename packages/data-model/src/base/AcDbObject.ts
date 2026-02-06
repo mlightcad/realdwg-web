@@ -7,6 +7,7 @@ import {
 import { uid } from 'uid'
 
 import { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbDictionary } from '../object/AcDbDictionary'
 import { acdbHostApplicationServices } from './AcDbHostApplicationServices'
 
 /** Type alias for object ID as string */
@@ -286,6 +287,49 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   set database(db: AcDbDatabase) {
     this._database = db
+  }
+
+  /**
+   * Creates the extension dictionary for this object if it does not already exist.
+   *
+   * This method closely mirrors the behavior of
+   * `AcDbObject::createExtensionDictionary()` in ObjectARX.
+   *
+   * - If the object already owns an extension dictionary, no new dictionary
+   *   is created and the existing dictionary's objectId is returned.
+   * - Otherwise, a new AcDbDictionary is created, added to the same database,
+   *   owned by this object, and its objectId is stored on this object.
+   *
+   * @returns The objectId of the extension dictionary
+   *
+   * @example
+   * ```typescript
+   * const dictId = obj.createExtensionDictionary()
+   * ```
+   */
+  createExtensionDictionary(): AcDbObjectId | undefined {
+    // If already exists, behave like ObjectARX: do nothing
+    const existingId = this.extensionDictionary
+    if (existingId) {
+      return existingId
+    }
+
+    const db = this.database
+    if (db) {
+      // Create a new extension dictionary
+      const dict = new AcDbDictionary(db)
+
+      // Ensure dictionary lives in the same database
+      dict.database = db
+
+      // Add dictionary to database
+      db.objects.dictionary.setAt(dict.objectId, dict)
+
+      // Establish ownership relationship
+      this.extensionDictionary = dict.objectId
+      return dict.objectId
+    }
+    return undefined
   }
 
   /**

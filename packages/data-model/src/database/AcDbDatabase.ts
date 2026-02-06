@@ -283,7 +283,7 @@ export class AcDbDatabase extends AcDbObject {
   private _tables: AcDbTables
   /** Nongraphical objects in the database */
   private _objects: {
-    readonly dictionary: AcDbDictionary<AcDbObject>
+    readonly dictionary: AcDbDictionary<AcDbDictionary>
     readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
     readonly layout: AcDbLayoutDictionary
     readonly xrecord: AcDbDictionary<AcDbXrecord>
