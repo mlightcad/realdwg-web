@@ -8,7 +8,9 @@ import { uid } from 'uid'
 
 import { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbDxfCode } from './AcDbDxfCode'
 import { acdbHostApplicationServices } from './AcDbHostApplicationServices'
+import { AcDbResultBuffer } from './AcDbResultBuffer'
 
 /** Type alias for object ID as string */
 export type AcDbObjectId = string
@@ -54,6 +56,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   private _database?: AcDbDatabase
   /** The attributes object that stores all object properties */
   private _attrs: AcCmObject<ATTRS>
+  /** XData attached to this object */
+  private _xDataMap: Map<string, AcDbResultBuffer>
 
   /**
    * Creates a new AcDbObject instance.
@@ -70,6 +74,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     attrs = attrs || {}
     defaults(attrs, { objectId: uid() })
     this._attrs = new AcCmObject<ATTRS>(attrs, defaultAttrs)
+    this._xDataMap = new Map()
   }
 
   /**
@@ -287,6 +292,84 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   set database(db: AcDbDatabase) {
     this._database = db
+  }
+
+  /**
+   * Retrieves the XData associated with this object for a given application ID.
+   *
+   * Extended Entity Data (XData) allows applications to attach arbitrary,
+   * application-specific data to an AcDbObject. Each XData entry is identified
+   * by a registered application name (AppId) and stored as an AcDbResultBuffer.
+   *
+   * This method is conceptually equivalent to `AcDbObject::xData()` in ObjectARX,
+   * but simplified to return the entire result buffer for the specified AppId.
+   *
+   * @param appId - The application ID (registered AppId name) that owns the XData
+   * @returns The AcDbResultBuffer associated with the AppId, or `undefined`
+   *          if no XData exists for that AppId
+   *
+   * @example
+   * ```typescript
+   * const xdata = obj.getXData('MY_APP')
+   * if (xdata) {
+   *   // Read values from the result buffer
+   * }
+   * ```
+   */
+  getXData(appId: string): AcDbResultBuffer | undefined {
+    return this._xDataMap.get(appId)
+  }
+
+  /**
+   * Attaches or replaces XData for this object.
+   *
+   * If XData already exists for the given AppId, it is replaced by the provided
+   * AcDbResultBuffer. The caller is responsible for ensuring that:
+   *
+   * - The AppId is registered in the database's AppId table
+   * - The result buffer follows valid DXF/XData conventions (e.g. starts with
+   *   a 1001 group code for the AppId)
+   *
+   * This method is conceptually similar to `AcDbObject::setXData()` in ObjectARX.
+   *
+   * @param resbuf - The result buffer containing the XData to attach
+   *
+   * @example
+   * ```typescript
+   * const rb = new AcDbResultBuffer([
+   *   { code: AcDbDxfCode.ExtendedDataRegAppName, value: 'MY_APP' },
+   *   { code: AcDbDxfCode.ExtendedDataAsciiString, value: 'custom value' }
+   * ])
+   *
+   * obj.setXData('MY_APP', rb)
+   * ```
+   */
+  setXData(resbuf: AcDbResultBuffer): void {
+    for (const item of resbuf) {
+      if (item.code === AcDbDxfCode.ExtendedDataRegAppName) {
+        this._xDataMap.set(item.value as string, resbuf)
+      }
+    }
+  }
+
+  /**
+   * Removes the XData associated with the specified application ID.
+   *
+   * After removal, calls to getXData() for the same AppId will return `undefined`.
+   * If no XData exists for the given AppId, this method has no effect.
+   *
+   * This mirrors the behavior of clearing XData for a specific application
+   * in ObjectARX rather than removing all XData from the object.
+   *
+   * @param appId - The application ID whose XData should be removed
+   *
+   * @example
+   * ```typescript
+   * obj.removeXData('MY_APP')
+   * ```
+   */
+  removeXData(appId: string): void {
+    this._xDataMap.delete(appId)
   }
 
   /**

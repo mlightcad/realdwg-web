@@ -34,6 +34,9 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import { AcDbDwgVersion } from './AcDbDwgVersion'
+import { AcGiLineWeight } from '@mlightcad/graphic-interface'
+import { AcDbRegAppTable } from './AcDbRegAppTable'
+import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -213,6 +216,8 @@ export interface AcDbOpenDatabaseOptions {
  * layer table, and viewport table.
  */
 export interface AcDbTables {
+  /** Registered application name table */
+  readonly appIdTable: AcDbRegAppTable
   /** Block table containing block definitions */
   readonly blockTable: AcDbBlockTable
   /** Dimension style table containing dimension style definitions */
@@ -267,6 +272,8 @@ export class AcDbDatabase extends AcDbObject {
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
   private _celtscale: number
+  /** Current entity line weight value */
+  private _celweight: AcGiLineWeight
   /** Current layer for the database */
   private _clayer: string
   /** The extents of current Model Space */
@@ -320,6 +327,8 @@ export class AcDbDatabase extends AcDbObject {
     headerSysVarChanged: new AcCmEventManager<AcDbHeaderSysVarEventArgs>()
   }
 
+  public static MLIGHTCAD_APPID = 'mlightcad'
+
   /**
    * Creates a new AcDbDatabase instance.
    */
@@ -331,6 +340,7 @@ export class AcDbDatabase extends AcDbObject {
     this._aunits = AcDbAngleUnits.DecimalDegrees
     this._celtscale = 1
     this._cecolor = new AcCmColor()
+    this._celweight = AcGiLineWeight.ByLayer
     this._clayer = '0'
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
@@ -339,6 +349,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdmode = 0
     this._pdsize = 0
     this._tables = {
+      appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
       dimStyleTable: new AcDbDimStyleTable(this),
       linetypeTable: new AcDbLinetypeTable(this),
@@ -352,6 +363,9 @@ export class AcDbDatabase extends AcDbObject {
       layout: new AcDbLayoutDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
+    this._tables.appIdTable.add(
+      new AcDbRegAppTableRecord(AcDbDatabase.MLIGHTCAD_APPID)
+    )
   }
 
   /**
@@ -453,7 +467,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set aunits(value: number) {
-    this._aunits = value || 0
+    this._aunits = value ?? 0
     this.triggerHeaderSysVarChangedEvent('aunits')
   }
 
@@ -505,7 +519,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   set insunits(value: number) {
     // TODO: Default value is 1 (imperial) or 4 (metric)
-    this._insunits = value || 4
+    this._insunits = value ?? 4
     this.triggerHeaderSysVarChangedEvent('insunits')
   }
 
@@ -534,7 +548,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set ltscale(value: number) {
-    this._ltscale = value || 1
+    this._ltscale = value ?? 1
     this.triggerHeaderSysVarChangedEvent('ltscale')
   }
 
@@ -576,8 +590,19 @@ export class AcDbDatabase extends AcDbObject {
     return this._celtscale
   }
   set celtscale(value: number) {
-    this._celtscale = value || 1
+    this._celtscale = value ?? 1
     this.triggerHeaderSysVarChangedEvent('celtscale')
+  }
+
+  /**
+   * The layer of new objects as they are created.
+   */
+  get celweight(): AcGiLineWeight {
+    return this._celweight
+  }
+  set celweight(value: AcGiLineWeight) {
+    this._celweight = value ?? AcGiLineWeight.ByLayer
+    this.triggerHeaderSysVarChangedEvent('celweight')
   }
 
   /**
@@ -587,7 +612,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._clayer
   }
   set clayer(value: string) {
-    this._clayer = value || '0'
+    this._clayer = value ?? '0'
     this.triggerHeaderSysVarChangedEvent('clayer')
   }
 
@@ -598,7 +623,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._angBase
   }
   set angBase(value: number) {
-    this._angBase = value || 0
+    this._angBase = value ?? 0
     this.triggerHeaderSysVarChangedEvent('angbase')
   }
 
@@ -611,7 +636,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._angDir
   }
   set angDir(value: number) {
-    this._angDir = value || 0
+    this._angDir = value ?? 0
     this.triggerHeaderSysVarChangedEvent('angdir')
   }
 
@@ -655,7 +680,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdmode
   }
   set pdmode(value: number) {
-    this._pdmode = value || 0
+    this._pdmode = value ?? 0
     this.triggerHeaderSysVarChangedEvent('pdmode')
   }
 
@@ -669,7 +694,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdsize
   }
   set pdsize(value: number) {
-    this._pdsize = value || 0
+    this._pdsize = value ?? 0
     this.triggerHeaderSysVarChangedEvent('pdsize')
   }
 
