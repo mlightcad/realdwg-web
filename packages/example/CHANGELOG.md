@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.0
+
+### Patch Changes
+
+- feat: support xdata and xrecord
+- Updated dependencies
+  - @mlightcad/data-model@1.6.11
+  - @mlightcad/libredwg-converter@3.4.14
+
 ## 0.0.13
 
 ### Patch Changes

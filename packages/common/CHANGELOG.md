@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.0
+
+### Patch Changes
+
+- feat: support xdata and xrecord
+
 ## 1.3.7
 
 ### Patch Changes

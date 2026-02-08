@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.0
+
+### Patch Changes
+
+- feat: support xdata and xrecord
+- Updated dependencies
+  - @mlightcad/data-model@1.6.11
+
 ## 3.4.13
 
 ### Patch Changes
