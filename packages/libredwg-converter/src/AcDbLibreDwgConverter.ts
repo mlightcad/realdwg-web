@@ -519,7 +519,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   private processLayouts(model: DwgDatabase, db: AcDbDatabase) {
-    const layoutDict = db.dictionaries.layouts
+    const layoutDict = db.objects.layout
     const layouts = model.objects.LAYOUT
     layouts.forEach(layout => {
       const dbLayout = new AcDbLayout()
@@ -555,7 +555,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   private processImageDefs(model: DwgDatabase, db: AcDbDatabase) {
-    const imageDefDict = db.dictionaries.imageDefs
+    const imageDefDict = db.objects.imageDefinition
     const imageDefs = model.objects.IMAGEDEF
     imageDefs.forEach(imageDef => {
       const dbImageDef = new AcDbRasterImageDef()

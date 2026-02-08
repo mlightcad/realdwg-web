@@ -70,7 +70,7 @@ export class AcDbLayoutManager {
    * ```
    */
   countLayouts(db?: AcDbDatabase) {
-    return this.getWorkingDatabase(db).dictionaries.layouts.numEntries
+    return this.getWorkingDatabase(db).objects.layout.numEntries
   }
 
   /**
@@ -89,7 +89,7 @@ export class AcDbLayoutManager {
    * ```
    */
   findLayoutNamed(name: string, db?: AcDbDatabase) {
-    return this.getWorkingDatabase(db).dictionaries.layouts.getAt(name)
+    return this.getWorkingDatabase(db).objects.layout.getAt(name)
   }
 
   /**
@@ -125,7 +125,7 @@ export class AcDbLayoutManager {
    */
   setCurrentLayoutId(id: AcDbObjectId, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
-    const layout = currentDb.dictionaries.layouts.getIdAt(id)
+    const layout = currentDb.objects.layout.getIdAt(id)
     return this.setCurrentLayoutInternal(layout, currentDb)
   }
 
@@ -143,7 +143,7 @@ export class AcDbLayoutManager {
    */
   setCurrentLayoutBtrId(id: AcDbObjectId, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
-    const layout = currentDb.dictionaries.layouts.getBtrIdAt(id)
+    const layout = currentDb.objects.layout.getBtrIdAt(id)
     return this.setCurrentLayoutInternal(layout, currentDb)
   }
 
@@ -161,7 +161,7 @@ export class AcDbLayoutManager {
    */
   setCurrentLayout(name: string, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
-    const layout = currentDb.dictionaries.layouts.getAt(name)
+    const layout = currentDb.objects.layout.getAt(name)
     return this.setCurrentLayoutInternal(layout, currentDb)
   }
 
@@ -180,7 +180,7 @@ export class AcDbLayoutManager {
    */
   renameLayout(oldName: string, newName: string, db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
-    const layout = currentDb.dictionaries.layouts.getAt(oldName)
+    const layout = currentDb.objects.layout.getAt(oldName)
     if (layout) {
       layout.layoutName = newName
       this.events.layoutRenamed.dispatch({
@@ -202,7 +202,7 @@ export class AcDbLayoutManager {
    * (or the workingDatabase if 'db' isn't provided).
    */
   layoutExists(name: string, db?: AcDbDatabase) {
-    return this.getWorkingDatabase(db).dictionaries.layouts.has(name)
+    return this.getWorkingDatabase(db).objects.layout.has(name)
   }
 
   /**
@@ -213,7 +213,7 @@ export class AcDbLayoutManager {
    * @returns
    */
   deleteLayout(name: string, db?: AcDbDatabase) {
-    const layouts = this.getWorkingDatabase(db).dictionaries.layouts
+    const layouts = this.getWorkingDatabase(db).objects.layout
     const layout = layouts.getAt(name)
     let result = false
     if (layout) {
@@ -238,13 +238,13 @@ export class AcDbLayoutManager {
 
     const layout = new AcDbLayout()
     layout.layoutName = name
-    layout.tabOrder = currentDb.dictionaries.layouts.maxTabOrder
+    layout.tabOrder = currentDb.objects.layout.maxTabOrder
 
     const btr = new AcDbBlockTableRecord()
     btr.name = `*Paper_Space${layout.tabOrder}`
     currentDb.tables.blockTable.add(btr)
 
-    currentDb.dictionaries.layouts.setAt(name, layout)
+    currentDb.objects.layout.setAt(name, layout)
 
     this.events.layoutCreated.dispatch({
       layout: layout
@@ -260,7 +260,7 @@ export class AcDbLayoutManager {
    */
   getActiveLayout(db?: AcDbDatabase) {
     const currentDb = this.getWorkingDatabase(db)
-    return currentDb.dictionaries.layouts.getBtrIdAt(currentDb.currentSpaceId)
+    return currentDb.objects.layout.getBtrIdAt(currentDb.currentSpaceId)
   }
 
   private getWorkingDatabase(db?: AcDbDatabase) {

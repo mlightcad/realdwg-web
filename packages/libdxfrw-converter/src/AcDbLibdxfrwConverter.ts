@@ -366,7 +366,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
 
   private processImageDefs(imageDefs: DRW_ImageList, db: AcDbDatabase) {
     const objectConverter = new AcDbObjectConverter()
-    const imageDefDict = db.dictionaries.imageDefs
+    const imageDefDict = db.objects.imageDefinition
     for (let index = 0, size = imageDefs.size(); index < size; ++index) {
       const item = imageDefs.get(index)
       if (item != null) {

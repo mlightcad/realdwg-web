@@ -311,7 +311,7 @@ export class AcDbRasterImage extends AcDbEntity {
    */
   get imageFileName() {
     if (this._imageDefId) {
-      const imageDef = this.database.dictionaries.imageDefs.getIdAt(
+      const imageDef = this.database.objects.imageDefinition.getIdAt(
         this._imageDefId
       )
       if (imageDef) {

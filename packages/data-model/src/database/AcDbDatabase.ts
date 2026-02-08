@@ -12,9 +12,9 @@ import { AcDbEntity } from '../entity'
 import { AcDbAngleUnits, AcDbDataGenerator, AcDbUnitsValue } from '../misc'
 import {
   AcDbDictionary,
-  AcDbLayout,
   AcDbLayoutDictionary,
-  AcDbRasterImageDef
+  AcDbRasterImageDef,
+  AcDbXrecord
 } from '../object'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
@@ -34,6 +34,9 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import { AcDbDwgVersion } from './AcDbDwgVersion'
+import { AcGiLineWeight } from '@mlightcad/graphic-interface'
+import { AcDbRegAppTable } from './AcDbRegAppTable'
+import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -213,6 +216,8 @@ export interface AcDbOpenDatabaseOptions {
  * layer table, and viewport table.
  */
 export interface AcDbTables {
+  /** Registered application name table */
+  readonly appIdTable: AcDbRegAppTable
   /** Block table containing block definitions */
   readonly blockTable: AcDbBlockTable
   /** Dimension style table containing dimension style definitions */
@@ -225,17 +230,6 @@ export interface AcDbTables {
   readonly layerTable: AcDbLayerTable
   /** Viewport table containing viewport definitions */
   readonly viewportTable: AcDbViewportTable
-}
-
-/**
- * Interface defining the dictionaries available in a drawing database.
- *
- * This interface provides access to various dictionaries in the database,
- * such as layout dictionary and image definition dictionary.
- */
-export interface AcDbDictionaries {
-  /** Layout dictionary containing layout definitions */
-  readonly layoutDictionary: AcDbDictionary<AcDbLayout>
 }
 
 /**
@@ -278,6 +272,8 @@ export class AcDbDatabase extends AcDbObject {
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
   private _celtscale: number
+  /** Current entity line weight value */
+  private _celweight: AcGiLineWeight
   /** Current layer for the database */
   private _clayer: string
   /** The extents of current Model Space */
@@ -292,10 +288,12 @@ export class AcDbDatabase extends AcDbObject {
   private _pdsize: number
   /** Tables in the database */
   private _tables: AcDbTables
-  /** Dictionaries in the database */
-  private _dictionaries: {
-    readonly layouts: AcDbLayoutDictionary
-    readonly imageDefs: AcDbDictionary<AcDbRasterImageDef>
+  /** Nongraphical objects in the database */
+  private _objects: {
+    readonly dictionary: AcDbDictionary<AcDbDictionary>
+    readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
+    readonly layout: AcDbLayoutDictionary
+    readonly xrecord: AcDbDictionary<AcDbXrecord>
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
@@ -329,6 +327,8 @@ export class AcDbDatabase extends AcDbObject {
     headerSysVarChanged: new AcCmEventManager<AcDbHeaderSysVarEventArgs>()
   }
 
+  public static MLIGHTCAD_APPID = 'mlightcad'
+
   /**
    * Creates a new AcDbDatabase instance.
    */
@@ -340,6 +340,7 @@ export class AcDbDatabase extends AcDbObject {
     this._aunits = AcDbAngleUnits.DecimalDegrees
     this._celtscale = 1
     this._cecolor = new AcCmColor()
+    this._celweight = AcGiLineWeight.ByLayer
     this._clayer = '0'
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
@@ -348,6 +349,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdmode = 0
     this._pdsize = 0
     this._tables = {
+      appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
       dimStyleTable: new AcDbDimStyleTable(this),
       linetypeTable: new AcDbLinetypeTable(this),
@@ -355,10 +357,15 @@ export class AcDbDatabase extends AcDbObject {
       layerTable: new AcDbLayerTable(this),
       viewportTable: new AcDbViewportTable(this)
     }
-    this._dictionaries = {
-      layouts: new AcDbLayoutDictionary(this),
-      imageDefs: new AcDbDictionary(this)
+    this._objects = {
+      dictionary: new AcDbDictionary(this),
+      imageDefinition: new AcDbDictionary(this),
+      layout: new AcDbLayoutDictionary(this),
+      xrecord: new AcDbDictionary(this)
     }
+    this._tables.appIdTable.add(
+      new AcDbRegAppTableRecord(AcDbDatabase.MLIGHTCAD_APPID)
+    )
   }
 
   /**
@@ -378,18 +385,18 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Gets all named object dictionaries in this drawing database.
+   * Gets all nongraphical objects in this drawing database.
    *
-   * @returns Object containing all the dictionaries in the database
+   * @returns Object containing all nongraphical objects in the database
    *
    * @example
    * ```typescript
-   * const dictionaries = database.dictionaries;
-   * const layouts = dictionaries.layouts;
+   * const objects = database.objects;
+   * const layout = objects.layout;
    * ```
    */
-  get dictionaries() {
-    return this._dictionaries
+  get objects() {
+    return this._objects
   }
 
   /**
@@ -460,7 +467,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set aunits(value: number) {
-    this._aunits = value || 0
+    this._aunits = value ?? 0
     this.triggerHeaderSysVarChangedEvent('aunits')
   }
 
@@ -512,7 +519,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   set insunits(value: number) {
     // TODO: Default value is 1 (imperial) or 4 (metric)
-    this._insunits = value || 4
+    this._insunits = value ?? 4
     this.triggerHeaderSysVarChangedEvent('insunits')
   }
 
@@ -541,7 +548,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set ltscale(value: number) {
-    this._ltscale = value || 1
+    this._ltscale = value ?? 1
     this.triggerHeaderSysVarChangedEvent('ltscale')
   }
 
@@ -583,8 +590,19 @@ export class AcDbDatabase extends AcDbObject {
     return this._celtscale
   }
   set celtscale(value: number) {
-    this._celtscale = value || 1
+    this._celtscale = value ?? 1
     this.triggerHeaderSysVarChangedEvent('celtscale')
+  }
+
+  /**
+   * The layer of new objects as they are created.
+   */
+  get celweight(): AcGiLineWeight {
+    return this._celweight
+  }
+  set celweight(value: AcGiLineWeight) {
+    this._celweight = value ?? AcGiLineWeight.ByLayer
+    this.triggerHeaderSysVarChangedEvent('celweight')
   }
 
   /**
@@ -594,7 +612,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._clayer
   }
   set clayer(value: string) {
-    this._clayer = value || '0'
+    this._clayer = value ?? '0'
     this.triggerHeaderSysVarChangedEvent('clayer')
   }
 
@@ -605,7 +623,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._angBase
   }
   set angBase(value: number) {
-    this._angBase = value || 0
+    this._angBase = value ?? 0
     this.triggerHeaderSysVarChangedEvent('angbase')
   }
 
@@ -618,7 +636,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._angDir
   }
   set angDir(value: number) {
-    this._angDir = value || 0
+    this._angDir = value ?? 0
     this.triggerHeaderSysVarChangedEvent('angdir')
   }
 
@@ -662,7 +680,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdmode
   }
   set pdmode(value: number) {
-    this._pdmode = value || 0
+    this._pdmode = value ?? 0
     this.triggerHeaderSysVarChangedEvent('pdmode')
   }
 
@@ -676,7 +694,7 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdsize
   }
   set pdsize(value: number) {
-    this._pdsize = value || 0
+    this._pdsize = value ?? 0
     this.triggerHeaderSysVarChangedEvent('pdsize')
   }
 
@@ -927,7 +945,7 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.textStyleTable.removeAll()
     this._tables.layerTable.removeAll()
     this._tables.viewportTable.removeAll()
-    this._dictionaries.layouts.removeAll()
+    this._objects.layout.removeAll()
     this._currentSpace = undefined
     this._extents.makeEmpty()
   }

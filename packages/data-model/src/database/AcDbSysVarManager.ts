@@ -140,7 +140,7 @@ export class AcDbSysVarManager {
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
       if (descriptor.isDbVar) {
-        return db['name' as keyof AcDbDatabase] as AcDbSysVarType
+        return db[name.toLowerCase() as keyof AcDbDatabase] as AcDbSysVarType
       } else if (this.cache.has(name)) {
         return this.cache.get(name) as AcDbSysVarType
       }

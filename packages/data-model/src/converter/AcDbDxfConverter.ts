@@ -482,7 +482,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     const objects = model.objects.byName
     const objectConverter = new AcDbObjectConverter()
     if ('LAYOUT' in objects) {
-      const layoutDict = db.dictionaries.layouts
+      const layoutDict = db.objects.layout
       objects['LAYOUT'].forEach(layout => {
         const dbLayout = objectConverter.convertLayout(
           layout as LayoutDXFObject,
@@ -492,7 +492,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       })
     }
     if ('IMAGEDEF' in objects) {
-      const imageDefDict = db.dictionaries.imageDefs
+      const imageDefDict = db.objects.imageDefinition
       objects['IMAGEDEF'].forEach(imageDef => {
         const dbImageDef = objectConverter.convertImageDef(
           imageDef as ImageDefDXFObject

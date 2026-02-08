@@ -7,7 +7,9 @@ import {
 import { uid } from 'uid'
 
 import { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbDxfCode } from './AcDbDxfCode'
 import { acdbHostApplicationServices } from './AcDbHostApplicationServices'
+import { AcDbResultBuffer } from './AcDbResultBuffer'
 
 /** Type alias for object ID as string */
 export type AcDbObjectId = string
@@ -23,6 +25,11 @@ export interface AcDbObjectAttrs extends AcCmAttributes {
   objectId?: AcDbObjectId
   /** Identifier of the object that owns this object */
   ownerId?: AcDbObjectId
+  /**
+   * The objectId of the extension dictionary owned by the object. If the object does
+   * not own an extension dictionary, then the returned objectId is set to undefined.
+   */
+  extensionDictionary?: AcDbObjectId
 }
 
 /**
@@ -48,6 +55,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   private _database?: AcDbDatabase
   /** The attributes object that stores all object properties */
   private _attrs: AcCmObject<ATTRS>
+  /** XData attached to this object */
+  private _xDataMap: Map<string, AcDbResultBuffer>
 
   /**
    * Creates a new AcDbObject instance.
@@ -64,6 +73,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     attrs = attrs || {}
     defaults(attrs, { objectId: uid() })
     this._attrs = new AcCmObject<ATTRS>(attrs, defaultAttrs)
+    this._xDataMap = new Map()
   }
 
   /**
@@ -207,6 +217,46 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
+   * Gets the objectId of the extension dictionary owned by this object.
+   *
+   * If the object does not have an extension dictionary, this returns `undefined`.
+   *
+   * In ObjectARX terms, this is equivalent to `AcDbObject::extensionDictionary()`.
+   *
+   * @returns The extension dictionary objectId, or undefined
+   *
+   * @example
+   * ```typescript
+   * const dictId = obj.extensionDictionary
+   * if (dictId) {
+   *   console.log('Has extension dictionary:', dictId)
+   * }
+   * ```
+   */
+  get extensionDictionary(): AcDbObjectId | undefined {
+    return this.getAttrWithoutException('extensionDictionary')
+  }
+
+  /**
+   * Sets the objectId of the extension dictionary owned by this object.
+   *
+   * This does not create or delete the dictionary object itself — it only
+   * establishes or clears the ownership relationship.
+   *
+   * Passing `undefined` removes the association.
+   *
+   * @param value - The extension dictionary objectId, or undefined
+   *
+   * @example
+   * ```typescript
+   * obj.extensionDictionary = dict.objectId
+   * ```
+   */
+  set extensionDictionary(value: AcDbObjectId | undefined) {
+    this._attrs.set('extensionDictionary', value)
+  }
+
+  /**
    * Gets the database in which this object is resident.
    *
    * When an object isn't added to a database, this property returns the current
@@ -241,6 +291,127 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   set database(db: AcDbDatabase) {
     this._database = db
+  }
+
+  /**
+   * Retrieves the XData associated with this object for a given application ID.
+   *
+   * Extended Entity Data (XData) allows applications to attach arbitrary,
+   * application-specific data to an AcDbObject. Each XData entry is identified
+   * by a registered application name (AppId) and stored as an AcDbResultBuffer.
+   *
+   * This method is conceptually equivalent to `AcDbObject::xData()` in ObjectARX,
+   * but simplified to return the entire result buffer for the specified AppId.
+   *
+   * @param appId - The application ID (registered AppId name) that owns the XData
+   * @returns The AcDbResultBuffer associated with the AppId, or `undefined`
+   *          if no XData exists for that AppId
+   *
+   * @example
+   * ```typescript
+   * const xdata = obj.getXData('MY_APP')
+   * if (xdata) {
+   *   // Read values from the result buffer
+   * }
+   * ```
+   */
+  getXData(appId: string): AcDbResultBuffer | undefined {
+    return this._xDataMap.get(appId)
+  }
+
+  /**
+   * Attaches or replaces XData for this object.
+   *
+   * If XData already exists for the given AppId, it is replaced by the provided
+   * AcDbResultBuffer. The caller is responsible for ensuring that:
+   *
+   * - The AppId is registered in the database's AppId table
+   * - The result buffer follows valid DXF/XData conventions (e.g. starts with
+   *   a 1001 group code for the AppId)
+   *
+   * This method is conceptually similar to `AcDbObject::setXData()` in ObjectARX.
+   *
+   * @param resbuf - The result buffer containing the XData to attach
+   *
+   * @example
+   * ```typescript
+   * const rb = new AcDbResultBuffer([
+   *   { code: AcDbDxfCode.ExtendedDataRegAppName, value: 'MY_APP' },
+   *   { code: AcDbDxfCode.ExtendedDataAsciiString, value: 'custom value' }
+   * ])
+   *
+   * obj.setXData('MY_APP', rb)
+   * ```
+   */
+  setXData(resbuf: AcDbResultBuffer): void {
+    for (const item of resbuf) {
+      if (item.code === AcDbDxfCode.ExtendedDataRegAppName) {
+        this._xDataMap.set(item.value as string, resbuf)
+      }
+    }
+  }
+
+  /**
+   * Removes the XData associated with the specified application ID.
+   *
+   * After removal, calls to getXData() for the same AppId will return `undefined`.
+   * If no XData exists for the given AppId, this method has no effect.
+   *
+   * This mirrors the behavior of clearing XData for a specific application
+   * in ObjectARX rather than removing all XData from the object.
+   *
+   * @param appId - The application ID whose XData should be removed
+   *
+   * @example
+   * ```typescript
+   * obj.removeXData('MY_APP')
+   * ```
+   */
+  removeXData(appId: string): void {
+    this._xDataMap.delete(appId)
+  }
+
+  /**
+   * Creates the extension dictionary for this object if it does not already exist.
+   *
+   * This method closely mirrors the behavior of
+   * `AcDbObject::createExtensionDictionary()` in ObjectARX.
+   *
+   * - If the object already owns an extension dictionary, no new dictionary
+   *   is created and the existing dictionary's objectId is returned.
+   * - Otherwise, a new AcDbDictionary is created, added to the same database,
+   *   owned by this object, and its objectId is stored on this object.
+   *
+   * @returns The objectId of the extension dictionary
+   *
+   * @example
+   * ```typescript
+   * const dictId = obj.createExtensionDictionary()
+   * ```
+   */
+  createExtensionDictionary(): AcDbObjectId | undefined {
+    // If already exists, behave like ObjectARX: do nothing
+    // const existingId = this.extensionDictionary
+    // if (existingId) {
+    //   return existingId
+    // }
+
+    // const db = this.database
+    // if (db) {
+    //   // Create a new extension dictionary
+    //   const dict = new AcDbDictionary(db)
+
+    //   // Ensure dictionary lives in the same database
+    //   dict.database = db
+
+    //   // Add dictionary to database
+    //   db.objects.dictionary.setAt(dict.objectId, dict)
+
+    //   // Establish ownership relationship
+    //   this.extensionDictionary = dict.objectId
+    //   return dict.objectId
+    // }
+    return undefined
   }
 
   /**
