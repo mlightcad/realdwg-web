@@ -308,6 +308,46 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Resolves the effective properties of this entity.
+   *
+   * This method determines the final, usable values for entity properties such as
+   * layer, linetype, lineweight, color, and other display-related attributes.
+   * If a property is not explicitly set on the entity (for example, it is undefined
+   * or specified as *ByLayer* / *ByBlock*), the value is resolved according to the
+   * current AutoCAD system variables and drawing context.
+   *
+   * Typical system variables involved in the resolution process include, but are
+   * not limited to:
+   * - `CLAYER`    – Current layer
+   * - `CELTYPE`   – Current linetype
+   * - `CELWEIGHT` – Current lineweight
+   * - `CECOLOR`   – Current color
+   *
+   * The resolution follows AutoCAD semantics:
+   * - Explicitly assigned entity properties take precedence
+   * - *ByLayer* properties are inherited from the entity’s layer
+   * - *ByBlock* properties are inherited from the owning block reference
+   * - If no explicit value can be determined, the corresponding system variable
+   *   or default drawing value is used
+   *
+   * This method does not change user-defined property settings; it only computes
+   * and applies the final effective values used for display, selection, and
+   * downstream processing.
+   */
+  resolveEffectiveProperties() {
+    if (this._layer == null) {
+      this._layer = this.database.clayer ?? '0'
+    }
+
+    if (this._color == null) {
+      this._color = new AcCmColor()
+      if (this.database.cecolor) {
+        this._color.copy(this.database.cecolor)
+      }
+    }
+  }
+
+  /**
    * Returns the full property definition for this entity, including
    * all property groups and runtime accessors.
    *

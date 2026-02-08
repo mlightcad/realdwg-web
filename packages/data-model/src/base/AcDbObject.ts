@@ -7,7 +7,6 @@ import {
 import { uid } from 'uid'
 
 import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDictionary } from '../object/AcDbDictionary'
 import { AcDbDxfCode } from './AcDbDxfCode'
 import { acdbHostApplicationServices } from './AcDbHostApplicationServices'
 import { AcDbResultBuffer } from './AcDbResultBuffer'
@@ -392,26 +391,26 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   createExtensionDictionary(): AcDbObjectId | undefined {
     // If already exists, behave like ObjectARX: do nothing
-    const existingId = this.extensionDictionary
-    if (existingId) {
-      return existingId
-    }
+    // const existingId = this.extensionDictionary
+    // if (existingId) {
+    //   return existingId
+    // }
 
-    const db = this.database
-    if (db) {
-      // Create a new extension dictionary
-      const dict = new AcDbDictionary(db)
+    // const db = this.database
+    // if (db) {
+    //   // Create a new extension dictionary
+    //   const dict = new AcDbDictionary(db)
 
-      // Ensure dictionary lives in the same database
-      dict.database = db
+    //   // Ensure dictionary lives in the same database
+    //   dict.database = db
 
-      // Add dictionary to database
-      db.objects.dictionary.setAt(dict.objectId, dict)
+    //   // Add dictionary to database
+    //   db.objects.dictionary.setAt(dict.objectId, dict)
 
-      // Establish ownership relationship
-      this.extensionDictionary = dict.objectId
-      return dict.objectId
-    }
+    //   // Establish ownership relationship
+    //   this.extensionDictionary = dict.objectId
+    //   return dict.objectId
+    // }
     return undefined
   }
 

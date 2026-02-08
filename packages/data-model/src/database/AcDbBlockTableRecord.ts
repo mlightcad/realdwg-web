@@ -193,11 +193,13 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
         const item = entity[i]
         item.database = this.database
         item.ownerId = this.objectId
+        item.resolveEffectiveProperties()
         this._entities.set(item.objectId, item)
       }
     } else {
       entity.database = this.database
       entity.ownerId = this.objectId
+      entity.resolveEffectiveProperties()
       this._entities.set(entity.objectId, entity)
     }
 
