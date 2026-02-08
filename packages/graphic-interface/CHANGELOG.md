@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.0
+
+### Patch Changes
+
+- feat: support xdata and xrecord
+- Updated dependencies
+  - @mlightcad/common@1.3.8
+  - @mlightcad/geometry-engine@3.1.11
+
 ## 3.2.7
 
 ### Patch Changes
