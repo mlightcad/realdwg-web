@@ -1,5 +1,6 @@
 import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
+import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 import { AcDbDatabase } from 'database'
 
 /**
@@ -103,6 +104,18 @@ export class AcDbSysVarManager {
       type: 'color',
       isDbVar: true,
       defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
+    })
+    this.registerVar({
+      name: 'CELTSCALE',
+      type: 'number',
+      isDbVar: true,
+      defaultValue: -1
+    })
+    this.registerVar({
+      name: 'CELWEIGHT',
+      type: 'number',
+      isDbVar: true,
+      defaultValue: AcGiLineWeight.ByLayer
     })
     this.registerVar({
       name: 'CLAYER',

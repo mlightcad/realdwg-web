@@ -50,9 +50,9 @@ export abstract class AcDbEntity extends AcDbObject {
   /** The linetype name for this entity */
   private _lineType: string = ByLayer
   /** The line weight for this entity */
-  private _lineWeight: AcGiLineWeight = AcGiLineWeight.ByLayer
+  private _lineWeight?: AcGiLineWeight
   /** The linetype scale factor for this entity */
-  private _linetypeScale: number = -1
+  private _linetypeScale?: number
   /** Whether this entity is visible */
   private _visibility: boolean = true
   /** The transparency level of this entity (0-1) */
@@ -206,6 +206,9 @@ export abstract class AcDbEntity extends AcDbObject {
    * @returns The line weight value
    */
   get lineWeight() {
+    if (this._lineWeight == null) {
+      this._lineWeight = this.database.celweight ?? AcGiLineWeight.ByLayer
+    }
     return this._lineWeight
   }
 
@@ -234,6 +237,9 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get linetypeScale() {
+    if (this._linetypeScale == null) {
+      this._linetypeScale = this.database.celtscale ?? -1
+    }
     return this._linetypeScale
   }
 
@@ -344,6 +350,14 @@ export abstract class AcDbEntity extends AcDbObject {
       if (this.database.cecolor) {
         this._color.copy(this.database.cecolor)
       }
+    }
+
+    if (this._linetypeScale == null) {
+      this._linetypeScale = this.database.celtscale ?? -1
+    }
+
+    if (this._lineWeight == null) {
+      this._lineWeight = this.database.celweight ?? AcGiLineWeight.ByLayer
     }
   }
 
