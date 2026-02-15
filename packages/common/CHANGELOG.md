@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.1
+
+### Patch Changes
+
+- feat: set entity line weight and line type scale for newly created entity
+
 ## 1.4.0
 
 ### Patch Changes

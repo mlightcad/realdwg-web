@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.1
+
+### Patch Changes
+
+- feat: set entity line weight and line type scale for newly created entity
+- Updated dependencies
+  - @mlightcad/data-model@1.7.1
+
 ## 3.5.0
 
 ### Patch Changes

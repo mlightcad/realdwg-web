@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.1
+
+### Patch Changes
+
+- feat: set entity line weight and line type scale for newly created entity
+- Updated dependencies
+  - @mlightcad/common@1.4.1
+  - @mlightcad/geometry-engine@3.2.1
+  - @mlightcad/graphic-interface@3.3.1
+
 ## 1.7.0
 
 ### Patch Changes
