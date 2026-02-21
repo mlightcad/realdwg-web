@@ -89,17 +89,6 @@ export class AcDbSysVarManager {
 
   private constructor() {
     this.registerVar({
-      /**
-       * The flag whether the background color is white
-       * - false: black
-       * - true: white
-       */
-      name: 'WHITEBKCOLOR',
-      type: 'boolean',
-      isDbVar: false,
-      defaultValue: false
-    })
-    this.registerVar({
       name: 'CECOLOR',
       type: 'color',
       isDbVar: true,
@@ -124,10 +113,27 @@ export class AcDbSysVarManager {
       defaultValue: '0'
     })
     this.registerVar({
+      name: 'LWDISPLAY',
+      type: 'boolean',
+      isDbVar: true,
+      defaultValue: false
+    })
+    this.registerVar({
       name: 'PICKBOX',
       type: 'number',
       isDbVar: false,
       defaultValue: 0
+    })
+    this.registerVar({
+      /**
+       * The flag whether the background color is white
+       * - false: black
+       * - true: white
+       */
+      name: 'WHITEBKCOLOR',
+      type: 'boolean',
+      isDbVar: false,
+      defaultValue: false
     })
   }
 

@@ -282,6 +282,8 @@ export class AcDbDatabase extends AcDbObject {
   private _insunits: AcDbUnitsValue
   /** Global linetype scale */
   private _ltscale: number
+  /** The flag whether to display line weight */
+  private _lwdisplay: boolean
   /** Point display mode */
   private _pdmode: number
   /** Point display size */
@@ -346,6 +348,7 @@ export class AcDbDatabase extends AcDbObject {
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
     this._ltscale = 1
+    this._lwdisplay = false
     this._pdmode = 0
     this._pdsize = 0
     this._tables = {
@@ -550,6 +553,35 @@ export class AcDbDatabase extends AcDbObject {
   set ltscale(value: number) {
     this._ltscale = value ?? 1
     this.triggerHeaderSysVarChangedEvent('ltscale')
+  }
+
+  /**
+   * Gets the flag whether to display line weight.
+   *
+   * @returns The flag whether to display line weight.
+   *
+   * @example
+   * ```typescript
+   * const lineTypeScale = database.ltscale;
+   * ```
+   */
+  get lwdisplay(): boolean {
+    return this._lwdisplay
+  }
+
+  /**
+   * Sets the flag whether to display line weight.
+   *
+   * @param value - The flag whether to display line weight.
+   *
+   * @example
+   * ```typescript
+   * database.lwdisplay = true;
+   * ```
+   */
+  set lwdisplay(value: boolean) {
+    this._lwdisplay = value ?? false
+    this.triggerHeaderSysVarChangedEvent('lwdisplay')
   }
 
   /**
