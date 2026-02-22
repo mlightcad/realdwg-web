@@ -1,7 +1,8 @@
 import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
-import { AcDbDatabase } from 'database'
+
+import type { AcDbDatabase } from './AcDbDatabase'
 
 /**
  * Supported AutoCAD system variable data type name.
@@ -48,6 +49,8 @@ export interface AcDbSysVarDescriptor {
  * Event arguments for system variable related events.
  */
 export interface AcDbSysVarEventArgs {
+  /** The database that triggered the event */
+  database: AcDbDatabase
   /** The system variable name */
   name: string
   /** The new value of system variable */
@@ -122,7 +125,7 @@ export class AcDbSysVarManager {
       name: 'PICKBOX',
       type: 'number',
       isDbVar: false,
-      defaultValue: 0
+      defaultValue: 10
     })
     this.registerVar({
       /**
@@ -141,7 +144,14 @@ export class AcDbSysVarManager {
    * Register one system variable metadata entry.
    */
   public registerVar(desc: AcDbSysVarDescriptor) {
-    this.registry.set(desc.name.toUpperCase(), desc)
+    const name = this.normalizeName(desc.name)
+    this.registry.set(name, {
+      ...desc,
+      name
+    })
+    if (!desc.isDbVar) {
+      this.cache.set(name, desc.defaultValue)
+    }
   }
 
   /**
@@ -155,7 +165,7 @@ export class AcDbSysVarManager {
    * Get system variable value.
    */
   public getVar(name: string, db: AcDbDatabase): AcDbSysVarType | undefined {
-    name = name.toUpperCase()
+    name = this.normalizeName(name)
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
       if (descriptor.isDbVar) {
@@ -172,7 +182,7 @@ export class AcDbSysVarManager {
    * Set system variable value.
    */
   public setVar(name: string, value: AcDbSysVarType, db: AcDbDatabase) {
-    name = name.toUpperCase()
+    name = this.normalizeName(name)
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
       const oldVal = this.getVar(name, db)
@@ -200,8 +210,15 @@ export class AcDbSysVarManager {
         ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value
       } else {
         this.cache.set(name, value)
+        if (this.hasValueChanged(oldVal, value)) {
+          this.events.sysVarChanged.dispatch({
+            database: db,
+            name,
+            newVal: value,
+            oldVal
+          })
+        }
       }
-      this.events.sysVarChanged.dispatch({ name, newVal: value, oldVal })
     } else {
       throw new Error(`System variable ${name} not found!`)
     }
@@ -211,7 +228,7 @@ export class AcDbSysVarManager {
    * Get system variable metadata descriptor (if registered).
    */
   public getDescriptor(name: string): AcDbSysVarDescriptor | undefined {
-    return this.registry.get(name.toUpperCase())
+    return this.registry.get(this.normalizeName(name))
   }
 
   /**
@@ -243,5 +260,26 @@ export class AcDbSysVarManager {
     if (falseValues.has(v)) return false
 
     return false
+  }
+
+  /**
+   * Check if sysvar value changed.
+   */
+  private hasValueChanged(
+    oldValue: AcDbSysVarType | undefined,
+    newValue: AcDbSysVarType | undefined
+  ) {
+    if (oldValue instanceof AcCmColor && newValue instanceof AcCmColor) {
+      return !oldValue.equals(newValue)
+    }
+
+    return !Object.is(oldValue, newValue)
+  }
+
+  /**
+   * Normalize system variable name for internal storage and lookup.
+   */
+  private normalizeName(name: string): string {
+    return name.toLowerCase()
   }
 }
