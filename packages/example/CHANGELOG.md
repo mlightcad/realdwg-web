@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.2
+
+### Patch Changes
+
+- feat(data-model): emit sysVarChanged only when sysvar value actually changes and add system variable 'LWDISPLAY'
+- Updated dependencies
+  - @mlightcad/data-model@1.7.2
+  - @mlightcad/libredwg-converter@3.5.2
+
 ## 0.1.1
 
 ### Patch Changes

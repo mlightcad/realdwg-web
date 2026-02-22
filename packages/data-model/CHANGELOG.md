@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.2
+
+### Patch Changes
+
+- feat(data-model): emit sysVarChanged only when sysvar value actually changes and add system variable 'LWDISPLAY'
+- Updated dependencies
+  - @mlightcad/common@1.4.2
+  - @mlightcad/geometry-engine@3.2.2
+  - @mlightcad/graphic-interface@3.3.2
+
 ## 1.7.1
 
 ### Patch Changes

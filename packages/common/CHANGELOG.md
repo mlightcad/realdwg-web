@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.2
+
+### Patch Changes
+
+- feat(data-model): emit sysVarChanged only when sysvar value actually changes and add system variable 'LWDISPLAY'
+
 ## 1.4.1
 
 ### Patch Changes
