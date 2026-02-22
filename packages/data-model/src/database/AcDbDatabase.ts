@@ -37,6 +37,7 @@ import { AcDbDwgVersion } from './AcDbDwgVersion'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 import { AcDbRegAppTable } from './AcDbRegAppTable'
 import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
+import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -106,16 +107,6 @@ export interface AcDbProgressdEventArgs {
    * Note: For now, 'PARSE' and 'FONT' sub stages use this field only.
    */
   data?: unknown
-}
-
-/**
- * Event arguments for header system variable changes.
- */
-export interface AcDbHeaderSysVarEventArgs {
-  /** The database that triggered the event */
-  database: AcDbDatabase
-  /** The name of the system variable that changed */
-  name: string
 }
 
 /**
@@ -282,6 +273,8 @@ export class AcDbDatabase extends AcDbObject {
   private _insunits: AcDbUnitsValue
   /** Global linetype scale */
   private _ltscale: number
+  /** The flag whether to display line weight */
+  private _lwdisplay: boolean
   /** Point display mode */
   private _pdmode: number
   /** Point display size */
@@ -322,9 +315,7 @@ export class AcDbDatabase extends AcDbObject {
     /** Fired when a layer is erased from the database */
     layerErased: new AcCmEventManager<AcDbLayerEventArgs>(),
     /** Fired during database opening operations to report progress */
-    openProgress: new AcCmEventManager<AcDbProgressdEventArgs>(),
-    /** Fired when a header system variable is changed */
-    headerSysVarChanged: new AcCmEventManager<AcDbHeaderSysVarEventArgs>()
+    openProgress: new AcCmEventManager<AcDbProgressdEventArgs>()
   }
 
   public static MLIGHTCAD_APPID = 'mlightcad'
@@ -346,6 +337,7 @@ export class AcDbDatabase extends AcDbObject {
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
     this._ltscale = 1
+    this._lwdisplay = true
     this._pdmode = 0
     this._pdsize = 0
     this._tables = {
@@ -467,8 +459,9 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set aunits(value: number) {
-    this._aunits = value ?? 0
-    this.triggerHeaderSysVarChangedEvent('aunits')
+    this.updateSysVar('aunits', this._aunits, value ?? 0, nextValue => {
+      this._aunits = nextValue
+    })
   }
 
   /**
@@ -487,8 +480,14 @@ export class AcDbDatabase extends AcDbObject {
    * @param value - The version value of the database
    */
   set version(value: string | number) {
-    this._version = new AcDbDwgVersion(value)
-    this.triggerHeaderSysVarChangedEvent('version')
+    this.updateSysVar(
+      'version',
+      this._version,
+      new AcDbDwgVersion(value),
+      nextValue => {
+        this._version = nextValue
+      }
+    )
   }
 
   /**
@@ -519,8 +518,9 @@ export class AcDbDatabase extends AcDbObject {
    */
   set insunits(value: number) {
     // TODO: Default value is 1 (imperial) or 4 (metric)
-    this._insunits = value ?? 4
-    this.triggerHeaderSysVarChangedEvent('insunits')
+    this.updateSysVar('insunits', this._insunits, value ?? 4, nextValue => {
+      this._insunits = nextValue
+    })
   }
 
   /**
@@ -548,8 +548,44 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set ltscale(value: number) {
-    this._ltscale = value ?? 1
-    this.triggerHeaderSysVarChangedEvent('ltscale')
+    this.updateSysVar('ltscale', this._ltscale, value ?? 1, nextValue => {
+      this._ltscale = nextValue
+    })
+  }
+
+  /**
+   * Gets the flag whether to display line weight.
+   *
+   * @returns The flag whether to display line weight.
+   *
+   * @example
+   * ```typescript
+   * const lineTypeScale = database.ltscale;
+   * ```
+   */
+  get lwdisplay(): boolean {
+    return this._lwdisplay
+  }
+
+  /**
+   * Sets the flag whether to display line weight.
+   *
+   * @param value - The flag whether to display line weight.
+   *
+   * @example
+   * ```typescript
+   * database.lwdisplay = true;
+   * ```
+   */
+  set lwdisplay(value: boolean) {
+    this.updateSysVar(
+      'lwdisplay',
+      this._lwdisplay,
+      value ?? false,
+      nextValue => {
+        this._lwdisplay = nextValue
+      }
+    )
   }
 
   /**
@@ -577,8 +613,9 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set cecolor(value: AcCmColor) {
-    this._cecolor = value || 0
-    this.triggerHeaderSysVarChangedEvent('cecolor')
+    this.updateSysVar('cecolor', this._cecolor, value || 0, nextValue => {
+      this._cecolor = nextValue
+    })
   }
 
   /**
@@ -590,8 +627,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._celtscale
   }
   set celtscale(value: number) {
-    this._celtscale = value ?? 1
-    this.triggerHeaderSysVarChangedEvent('celtscale')
+    this.updateSysVar('celtscale', this._celtscale, value ?? 1, nextValue => {
+      this._celtscale = nextValue
+    })
   }
 
   /**
@@ -601,8 +639,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._celweight
   }
   set celweight(value: AcGiLineWeight) {
-    this._celweight = value ?? AcGiLineWeight.ByLayer
-    this.triggerHeaderSysVarChangedEvent('celweight')
+    this.updateSysVar(
+      'celweight',
+      this._celweight,
+      value ?? AcGiLineWeight.ByLayer,
+      nextValue => {
+        this._celweight = nextValue
+      }
+    )
   }
 
   /**
@@ -612,8 +656,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._clayer
   }
   set clayer(value: string) {
-    this._clayer = value ?? '0'
-    this.triggerHeaderSysVarChangedEvent('clayer')
+    this.updateSysVar('clayer', this._clayer, value ?? '0', nextValue => {
+      this._clayer = nextValue
+    })
   }
 
   /**
@@ -623,8 +668,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._angBase
   }
   set angBase(value: number) {
-    this._angBase = value ?? 0
-    this.triggerHeaderSysVarChangedEvent('angbase')
+    this.updateSysVar('angbase', this._angBase, value ?? 0, nextValue => {
+      this._angBase = nextValue
+    })
   }
 
   /**
@@ -636,8 +682,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._angDir
   }
   set angDir(value: number) {
-    this._angDir = value ?? 0
-    this.triggerHeaderSysVarChangedEvent('angdir')
+    this.updateSysVar('angdir', this._angDir, value ?? 0, nextValue => {
+      this._angDir = nextValue
+    })
   }
 
   /**
@@ -648,8 +695,11 @@ export class AcDbDatabase extends AcDbObject {
   }
   set extmax(value: AcGePoint3dLike) {
     if (value) {
+      const oldExtMax = this._extents.max.clone()
       this._extents.expandByPoint(value)
-      this.triggerHeaderSysVarChangedEvent('extmax')
+      if (!this._extents.max.equals(oldExtMax)) {
+        this.triggerSysVarChangedEvent('extmax', oldExtMax, this._extents.max)
+      }
     }
   }
 
@@ -661,8 +711,11 @@ export class AcDbDatabase extends AcDbObject {
   }
   set extmin(value: AcGePoint3dLike) {
     if (value) {
+      const oldExtMin = this._extents.min.clone()
       this._extents.expandByPoint(value)
-      this.triggerHeaderSysVarChangedEvent('extmin')
+      if (!this._extents.min.equals(oldExtMin)) {
+        this.triggerSysVarChangedEvent('extmin', oldExtMin, this._extents.min)
+      }
     }
   }
 
@@ -680,8 +733,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdmode
   }
   set pdmode(value: number) {
-    this._pdmode = value ?? 0
-    this.triggerHeaderSysVarChangedEvent('pdmode')
+    this.updateSysVar('pdmode', this._pdmode, value ?? 0, nextValue => {
+      this._pdmode = nextValue
+    })
   }
 
   /**
@@ -694,8 +748,9 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdsize
   }
   set pdsize(value: number) {
-    this._pdsize = value ?? 0
-    this.triggerHeaderSysVarChangedEvent('pdsize')
+    this.updateSysVar('pdsize', this._pdsize, value ?? 0, nextValue => {
+      this._pdsize = nextValue
+    })
   }
 
   /**
@@ -951,22 +1006,60 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Triggers a header system variable changed event.
-   *
-   * This method is called internally when header system variables
-   * are modified to notify listeners of the change.
-   *
-   * @param sysVarName - The name of the system variable that changed
-   *
-   * @example
-   * ```typescript
-   * database.triggerHeaderSysVarChangedEvent('aunits');
-   * ```
+   * Updates a sysvar value and dispatches the change event only when the value changed.
    */
-  private triggerHeaderSysVarChangedEvent(sysVarName: string) {
-    this.events.headerSysVarChanged.dispatch({
+  private updateSysVar<T>(
+    sysVarName: string,
+    currentValue: T,
+    nextValue: T,
+    setter: (nextValue: T) => void
+  ) {
+    if (!this.hasSysVarValueChanged(currentValue, nextValue)) {
+      return
+    }
+
+    setter(nextValue)
+    this.triggerSysVarChangedEvent(sysVarName, currentValue, nextValue)
+  }
+
+  /**
+   * Determines whether two sysvar values are different.
+   */
+  private hasSysVarValueChanged(currentValue: unknown, nextValue: unknown) {
+    if (currentValue instanceof AcCmColor && nextValue instanceof AcCmColor) {
+      return !currentValue.equals(nextValue)
+    }
+
+    if (
+      currentValue instanceof AcDbDwgVersion &&
+      nextValue instanceof AcDbDwgVersion
+    ) {
+      return currentValue.value !== nextValue.value
+    }
+
+    return !Object.is(currentValue, nextValue)
+  }
+
+  /**
+   * Triggers a system variable changed event with old/new values.
+   */
+  private triggerSysVarChangedEvent(
+    sysVarName: string,
+    oldValue: unknown,
+    newValue: unknown
+  ) {
+    const manager = AcDbSysVarManager.instance()
+    const name = sysVarName.toLowerCase()
+    const descriptor = manager.getDescriptor(name)
+    if (descriptor == null) {
+      return
+    }
+
+    manager.events.sysVarChanged.dispatch({
       database: this,
-      name: sysVarName
+      name,
+      oldVal: oldValue as AcDbSysVarType,
+      newVal: newValue as AcDbSysVarType
     })
   }
 
