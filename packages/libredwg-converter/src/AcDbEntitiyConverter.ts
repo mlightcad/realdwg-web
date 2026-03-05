@@ -755,10 +755,12 @@ export class AcDbEntityConverter {
     dbBlockReference.scaleFactors.z = blockReference.zScale
     dbBlockReference.rotation = blockReference.rotation
     dbBlockReference.normal.copy(blockReference.extrusionDirection)
-    blockReference.attribs.forEach(attrib => {
-      const dbAttrib = this.convertAttribute(attrib)
-      dbBlockReference.appendAttributes(dbAttrib)
-    })
+    if (blockReference.attribs) {
+      blockReference.attribs.forEach(attrib => {
+        const dbAttrib = this.convertAttribute(attrib)
+        dbBlockReference.appendAttributes(dbAttrib)
+      })
+    }
     return dbBlockReference
   }
 
