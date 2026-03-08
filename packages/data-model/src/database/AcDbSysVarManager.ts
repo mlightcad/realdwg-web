@@ -115,12 +115,26 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: '0'
     })
+    /**
+     * Color theme of UI elements
+     * - 0:	Dark theme
+     * - 1:	Light theme
+     */
+    this.registerVar({
+      name: 'COLORTHEME',
+      type: 'number',
+      isDbVar: false,
+      defaultValue: '0'
+    })
     this.registerVar({
       name: 'LWDISPLAY',
       type: 'boolean',
       isDbVar: true,
       defaultValue: false
     })
+    /**
+     * Represents the half-size of the pickbox in pixels
+     */
     this.registerVar({
       name: 'PICKBOX',
       type: 'number',
