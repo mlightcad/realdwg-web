@@ -185,6 +185,9 @@ export interface AcDbConvertDatabasePerformanceData {
 }
 
 const PERFORMANCE_ENTRY_NAME = 'Load Database'
+const DEFAULT_WORKER_TIMEOUT_MS = 30000
+const MAX_WORKER_TIMEOUT_MS = 120000
+const BYTES_PER_MEBIBYTE = 1024 * 1024
 
 /**
  * Task class for database conversion operations.
@@ -267,6 +270,14 @@ export interface AcDbDatabaseConverterConfig {
    * ```
    */
   parserWorkerUrl?: string | URL
+  /**
+   * Timeout for parser web worker operations in milliseconds.
+   *
+   * This applies only when parsing runs in a web worker.
+   *
+   * @default 30000
+   */
+  timeout?: number
   /**
    * Whether to use web workers for computationally intensive tasks.
    *
@@ -382,7 +393,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     data: ArrayBuffer,
     db: AcDbDatabase,
     minimumChunkSize: number,
-    progress?: AcDbConversionProgressCallback
+    progress?: AcDbConversionProgressCallback,
+    timeout?: number
   ) {
     const loadDbTimeEntry: AcCmPerformanceEntry<AcDbConvertDatabasePerformanceData> =
       {
@@ -427,7 +439,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: ArrayBuffer) => {
-            return await this.parse(data)
+            return await this.parse(data, timeout)
           }
         },
         progress
@@ -655,9 +667,30 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     }
   }
 
+  /**
+   * Resolves the parser worker timeout in milliseconds.
+   *
+   * Explicit timeout always takes precedence. Otherwise the timeout scales
+   * linearly with file size at one extra second per MiB, clamped to the
+   * range of 30 seconds to 2 minutes.
+   */
+  protected getParserWorkerTimeout(data: ArrayBuffer, timeout?: number) {
+    const resolvedTimeout = timeout ?? this.config.timeout
+    if (resolvedTimeout != null) {
+      return resolvedTimeout
+    }
+
+    const sizeInMiB = Math.ceil(data.byteLength / BYTES_PER_MEBIBYTE)
+    const dynamicTimeout = DEFAULT_WORKER_TIMEOUT_MS + sizeInMiB * 1000
+    return Math.min(
+      MAX_WORKER_TIMEOUT_MS,
+      Math.max(DEFAULT_WORKER_TIMEOUT_MS, dynamicTimeout)
+    )
+  }
+
   protected async parse(
     _data: ArrayBuffer,
-    _workerUrl?: string
+    _timeout?: number
   ): Promise<AcDbParsingTaskResult<TModel>> {
     throw new Error('Not impelemented yet!')
   }

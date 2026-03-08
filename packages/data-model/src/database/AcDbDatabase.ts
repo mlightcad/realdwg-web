@@ -197,6 +197,14 @@ export interface AcDbOpenDatabaseOptions {
    * database processing is broken into chunks for better performance.
    */
   minimumChunkSize?: number
+
+  /**
+   * Timeout for web worker parsing in milliseconds.
+   *
+   * This option is used only when the selected converter parses the drawing
+   * file in a web worker. If omitted, the converter-level timeout is used.
+   */
+  timeout?: number
 }
 
 /**
@@ -819,7 +827,8 @@ export class AcDbDatabase extends AcDbObject {
             : this.tables.textStyleTable.fonts
           await options.fontLoader.load(fonts)
         }
-      }
+      },
+      options?.timeout
     )
   }
 

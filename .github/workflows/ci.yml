@@ -52,6 +52,12 @@ jobs:
 
       - name: Build API docs
         run: pnpm doc
+
+      - name: Publish packages to npm
+        if: startsWith(github.ref, 'refs/tags/')
+        run: pnpm publish -r
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         
       - name: Create github release
         if: startsWith(github.ref, 'refs/tags/')
