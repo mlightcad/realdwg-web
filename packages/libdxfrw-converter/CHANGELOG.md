@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.4
+
+### Patch Changes
+
+- feat: add configurable parser worker timeout for drawing conversion and centralize database system variable names
+- Updated dependencies
+  - @mlightcad/data-model@1.7.4
+
 ## 3.5.3
 
 ### Patch Changes

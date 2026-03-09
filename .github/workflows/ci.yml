@@ -53,20 +53,6 @@ jobs:
       - name: Build API docs
         run: pnpm doc
 
-      - name: Publish packages to npm
-        if: startsWith(github.ref, 'refs/tags/')
-        run: pnpm publish -r
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        
-      - name: Create github release
-        if: startsWith(github.ref, 'refs/tags/')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Release ${{ github.ref_name }}
-          generate_release_notes: true
-
       - name: Setup Pages
         uses: actions/configure-pages@v5
 

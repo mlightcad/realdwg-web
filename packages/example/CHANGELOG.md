@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.4
+
+### Patch Changes
+
+- feat: add configurable parser worker timeout for drawing conversion and centralize database system variable names
+- Updated dependencies
+  - @mlightcad/data-model@1.7.4
+  - @mlightcad/libredwg-converter@3.5.4
+
 ## 0.1.3
 
 ### Patch Changes
