@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.4
+
+### Patch Changes
+
+- feat: add configurable parser worker timeout for drawing conversion and centralize database system variable names
+- Updated dependencies
+  - @mlightcad/common@1.4.4
+  - @mlightcad/geometry-engine@3.2.4
+
 ## 3.3.3
 
 ### Patch Changes

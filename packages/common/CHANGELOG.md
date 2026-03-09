@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.4
+
+### Patch Changes
+
+- feat: add configurable parser worker timeout for drawing conversion and centralize database system variable names
+
 ## 1.4.3
 
 ### Patch Changes
