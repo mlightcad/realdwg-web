@@ -3,6 +3,7 @@ import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import type { AcDbDatabase } from './AcDbDatabase'
+import { AcDbSystemVariables } from './AcDbSystemVariables'
 
 /**
  * Supported AutoCAD system variable data type name.
@@ -92,37 +93,51 @@ export class AcDbSysVarManager {
 
   private constructor() {
     this.registerVar({
-      name: 'CECOLOR',
+      name: AcDbSystemVariables.CECOLOR,
       type: 'color',
       isDbVar: true,
       defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
     })
     this.registerVar({
-      name: 'CELTSCALE',
+      name: AcDbSystemVariables.CELTSCALE,
       type: 'number',
       isDbVar: true,
       defaultValue: -1
     })
     this.registerVar({
-      name: 'CELWEIGHT',
+      name: AcDbSystemVariables.CELWEIGHT,
       type: 'number',
       isDbVar: true,
       defaultValue: AcGiLineWeight.ByLayer
     })
     this.registerVar({
-      name: 'CLAYER',
+      name: AcDbSystemVariables.CLAYER,
       type: 'string',
       isDbVar: true,
       defaultValue: '0'
     })
+    /**
+     * Color theme of UI elements
+     * - 0:	Dark theme
+     * - 1:	Light theme
+     */
     this.registerVar({
-      name: 'LWDISPLAY',
+      name: AcDbSystemVariables.COLORTHEME,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: '0'
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.LWDISPLAY,
       type: 'boolean',
       isDbVar: true,
       defaultValue: false
     })
+    /**
+     * Represents the half-size of the pickbox in pixels
+     */
     this.registerVar({
-      name: 'PICKBOX',
+      name: AcDbSystemVariables.PICKBOX,
       type: 'number',
       isDbVar: false,
       defaultValue: 10
@@ -133,7 +148,7 @@ export class AcDbSysVarManager {
        * - false: black
        * - true: white
        */
-      name: 'WHITEBKCOLOR',
+      name: AcDbSystemVariables.WHITEBKCOLOR,
       type: 'boolean',
       isDbVar: false,
       defaultValue: false

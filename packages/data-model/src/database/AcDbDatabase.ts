@@ -38,6 +38,7 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 import { AcDbRegAppTable } from './AcDbRegAppTable'
 import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
 import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
+import { AcDbSystemVariables } from './AcDbSystemVariables'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -197,6 +198,14 @@ export interface AcDbOpenDatabaseOptions {
    * database processing is broken into chunks for better performance.
    */
   minimumChunkSize?: number
+
+  /**
+   * Timeout for web worker parsing in milliseconds.
+   *
+   * This option is used only when the selected converter parses the drawing
+   * file in a web worker. If omitted, the converter-level timeout is used.
+   */
+  timeout?: number
 }
 
 /**
@@ -459,9 +468,14 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set aunits(value: number) {
-    this.updateSysVar('aunits', this._aunits, value ?? 0, nextValue => {
-      this._aunits = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.AUNITS,
+      this._aunits,
+      value ?? 0,
+      nextValue => {
+        this._aunits = nextValue
+      }
+    )
   }
 
   /**
@@ -481,7 +495,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   set version(value: string | number) {
     this.updateSysVar(
-      'version',
+      AcDbSystemVariables.ACADVER,
       this._version,
       new AcDbDwgVersion(value),
       nextValue => {
@@ -518,9 +532,14 @@ export class AcDbDatabase extends AcDbObject {
    */
   set insunits(value: number) {
     // TODO: Default value is 1 (imperial) or 4 (metric)
-    this.updateSysVar('insunits', this._insunits, value ?? 4, nextValue => {
-      this._insunits = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.INSUNITS,
+      this._insunits,
+      value ?? 4,
+      nextValue => {
+        this._insunits = nextValue
+      }
+    )
   }
 
   /**
@@ -548,9 +567,14 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set ltscale(value: number) {
-    this.updateSysVar('ltscale', this._ltscale, value ?? 1, nextValue => {
-      this._ltscale = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.LTSCALE,
+      this._ltscale,
+      value ?? 1,
+      nextValue => {
+        this._ltscale = nextValue
+      }
+    )
   }
 
   /**
@@ -579,7 +603,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   set lwdisplay(value: boolean) {
     this.updateSysVar(
-      'lwdisplay',
+      AcDbSystemVariables.LWDISPLAY,
       this._lwdisplay,
       value ?? false,
       nextValue => {
@@ -613,9 +637,14 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   set cecolor(value: AcCmColor) {
-    this.updateSysVar('cecolor', this._cecolor, value || 0, nextValue => {
-      this._cecolor = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.CECOLOR,
+      this._cecolor,
+      value || 0,
+      nextValue => {
+        this._cecolor = nextValue
+      }
+    )
   }
 
   /**
@@ -627,9 +656,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._celtscale
   }
   set celtscale(value: number) {
-    this.updateSysVar('celtscale', this._celtscale, value ?? 1, nextValue => {
-      this._celtscale = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.CELTSCALE,
+      this._celtscale,
+      value ?? 1,
+      nextValue => {
+        this._celtscale = nextValue
+      }
+    )
   }
 
   /**
@@ -640,7 +674,7 @@ export class AcDbDatabase extends AcDbObject {
   }
   set celweight(value: AcGiLineWeight) {
     this.updateSysVar(
-      'celweight',
+      AcDbSystemVariables.CELWEIGHT,
       this._celweight,
       value ?? AcGiLineWeight.ByLayer,
       nextValue => {
@@ -656,9 +690,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._clayer
   }
   set clayer(value: string) {
-    this.updateSysVar('clayer', this._clayer, value ?? '0', nextValue => {
-      this._clayer = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.CLAYER,
+      this._clayer,
+      value ?? '0',
+      nextValue => {
+        this._clayer = nextValue
+      }
+    )
   }
 
   /**
@@ -668,9 +707,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._angBase
   }
   set angBase(value: number) {
-    this.updateSysVar('angbase', this._angBase, value ?? 0, nextValue => {
-      this._angBase = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.ANGBASE,
+      this._angBase,
+      value ?? 0,
+      nextValue => {
+        this._angBase = nextValue
+      }
+    )
   }
 
   /**
@@ -682,9 +726,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._angDir
   }
   set angDir(value: number) {
-    this.updateSysVar('angdir', this._angDir, value ?? 0, nextValue => {
-      this._angDir = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.ANGDIR,
+      this._angDir,
+      value ?? 0,
+      nextValue => {
+        this._angDir = nextValue
+      }
+    )
   }
 
   /**
@@ -698,7 +747,11 @@ export class AcDbDatabase extends AcDbObject {
       const oldExtMax = this._extents.max.clone()
       this._extents.expandByPoint(value)
       if (!this._extents.max.equals(oldExtMax)) {
-        this.triggerSysVarChangedEvent('extmax', oldExtMax, this._extents.max)
+        this.triggerSysVarChangedEvent(
+          AcDbSystemVariables.EXTMAX,
+          oldExtMax,
+          this._extents.max
+        )
       }
     }
   }
@@ -714,7 +767,11 @@ export class AcDbDatabase extends AcDbObject {
       const oldExtMin = this._extents.min.clone()
       this._extents.expandByPoint(value)
       if (!this._extents.min.equals(oldExtMin)) {
-        this.triggerSysVarChangedEvent('extmin', oldExtMin, this._extents.min)
+        this.triggerSysVarChangedEvent(
+          AcDbSystemVariables.EXTMIN,
+          oldExtMin,
+          this._extents.min
+        )
       }
     }
   }
@@ -733,9 +790,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdmode
   }
   set pdmode(value: number) {
-    this.updateSysVar('pdmode', this._pdmode, value ?? 0, nextValue => {
-      this._pdmode = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.PDMODE,
+      this._pdmode,
+      value ?? 0,
+      nextValue => {
+        this._pdmode = nextValue
+      }
+    )
   }
 
   /**
@@ -748,9 +810,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._pdsize
   }
   set pdsize(value: number) {
-    this.updateSysVar('pdsize', this._pdsize, value ?? 0, nextValue => {
-      this._pdsize = nextValue
-    })
+    this.updateSysVar(
+      AcDbSystemVariables.PDSIZE,
+      this._pdsize,
+      value ?? 0,
+      nextValue => {
+        this._pdsize = nextValue
+      }
+    )
   }
 
   /**
@@ -819,7 +886,8 @@ export class AcDbDatabase extends AcDbObject {
             : this.tables.textStyleTable.fonts
           await options.fontLoader.load(fonts)
         }
-      }
+      },
+      options?.timeout
     )
   }
 

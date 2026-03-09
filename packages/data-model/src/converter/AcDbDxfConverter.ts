@@ -74,10 +74,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * @returns Parsed DXF object containing all the parsed data
    *
    */
-  protected async parse(data: ArrayBuffer) {
-    if (this.config.useWorker && this.config.parserWorkerUrl) {
+  protected async parse(data: ArrayBuffer, timeout?: number) {
+    const effectiveConfig = this.config
+    const resolvedTimeout = this.getParserWorkerTimeout(data, timeout)
+
+    if (effectiveConfig.useWorker && effectiveConfig.parserWorkerUrl) {
       const api = createWorkerApi({
-        workerUrl: this.config.parserWorkerUrl,
+        workerUrl: effectiveConfig.parserWorkerUrl,
+        timeout: resolvedTimeout,
         // One concurrent worker needed for parser
         maxConcurrentWorkers: 1
       })
