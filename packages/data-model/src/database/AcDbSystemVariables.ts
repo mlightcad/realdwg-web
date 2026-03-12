@@ -43,6 +43,8 @@ export const AcDbSystemVariables = {
   LTSCALE: 'LTSCALE',
   /** Flag indicating whether lineweights are displayed in the editor/viewer. */
   LWDISPLAY: 'LWDISPLAY',
+  /** Color used for measurement tool overlays (distance, area, arc). */
+  MEASUREMENTCOLOR: 'MEASUREMENTCOLOR',
   /** Point display style bitmask that controls how POINT entities are drawn. */
   PDMODE: 'PDMODE',
   /** Point display size, expressed as an absolute value or viewport percentage. */

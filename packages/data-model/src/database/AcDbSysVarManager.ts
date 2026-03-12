@@ -134,6 +134,20 @@ export class AcDbSysVarManager {
       defaultValue: false
     })
     /**
+     * Color used for measurement tool overlays (distance, area, arc).
+     * Default: RGB(96, 165, 250)
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.MEASUREMENTCOLOR,
+      type: 'color',
+      isDbVar: false,
+      defaultValue: (() => {
+        const c = new AcCmColor(AcCmColorMethod.ByColor)
+        c.setRGB(96, 165, 250)
+        return c
+      })()
+    })
+    /**
      * Represents the half-size of the pickbox in pixels
      */
     this.registerVar({
