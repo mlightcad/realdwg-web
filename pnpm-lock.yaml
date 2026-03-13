@@ -11,6 +11,9 @@ importers:
       '@changesets/cli':
         specifier: ^2.29.5
         version: 2.29.5
+      '@eslint/js':
+        specifier: ^9.9.1
+        version: 9.10.0
       '@intlify/eslint-plugin-vue-i18n':
         specifier: ^3.0.0
         version: 3.0.0(eslint@9.10.0(jiti@1.21.6))

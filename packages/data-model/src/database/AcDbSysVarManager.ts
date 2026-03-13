@@ -117,12 +117,6 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: '0'
     })
-    this.registerVar({
-      name: AcDbSystemVariables.TEXTSTYLE,
-      type: 'string',
-      isDbVar: true,
-      defaultValue: DEFAULT_TEXT_STYLE
-    })
     /**
      * Color theme of UI elements
      * - 0:	Dark theme
@@ -139,6 +133,20 @@ export class AcDbSysVarManager {
       type: 'boolean',
       isDbVar: true,
       defaultValue: false
+    })
+    /**
+     * Color used for measurement tool overlays (distance, area, arc).
+     * Default: RGB(96, 165, 250)
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.MEASUREMENTCOLOR,
+      type: 'color',
+      isDbVar: false,
+      defaultValue: (() => {
+        const c = new AcCmColor(AcCmColorMethod.ByColor)
+        c.setRGB(96, 165, 250)
+        return c
+      })()
     })
     /**
      * Running Object Snap (OSNAP) modes stored as a bitcode value.
@@ -158,6 +166,12 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 10
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.TEXTSTYLE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: DEFAULT_TEXT_STYLE
     })
     this.registerVar({
       /**
