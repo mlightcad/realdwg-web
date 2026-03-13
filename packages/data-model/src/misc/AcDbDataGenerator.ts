@@ -11,6 +11,7 @@ import {
 } from '../database'
 import { AcDbHatch } from '../entity'
 import { AcDbLayout } from '../object'
+import { DEFAULT_TEXT_STYLE } from './AcDbConstants'
 
 export class AcDbDataGenerator {
   readonly db: AcDbDatabase
@@ -63,7 +64,7 @@ export class AcDbDataGenerator {
   createDefaultTextStyle() {
     this.db.tables.textStyleTable.add(
       new AcDbTextStyleTableRecord({
-        name: 'Standard',
+        name: DEFAULT_TEXT_STYLE,
         standardFlag: 0,
         fixedTextHeight: 0,
         widthFactor: 1,
@@ -80,8 +81,8 @@ export class AcDbDataGenerator {
   createDefaultDimStyle() {
     this.db.tables.dimStyleTable.add(
       new AcDbDimStyleTableRecord({
-        name: 'Standard',
-        dimtxsty: 'Standard'
+        name: DEFAULT_TEXT_STYLE,
+        dimtxsty: DEFAULT_TEXT_STYLE
       })
     )
   }

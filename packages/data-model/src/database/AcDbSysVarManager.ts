@@ -2,6 +2,7 @@ import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
+import { DEFAULT_TEXT_STYLE } from '../misc'
 import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 
@@ -116,6 +117,12 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: '0'
     })
+    this.registerVar({
+      name: AcDbSystemVariables.TEXTSTYLE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: DEFAULT_TEXT_STYLE
+    })
     /**
      * Color theme of UI elements
      * - 0:	Dark theme
@@ -146,6 +153,15 @@ export class AcDbSysVarManager {
         c.setRGB(96, 165, 250)
         return c
       })()
+    /**      
+     * Running Object Snap (OSNAP) modes stored as a bitcode value.
+     * Each snap type corresponds to a bit, and the values are added together.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.OSMODE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
     })
     /**
      * Represents the half-size of the pickbox in pixels

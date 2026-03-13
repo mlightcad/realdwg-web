@@ -12,7 +12,7 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbOsnapMode } from '../misc'
+import { AcDbOsnapMode, DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -392,7 +392,7 @@ export class AcDbText extends AcDbEntity {
    *
    * @example
    * ```typescript
-   * text.styleName = "Standard";
+   * text.styleName = DEFAULT_TEXT_STYLE;
    * ```
    */
   set styleName(value: string) {
@@ -616,8 +616,8 @@ export class AcDbText extends AcDbEntity {
     const textStyleTable = this.database.tables.textStyleTable
     let style = textStyleTable.getAt(this.styleName)
     if (!style) {
-      style = (textStyleTable.getAt('STANDARD') ||
-        textStyleTable.getAt('Standard'))!
+      style = (textStyleTable.getAt(DEFAULT_TEXT_STYLE) ||
+        textStyleTable.getAt(DEFAULT_TEXT_STYLE))!
     }
     return style.textStyle
   }

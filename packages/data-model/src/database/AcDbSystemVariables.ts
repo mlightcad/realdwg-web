@@ -31,6 +31,8 @@ export const AcDbSystemVariables = {
   CELWEIGHT: 'CELWEIGHT',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
+  /** Current text style name used when creating new text entities. */
+  TEXTSTYLE: 'TEXTSTYLE',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
   /** Upper-right corner of the model-space drawing extents. */
@@ -45,6 +47,8 @@ export const AcDbSystemVariables = {
   LWDISPLAY: 'LWDISPLAY',
   /** Color used for measurement tool overlays (distance, area, arc). */
   MEASUREMENTCOLOR: 'MEASUREMENTCOLOR',
+  /** Running object snap mode bitmask (OSNAP settings). */
+  OSMODE: 'OSMODE',
   /** Point display style bitmask that controls how POINT entities are drawn. */
   PDMODE: 'PDMODE',
   /** Point display size, expressed as an absolute value or viewport percentage. */

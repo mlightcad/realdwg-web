@@ -9,7 +9,12 @@ import {
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
 import { AcDbEntity } from '../entity'
-import { AcDbAngleUnits, AcDbDataGenerator, AcDbUnitsValue } from '../misc'
+import {
+  AcDbAngleUnits,
+  AcDbDataGenerator,
+  AcDbUnitsValue,
+  DEFAULT_TEXT_STYLE
+} from '../misc'
 import {
   AcDbDictionary,
   AcDbLayoutDictionary,
@@ -276,6 +281,8 @@ export class AcDbDatabase extends AcDbObject {
   private _celweight: AcGiLineWeight
   /** Current layer for the database */
   private _clayer: string
+  /** Current text style name for the database */
+  private _textstyle: string
   /** The extents of current Model Space */
   private _extents: AcGeBox3d
   /** Insertion units for the database */
@@ -288,6 +295,8 @@ export class AcDbDatabase extends AcDbObject {
   private _pdmode: number
   /** Point display size */
   private _pdsize: number
+  /** Running object snap mode bitmask */
+  private _osmode: number
   /** Tables in the database */
   private _tables: AcDbTables
   /** Nongraphical objects in the database */
@@ -342,6 +351,7 @@ export class AcDbDatabase extends AcDbObject {
     this._cecolor = new AcCmColor()
     this._celweight = AcGiLineWeight.ByLayer
     this._clayer = '0'
+    this._textstyle = DEFAULT_TEXT_STYLE
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
@@ -349,6 +359,7 @@ export class AcDbDatabase extends AcDbObject {
     this._lwdisplay = true
     this._pdmode = 0
     this._pdsize = 0
+    this._osmode = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
@@ -642,7 +653,7 @@ export class AcDbDatabase extends AcDbObject {
       this._cecolor,
       value || 0,
       nextValue => {
-        this._cecolor = nextValue
+        this._cecolor = nextValue.clone()
       }
     )
   }
@@ -696,6 +707,23 @@ export class AcDbDatabase extends AcDbObject {
       value ?? '0',
       nextValue => {
         this._clayer = nextValue
+      }
+    )
+  }
+
+  /**
+   * The text style name for new text objects.
+   */
+  get textstyle(): string {
+    return this._textstyle
+  }
+  set textstyle(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.TEXTSTYLE,
+      this._textstyle,
+      value ?? DEFAULT_TEXT_STYLE,
+      nextValue => {
+        this._textstyle = nextValue
       }
     )
   }
@@ -816,6 +844,23 @@ export class AcDbDatabase extends AcDbObject {
       value ?? 0,
       nextValue => {
         this._pdsize = nextValue
+      }
+    )
+  }
+
+  /**
+   * Running Object Snap (OSNAP) mode bitmask.
+   */
+  get osmode(): number {
+    return this._osmode
+  }
+  set osmode(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.OSMODE,
+      this._osmode,
+      value ?? 0,
+      nextValue => {
+        this._osmode = nextValue
       }
     )
   }
