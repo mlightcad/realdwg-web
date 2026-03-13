@@ -1,5 +1,6 @@
 import { defaults } from '@mlightcad/common'
 
+import { DEFAULT_TEXT_STYLE } from '../misc'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
@@ -309,7 +310,7 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     dimfit: 0,
     dimupt: 0,
     dimatfit: 3,
-    dimtxsty: 'Standard',
+    dimtxsty: DEFAULT_TEXT_STYLE,
     dimldrblk: '',
     dimblk: '',
     dimblk1: '',

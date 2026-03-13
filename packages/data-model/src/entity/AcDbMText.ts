@@ -12,7 +12,7 @@ import {
   AcGiMTextFlowDirection
 } from '@mlightcad/graphic-interface'
 
-import { AcDbOsnapMode } from '../misc'
+import { AcDbOsnapMode, DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -573,8 +573,8 @@ export class AcDbMText extends AcDbEntity {
     const textStyleTable = this.database.tables.textStyleTable
     let style = textStyleTable.getAt(this.styleName)
     if (!style) {
-      style = (textStyleTable.getAt('STANDARD') ||
-        textStyleTable.getAt('Standard'))!
+      style = (textStyleTable.getAt(DEFAULT_TEXT_STYLE) ||
+        textStyleTable.getAt(DEFAULT_TEXT_STYLE))!
     }
     return style.textStyle
   }

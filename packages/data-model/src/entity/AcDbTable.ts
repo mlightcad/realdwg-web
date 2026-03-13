@@ -13,6 +13,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbTextStyleTableRecord } from '../database'
+import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBlockReference } from './AcDbBlockReference'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -563,8 +564,8 @@ export class AcDbTable extends AcDbBlockReference {
       style = textStyleTable.getAt(cell.textStyle)
     }
     if (!style) {
-      style = (textStyleTable.getAt('STANDARD') ||
-        textStyleTable.getAt('Standard'))!
+      style = (textStyleTable.getAt(DEFAULT_TEXT_STYLE) ||
+        textStyleTable.getAt(DEFAULT_TEXT_STYLE))!
     }
     return style.textStyle
   }

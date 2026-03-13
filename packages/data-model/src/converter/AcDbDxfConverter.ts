@@ -39,6 +39,7 @@ import {
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
 import { AcDbAttribute, AcDbBlockReference, AcDbEntity } from '../entity'
+import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -436,8 +437,10 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     if (header['$EXTMAX']) db.extmax = header['$EXTMAX']
     if (header['$EXTMIN']) db.extmin = header['$EXTMIN']
     if (header['$INSUNITS'] != null) db.insunits = header['$INSUNITS']
+    db.osmode = header['$OSMODE'] || 0
     db.pdmode = header['$PDMODE'] || 0
     db.pdsize = header['$PDSIZE'] || 0.0
+    db.textstyle = header['$TEXTSTYLE'] || DEFAULT_TEXT_STYLE
   }
 
   /**
@@ -800,7 +803,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
           dimfit: item.DIMFIT || 0,
           dimupt: item.DIMUPT,
           dimatfit: item.DIMATFIT,
-          dimtxsty: item.DIMTXSTY || 'Standard',
+          dimtxsty: item.DIMTXSTY || DEFAULT_TEXT_STYLE,
           dimldrblk: item.DIMLDRBLK || '',
           dimblk: item.DIMBLK || '',
           dimblk1: item.DIMBLK1 || '',

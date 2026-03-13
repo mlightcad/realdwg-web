@@ -7,6 +7,13 @@
 export const DEFAULT_LINE_TYPE = 'Continuous'
 
 /**
+ * Default text style name used when no specific text style is specified.
+ *
+ * This constant represents the standard text style used in AutoCAD drawings.
+ */
+export const DEFAULT_TEXT_STYLE = 'Standard'
+
+/**
  * Special line type value that indicates the entity should use
  * the line type of its layer.
  *
