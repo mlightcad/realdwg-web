@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+- Updated dependencies
+  - @mlightcad/common@1.4.5
+  - @mlightcad/geometry-engine@3.2.5
+
 ## 3.3.4
 
 ### Patch Changes

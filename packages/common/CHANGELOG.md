@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+
 ## 1.4.4
 
 ### Patch Changes

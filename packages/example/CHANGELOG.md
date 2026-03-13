@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+- Updated dependencies
+  - @mlightcad/data-model@1.7.5
+  - @mlightcad/libredwg-converter@3.5.5
+
 ## 0.1.4
 
 ### Patch Changes
