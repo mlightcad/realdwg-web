@@ -20,7 +20,8 @@ import {
   AcDbViewportTableRecord,
   AcGiBaseLineStyle,
   AcGiLineTypePatternElement,
-  AcGiTextStyle
+  AcGiTextStyle,
+  DEFAULT_TEXT_STYLE
 } from '@mlightcad/data-model'
 import {
   DRW_Database,
@@ -216,7 +217,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
           dimfit: item.dimfit || 0,
           dimupt: item.dimupt,
           dimatfit: item.dimatfit,
-          dimtxsty: item.dimtxsty || 'Standard',
+          dimtxsty: item.dimtxsty || DEFAULT_TEXT_STYLE,
           dimldrblk: item.dimldrblk || '',
           dimblk: item.dimblk || '',
           dimblk1: item.dimblk1 || '',

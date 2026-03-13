@@ -27,7 +27,8 @@ import {
   AcGiDefaultLightingType,
   AcGiOrthographicType,
   AcGiRenderMode,
-  createWorkerApi
+  createWorkerApi,
+  DEFAULT_TEXT_STYLE
 } from '@mlightcad/data-model'
 import {
   DwgBlockRecordTableEntry,
@@ -245,7 +246,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimfit: item.DIMFIT || 0,
         dimupt: item.DIMUPT,
         dimatfit: item.DIMATFIT,
-        dimtxsty: 'Standard', // TODO: Set correct value
+        dimtxsty: DEFAULT_TEXT_STYLE, // TODO: Set correct value
         dimldrblk: '', // TODO: Set correct value
         dimblk: item.DIMBLK || '', // TODO: Set correct value
         dimblk1: item.DIMBLK1 || '', // TODO: Set correct value
@@ -506,6 +507,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.insunits = header.INSUNITS ?? 1
     db.pdmode = header.PDMODE ?? 0
     db.pdsize = header.PDSIZE ?? 0.0
+    db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
   }
 
   private processCommonTableEntryAttrs(
