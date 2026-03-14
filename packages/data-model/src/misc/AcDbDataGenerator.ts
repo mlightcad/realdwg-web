@@ -11,7 +11,7 @@ import {
 } from '../database'
 import { AcDbHatch } from '../entity'
 import { AcDbLayout } from '../object'
-import { DEFAULT_TEXT_STYLE } from './AcDbConstants'
+import { DEFAULT_LINE_TYPE, DEFAULT_TEXT_STYLE } from './AcDbConstants'
 
 export class AcDbDataGenerator {
   readonly db: AcDbDatabase
@@ -25,7 +25,7 @@ export class AcDbDataGenerator {
       new AcDbLayerTableRecord({
         name: '0',
         standardFlags: 0,
-        linetype: 'Continuous',
+        linetype: DEFAULT_LINE_TYPE,
         lineWeight: 0,
         isOff: false,
         color: defaultColor,
@@ -53,7 +53,7 @@ export class AcDbDataGenerator {
     )
     this.db.tables.linetypeTable.add(
       new AcDbLinetypeTableRecord({
-        name: 'Continuous',
+        name: DEFAULT_LINE_TYPE,
         standardFlag: 0,
         description: 'Solid line',
         totalPatternLength: 0

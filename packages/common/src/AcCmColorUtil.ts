@@ -162,6 +162,10 @@ const COLOR_NAMES: Record<string, number> = {
  * Index 0 and 256, while included in this array, are actually reserved for inheritance
  * values in AutoCAD so they should not be used for index color lookups:
  * - Index 0: "ByBlock" - entity uses color of the block reference
+ * - index 7: is a special adaptive color in AutoCAD. It is not a fixed RGB value.
+ *   Instead, its displayed color depends on the drawing background to ensure sufficient contrast.
+ *   On dark backgrounds (e.g., the default model space), ACI 7 appears white.
+ *   On light backgrounds (e.g., paper space or white model space), it appears black.
  * - Index 256: "ByLayer" - entity uses color specified in the layer
  */
 const AUTO_CAD_COLOR_INDEX = [

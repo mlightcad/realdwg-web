@@ -1,6 +1,12 @@
-import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmColorMethod,
+  AcCmTransparency,
+  defaults
+} from '@mlightcad/common'
 import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
+import { DEFAULT_LINE_TYPE } from '../misc'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
@@ -67,7 +73,11 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   ) {
     attrs = attrs || {}
     defaults(attrs, {
-      color: new AcCmColor(),
+      // By default, a newly created layer uses ACI color index 7.
+      // In AutoCAD, ACI 7 is a special background-adaptive color rather than a fixed RGB value.
+      // It appears white on dark drawing backgrounds and black on light backgrounds,
+      // ensuring that entities remain visible regardless of the current canvas theme.
+      color: new AcCmColor(AcCmColorMethod.ByACI, 7),
       description: '',
       standardFlags: 0,
       isHidden: false,
@@ -75,7 +85,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
       isOff: false,
       isPlottable: true,
       transparency: new AcCmTransparency(),
-      linetype: '',
+      linetype: DEFAULT_LINE_TYPE,
       lineWeight: 1,
       materialId: -1
     })
