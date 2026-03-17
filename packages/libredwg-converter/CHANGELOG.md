@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/data-model@1.7.6
+
 ## 3.5.5
 
 ### Patch Changes

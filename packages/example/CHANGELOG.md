@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/data-model@1.7.6
+  - @mlightcad/libredwg-converter@3.5.6
+
 ## 0.1.5
 
 ### Patch Changes

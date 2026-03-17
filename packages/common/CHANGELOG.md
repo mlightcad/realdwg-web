@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+
 ## 1.4.5
 
 ### Patch Changes

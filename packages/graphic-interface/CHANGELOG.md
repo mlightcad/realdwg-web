@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/common@1.4.6
+  - @mlightcad/geometry-engine@3.2.6
+
 ## 3.3.5
 
 ### Patch Changes
