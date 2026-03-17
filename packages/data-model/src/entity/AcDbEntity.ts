@@ -143,6 +143,23 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Resolved color applied on this entity. It will resolve layer colors and block colors as needed.
+   */
+  get resolvedColor() {
+    let color = this.color
+    if (color.isByLayer) {
+      const layerColor = this.getLayerColor()
+      if (layerColor && layerColor.RGB != null) {
+        color = layerColor
+      }
+    } else if (color.isByBlock) {
+      // Do nothing for common entity and just use default color in database
+      // Block reference entity need to override this method handle 'byBlock'.
+    }
+    return color
+  }
+
+  /**
    * Gets the RGB color of this entity.
    *
    * This method handles the conversion of color indices (including ByLayer and ByBlock)
@@ -157,17 +174,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get rgbColor() {
-    // Default color
-    let color = this.color
-    if (color.isByLayer) {
-      const layerColor = this.getLayerColor()
-      if (layerColor && layerColor.RGB != null) {
-        color = layerColor
-      }
-    } else if (color.isByBlock) {
-      // Do nothing for common entity and just use default color in database
-      // Block reference entity need to override this method handle 'byBlock'.
-    }
+    const color = this.resolvedColor
     const rgb = color.RGB
     return rgb != null ? rgb : 0xffffff
   }
@@ -524,7 +531,7 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   worldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
     const traits = renderer.subEntityTraits
-    traits.color = this.color
+    traits.color = this.resolvedColor
     traits.rgbColor = this.rgbColor
     traits.lineType = this.lineStyle
     traits.lineTypeScale = this.linetypeScale
