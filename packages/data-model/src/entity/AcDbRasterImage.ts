@@ -6,8 +6,8 @@ import {
   AcGeVector2d
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
-import { AcDbObjectId } from 'base'
 
+import { AcDbDxfFiler, AcDbObjectId } from '../base'
 import { AcDbEntity } from './AcDbEntity'
 
 /**
@@ -405,6 +405,29 @@ export class AcDbRasterImage extends AcDbEntity {
     }
 
     return points
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbRasterImage')
+    filer.writePoint3d(10, this.position)
+    filer.writePoint3d(11, { x: this.width * this.scale.x, y: 0, z: 0 })
+    filer.writePoint3d(12, { x: 0, y: this.height * this.scale.y, z: 0 })
+    filer.writeObjectId(340, this.imageDefId)
+    filer.writeInt16(70, this.isImageShown ? 1 : 0)
+    filer.writeInt16(280, this.clipBoundaryType)
+    filer.writeInt16(281, this.isClipped ? 1 : 0)
+    filer.writeInt16(282, this.isImageTransparent ? 1 : 0)
+    filer.writeInt16(283, this.brightness)
+    filer.writeInt16(360, this.contrast)
+    filer.writeInt16(361, this.fade)
+    if (this.isClipped) {
+      filer.writeInt16(91, this.clipBoundary.length)
+      for (const point of this.clipBoundary) {
+        filer.writePoint2d(14, point)
+      }
+    }
+    return this
   }
 }
 

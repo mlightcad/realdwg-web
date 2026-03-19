@@ -1,3 +1,4 @@
+import { AcDbDxfFiler } from '../base'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
@@ -9,5 +10,12 @@ export class AcDbRegAppTableRecord extends AcDbSymbolTableRecord {
   constructor(name: string) {
     super()
     this.name = name
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbRegAppTableRecord')
+    filer.writeInt16(70, 0)
+    return this
   }
 }

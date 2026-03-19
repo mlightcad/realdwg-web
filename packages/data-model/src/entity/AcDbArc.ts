@@ -9,6 +9,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -561,5 +562,16 @@ export class AcDbArc extends AcDbCurve {
    */
   subWorldDraw(renderer: AcGiRenderer) {
     return renderer.circularArc(this._geo)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbArc')
+    filer.writePoint3d(10, this.center)
+    filer.writeDouble(40, this.radius)
+    filer.writeAngle(50, this.startAngle)
+    filer.writeAngle(51, this.endAngle)
+    filer.writeVector3d(210, this.normal)
+    return this
   }
 }

@@ -6,13 +6,23 @@ import {
 } from '@mlightcad/common'
 import { uid } from 'uid'
 
-import { AcDbDatabase } from '../database/AcDbDatabase'
+import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbDxfCode } from './AcDbDxfCode'
-import { acdbHostApplicationServices } from './AcDbHostApplicationServices'
+import { AcDbDxfFiler } from './AcDbDxfFiler'
 import { AcDbResultBuffer } from './AcDbResultBuffer'
 
 /** Type alias for object ID as string */
 export type AcDbObjectId = string
+
+let hostApplicationServicesProvider:
+  | (() => { workingDatabase: AcDbDatabase })
+  | undefined
+
+export function setAcDbHostApplicationServicesProvider(
+  provider: () => { workingDatabase: AcDbDatabase }
+) {
+  hostApplicationServicesProvider = provider
+}
 
 /**
  * Interface defining the attributes that can be associated with an AcDbObject.
@@ -271,9 +281,15 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   get database(): AcDbDatabase {
-    return this._database
-      ? this._database
-      : acdbHostApplicationServices().workingDatabase
+    if (this._database) {
+      return this._database
+    }
+    if (hostApplicationServicesProvider) {
+      return hostApplicationServicesProvider().workingDatabase
+    }
+    throw new Error(
+      'The current working database must be set before using it!'
+    )
   }
 
   /**
@@ -427,4 +443,38 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   close() {}
+
+  /**
+   * Writes the common DXF wrapper for this object and then delegates the
+   * object-specific payload to {@link dxfOutFields}.
+   */
+  dxfOut(...args: unknown[]): unknown {
+    const [filer, allXdata = false] = args as [
+      AcDbDxfFiler,
+      boolean?,
+      AcDbObjectId[]?
+    ]
+    filer.writeHandle(5, this.objectId)
+    filer.writeObjectId(330, this.ownerId)
+    filer.writeObjectId(360, this.extensionDictionary)
+    this.dxfOutFields(filer)
+
+    if (allXdata) {
+      for (const data of this._xDataMap.values()) {
+        filer.writeResultBuffer(data)
+      }
+    }
+    return this
+  }
+
+  /**
+   * Writes object-specific DXF fields.
+   *
+   * Subclasses should override this method and call `super.dxfOutFields(filer)`
+   * first so the subclass markers remain consistent.
+   */
+  dxfOutFields(filer: AcDbDxfFiler) {
+    filer.writeSubclassMarker('AcDbObject')
+    return this
+  }
 }

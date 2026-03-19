@@ -7,6 +7,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -371,5 +372,13 @@ export class AcDbLine extends AcDbCurve {
       new AcGePoint3d(end.x, end.y, 0)
     ]
     return renderer.lines(points)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbLine')
+    filer.writePoint3d(10, this.startPoint)
+    filer.writePoint3d(11, this.endPoint)
+    return this
   }
 }

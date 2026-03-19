@@ -1,5 +1,6 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
@@ -273,5 +274,14 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    */
   getIdAt(id: AcDbObjectId) {
     return this._entities.get(id)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbBlockTableRecord')
+    filer.writePoint3d(10, this.origin)
+    filer.writeObjectId(340, this.layoutId)
+    filer.writeInt16(70, 0)
+    return this
   }
 }

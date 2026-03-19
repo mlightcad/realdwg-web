@@ -13,11 +13,21 @@ const modeSelect = document.getElementById('modeSelect') as HTMLSelectElement
 const runButton = document.getElementById('runButton') as HTMLButtonElement
 const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
+const exportButton = document.createElement('button')
+
+exportButton.type = 'button'
+exportButton.textContent = 'Export DXF'
+exportButton.hidden = true
+exportButton.disabled = true
+exportButton.style.marginLeft = '8px'
+runButton.insertAdjacentElement('afterend', exportButton)
 
 type ParseMode = 'compare' | 'main' | 'worker'
 
 let lastFile: File | null = null
 let lastBuffer: ArrayBuffer | null = null
+let lastParsedDatabase: AcDbDatabase | null = null
+let lastDownloadUrl: string | null = null
 
 const registerConverters = (useWorker: boolean) => {
   // Register DXF converter
@@ -67,6 +77,7 @@ const collectLayers = (database: AcDbDatabase) => {
 type ParseResult =
   | { skipped: true; reason: string }
   | {
+      database: AcDbDatabase
       skipped: false
       durationMs: number
       layers: { count: number; names: string[] }
@@ -91,6 +102,7 @@ const parseOnce = async (
   const end = performance.now()
 
   return {
+    database,
     skipped: false,
     durationMs: end - start,
     layers: collectLayers(database)
@@ -109,6 +121,19 @@ const compareTimes = (mainMs: number, workerMs: number) => {
 
 const setStatus = (message: string) => {
   status.textContent = message
+}
+
+const getExportFileName = (fileName: string) => {
+  const suffixIndex = fileName.lastIndexOf('.')
+  const baseName = suffixIndex >= 0 ? fileName.slice(0, suffixIndex) : fileName
+  return `${baseName}.dxf`
+}
+
+const updateExportButton = () => {
+  const shouldShow =
+    lastFile != null && getFileType(lastFile.name) === AcDbFileType.DWG
+  exportButton.hidden = !shouldShow
+  exportButton.disabled = !shouldShow || lastParsedDatabase == null
 }
 
 const renderLayers = (layerInfo?: { count: number; names: string[] }) => {
@@ -144,6 +169,10 @@ const runParse = async () => {
   let mode = modeSelect.value as ParseMode
   const fileType = getFileType(lastFile.name)
   const lines: string[] = []
+  let parsedDatabase: AcDbDatabase | null = null
+
+  lastParsedDatabase = null
+  updateExportButton()
 
   if (fileType === AcDbFileType.DWG && mode !== 'worker') {
     mode = 'worker'
@@ -157,6 +186,7 @@ const runParse = async () => {
   runButton.disabled = true
   modeSelect.disabled = true
   fileInput.disabled = true
+  exportButton.disabled = true
 
   try {
     setStatus('')
@@ -196,8 +226,10 @@ const runParse = async () => {
       let layerSource: { count: number; names: string[] } | undefined
       if (!workerResult.skipped) {
         layerSource = workerResult.layers
+        parsedDatabase = workerResult.database
       } else if (!mainResult.skipped) {
         layerSource = mainResult.layers
+        parsedDatabase = mainResult.database
       }
       lines.push(...renderLayers(layerSource))
     } else if (mode === 'main') {
@@ -207,6 +239,7 @@ const runParse = async () => {
       if (result.skipped) {
         lines.push(`Main thread: skipped (${result.reason})`)
       } else {
+        parsedDatabase = result.database
         lines.push(`Main thread: ${formatMs(result.durationMs)}`)
         lines.push('')
         lines.push(...renderLayers(result.layers))
@@ -218,6 +251,7 @@ const runParse = async () => {
       if (result.skipped) {
         lines.push(`Worker: skipped (${result.reason})`)
       } else {
+        parsedDatabase = result.database
         lines.push(`Worker: ${formatMs(result.durationMs)}`)
         lines.push('')
         lines.push(...renderLayers(result.layers))
@@ -227,11 +261,13 @@ const runParse = async () => {
     console.error(error)
     lines.push(`Error: ${(error as Error).message}`)
   } finally {
+    lastParsedDatabase = fileType === AcDbFileType.DWG ? parsedDatabase : null
     setStatus('')
     output.textContent = lines.join('\n')
     runButton.disabled = false
     modeSelect.disabled = false
     fileInput.disabled = false
+    updateExportButton()
   }
 }
 
@@ -239,7 +275,9 @@ fileInput.addEventListener('change', async () => {
   const file = fileInput.files?.[0]
   if (!file) return
   lastFile = file
+  lastParsedDatabase = null
   updateModeOptions(getFileType(file.name))
+  updateExportButton()
   output.textContent = 'Loading file...\n'
   lastBuffer = await file.arrayBuffer()
   await runParse()
@@ -247,4 +285,38 @@ fileInput.addEventListener('change', async () => {
 
 runButton.addEventListener('click', async () => {
   await runParse()
+})
+
+exportButton.addEventListener('click', () => {
+  if (!lastFile || !lastParsedDatabase) return
+
+  exportButton.disabled = true
+
+  try {
+    setStatus('Generating DXF export...')
+    const dxf = lastParsedDatabase.dxfOut(undefined, 6)
+    const fileName = getExportFileName(lastFile.name)
+    const blob = new Blob([dxf], {
+      type: 'application/dxf;charset=utf-8'
+    })
+
+    if (lastDownloadUrl) {
+      URL.revokeObjectURL(lastDownloadUrl)
+    }
+
+    lastDownloadUrl = URL.createObjectURL(blob)
+
+    const anchor = document.createElement('a')
+    anchor.href = lastDownloadUrl
+    anchor.download = fileName
+    document.body.appendChild(anchor)
+    anchor.click()
+    anchor.remove()
+    setStatus(`DXF exported: ${fileName}`)
+  } catch (error) {
+    console.error(error)
+    setStatus(`DXF export failed: ${(error as Error).message}`)
+  } finally {
+    updateExportButton()
+  }
 })

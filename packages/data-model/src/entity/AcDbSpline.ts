@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 
@@ -220,5 +221,35 @@ export class AcDbSpline extends AcDbCurve {
   subWorldDraw(renderer: AcGiRenderer) {
     const points = this._geo.getPoints(100)
     return renderer.lines(points)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    const spline = this._geo as unknown as {
+      degree: number
+      knots: number[]
+      weights: number[]
+      controlPoints: AcGePoint3dLike[]
+      fitPoints?: AcGePoint3dLike[]
+    }
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbSpline')
+    filer.writeInt16(70, this.closed ? 1 : 0)
+    filer.writeInt16(71, spline.degree)
+    filer.writeInt16(72, spline.knots.length)
+    filer.writeInt16(73, spline.controlPoints.length)
+    filer.writeInt16(74, spline.fitPoints?.length ?? 0)
+    for (const knot of spline.knots) {
+      filer.writeDouble(40, knot)
+    }
+    for (const weight of spline.weights) {
+      filer.writeDouble(41, weight)
+    }
+    for (const point of spline.controlPoints) {
+      filer.writePoint3d(10, point)
+    }
+    for (const point of spline.fitPoints ?? []) {
+      filer.writePoint3d(11, point)
+    }
+    return this
   }
 }

@@ -1,38 +1,40 @@
 /* eslint-disable simple-import-sort/imports */
 import { AcCmColor, AcCmEventManager } from '@mlightcad/common'
 
-import { AcDbObject, AcDbObjectId } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
 import { AcDbRegenerator } from '../converter'
 import {
   AcDbConverterType,
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
-import { AcDbEntity } from '../entity'
+import { AcDb2dPolyline, AcDb3dPolyline, AcDbBlockReference, AcDbEntity } from '../entity'
 import {
   AcDbAngleUnits,
   AcDbDataGenerator,
   AcDbUnitsValue,
   DEFAULT_TEXT_STYLE
 } from '../misc'
-import {
-  AcDbDictionary,
-  AcDbLayoutDictionary,
-  AcDbRasterImageDef,
-  AcDbXrecord
-} from '../object'
+import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
+import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
 import { AcDbDimStyleTable } from './AcDbDimStyleTable'
+import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
 import { AcDbLayerTable } from './AcDbLayerTable'
 import {
   AcDbLayerTableRecord,
   AcDbLayerTableRecordAttrs
 } from './AcDbLayerTableRecord'
 import { AcDbLinetypeTable } from './AcDbLinetypeTable'
+import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
 import { AcDbTextStyleTable } from './AcDbTextStyleTable'
+import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
 import { AcDbViewportTable } from './AcDbViewportTable'
+import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
 import {
   AcGeBox3d,
   AcGePoint3d,
@@ -44,6 +46,8 @@ import { AcDbRegAppTable } from './AcDbRegAppTable'
 import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
 import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
+import { AcDbLayout } from '../object/layout/AcDbLayout'
+import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -1027,6 +1031,38 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Exports the current database into an ASCII DXF string.
+   *
+   * The `fileName` parameter is kept for ObjectARX API parity. In this web
+   * implementation the method returns the DXF payload instead of writing the
+   * filesystem directly.
+   */
+  dxfOut(
+    _fileName?: string,
+    precision: number = 16,
+    version: AcDbDwgVersion | string | number = this.version.name,
+    _saveThumbnailImage: boolean = false
+  ) {
+    this.ensureDxfExportDefaults()
+
+    const outVersion =
+      version instanceof AcDbDwgVersion ? version : new AcDbDwgVersion(version)
+    const filer = new AcDbDxfFiler({
+      database: this,
+      precision,
+      version: outVersion
+    })
+
+    this.writeDxfHeaderSection(filer)
+    this.writeDxfTablesSection(filer, outVersion)
+    this.writeDxfBlocksSection(filer)
+    this.writeDxfEntitiesSection(filer)
+    this.writeDxfObjectsSection(filer)
+    filer.writeStart('EOF')
+    return filer.toString()
+  }
+
+  /**
    * Triggers xxxAppended events with data in the database to redraw the associated viewer.
    */
   async regen() {
@@ -1091,6 +1127,355 @@ export class AcDbDatabase extends AcDbObject {
     // Create default layout for model space
     if (options.layout) {
       generator.createDefaultLayout()
+    }
+  }
+
+  private ensureDxfExportDefaults() {
+    if (!this.tables.layerTable.has('0')) {
+      const defaultColor = new AcCmColor()
+      defaultColor.colorIndex = 7
+      this.tables.layerTable.add(
+        new AcDbLayerTableRecord({
+          name: '0',
+          standardFlags: 0,
+          linetype: 'Continuous',
+          lineWeight: 0,
+          isOff: false,
+          color: defaultColor,
+          isPlottable: true
+        })
+      )
+    }
+
+    if (!this.tables.linetypeTable.has('ByBlock')) {
+      this.tables.linetypeTable.add(
+        new AcDbLinetypeTableRecord({
+          name: 'ByBlock',
+          standardFlag: 0,
+          description: '',
+          totalPatternLength: 0
+        })
+      )
+    }
+    if (!this.tables.linetypeTable.has('ByLayer')) {
+      this.tables.linetypeTable.add(
+        new AcDbLinetypeTableRecord({
+          name: 'ByLayer',
+          standardFlag: 0,
+          description: '',
+          totalPatternLength: 0
+        })
+      )
+    }
+    if (!this.tables.linetypeTable.has('Continuous')) {
+      this.tables.linetypeTable.add(
+        new AcDbLinetypeTableRecord({
+          name: 'Continuous',
+          standardFlag: 0,
+          description: 'Solid line',
+          totalPatternLength: 0
+        })
+      )
+    }
+
+    if (!this.tables.textStyleTable.has(DEFAULT_TEXT_STYLE)) {
+      this.tables.textStyleTable.add(
+        new AcDbTextStyleTableRecord({
+          name: DEFAULT_TEXT_STYLE,
+          standardFlag: 0,
+          fixedTextHeight: 0,
+          widthFactor: 1,
+          obliqueAngle: 0,
+          textGenerationFlag: 0,
+          lastHeight: 0.2,
+          font: 'SimKai',
+          bigFont: '',
+          extendedFont: 'SimKai'
+        })
+      )
+    }
+
+    if (!this.tables.dimStyleTable.has(DEFAULT_TEXT_STYLE)) {
+      this.tables.dimStyleTable.add(
+        new AcDbDimStyleTableRecord({
+          name: DEFAULT_TEXT_STYLE,
+          dimtxsty: DEFAULT_TEXT_STYLE
+        })
+      )
+    }
+
+    if (!this.tables.viewportTable.has('*ACTIVE')) {
+      const viewport = new AcDbViewportTableRecord()
+      viewport.name = '*ACTIVE'
+      this.tables.viewportTable.add(viewport)
+    }
+
+    const modelSpace = this.tables.blockTable.modelSpace
+    if (!this.objects.layout.getAt('Model')) {
+      const layout = new AcDbLayout()
+      layout.layoutName = 'Model'
+      layout.tabOrder = 0
+      layout.blockTableRecordId = modelSpace.objectId
+      layout.limits.min.copy({ x: 0, y: 0 })
+      layout.limits.max.copy({ x: 1000000, y: 1000000 })
+      layout.extents.min.copy({ x: 0, y: 0, z: 0 })
+      layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
+      this.objects.layout.setAt(layout.layoutName, layout)
+      modelSpace.layoutId = layout.objectId
+    }
+  }
+
+  private writeDxfHeaderSection(filer: AcDbDxfFiler) {
+    filer.startSection('HEADER')
+    filer.writeString(9, '$ACADVER')
+    filer.writeString(1, filer.version?.name ?? this.version.name)
+    filer.writeString(9, '$INSUNITS')
+    filer.writeInt16(70, this.insunits)
+    filer.writeString(9, '$LTSCALE')
+    filer.writeDouble(40, this.ltscale)
+    filer.writeString(9, '$LWDISPLAY')
+    filer.writeInt16(70, this.lwdisplay ? 1 : 0)
+    filer.writeString(9, '$CLAYER')
+    filer.writeString(8, this.clayer)
+    filer.writeString(9, '$TEXTSTYLE')
+    filer.writeString(7, this.textstyle)
+    filer.writeString(9, '$ANGBASE')
+    filer.writeAngle(50, this.angBase)
+    filer.writeString(9, '$ANGDIR')
+    filer.writeInt16(70, this.angDir)
+    filer.writeString(9, '$EXTMIN')
+    filer.writePoint3d(10, this.extmin)
+    filer.writeString(9, '$EXTMAX')
+    filer.writePoint3d(10, this.extmax)
+    filer.writeString(9, '$PDMODE')
+    filer.writeInt32(70, this.pdmode)
+    filer.writeString(9, '$PDSIZE')
+    filer.writeDouble(40, this.pdsize)
+    filer.writeString(9, '$OSMODE')
+    filer.writeInt32(70, this.osmode)
+    filer.endSection()
+  }
+
+  private writeDxfTablesSection(
+    filer: AcDbDxfFiler,
+    version: AcDbDwgVersion
+  ) {
+    filer.startSection('TABLES')
+    this.writeDxfTable(
+      filer,
+      'VPORT',
+      this.tables.viewportTable.newIterator(),
+      'VPORT'
+    )
+    this.writeDxfTable(
+      filer,
+      'LTYPE',
+      this.tables.linetypeTable.newIterator(),
+      'LTYPE'
+    )
+    this.writeDxfTable(
+      filer,
+      'LAYER',
+      this.tables.layerTable.newIterator(),
+      'LAYER'
+    )
+    this.writeDxfTable(
+      filer,
+      'STYLE',
+      this.tables.textStyleTable.newIterator(),
+      'STYLE'
+    )
+    this.writeDxfTable(
+      filer,
+      'APPID',
+      this.tables.appIdTable.newIterator(),
+      'APPID'
+    )
+    this.writeDxfTable(
+      filer,
+      'DIMSTYLE',
+      this.tables.dimStyleTable.newIterator(),
+      'DIMSTYLE'
+    )
+    if (version.value >= 23) {
+      this.writeDxfTable(
+        filer,
+        'BLOCK_RECORD',
+        this.tables.blockTable.newIterator(),
+        'BLOCK_RECORD'
+      )
+    }
+    filer.endSection()
+  }
+
+  private writeDxfBlocksSection(filer: AcDbDxfFiler) {
+    filer.startSection('BLOCKS')
+    for (const btr of this.tables.blockTable.newIterator()) {
+      filer.writeStart('BLOCK')
+      filer.writeHandle(5, `BLOCK:${btr.objectId}`)
+      filer.writeObjectId(330, btr.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      filer.writeSubclassMarker('AcDbBlockBegin')
+      filer.writeString(8, '0')
+      filer.writeString(2, btr.name)
+      filer.writeInt16(70, 0)
+      filer.writePoint3d(10, btr.origin)
+      filer.writeString(3, btr.name)
+
+      if (!btr.isModelSapce && !btr.isPaperSapce) {
+        for (const entity of btr.newIterator()) {
+          this.writeDxfEntity(filer, entity)
+        }
+      }
+
+      filer.writeStart('ENDBLK')
+      filer.writeHandle(5, `ENDBLK:${btr.objectId}`)
+      filer.writeObjectId(330, btr.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      filer.writeSubclassMarker('AcDbBlockEnd')
+    }
+    filer.endSection()
+  }
+
+  private writeDxfEntitiesSection(filer: AcDbDxfFiler) {
+    filer.startSection('ENTITIES')
+    for (const btr of this.tables.blockTable.newIterator()) {
+      if (!btr.isModelSapce && !btr.isPaperSapce) continue
+      for (const entity of btr.newIterator()) {
+        this.writeDxfEntity(filer, entity)
+      }
+    }
+    filer.endSection()
+  }
+
+  private writeDxfObjectsSection(filer: AcDbDxfFiler) {
+    filer.startSection('OBJECTS')
+    this.objects.layout.ownerId = this.objects.dictionary.objectId
+    this.objects.imageDefinition.ownerId = this.objects.dictionary.objectId
+    this.objects.xrecord.ownerId = this.objects.dictionary.objectId
+
+    filer.writeStart('DICTIONARY')
+    filer.writeHandle(5, this.objects.dictionary.objectId)
+    filer.writeSubclassMarker('AcDbDictionary')
+    filer.writeInt16(281, 1)
+    filer.writeString(3, 'ACAD_LAYOUT')
+    filer.writeObjectId(350, this.objects.layout.objectId)
+    if (this.objects.imageDefinition.numEntries > 0) {
+      filer.writeString(3, 'ISM_RASTER_IMAGE_DICT')
+      filer.writeObjectId(350, this.objects.imageDefinition.objectId)
+    }
+    if (this.objects.xrecord.numEntries > 0) {
+      filer.writeString(3, 'MLIGHT_XRECORD')
+      filer.writeObjectId(350, this.objects.xrecord.objectId)
+    }
+
+    filer.writeStart('DICTIONARY')
+    this.objects.layout.dxfOut(filer)
+
+    if (this.objects.imageDefinition.numEntries > 0) {
+      filer.writeStart('DICTIONARY')
+      this.objects.imageDefinition.dxfOut(filer)
+    }
+
+    if (this.objects.xrecord.numEntries > 0) {
+      filer.writeStart('DICTIONARY')
+      this.objects.xrecord.dxfOut(filer)
+    }
+
+    for (const layout of this.objects.layout.newIterator()) {
+      filer.writeStart('LAYOUT')
+      layout.dxfOut(filer)
+    }
+
+    for (const imageDef of this.objects.imageDefinition.newIterator()) {
+      filer.writeStart('IMAGEDEF')
+      imageDef.dxfOut(filer)
+    }
+
+    for (const xrecord of this.objects.xrecord.newIterator()) {
+      filer.writeStart('XRECORD')
+      xrecord.dxfOut(filer)
+    }
+    filer.endSection()
+  }
+
+  private writeDxfTable<TRecord extends AcDbObject>(
+    filer: AcDbDxfFiler,
+    tableName: string,
+    records: Iterable<TRecord>,
+    recordType: string
+  ) {
+    const items = [...records]
+    filer.startTable(tableName, items.length)
+    for (const record of items) {
+      filer.writeStart(recordType)
+      record.dxfOut(filer)
+    }
+    filer.endTable()
+  }
+
+  private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
+    filer.writeStart(entity.dxfEntityTypeName)
+    entity.dxfOut(filer)
+
+    if (entity instanceof AcDb2dPolyline) {
+      for (let i = 0; i < entity.numberOfVertices; ++i) {
+        filer.writeStart('VERTEX')
+        filer.writeHandle(5, `VERTEX:${entity.objectId}:${i}`)
+        filer.writeObjectId(330, entity.objectId)
+        filer.writeSubclassMarker('AcDbEntity')
+        filer.writeSubclassMarker('AcDbVertex')
+        filer.writeSubclassMarker('AcDb2dVertex')
+        filer.writePoint3d(10, {
+          x: entity.getPointAt(i).x,
+          y: entity.getPointAt(i).y,
+          z: entity.elevation
+        })
+        filer.writeInt16(70, 0)
+      }
+      filer.writeStart('SEQEND')
+      filer.writeHandle(5, `SEQEND:${entity.objectId}`)
+      filer.writeObjectId(330, entity.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      return
+    }
+
+    if (entity instanceof AcDb3dPolyline) {
+      for (let i = 0; i < entity.numberOfVertices; ++i) {
+        const point = entity.getPointAt(i)
+        filer.writeStart('VERTEX')
+        filer.writeHandle(5, `VERTEX:${entity.objectId}:${i}`)
+        filer.writeObjectId(330, entity.objectId)
+        filer.writeSubclassMarker('AcDbEntity')
+        filer.writeSubclassMarker('AcDbVertex')
+        filer.writeSubclassMarker('AcDb3dPolylineVertex')
+        filer.writePoint3d(10, {
+          x: point.x,
+          y: point.y,
+          z: 0
+        })
+        filer.writeInt16(70, 32)
+      }
+      filer.writeStart('SEQEND')
+      filer.writeHandle(5, `SEQEND:${entity.objectId}`)
+      filer.writeObjectId(330, entity.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      return
+    }
+
+    if (entity instanceof AcDbBlockReference) {
+      let hasAttributes = false
+      for (const attrib of entity.attributeIterator()) {
+        hasAttributes = true
+        filer.writeStart('ATTRIB')
+        attrib.dxfOut(filer)
+      }
+      if (hasAttributes) {
+        filer.writeStart('SEQEND')
+        filer.writeHandle(5, `SEQEND:${entity.objectId}`)
+        filer.writeObjectId(330, entity.objectId)
+        filer.writeSubclassMarker('AcDbEntity')
+      }
     }
   }
 

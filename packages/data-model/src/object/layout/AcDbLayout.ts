@@ -1,6 +1,7 @@
 import { AcGeBox2d, AcGeBox3d } from '@mlightcad/geometry-engine'
 
-import { AcDbObject } from '../../base'
+import { AcDbDxfFiler } from '../../base/AcDbDxfFiler'
+import { AcDbObject } from '../../base/AcDbObject'
 
 /**
  * Represents the stored characteristics of each paperspace layout.
@@ -232,5 +233,19 @@ export class AcDbLayout extends AcDbObject {
    */
   set extents(value: AcGeBox3d) {
     this._extents.copy(value)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbLayout')
+    filer.writeString(1, this.layoutName)
+    filer.writeInt16(70, this.tabSelected ? 1 : 0)
+    filer.writeInt16(71, this.tabOrder)
+    filer.writeObjectId(330, this.blockTableRecordId)
+    filer.writePoint2d(10, this.limits.min)
+    filer.writePoint2d(11, this.limits.max)
+    filer.writePoint3d(14, this.extents.min)
+    filer.writePoint3d(15, this.extents.max)
+    return this
   }
 }

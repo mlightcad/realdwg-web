@@ -8,6 +8,7 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -363,5 +364,31 @@ export class AcDbHatch extends AcDbEntity {
       definitionLines: this.definitionLines
     }
     return renderer.area(this._geo)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    const loops = this._geo.loops
+    filer.writeSubclassMarker('AcDbHatch')
+    filer.writePoint3d(10, { x: 0, y: 0, z: this.elevation })
+    filer.writeInt16(70, this.isSolidFill ? 1 : 0)
+    filer.writeInt16(71, 0)
+    filer.writeString(2, this.patternName || (this.isSolidFill ? 'SOLID' : 'USER'))
+    filer.writeInt16(75, this.hatchStyle)
+    filer.writeInt16(76, this.patternType)
+    filer.writeAngle(52, this.patternAngle)
+    filer.writeDouble(41, this.patternScale)
+    filer.writeInt16(91, loops.length)
+    for (const loop of loops) {
+      const points = loop.getPoints(64)
+      filer.writeInt16(92, 2)
+      filer.writeInt16(93, points.length)
+      for (const point of points) {
+        filer.writePoint2d(10, point)
+      }
+      filer.writeInt16(97, 0)
+    }
+    filer.writeInt16(98, 0)
+    return this
   }
 }

@@ -68,6 +68,7 @@ export class AcDbSymbolTable<
    */
   add(record: RecordType) {
     record.database = this.database
+    record.ownerId = this.objectId
     const normalizedName = this.normalizeName(record.name)
     this._recordsByName.set(normalizedName, record)
     this._recordsById.set(record.objectId, record)

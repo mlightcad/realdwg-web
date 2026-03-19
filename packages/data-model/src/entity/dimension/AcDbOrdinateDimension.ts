@@ -4,6 +4,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
+import { AcDbDxfFiler } from '../../base'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -111,5 +112,13 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    */
   protected get arrowLineCount() {
     return 0
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbOrdinateDimension')
+    filer.writePoint3d(13, this.definingPoint)
+    filer.writePoint3d(14, this.leaderEndPoint)
+    return this
   }
 }
