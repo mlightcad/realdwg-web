@@ -9,6 +9,7 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../../base'
 import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
@@ -250,5 +251,16 @@ export class AcDbDiametricDimension extends AcDbDimension {
       if (startCompare !== 0) return startCompare
       return comparePoints(segA.endPoint, segB.endPoint)
     })
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbDiametricDimension')
+    filer.writePoint3d(15, this.chordPoint)
+    filer.writePoint3d(16, this.farChordPoint)
+    filer.writeDouble(40, this.leaderLength)
+    filer.writeAngle(52, this.extArcStartAngle)
+    filer.writeAngle(53, this.extArcEndAngle)
+    return this
   }
 }

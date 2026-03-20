@@ -4,6 +4,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
+import { AcDbDxfFiler } from '../../base'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -138,5 +139,15 @@ export class AcDbArcDimension extends AcDbDimension {
   get geometricExtents() {
     // TODO: Finish it
     return new AcGeBox3d()
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbArcDimension')
+    filer.writePoint3d(13, this.xLine1Point)
+    filer.writePoint3d(14, this.xLine2Point)
+    filer.writePoint3d(15, this.centerPoint)
+    filer.writePoint3d(16, this.arcPoint)
+    return this
   }
 }

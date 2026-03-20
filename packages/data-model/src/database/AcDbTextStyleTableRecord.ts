@@ -1,5 +1,6 @@
 import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
@@ -241,5 +242,23 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
       return fileName.substring(0, dotIndex)
     }
     return pathName
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbTextStyleTableRecord')
+    filer.writeString(2, this.name)
+    filer.writeInt16(70, this.textStyle.standardFlag)
+    filer.writeDouble(40, this.textSize)
+    filer.writeDouble(41, this.xScale)
+    filer.writeAngle(50, this.obliquingAngle)
+    filer.writeInt16(
+      71,
+      this.isVertical ? 4 : this.textStyle.textGenerationFlag
+    )
+    filer.writeDouble(42, this.priorSize)
+    filer.writeString(3, this.fileName)
+    filer.writeString(4, this.bigFontFileName)
+    return this
   }
 }

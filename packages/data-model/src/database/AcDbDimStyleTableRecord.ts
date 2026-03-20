@@ -1,5 +1,6 @@
 import { defaults } from '@mlightcad/common'
 
+import { AcDbDxfFiler } from '../base'
 import { DEFAULT_TEXT_STYLE } from '../misc'
 import {
   AcDbSymbolTableRecord,
@@ -1224,5 +1225,39 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
   }
   set dimlwe(value: number) {
     this.setAttr('dimlwe', value)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    const textStyle = this.database.tables.textStyleTable.getAt(this.dimtxsty)
+    const dimldrblk = this.database.tables.blockTable.getAt(this.dimldrblk)
+    const dimblk = this.database.tables.blockTable.getAt(this.dimblk)
+    const dimblk1 = this.database.tables.blockTable.getAt(this.dimblk1)
+    const dimblk2 = this.database.tables.blockTable.getAt(this.dimblk2)
+    filer.writeSubclassMarker('AcDbDimStyleTableRecord')
+    filer.writeString(2, this.name)
+    filer.writeInt16(70, 0)
+    filer.writeString(3, this.dimpost)
+    filer.writeString(4, this.dimapost)
+    filer.writeDouble(40, this.dimscale)
+    filer.writeDouble(41, this.dimasz)
+    filer.writeDouble(42, this.dimexo)
+    filer.writeDouble(43, this.dimdli)
+    filer.writeDouble(44, this.dimexe)
+    filer.writeDouble(140, this.dimtxt)
+    filer.writeDouble(147, this.dimgap)
+    filer.writeInt16(170, this.dimalt)
+    filer.writeInt16(171, this.dimtol)
+    filer.writeInt16(172, this.dimlim)
+    filer.writeInt16(173, this.dimtih)
+    filer.writeInt16(174, this.dimtoh)
+    filer.writeObjectId(340, textStyle?.objectId)
+    filer.writeObjectId(341, dimldrblk?.objectId)
+    filer.writeObjectId(342, dimblk?.objectId)
+    filer.writeObjectId(343, dimblk1?.objectId)
+    filer.writeObjectId(344, dimblk2?.objectId)
+    filer.writeInt16(371, this.dimlwd)
+    filer.writeInt16(372, this.dimlwe)
+    return this
   }
 }

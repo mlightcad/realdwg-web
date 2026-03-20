@@ -12,6 +12,7 @@ import {
   AcGiStyleType
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbObject } from '../base/AcDbObject'
 import { AcDbOsnapMode, ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc'
 import {
@@ -74,6 +75,39 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   get type() {
     return (this.constructor as typeof AcDbEntity).typeName
+  }
+
+  /**
+   * DXF entity name written to the file.
+   */
+  get dxfEntityTypeName() {
+    switch (this.type) {
+      case 'BlockReference':
+        return 'INSERT'
+      case 'Polyline':
+        return 'LWPOLYLINE'
+      case '2dPolyline':
+      case '3dPolyline':
+        return 'POLYLINE'
+      case '2dVertex':
+      case '3dVertex':
+        return 'VERTEX'
+      case 'Face':
+        return '3DFACE'
+      case 'RasterImage':
+        return 'IMAGE'
+      case 'Table':
+        return 'ACAD_TABLE'
+      case 'AlignedDimension':
+      case 'RadialDimension':
+      case 'DiametricDimension':
+      case 'OrdinateDimension':
+      case '3PointAngularDimension':
+      case 'ArcDimension':
+        return 'DIMENSION'
+      default:
+        return this.type.toUpperCase()
+    }
   }
 
   /**
@@ -318,6 +352,24 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   set transparency(value: AcCmTransparency) {
     this._transparency = value.clone()
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    // For better downstream compatibility, emit only the entity-level subclass
+    // marker here. The object-level marker (AcDbObject) is omitted for entities.
+    filer.writeSubclassMarker('AcDbEntity')
+    filer.writeString(8, this.layer)
+    filer.writeString(6, this.lineType)
+    filer.writeDouble(48, this.linetypeScale)
+    filer.writeInt16(60, this.visibility ? 0 : 1)
+    filer.writeCmColor(this.color)
+    filer.writeInt16(370, this.lineWeight)
+    filer.writeTransparency(this.transparency)
+    const owner = this.database.tables.blockTable.getIdAt(this.ownerId)
+    if (owner?.isPaperSapce) {
+      filer.writeInt16(67, 1)
+    }
+    return this
   }
 
   /**

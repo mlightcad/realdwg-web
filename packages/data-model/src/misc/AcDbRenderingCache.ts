@@ -1,9 +1,9 @@
 import { AcCmColor } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
-import { AcDbEntity } from 'entity'
 
 import { AcDbBlockTableRecord } from '../database'
+import { AcDbEntity } from '../entity'
 
 /**
  * Internal class used to cache rendered results to avoid duplicated rendering.

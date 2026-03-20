@@ -1,3 +1,4 @@
+import { AcDbDxfFiler } from '../base'
 import {
   AcDbAttributeFlags,
   AcDbAttributeMTextFlag
@@ -260,5 +261,18 @@ export class AcDbAttribute extends AcDbText {
   set mtext(value: AcDbMText | undefined) {
     this._mtext = value
     this.isMTextAttribute = value != null
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbAttribute')
+    filer.writeInt16(70, this.isInvisible ? 1 : 0)
+    filer.writeInt16(73, this.fieldLength)
+    filer.writeString(2, this.tag)
+    filer.writeInt16(74, this.isReallyLocked ? 1 : 0)
+    if (this.mtext) {
+      filer.writeInt16(71, this.isMTextAttribute ? 1 : 0)
+    }
+    return this
   }
 }

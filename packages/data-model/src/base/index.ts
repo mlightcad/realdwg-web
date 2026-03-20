@@ -1,4 +1,5 @@
 export * from './AcDbDxfCode'
+export * from './AcDbDxfFiler'
 export * from './AcDbHostApplicationServices'
 export * from './AcDbObject'
 export * from './AcDbOpenMode'

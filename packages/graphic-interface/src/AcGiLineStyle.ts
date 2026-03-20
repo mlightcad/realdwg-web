@@ -1,6 +1,5 @@
-import { AcGiStyleType } from 'AcGiStyleType'
-
 import { AcGiArrowType } from './AcGiArrowType'
+import { AcGiStyleType } from './AcGiStyleType'
 
 /**
  * Line type pattern element

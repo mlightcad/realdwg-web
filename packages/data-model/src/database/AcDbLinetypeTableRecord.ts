@@ -1,5 +1,6 @@
 import { AcGiBaseLineStyle } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
@@ -101,5 +102,21 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
       )
     }
     return this._linetype.pattern![index].elementLength
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbLinetypeTableRecord')
+    filer.writeString(2, this.name)
+    filer.writeInt16(70, this.linetype.standardFlag)
+    filer.writeString(3, this.comments)
+    filer.writeInt16(72, 65)
+    filer.writeInt16(73, this.numDashes)
+    filer.writeDouble(40, this.patternLength)
+    for (const item of this.linetype.pattern ?? []) {
+      filer.writeDouble(49, item.elementLength)
+      filer.writeInt16(74, item.elementTypeFlag)
+    }
+    return this
   }
 }

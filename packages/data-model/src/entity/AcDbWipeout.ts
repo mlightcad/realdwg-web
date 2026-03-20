@@ -1,6 +1,7 @@
 import { AcGeArea2d, AcGePolyline2d } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbRasterImage } from './AcDbRasterImage'
 
 /**
@@ -37,5 +38,11 @@ export class AcDbWipeout extends AcDbRasterImage {
     const area = new AcGeArea2d()
     area.add(new AcGePolyline2d(points))
     return renderer.area(area)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbWipeout')
+    return this
   }
 }

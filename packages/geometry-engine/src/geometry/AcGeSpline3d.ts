@@ -193,6 +193,30 @@ export class AcGeSpline3d extends AcGeCurve3d {
     return this._knotParameterization
   }
 
+  get controlPoints() {
+    return this._controlPoints.map(point => ({
+      x: point.x,
+      y: point.y,
+      z: point.z || 0
+    }))
+  }
+
+  get fitPoints() {
+    return this._fitPoints?.map(point => ({
+      x: point.x,
+      y: point.y,
+      z: point.z || 0
+    }))
+  }
+
+  get knots() {
+    return [...this._nurbsCurve.knots()]
+  }
+
+  get weights() {
+    return [...this._nurbsCurve.weights()]
+  }
+
   /**
    * The start point of this spline
    */

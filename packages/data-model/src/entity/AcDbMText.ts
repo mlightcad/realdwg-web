@@ -12,6 +12,7 @@ import {
   AcGiMTextFlowDirection
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode, DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -601,5 +602,28 @@ export class AcDbMText extends AcDbEntity {
       lineSpaceFactor: this.lineSpacingFactor
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbMText')
+    filer.writePoint3d(10, this.location)
+    filer.writeDouble(40, this.height)
+    filer.writeDouble(41, this.width)
+    filer.writeString(1, this.contents)
+    filer.writeString(7, this.styleName)
+    filer.writeAngle(50, this.rotation)
+    filer.writeVector3d(11, this.direction)
+    filer.writeInt16(71, this.attachmentPoint)
+    filer.writeInt16(72, this.drawingDirection)
+    filer.writeInt16(73, this.lineSpacingStyle)
+    filer.writeDouble(44, this.lineSpacingFactor)
+    if (this.backgroundFill) {
+      filer.writeInt16(90, 1)
+      filer.writeInt32(63, this.backgroundFillColor)
+      filer.writeInt32(441, this.backgroundFillTransparency)
+      filer.writeDouble(45, this.backgroundScaleFactor)
+    }
+    return this
   }
 }

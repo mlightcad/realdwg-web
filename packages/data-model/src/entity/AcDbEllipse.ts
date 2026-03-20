@@ -7,6 +7,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -511,5 +512,21 @@ export class AcDbEllipse extends AcDbCurve {
    */
   subWorldDraw(renderer: AcGiRenderer) {
     return renderer.ellipticalArc(this._geo)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbEllipse')
+    filer.writePoint3d(10, this.center)
+    filer.writePoint3d(11, {
+      x: this.majorAxisRadius,
+      y: 0,
+      z: 0
+    })
+    filer.writeVector3d(210, this.normal)
+    filer.writeDouble(40, this.minorAxisRadius / this.majorAxisRadius)
+    filer.writeDouble(41, this.startAngle)
+    filer.writeDouble(42, this.endAngle)
+    return this
   }
 }

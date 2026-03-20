@@ -1,5 +1,6 @@
 import { defaults } from '@mlightcad/common'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
 
 /**
@@ -71,5 +72,11 @@ export class AcDbSymbolTableRecord<
   }
   set name(value: string) {
     this.setAttr('name', value)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbSymbolTableRecord')
+    return this
   }
 }

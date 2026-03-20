@@ -1,5 +1,12 @@
 import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
+import type { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
+import { setAcDbHostApplicationServicesProvider } from './AcDbObject'
+
+let layoutManagerFactory: (() => AcDbLayoutManager) | undefined
+
+export function setAcDbLayoutManagerFactory(factory: () => AcDbLayoutManager) {
+  layoutManagerFactory = factory
+}
 
 /**
  * Returns the singleton instance of the host application services.
@@ -38,7 +45,7 @@ export class AcDbHostApplicationServices {
   private _workingDatabase: AcDbDatabase | null = null
 
   /** The layout manager instance */
-  private _layoutManager: AcDbLayoutManager
+  private _layoutManager?: AcDbLayoutManager
 
   /** The singleton instance of AcDbHostApplicationServices */
   public static instance: AcDbHostApplicationServices =
@@ -46,11 +53,8 @@ export class AcDbHostApplicationServices {
 
   /**
    * Private constructor to enforce singleton pattern.
-   * Initializes the layout manager.
    */
-  private constructor() {
-    this._layoutManager = new AcDbLayoutManager()
-  }
+  private constructor() {}
 
   /**
    * Gets the current working database.
@@ -115,6 +119,16 @@ export class AcDbHostApplicationServices {
    * ```
    */
   get layoutManager() {
+    if (!this._layoutManager) {
+      if (!layoutManagerFactory) {
+        throw new Error(
+          'The layout manager factory must be registered before using it!'
+        )
+      }
+      this._layoutManager = layoutManagerFactory()
+    }
     return this._layoutManager
   }
 }
+
+setAcDbHostApplicationServicesProvider(acdbHostApplicationServices)

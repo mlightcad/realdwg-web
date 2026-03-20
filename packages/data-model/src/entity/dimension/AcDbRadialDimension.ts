@@ -5,6 +5,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiLineArrowStyle } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../../base'
 import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
@@ -273,5 +274,16 @@ export class AcDbRadialDimension extends AcDbDimension {
     return {
       secondArrow: this.secondArrowStyle
     }
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbRadialDimension')
+    filer.writePoint3d(15, this.center)
+    filer.writePoint3d(13, this.chordPoint)
+    filer.writeDouble(40, this.leaderLength)
+    filer.writeAngle(52, this.extArcStartAngle)
+    filer.writeAngle(53, this.extArcEndAngle)
+    return this
   }
 }

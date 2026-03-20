@@ -7,6 +7,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -102,6 +103,14 @@ export class AcDb3dPolyline extends AcDbCurve {
    */
   set closed(value: boolean) {
     this._geo.closed = value
+  }
+
+  get numberOfVertices() {
+    return this._geo.numberOfVertices
+  }
+
+  getPointAt(index: number) {
+    return this._geo.getPointAt(index)
   }
 
   /**
@@ -261,5 +270,17 @@ export class AcDb3dPolyline extends AcDbCurve {
       points.push(new AcGePoint3d().set(point.x, point.y, 0))
     )
     return renderer.lines(points)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDb3dPolyline')
+    let flag = this.closed ? 1 : 0
+    flag |= 8
+    if (this.polyType === AcDbPoly3dType.QuadSplinePoly) flag |= 16
+    if (this.polyType === AcDbPoly3dType.CubicSplinePoly) flag |= 32
+    filer.writeInt16(66, this.numberOfVertices > 0 ? 1 : 0)
+    filer.writeInt16(70, flag)
+    return this
   }
 }

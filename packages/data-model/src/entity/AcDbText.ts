@@ -12,6 +12,7 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode, DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -652,5 +653,22 @@ export class AcDbText extends AcDbEntity {
       attachmentPoint: AcGiMTextAttachmentPoint.BottomLeft
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbText')
+    filer.writePoint3d(10, this.position)
+    filer.writeDouble(39, this.thickness)
+    filer.writeDouble(40, this.height)
+    filer.writeString(1, this.textString)
+    filer.writeAngle(50, this.rotation)
+    filer.writeDouble(41, this.widthFactor)
+    filer.writeAngle(51, this.oblique)
+    filer.writeString(7, this.styleName)
+    filer.writeInt16(72, this.horizontalMode)
+    filer.writeInt16(73, this.verticalMode)
+    filer.writePoint3d(11, this.position)
+    return this
   }
 }

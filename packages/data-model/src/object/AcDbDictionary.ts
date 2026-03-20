@@ -1,6 +1,7 @@
-import { AcDbObject, AcDbObjectId } from '../base'
-import { AcDbDatabase } from '../database'
-import { AcDbObjectIterator } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
+import { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 
 /**
  * A database-resident object dictionary that maintains a map between text strings and database objects.
@@ -82,6 +83,7 @@ export class AcDbDictionary<
    */
   setAt(key: string, value: TObjectType) {
     value.database = this.database
+    value.ownerId = this.objectId
     this._recordsByName.set(key, value)
     this._recordsById.set(value.objectId, value)
     this.database.events.dictObjetSet.dispatch({
@@ -253,5 +255,23 @@ export class AcDbDictionary<
    */
   newIterator(): AcDbObjectIterator<TObjectType> {
     return new AcDbObjectIterator(this._recordsByName)
+  }
+
+  /**
+   * Returns dictionary entries as `[key, object]` tuples.
+   */
+  entries() {
+    return this._recordsByName.entries()
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbDictionary')
+    filer.writeInt16(281, 1)
+    for (const [key, value] of this._recordsByName) {
+      filer.writeString(3, key)
+      filer.writeObjectId(350, value.objectId)
+    }
+    return this
   }
 }

@@ -9,7 +9,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbObjectId } from '../base'
+import { AcDbDxfFiler, AcDbObjectId } from '../base'
 import { AcDbObjectIterator, AcDbOsnapMode, AcDbRenderingCache } from '../misc'
 import { AcDbAttribute } from './AcDbAttribute'
 import { AcDbEntity } from './AcDbEntity'
@@ -201,6 +201,10 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   set normal(value: AcGeVector3dLike) {
     this._normal.copy(value).normalize()
+  }
+
+  get blockName() {
+    return this._blockName
   }
 
   /**
@@ -667,5 +671,18 @@ export class AcDbBlockReference extends AcDbEntity {
         })
       }
     }
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbBlockReference')
+    filer.writePoint3d(10, this.position)
+    filer.writeString(2, this.blockName)
+    filer.writeDouble(41, this.scaleFactors.x)
+    filer.writeDouble(42, this.scaleFactors.y)
+    filer.writeDouble(43, this.scaleFactors.z)
+    filer.writeAngle(50, this.rotation)
+    filer.writeVector3d(210, this.normal)
+    return this
   }
 }

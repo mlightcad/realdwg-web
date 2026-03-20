@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -310,5 +311,13 @@ export class AcDbRay extends AcDbCurve {
       this._unitDir.clone().multiplyScalar(1000000).add(this._basePoint)
     )
     return renderer.lines(points)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbRay')
+    filer.writePoint3d(10, this.basePoint)
+    filer.writeVector3d(11, this.unitDir)
+    return this
   }
 }

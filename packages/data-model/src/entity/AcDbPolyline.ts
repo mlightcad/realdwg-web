@@ -8,6 +8,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -438,5 +439,17 @@ export class AcDbPolyline extends AcDbCurve {
       points.push(new AcGePoint3d().set(point.x, point.y, this.elevation))
     )
     return renderer.lines(points)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbPolyline')
+    filer.writeInt32(90, this.numberOfVertices)
+    filer.writeInt16(70, this.closed ? 1 : 0)
+    filer.writeDouble(38, this.elevation)
+    for (let i = 0; i < this.numberOfVertices; ++i) {
+      filer.writePoint2d(10, this.getPoint2dAt(i))
+    }
+    return this
   }
 }

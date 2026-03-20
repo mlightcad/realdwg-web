@@ -5,6 +5,7 @@ import {
   AcGiViewport
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbEntity } from './AcDbEntity'
 
 /**
@@ -307,5 +308,17 @@ export class AcDbViewport extends AcDbEntity {
       ])
     )
     return lines
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbViewport')
+    filer.writePoint3d(10, this.centerPoint)
+    filer.writeDouble(40, this.height)
+    filer.writeDouble(41, this.width)
+    filer.writePoint3d(12, this.viewCenter)
+    filer.writeDouble(45, this.viewHeight)
+    filer.writeInt32(69, this.number)
+    return this
   }
 }
