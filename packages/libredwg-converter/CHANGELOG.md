@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.7
+
+### Patch Changes
+
+- feat: add DXF export support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.7
+
 ## 3.5.6
 
 ### Patch Changes
