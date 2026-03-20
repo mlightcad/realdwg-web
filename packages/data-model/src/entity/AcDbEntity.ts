@@ -355,7 +355,8 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {
-    super.dxfOutFields(filer)
+    // For better downstream compatibility, emit only the entity-level subclass
+    // marker here. The object-level marker (AcDbObject) is omitted for entities.
     filer.writeSubclassMarker('AcDbEntity')
     filer.writeString(8, this.layer)
     filer.writeString(6, this.lineType)

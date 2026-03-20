@@ -9,7 +9,12 @@ import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
-import { AcDb2dPolyline, AcDb3dPolyline, AcDbBlockReference, AcDbEntity } from '../entity'
+import {
+  AcDb2dPolyline,
+  AcDb3dPolyline,
+  AcDbBlockReference,
+  AcDbEntity
+} from '../entity'
 import {
   AcDbAngleUnits,
   AcDbDataGenerator,
@@ -1256,10 +1261,7 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
-  private writeDxfTablesSection(
-    filer: AcDbDxfFiler,
-    version: AcDbDwgVersion
-  ) {
+  private writeDxfTablesSection(filer: AcDbDxfFiler, version: AcDbDwgVersion) {
     filer.startSection('TABLES')
     this.writeDxfTable(
       filer,

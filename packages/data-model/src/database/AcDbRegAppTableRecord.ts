@@ -15,6 +15,7 @@ export class AcDbRegAppTableRecord extends AcDbSymbolTableRecord {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbRegAppTableRecord')
+    filer.writeString(2, this.name)
     filer.writeInt16(70, 0)
     return this
   }

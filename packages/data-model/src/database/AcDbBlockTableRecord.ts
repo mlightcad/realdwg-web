@@ -279,6 +279,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockTableRecord')
+    filer.writeString(2, this.name)
     filer.writePoint3d(10, this.origin)
     filer.writeObjectId(340, this.layoutId)
     filer.writeInt16(70, 0)

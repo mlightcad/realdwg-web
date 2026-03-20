@@ -4,9 +4,7 @@ import { setAcDbHostApplicationServicesProvider } from './AcDbObject'
 
 let layoutManagerFactory: (() => AcDbLayoutManager) | undefined
 
-export function setAcDbLayoutManagerFactory(
-  factory: () => AcDbLayoutManager
-) {
+export function setAcDbLayoutManagerFactory(factory: () => AcDbLayoutManager) {
   layoutManagerFactory = factory
 }
 

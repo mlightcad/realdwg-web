@@ -377,6 +377,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbLayerTableRecord')
+    filer.writeString(2, this.name)
     filer.writeInt16(70, this.standardFlags)
     filer.writeCmColor(this.color)
     filer.writeString(6, this.linetype)

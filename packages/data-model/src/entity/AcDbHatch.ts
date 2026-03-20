@@ -1,7 +1,14 @@
 import {
   AcGeArea2d,
   AcGeBox3d,
-  AcGeLoop2dType
+  AcGeCircArc2d,
+  AcGeEllipseArc2d,
+  AcGeLine2d,
+  AcGeLoop2d,
+  AcGeLoop2dType,
+  AcGePoint2d,
+  AcGePolyline2d,
+  AcGeSpline3d
 } from '@mlightcad/geometry-engine'
 import {
   AcGiHatchPatternLine,
@@ -371,23 +378,120 @@ export class AcDbHatch extends AcDbEntity {
     const loops = this._geo.loops
     filer.writeSubclassMarker('AcDbHatch')
     filer.writePoint3d(10, { x: 0, y: 0, z: this.elevation })
+    filer.writeVector3d(210, { x: 0, y: 0, z: 1 })
+    filer.writeString(
+      2,
+      this.patternName || (this.isSolidFill ? 'SOLID' : 'USER')
+    )
     filer.writeInt16(70, this.isSolidFill ? 1 : 0)
     filer.writeInt16(71, 0)
-    filer.writeString(2, this.patternName || (this.isSolidFill ? 'SOLID' : 'USER'))
+    filer.writeInt16(91, loops.length)
+    loops.forEach((loop, index) => {
+      const isExternal = index === 0
+
+      if (loop instanceof AcGePolyline2d) {
+        const vertices = loop.vertices
+        const hasBulge = vertices.some(vertex => (vertex.bulge ?? 0) !== 0)
+        const boundaryFlag = 2
+
+        filer.writeInt16(92, boundaryFlag)
+        filer.writeInt16(72, hasBulge ? 1 : 0)
+        filer.writeInt16(73, loop.closed ? 1 : 0)
+        filer.writeInt16(93, vertices.length)
+        for (const vertex of vertices) {
+          filer.writePoint2d(10, vertex)
+          if (hasBulge) {
+            filer.writeDouble(42, vertex.bulge ?? 0)
+          }
+        }
+        filer.writeInt16(97, 0)
+        return
+      }
+
+      if (loop instanceof AcGeLoop2d) {
+        const boundaryFlag = isExternal ? 1 : 0
+        filer.writeInt16(92, boundaryFlag)
+        filer.writeInt16(93, loop.numberOfEdges)
+
+        for (const edge of loop.curves) {
+          if (edge instanceof AcGeLine2d) {
+            filer.writeInt16(72, 1)
+            filer.writePoint2d(10, edge.startPoint)
+            filer.writePoint2d(11, edge.endPoint)
+            continue
+          }
+
+          if (edge instanceof AcGeCircArc2d) {
+            filer.writeInt16(72, 2)
+            filer.writePoint2d(10, edge.center)
+            filer.writeDouble(40, edge.radius)
+            filer.writeAngle(50, edge.startAngle)
+            filer.writeAngle(51, edge.endAngle)
+            filer.writeInt16(73, edge.clockwise ? 0 : 1)
+            continue
+          }
+
+          if (edge instanceof AcGeEllipseArc2d) {
+            filer.writeInt16(72, 3)
+            filer.writePoint2d(10, edge.center)
+            const majorAxisVector = new AcGePoint2d(
+              edge.majorAxisRadius * Math.cos(edge.rotation),
+              edge.majorAxisRadius * Math.sin(edge.rotation)
+            )
+            filer.writePoint2d(11, majorAxisVector)
+            const ratio =
+              edge.majorAxisRadius === 0
+                ? 0
+                : edge.minorAxisRadius / edge.majorAxisRadius
+            filer.writeDouble(40, ratio)
+            filer.writeAngle(50, edge.startAngle)
+            filer.writeAngle(51, edge.endAngle)
+            filer.writeInt16(73, edge.clockwise ? 0 : 1)
+            continue
+          }
+
+          if (edge instanceof AcGeSpline3d) {
+            const knots = edge.knots
+            const controlPoints = edge.controlPoints
+            const weights = edge.weights
+            const fitPoints = edge.fitPoints
+            const isRational = weights.some(weight => weight !== 1)
+
+            filer.writeInt16(72, 4)
+            filer.writeInt16(94, edge.degree)
+            filer.writeInt16(73, isRational ? 1 : 0)
+            filer.writeInt16(74, edge.closed ? 1 : 0)
+            filer.writeInt16(95, knots.length)
+            filer.writeInt16(96, controlPoints.length)
+            knots.forEach(knot => filer.writeDouble(40, knot))
+            controlPoints.forEach((point, pointIndex) => {
+              filer.writePoint2d(10, point)
+              if (isRational) {
+                filer.writeDouble(42, weights[pointIndex] ?? 1)
+              }
+            })
+            filer.writeInt16(97, fitPoints?.length ?? 0)
+            fitPoints?.forEach(point => filer.writePoint2d(11, point))
+          }
+        }
+
+        filer.writeInt16(97, 0)
+      }
+    })
     filer.writeInt16(75, this.hatchStyle)
     filer.writeInt16(76, this.patternType)
     filer.writeAngle(52, this.patternAngle)
     filer.writeDouble(41, this.patternScale)
-    filer.writeInt16(91, loops.length)
-    for (const loop of loops) {
-      const points = loop.getPoints(64)
-      filer.writeInt16(92, 2)
-      filer.writeInt16(93, points.length)
-      for (const point of points) {
-        filer.writePoint2d(10, point)
-      }
-      filer.writeInt16(97, 0)
-    }
+    filer.writeInt16(77, 0)
+    filer.writeInt16(78, this.definitionLines.length)
+    this.definitionLines.forEach(line => {
+      filer.writeAngle(53, line.angle)
+      filer.writePoint2d(43, line.base)
+      filer.writePoint2d(45, line.offset)
+      filer.writeInt16(79, line.dashLengths.length)
+      line.dashLengths.forEach(length => filer.writeDouble(49, length))
+    })
+    // TODO: Write the number of seed points
     filer.writeInt16(98, 0)
     return this
   }

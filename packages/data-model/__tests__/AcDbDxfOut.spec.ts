@@ -59,7 +59,11 @@ function parseRecords(content: string): DxfRecord[] {
   return records
 }
 
-function findRecord(records: DxfRecord[], type: string, predicate?: (record: DxfRecord) => boolean) {
+function findRecord(
+  records: DxfRecord[],
+  type: string,
+  predicate?: (record: DxfRecord) => boolean
+) {
   return records.find(record => {
     if (record.type !== type) return false
     return predicate ? predicate(record) : true
@@ -67,9 +71,7 @@ function findRecord(records: DxfRecord[], type: string, predicate?: (record: Dxf
 }
 
 function valuesByCode(record: DxfRecord, code: string) {
-  return record.pairs
-    .filter(pair => pair.code === code)
-    .map(pair => pair.value)
+  return record.pairs.filter(pair => pair.code === code).map(pair => pair.value)
 }
 
 describe('AcDbDatabase.dxfOut', () => {
@@ -129,7 +131,9 @@ describe('AcDbDatabase.dxfOut', () => {
 
     db.tables.blockTable.modelSpace.appendEntity([line, text, polyline])
 
-    const entities = parseRecords(getSection(db.dxfOut(undefined, 6), 'ENTITIES'))
+    const entities = parseRecords(
+      getSection(db.dxfOut(undefined, 6), 'ENTITIES')
+    )
 
     const lineRecord = findRecord(entities, 'LINE')
     expect(lineRecord).toBeDefined()

@@ -294,7 +294,8 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbViewportTableRecord')
-    filer.writeDouble(40, this.gsView.viewHeight)
+    filer.writeString(2, this.name)
+    filer.writeDouble(45, this.gsView.viewHeight)
     filer.writePoint2d(10, this.lowerLeftCorner)
     filer.writePoint2d(11, this.upperRightCorner)
     filer.writePoint2d(12, this.center)

@@ -1,7 +1,7 @@
 import { AcGeBox2d, AcGeBox3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base/AcDbDxfFiler'
-import { AcDbObject } from '../../base/AcDbObject'
+import { AcDbPlotSettings } from './AcDbPlotSettings'
 
 /**
  * Represents the stored characteristics of each paperspace layout.
@@ -18,7 +18,7 @@ import { AcDbObject } from '../../base/AcDbObject'
  * layout.limits = new AcGeBox2d();
  * ```
  */
-export class AcDbLayout extends AcDbObject {
+export class AcDbLayout extends AcDbPlotSettings {
   /** The user-friendly layout name displayed in the tab control */
   private _layoutName: string
   /** The tab order field controlling the display order */

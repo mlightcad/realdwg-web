@@ -107,6 +107,7 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbLinetypeTableRecord')
+    filer.writeString(2, this.name)
     filer.writeInt16(70, this.linetype.standardFlag)
     filer.writeString(3, this.comments)
     filer.writeInt16(72, 65)

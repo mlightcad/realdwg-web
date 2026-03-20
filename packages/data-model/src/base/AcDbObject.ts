@@ -287,9 +287,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     if (hostApplicationServicesProvider) {
       return hostApplicationServicesProvider().workingDatabase
     }
-    throw new Error(
-      'The current working database must be set before using it!'
-    )
+    throw new Error('The current working database must be set before using it!')
   }
 
   /**
@@ -473,8 +471,9 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * Subclasses should override this method and call `super.dxfOutFields(filer)`
    * first so the subclass markers remain consistent.
    */
-  dxfOutFields(filer: AcDbDxfFiler) {
-    filer.writeSubclassMarker('AcDbObject')
+  dxfOutFields(_filer: AcDbDxfFiler) {
+    // For better downstream compatibility, the object-level marker (AcDbObject) is omitted.
+    // filer.writeSubclassMarker('AcDbObject')
     return this
   }
 }

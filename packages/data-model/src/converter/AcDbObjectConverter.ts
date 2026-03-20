@@ -7,7 +7,16 @@ import {
 
 import { AcDbObject } from '../base'
 import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbLayout, AcDbRasterImageDef } from '../object'
+import {
+  AcDbLayout,
+  AcDbPlotPaperUnits,
+  AcDbPlotRotation,
+  AcDbPlotShadePlotResLevel,
+  AcDbPlotShadePlotType,
+  AcDbPlotStdScaleType,
+  AcDbPlotType,
+  AcDbRasterImageDef
+} from '../object'
 
 /**
  * Converts DXF objects to AcDbObject instances.
@@ -40,6 +49,90 @@ export class AcDbObjectConverter {
     const dbObject = new AcDbLayout()
     dbObject.layoutName = layout.layoutName
     dbObject.tabOrder = layout.tabOrder
+    dbObject.plotSettingsName = layout.pageSetupName
+    dbObject.plotCfgName = layout.configName
+    dbObject.canonicalMediaName = layout.paperSize
+    dbObject.plotViewName = layout.plotViewName
+    dbObject.currentStyleSheet = layout.currentStyleSheet
+
+    dbObject.plotPaperMargins = {
+      left: layout.marginLeft,
+      right: layout.marginRight,
+      top: layout.marginTop,
+      bottom: layout.marginBottom
+    }
+    dbObject.plotPaperSize.copy({
+      x: layout.paperWidth,
+      y: layout.paperHeight
+    })
+    dbObject.plotOrigin.copy({
+      x: layout.plotOriginX,
+      y: layout.plotOriginY
+    })
+    dbObject.plotWindowArea.min.copy({
+      x: layout.windowAreaXMin,
+      y: layout.windowAreaYMin
+    })
+    dbObject.plotWindowArea.max.copy({
+      x: layout.windowAreaXMax,
+      y: layout.windowAreaYMax
+    })
+    dbObject.customPrintScale = {
+      numerator: layout.printScaleNumerator,
+      denominator: layout.printScaleDenominator
+    }
+
+    dbObject.plotPaperUnits =
+      layout.plotPaperUnit as unknown as AcDbPlotPaperUnits
+    dbObject.plotRotation = layout.plotRotation as AcDbPlotRotation
+    dbObject.plotType = layout.plotType as unknown as AcDbPlotType
+    dbObject.stdScaleType = layout.standardScaleType as AcDbPlotStdScaleType
+    dbObject.shadePlot = (() => {
+      switch (layout.shadePlotMode) {
+        case 1:
+          return AcDbPlotShadePlotType.kWireframe
+        case 2:
+          return AcDbPlotShadePlotType.kHidden
+        case 3:
+          return AcDbPlotShadePlotType.kRendered
+        default:
+          return AcDbPlotShadePlotType.kAsDisplayed
+      }
+    })()
+    dbObject.shadePlotResLevel = (() => {
+      switch (layout.shadePlotResolution) {
+        case 1:
+          return AcDbPlotShadePlotResLevel.kPreview
+        case 2:
+          return AcDbPlotShadePlotResLevel.kNormal
+        case 3:
+          return AcDbPlotShadePlotResLevel.kPresentation
+        case 4:
+          return AcDbPlotShadePlotResLevel.kMaximum
+        case 5:
+          return AcDbPlotShadePlotResLevel.kCustom
+        default:
+          return AcDbPlotShadePlotResLevel.kDraft
+      }
+    })()
+    if (layout.shadePlotCustomDPI != null) {
+      dbObject.shadePlotCustomDPI = layout.shadePlotCustomDPI
+    }
+    if (layout.shadePlotId) {
+      dbObject.shadePlotId = layout.shadePlotId
+    }
+
+    const flag = layout.layoutFlag ?? 0
+    dbObject.plotViewportBorders = (flag & 1) !== 0
+    dbObject.showPlotStyles = (flag & 2) !== 0
+    dbObject.plotCentered = (flag & 4) !== 0
+    dbObject.plotHidden = (flag & 8) !== 0
+    dbObject.useStandardScale = (flag & 16) !== 0
+    dbObject.plotPlotStyles = (flag & 32) !== 0
+    dbObject.scaleLineweights = (flag & 64) !== 0
+    dbObject.printLineweights = (flag & 128) !== 0
+    dbObject.drawViewportsFirst = (flag & 512) !== 0
+    dbObject.modelType = (flag & 1024) !== 0
 
     if (layout.layoutName === 'Model') {
       // Upper case model space name

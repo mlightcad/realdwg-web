@@ -1235,6 +1235,7 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     const dimblk1 = this.database.tables.blockTable.getAt(this.dimblk1)
     const dimblk2 = this.database.tables.blockTable.getAt(this.dimblk2)
     filer.writeSubclassMarker('AcDbDimStyleTableRecord')
+    filer.writeString(2, this.name)
     filer.writeInt16(70, 0)
     filer.writeString(3, this.dimpost)
     filer.writeString(4, this.dimapost)
