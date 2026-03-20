@@ -26,9 +26,9 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  */
 export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   /** Name constant for model space block table record */
-  static MODEL_SPACE_NAME = '*MODEL_SPACE'
+  static MODEL_SPACE_NAME = '*Model_Space'
   /** Name prefix for paper space block table records */
-  static PAPER_SPACE_NAME_PREFIX = '*PAPER_SPACE'
+  static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
 
   /** The base point of the block in WCS coordinates */
   private _origin: AcGePoint3d
@@ -276,13 +276,41 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     return this._entities.get(id)
   }
 
+  dxfOutBlockRecord(filer: AcDbDxfFiler) {
+    filer.writeStart('BLOCK_RECORD')
+    this.dxfOut(filer)
+    return this
+  }
+
+  dxfOutBlockBegin(filer: AcDbDxfFiler) {
+    filer.writeStart('BLOCK')
+    filer.writeHandle(5, `BLOCK:${this.objectId}`)
+    filer.writeObjectId(330, this.objectId)
+    filer.writeSubclassMarker('AcDbEntity')
+    filer.writeSubclassMarker('AcDbBlockBegin')
+    filer.writeString(8, '0')
+    filer.writeString(2, this.name)
+    filer.writeInt16(70, 0)
+    filer.writePoint3d(10, this.origin)
+    filer.writeString(3, this.name)
+    return this
+  }
+
+  dxfOutBlockEnd(filer: AcDbDxfFiler) {
+    filer.writeStart('ENDBLK')
+    filer.writeHandle(5, `ENDBLK:${this.objectId}`)
+    filer.writeObjectId(330, this.objectId)
+    filer.writeSubclassMarker('AcDbEntity')
+    filer.writeSubclassMarker('AcDbBlockEnd')
+    return this
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockTableRecord')
     filer.writeString(2, this.name)
-    filer.writePoint3d(10, this.origin)
-    filer.writeObjectId(340, this.layoutId)
     filer.writeInt16(70, 0)
+    filer.writeObjectId(340, this.layoutId)
     return this
   }
 }

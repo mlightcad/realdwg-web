@@ -1299,7 +1299,7 @@ export class AcDbDatabase extends AcDbObject {
       this.tables.dimStyleTable.newIterator(),
       'DIMSTYLE'
     )
-    if (version.value >= 23) {
+    if (version.value >= 19) {
       this.writeDxfTable(
         filer,
         'BLOCK_RECORD',
@@ -1313,16 +1313,7 @@ export class AcDbDatabase extends AcDbObject {
   private writeDxfBlocksSection(filer: AcDbDxfFiler) {
     filer.startSection('BLOCKS')
     for (const btr of this.tables.blockTable.newIterator()) {
-      filer.writeStart('BLOCK')
-      filer.writeHandle(5, `BLOCK:${btr.objectId}`)
-      filer.writeObjectId(330, btr.objectId)
-      filer.writeSubclassMarker('AcDbEntity')
-      filer.writeSubclassMarker('AcDbBlockBegin')
-      filer.writeString(8, '0')
-      filer.writeString(2, btr.name)
-      filer.writeInt16(70, 0)
-      filer.writePoint3d(10, btr.origin)
-      filer.writeString(3, btr.name)
+      btr.dxfOutBlockBegin(filer)
 
       if (!btr.isModelSapce && !btr.isPaperSapce) {
         for (const entity of btr.newIterator()) {
@@ -1330,11 +1321,7 @@ export class AcDbDatabase extends AcDbObject {
         }
       }
 
-      filer.writeStart('ENDBLK')
-      filer.writeHandle(5, `ENDBLK:${btr.objectId}`)
-      filer.writeObjectId(330, btr.objectId)
-      filer.writeSubclassMarker('AcDbEntity')
-      filer.writeSubclassMarker('AcDbBlockEnd')
+      btr.dxfOutBlockEnd(filer)
     }
     filer.endSection()
   }
@@ -1410,6 +1397,14 @@ export class AcDbDatabase extends AcDbObject {
     const items = [...records]
     filer.startTable(tableName, items.length)
     for (const record of items) {
+      if (
+        recordType === 'BLOCK_RECORD' &&
+        record instanceof AcDbBlockTableRecord
+      ) {
+        record.dxfOutBlockRecord(filer)
+        continue
+      }
+
       filer.writeStart(recordType)
       record.dxfOut(filer)
     }

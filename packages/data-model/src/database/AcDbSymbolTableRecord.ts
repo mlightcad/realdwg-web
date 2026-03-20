@@ -76,6 +76,7 @@ export class AcDbSymbolTableRecord<
 
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbSymbolTableRecord')
     return this
   }
 }

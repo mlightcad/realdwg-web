@@ -5,6 +5,7 @@ import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
 import { AcDbText } from '../src/entity/AcDbText'
+import { AcDbLayout } from '../src/object/layout/AcDbLayout'
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
@@ -106,6 +107,10 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(dxf).toContain('2\nStandard\n')
     expect(dxf).toContain('0\nTABLE\n2\nAPPID\n')
     expect(dxf).toContain('2\nmlightcad\n')
+    expect(dxf).toContain('0\nTABLE\n2\nBLOCK_RECORD\n')
+    expect(dxf).toContain('0\nBLOCK_RECORD\n')
+    expect(dxf).toContain('2\n*Model_Space\n')
+    expect(dxf).toContain('0\nBLOCK\n')
     expect(dxf).toContain('0\nLAYOUT\n')
     expect(dxf).toContain('1\nModel\n')
   })
@@ -183,14 +188,25 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.modelSpace.appendEntity(insert)
 
     const dxf = db.dxfOut(undefined, 6)
+    const tableRecords = parseRecords(getSection(dxf, 'TABLES'))
     const blockRecords = parseRecords(getSection(dxf, 'BLOCKS'))
     const entityRecords = parseRecords(getSection(dxf, 'ENTITIES'))
+
+    const blockRecord = findRecord(tableRecords, 'BLOCK_RECORD', record =>
+      valuesByCode(record, '2').includes('TEST_BLOCK')
+    )
+    expect(blockRecord).toBeDefined()
+    expect(valuesByCode(blockRecord!, '70')).toContain('0')
+    expect(valuesByCode(blockRecord!, '10')).toEqual([])
 
     const blockBegin = findRecord(blockRecords, 'BLOCK', record =>
       valuesByCode(record, '2').includes('TEST_BLOCK')
     )
     expect(blockBegin).toBeDefined()
     expect(valuesByCode(blockBegin!, '3')).toContain('TEST_BLOCK')
+    expect(valuesByCode(blockBegin!, '10')).toContain('0')
+    expect(valuesByCode(blockBegin!, '20')).toContain('0')
+    expect(valuesByCode(blockBegin!, '30')).toContain('0')
 
     const blockLine = findRecord(blockRecords, 'LINE')
     expect(blockLine).toBeDefined()
@@ -211,5 +227,89 @@ describe('AcDbDatabase.dxfOut', () => {
 
     const seqendRecord = findRecord(entityRecords, 'SEQEND')
     expect(seqendRecord).toBeDefined()
+  })
+
+  it('writes additional paper space layouts as BLOCK_RECORD, BLOCK, and LAYOUT objects', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+
+    const paperSpace = new AcDbBlockTableRecord()
+    paperSpace.name = '*Paper_Space0'
+    db.tables.blockTable.add(paperSpace)
+
+    const layout = new AcDbLayout()
+    layout.layoutName = 'Layout1'
+    layout.tabOrder = 1
+    layout.blockTableRecordId = paperSpace.objectId
+    db.objects.layout.setAt(layout.layoutName, layout)
+    paperSpace.layoutId = layout.objectId
+
+    const paperLine = new AcDbLine(
+      { x: 100, y: 200, z: 0 },
+      { x: 140, y: 260, z: 0 }
+    )
+    paperSpace.appendEntity(paperLine)
+
+    const dxf = db.dxfOut(undefined, 6)
+    const tableRecords = parseRecords(getSection(dxf, 'TABLES'))
+    const blockRecords = parseRecords(getSection(dxf, 'BLOCKS'))
+    const entityRecords = parseRecords(getSection(dxf, 'ENTITIES'))
+    const objectRecords = parseRecords(getSection(dxf, 'OBJECTS'))
+
+    const paperBlockRecord = findRecord(tableRecords, 'BLOCK_RECORD', record =>
+      valuesByCode(record, '2').includes('*Paper_Space0')
+    )
+    expect(paperBlockRecord).toBeDefined()
+    expect(valuesByCode(paperBlockRecord!, '70')).toContain('0')
+
+    const paperBlock = findRecord(blockRecords, 'BLOCK', record =>
+      valuesByCode(record, '2').includes('*Paper_Space0')
+    )
+    expect(paperBlock).toBeDefined()
+    expect(valuesByCode(paperBlock!, '3')).toContain('*Paper_Space0')
+
+    const paperEndblk = findRecord(blockRecords, 'ENDBLK', record =>
+      valuesByCode(record, '330').includes(
+        valuesByCode(paperBlockRecord!, '5')[0]
+      )
+    )
+    expect(paperEndblk).toBeDefined()
+
+    const paperLayout = findRecord(objectRecords, 'LAYOUT', record =>
+      valuesByCode(record, '1').includes('Layout1')
+    )
+    expect(paperLayout).toBeDefined()
+    expect(valuesByCode(paperLayout!, '71')).toContain('1')
+    expect(valuesByCode(paperLayout!, '330')).toContain(
+      valuesByCode(paperBlockRecord!, '5')[0]
+    )
+
+    const entitiesPaperLine = findRecord(entityRecords, 'LINE', record => {
+      const x0 = valuesByCode(record, '10')
+      const y0 = valuesByCode(record, '20')
+      const x1 = valuesByCode(record, '11')
+      const y1 = valuesByCode(record, '21')
+      return (
+        x0.includes('100') &&
+        y0.includes('200') &&
+        x1.includes('140') &&
+        y1.includes('260')
+      )
+    })
+    expect(entitiesPaperLine).toBeDefined()
+
+    const blocksPaperLine = findRecord(blockRecords, 'LINE', record => {
+      const x0 = valuesByCode(record, '10')
+      const y0 = valuesByCode(record, '20')
+      const x1 = valuesByCode(record, '11')
+      const y1 = valuesByCode(record, '21')
+      return (
+        x0.includes('100') &&
+        y0.includes('200') &&
+        x1.includes('140') &&
+        y1.includes('260')
+      )
+    })
+    expect(blocksPaperLine).toBeUndefined()
   })
 })
