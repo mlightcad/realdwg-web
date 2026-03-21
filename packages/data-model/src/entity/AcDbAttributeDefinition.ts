@@ -1,5 +1,6 @@
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbMText } from './AcDbMText'
 import { AcDbText } from './AcDbText'
 
@@ -324,5 +325,16 @@ export class AcDbAttributeDefinition extends AcDbText {
    */
   subWorldDraw(_renderer: AcGiRenderer): undefined {
     return undefined
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbAttributeDefinition')
+    filer.writeString(3, this.prompt)
+    filer.writeString(2, this.tag)
+    filer.writeInt16(70, this.isInvisible ? 1 : 0)
+    filer.writeInt16(73, this.fieldLength)
+    filer.writeInt16(74, this.isReallyLocked ? 1 : 0)
+    return this
   }
 }

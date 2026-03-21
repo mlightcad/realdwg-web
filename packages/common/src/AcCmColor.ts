@@ -281,6 +281,29 @@ export class AcCmColor {
     return this._colorMethod === AcCmColorMethod.ByACI
   }
 
+  /**
+   * Returns true if the color method is ByACI and ACI value is 7
+   *
+   * Notes:
+   * In AutoCAD, ACI Color 7 (Color Index 7) is officially named "Black" or "White" depending on
+   * the context, but it is functionally defined as the "Contrasting Color" or "Auto-Contrast Color."
+   * Here is the technical explanation of its behavior:
+   * - If the background is dark: Color 7 displays as White.
+   * - If the background is light: Color 7 displays as Black.
+   */
+  get isForeground(): boolean {
+    return this._colorMethod === AcCmColorMethod.ByACI && this._value === 7
+  }
+
+  /**
+   * Sets the color to ACI value 7.
+   */
+  setForeground() {
+    this._colorMethod = AcCmColorMethod.ByACI
+    this._value = 7
+    return this
+  }
+
   // ---------------------------------------------------------------------
   // Layer / Block helpers
   // ---------------------------------------------------------------------

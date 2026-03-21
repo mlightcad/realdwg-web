@@ -9,6 +9,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../../base'
 import { AcDbBlockTableRecord } from '../../database'
 import { AcDbBlockReference } from '../AcDbBlockReference'
 import { AcDbLine } from '../AcDbLine'
@@ -425,5 +426,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
     const dx = p2.x - p1.x
     const dy = p2.y - p1.y
     this._rotation = Math.atan2(dy, dx)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbAlignedDimension')
+    filer.writePoint3d(13, this.xLine1Point)
+    filer.writePoint3d(14, this.xLine2Point)
+    filer.writePoint3d(15, this.dimLinePoint)
+    filer.writeAngle(50, this.rotation)
+    filer.writeAngle(52, this.oblique)
+    return this
   }
 }

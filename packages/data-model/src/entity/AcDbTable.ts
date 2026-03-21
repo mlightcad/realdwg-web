@@ -12,6 +12,7 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbTextStyleTableRecord } from '../database'
 import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBlockReference } from './AcDbBlockReference'
@@ -621,6 +622,21 @@ export class AcDbTable extends AcDbBlockReference {
         break
     }
     return offset
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbTable')
+    filer.writeInt16(71, this.attachmentPoint)
+    filer.writeInt32(91, this.numRows)
+    filer.writeInt32(92, this.numColumns)
+    for (let i = 0; i < this.numRows; ++i) {
+      filer.writeDouble(141, this.rowHeight(i))
+    }
+    for (let i = 0; i < this.numColumns; ++i) {
+      filer.writeDouble(142, this.columnWidth(i))
+    }
+    return this
   }
 }
 

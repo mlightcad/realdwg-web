@@ -8,6 +8,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 
@@ -278,5 +279,17 @@ export class AcDbTrace extends AcDbCurve {
       definitionLines: []
     }
     return renderer.area(area)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbTrace')
+    filer.writeDouble(38, this.elevation)
+    filer.writeDouble(39, this.thickness)
+    filer.writePoint3d(10, this.getPointAt(0))
+    filer.writePoint3d(11, this.getPointAt(1))
+    filer.writePoint3d(12, this.getPointAt(2))
+    filer.writePoint3d(13, this.getPointAt(3))
+    return this
   }
 }

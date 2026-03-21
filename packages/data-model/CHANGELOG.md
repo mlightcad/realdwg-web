@@ -1,5 +1,35 @@
 # @mlightcad/data-model
 
+## 1.7.7
+
+### Patch Changes
+
+- feat: add DXF export support
+- Updated dependencies
+  - @mlightcad/common@1.4.7
+  - @mlightcad/geometry-engine@3.2.7
+  - @mlightcad/graphic-interface@3.3.7
+
+## 1.7.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/common@1.4.6
+  - @mlightcad/geometry-engine@3.2.6
+  - @mlightcad/graphic-interface@3.3.6
+
+## 1.7.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+- Updated dependencies
+  - @mlightcad/common@1.4.5
+  - @mlightcad/geometry-engine@3.2.5
+  - @mlightcad/graphic-interface@3.3.5
+
 ## 1.7.4
 
 ### Patch Changes

@@ -1,6 +1,7 @@
 import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
 import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
@@ -371,5 +372,21 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   }
   set materialId(value: string) {
     this.setAttr('materialId', value)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbLayerTableRecord')
+    filer.writeString(2, this.name)
+    filer.writeInt16(70, this.standardFlags)
+    filer.writeCmColor(this.color)
+    filer.writeString(6, this.linetype)
+    filer.writeInt16(290, this.isPlottable ? 1 : 0)
+    filer.writeInt16(370, this.lineWeight)
+    filer.writeTransparency(this.transparency)
+    if (this.description) {
+      filer.writeString(4, this.description)
+    }
+    return this
   }
 }

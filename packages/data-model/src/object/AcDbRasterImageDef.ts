@@ -1,4 +1,5 @@
-import { AcDbObject } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObject } from '../base/AcDbObject'
 
 /**
  * The AcDbRasterImageDef object (or "image definition object") works with the AcDbRasterImage entity
@@ -60,5 +61,14 @@ export class AcDbRasterImageDef extends AcDbObject {
    */
   set sourceFileName(value: string) {
     this._sourceFileName = value
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbRasterImageDef')
+    filer.writeString(1, this.sourceFileName)
+    filer.writeInt16(280, 1)
+    filer.writeInt16(281, 0)
+    return this
   }
 }

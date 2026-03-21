@@ -1,4 +1,4 @@
-import { AcDbObjectId } from '../../base'
+import { AcDbObjectId } from '../../base/AcDbObject'
 import { AcDbDictionary } from '../AcDbDictionary'
 import { AcDbLayout } from './AcDbLayout'
 

@@ -1,5 +1,29 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.7
+
+### Patch Changes
+
+- feat: add DXF export support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.7
+
+## 3.5.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/data-model@1.7.6
+
+## 3.5.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+- Updated dependencies
+  - @mlightcad/data-model@1.7.5
+
 ## 3.5.4
 
 ### Patch Changes

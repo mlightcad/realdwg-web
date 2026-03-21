@@ -1,5 +1,32 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.7
+
+### Patch Changes
+
+- feat: add DXF export support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.7
+  - @mlightcad/libredwg-converter@3.5.7
+
+## 0.1.6
+
+### Patch Changes
+
+- feat: support changing foreground color
+- Updated dependencies
+  - @mlightcad/data-model@1.7.6
+  - @mlightcad/libredwg-converter@3.5.6
+
+## 0.1.5
+
+### Patch Changes
+
+- chore: add system variables MEASUREMENTCOLOR, OSMODE, and TEXTCOLOR
+- Updated dependencies
+  - @mlightcad/data-model@1.7.5
+  - @mlightcad/libredwg-converter@3.5.5
+
 ## 0.1.4
 
 ### Patch Changes

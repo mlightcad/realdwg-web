@@ -12,6 +12,7 @@ import {
   AcGiStyleType
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbObject } from '../base/AcDbObject'
 import { AcDbOsnapMode, ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc'
 import {
@@ -74,6 +75,39 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   get type() {
     return (this.constructor as typeof AcDbEntity).typeName
+  }
+
+  /**
+   * DXF entity name written to the file.
+   */
+  get dxfEntityTypeName() {
+    switch (this.type) {
+      case 'BlockReference':
+        return 'INSERT'
+      case 'Polyline':
+        return 'LWPOLYLINE'
+      case '2dPolyline':
+      case '3dPolyline':
+        return 'POLYLINE'
+      case '2dVertex':
+      case '3dVertex':
+        return 'VERTEX'
+      case 'Face':
+        return '3DFACE'
+      case 'RasterImage':
+        return 'IMAGE'
+      case 'Table':
+        return 'ACAD_TABLE'
+      case 'AlignedDimension':
+      case 'RadialDimension':
+      case 'DiametricDimension':
+      case 'OrdinateDimension':
+      case '3PointAngularDimension':
+      case 'ArcDimension':
+        return 'DIMENSION'
+      default:
+        return this.type.toUpperCase()
+    }
   }
 
   /**
@@ -143,6 +177,23 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Resolved color applied on this entity. It will resolve layer colors and block colors as needed.
+   */
+  get resolvedColor() {
+    let color = this.color
+    if (color.isByLayer) {
+      const layerColor = this.getLayerColor()
+      if (layerColor && layerColor.RGB != null) {
+        color = layerColor
+      }
+    } else if (color.isByBlock) {
+      // Do nothing for common entity and just use default color in database
+      // Block reference entity need to override this method handle 'byBlock'.
+    }
+    return color
+  }
+
+  /**
    * Gets the RGB color of this entity.
    *
    * This method handles the conversion of color indices (including ByLayer and ByBlock)
@@ -157,17 +208,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get rgbColor() {
-    // Default color
-    let color = this.color
-    if (color.isByLayer) {
-      const layerColor = this.getLayerColor()
-      if (layerColor && layerColor.RGB != null) {
-        color = layerColor
-      }
-    } else if (color.isByBlock) {
-      // Do nothing for common entity and just use default color in database
-      // Block reference entity need to override this method handle 'byBlock'.
-    }
+    const color = this.resolvedColor
     const rgb = color.RGB
     return rgb != null ? rgb : 0xffffff
   }
@@ -311,6 +352,24 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   set transparency(value: AcCmTransparency) {
     this._transparency = value.clone()
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    // For better downstream compatibility, emit only the entity-level subclass
+    // marker here. The object-level marker (AcDbObject) is omitted for entities.
+    filer.writeSubclassMarker('AcDbEntity')
+    filer.writeString(8, this.layer)
+    filer.writeString(6, this.lineType)
+    filer.writeDouble(48, this.linetypeScale)
+    filer.writeInt16(60, this.visibility ? 0 : 1)
+    filer.writeCmColor(this.color)
+    filer.writeInt16(370, this.lineWeight)
+    filer.writeTransparency(this.transparency)
+    const owner = this.database.tables.blockTable.getIdAt(this.ownerId)
+    if (owner?.isPaperSapce) {
+      filer.writeInt16(67, 1)
+    }
+    return this
   }
 
   /**
@@ -524,7 +583,7 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   worldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
     const traits = renderer.subEntityTraits
-    traits.color = this.color
+    traits.color = this.resolvedColor
     traits.rgbColor = this.rgbColor
     traits.lineType = this.lineStyle
     traits.lineTypeScale = this.linetypeScale

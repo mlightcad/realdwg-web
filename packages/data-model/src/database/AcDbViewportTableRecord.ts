@@ -6,6 +6,7 @@ import {
   AcGiView
 } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
@@ -288,5 +289,29 @@ export class AcDbViewportTableRecord extends AcDbSymbolTableRecord {
    */
   get gsView() {
     return this._gsView
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbViewportTableRecord')
+    filer.writeString(2, this.name)
+    filer.writeDouble(45, this.gsView.viewHeight)
+    filer.writePoint2d(10, this.lowerLeftCorner)
+    filer.writePoint2d(11, this.upperRightCorner)
+    filer.writePoint2d(12, this.center)
+    filer.writePoint2d(13, this.snapBase)
+    filer.writePoint2d(14, this.snapIncrements)
+    filer.writePoint2d(15, this.gridIncrements)
+    filer.writeInt16(70, this.standardFlag)
+    filer.writeInt16(71, this.circleSides)
+    filer.writeDouble(42, this.gsView.lensLength)
+    filer.writePoint3d(16, this.gsView.viewDirectionFromTarget)
+    filer.writePoint3d(17, this.gsView.viewTarget)
+    filer.writeAngle(50, this.snapAngle)
+    filer.writeAngle(51, this.gsView.viewTwistAngle)
+    filer.writeInt16(61, this.gridMajor)
+    filer.writeInt16(281, this.backgroundObjectId ? 1 : 0)
+    filer.writeObjectId(332, this.backgroundObjectId)
+    return this
   }
 }

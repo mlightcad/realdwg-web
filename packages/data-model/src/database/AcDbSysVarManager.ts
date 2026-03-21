@@ -117,12 +117,6 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: '0'
     })
-    this.registerVar({
-      name: AcDbSystemVariables.TEXTSTYLE,
-      type: 'string',
-      isDbVar: true,
-      defaultValue: DEFAULT_TEXT_STYLE
-    })
     /**
      * Color theme of UI elements
      * - 0:	Dark theme
@@ -153,7 +147,8 @@ export class AcDbSysVarManager {
         c.setRGB(96, 165, 250)
         return c
       })()
-    /**      
+    })
+    /**
      * Running Object Snap (OSNAP) modes stored as a bitcode value.
      * Each snap type corresponds to a bit, and the values are added together.
      */
@@ -171,6 +166,12 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 10
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.TEXTSTYLE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: DEFAULT_TEXT_STYLE
     })
     this.registerVar({
       /**

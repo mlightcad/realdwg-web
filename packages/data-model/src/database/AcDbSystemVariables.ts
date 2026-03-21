@@ -31,8 +31,6 @@ export const AcDbSystemVariables = {
   CELWEIGHT: 'CELWEIGHT',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
-  /** Current text style name used when creating new text entities. */
-  TEXTSTYLE: 'TEXTSTYLE',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
   /** Upper-right corner of the model-space drawing extents. */
@@ -55,6 +53,8 @@ export const AcDbSystemVariables = {
   PDSIZE: 'PDSIZE',
   /** Pickbox half-size, in pixels, used for selection hit testing in the UI. */
   PICKBOX: 'PICKBOX',
+  /** Current text style name used when creating new text entities. */
+  TEXTSTYLE: 'TEXTSTYLE',
   /** Flag indicating whether the drawing background should be rendered as white. */
   WHITEBKCOLOR: 'WHITEBKCOLOR'
 } as const

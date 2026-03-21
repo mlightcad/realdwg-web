@@ -13,8 +13,9 @@ import {
   AcGiLineArrowStyle,
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
-import { AcDbObjectId } from 'base'
 
+import { AcDbObjectId } from '../../base'
+import { AcDbDxfFiler } from '../../base'
 import { AcDbDimStyleTableRecord } from '../../database'
 import { AcDbRenderingCache } from '../../misc'
 import { AcDbEntity } from '../AcDbEntity'
@@ -610,5 +611,23 @@ export abstract class AcDbDimension extends AcDbEntity {
     // - The extrusion / normal is intentionally excluded
     // ------------------------------------------------------------
     return new AcGeMatrix3d().multiplyMatrices(mInsert, mBase)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    const dimStyle =
+      this.dimensionStyleName != null
+        ? this.database.tables.dimStyleTable.getAt(this.dimensionStyleName)
+        : undefined
+    filer.writeSubclassMarker('AcDbDimension')
+    filer.writeString(3, this.dimensionStyleName ?? this.dimensionStyle.name)
+    filer.writePoint3d(10, this.dimBlockPosition)
+    filer.writeString(1, this.dimensionText ?? '')
+    filer.writeAngle(53, this.textRotation)
+    filer.writePoint3d(11, this.textPosition)
+    filer.writeInt16(70, 0)
+    filer.writeVector3d(210, this.normal)
+    filer.writeObjectId(340, dimStyle?.objectId)
+    return this
   }
 }

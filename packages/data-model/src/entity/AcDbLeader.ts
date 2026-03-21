@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbCurve } from './AcDbCurve'
 
 /**
@@ -198,6 +199,10 @@ export class AcDbLeader extends AcDbCurve {
     return this._vertices.length
   }
 
+  get vertices() {
+    return this._vertices.map(point => point.clone())
+  }
+
   /**
    * Gets the dimension style applied to this leader.
    *
@@ -343,5 +348,20 @@ export class AcDbLeader extends AcDbCurve {
       this._splineGeo = new AcGeSpline3d(this._vertices, 'Uniform')
       this._updated = false
     }
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbLeader')
+    filer.writeString(3, this.dimensionStyle)
+    filer.writeInt16(71, this.hasArrowHead ? 1 : 0)
+    filer.writeInt16(72, this.annoType)
+    filer.writeInt16(73, this.hasHookLine ? 1 : 0)
+    filer.writeInt16(74, this.isSplined ? 1 : 0)
+    filer.writeInt16(76, this.numVertices)
+    for (const point of this.vertices) {
+      filer.writePoint3d(10, point)
+    }
+    return this
   }
 }

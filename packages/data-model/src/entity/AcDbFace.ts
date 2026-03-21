@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 
@@ -232,5 +233,26 @@ export class AcDbFace extends AcDbEntity {
       }
     }
     return renderer.lineSegments(buffer, 3, indices)
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    const p0 = this.getVertexAt(0)
+    const p1 = this.getVertexAt(1)
+    const p2 = this.getVertexAt(2)
+    const p3 = this.getVertexAt(3)
+    filer.writeSubclassMarker('AcDbFace')
+    filer.writePoint3d(10, p0)
+    filer.writePoint3d(11, p1)
+    filer.writePoint3d(12, p2)
+    filer.writePoint3d(13, p3)
+    let mask = 0
+    for (let i = 0; i < 4; ++i) {
+      if (!this.isEdgeVisibleAt(i)) {
+        mask |= 1 << i
+      }
+    }
+    filer.writeInt16(70, mask)
+    return this
   }
 }

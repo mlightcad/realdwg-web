@@ -1,6 +1,6 @@
-import { AcDbResultBuffer } from 'base/AcDbResultBuffer'
-
-import { AcDbObject } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObject } from '../base/AcDbObject'
+import { AcDbResultBuffer } from '../base/AcDbResultBuffer'
 
 /**
  * Defines how duplicate records are handled when objects
@@ -78,5 +78,13 @@ export class AcDbXrecord extends AcDbObject {
    */
   getDuplicateRecordCloning(): AcDbDuplicateRecordCloning {
     return AcDbDuplicateRecordCloning.NotApplicable
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbXrecord')
+    filer.writeInt16(280, 1)
+    filer.writeResultBuffer(this.data)
+    return this
   }
 }
