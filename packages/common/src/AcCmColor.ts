@@ -230,6 +230,16 @@ export class AcCmColor {
     return `rgb(${(rgb >> 16) & 0xff},${(rgb >> 8) & 0xff},${rgb & 0xff})`
   }
 
+  /**
+   * Returns a CSS rgba() color string with the specified alpha value.
+   * @param alpha - Opacity value between 0 (transparent) and 1 (opaque)
+   */
+  cssColorAlpha(alpha: number): string | undefined {
+    const rgb = this.RGB
+    if (rgb == null) return undefined
+    return `rgba(${(rgb >> 16) & 0xff},${(rgb >> 8) & 0xff},${rgb & 0xff},${alpha})`
+  }
+
   // ---------------------------------------------------------------------
   // ACI accessors (ByACI)
   // ---------------------------------------------------------------------
