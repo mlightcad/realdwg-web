@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.8
+
+### Patch Changes
+
+- fix: fix issue on reading dxf file caused by last release
+- Updated dependencies
+  - @mlightcad/common@1.4.8
+  - @mlightcad/geometry-engine@3.2.8
+  - @mlightcad/graphic-interface@3.3.8
+
 ## 1.7.7
 
 ### Patch Changes

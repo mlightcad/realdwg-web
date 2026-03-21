@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.8
+
+### Patch Changes
+
+- fix: fix issue on reading dxf file caused by last release
+- Updated dependencies
+  - @mlightcad/data-model@1.7.8
+  - @mlightcad/libredwg-converter@3.5.8
+
 ## 0.1.7
 
 ### Patch Changes

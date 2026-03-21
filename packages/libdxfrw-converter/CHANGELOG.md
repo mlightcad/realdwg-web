@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.8
+
+### Patch Changes
+
+- fix: fix issue on reading dxf file caused by last release
+- Updated dependencies
+  - @mlightcad/data-model@1.7.8
+
 ## 3.5.7
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.8
+
+### Patch Changes
+
+- fix: fix issue on reading dxf file caused by last release
+
 ## 1.4.7
 
 ### Patch Changes

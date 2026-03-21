@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.8
+
+### Patch Changes
+
+- fix: fix issue on reading dxf file caused by last release
+- Updated dependencies
+  - @mlightcad/common@1.4.8
+  - @mlightcad/geometry-engine@3.2.8
+
 ## 3.3.7
 
 ### Patch Changes
