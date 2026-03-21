@@ -277,6 +277,12 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       let entityType = start < end ? entities[start].type : ''
       for (let i = start; i < end; i++) {
         const entity = entities[i]
+        if (
+          entity.ownerBlockRecordSoftId &&
+          entity.ownerBlockRecordSoftId !== modelSpaceBlockTableRecord.objectId
+        ) {
+          continue
+        }
         if (entity.type !== 'ATTRIB') {
           const dbEntity = converter.convert(entity)
           if (dbEntity) {

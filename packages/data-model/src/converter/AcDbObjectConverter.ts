@@ -136,7 +136,7 @@ export class AcDbObjectConverter {
 
     if (layout.layoutName === 'Model') {
       // Upper case model space name
-      const modelSpaceName = AcDbBlockTableRecord.MODEL_SPACE_NAME
+      const modelSpaceName = AcDbBlockTableRecord.MODEL_SPACE_NAME.toUpperCase()
       model.tables.BLOCK_RECORD?.entries.some(btr => {
         if (btr.name.toUpperCase() === modelSpaceName) {
           dbObject.blockTableRecordId = btr.handle
@@ -162,10 +162,18 @@ export class AcDbObjectConverter {
       }
     }
 
-    dbObject.limits.min.copy(layout.minLimit)
-    dbObject.limits.max.copy(layout.maxLimit)
-    dbObject.extents.min.copy(layout.minExtent)
-    dbObject.extents.max.copy(layout.maxExtent)
+    if (layout.minLimit) {
+      dbObject.limits.min.copy(layout.minLimit)
+    }
+    if (layout.maxLimit) {
+      dbObject.limits.max.copy(layout.maxLimit)
+    }
+    if (layout.minExtent) {
+      dbObject.extents.min.copy(layout.minExtent)
+    }
+    if (layout.maxExtent) {
+      dbObject.extents.max.copy(layout.maxExtent)
+    }
     this.processCommonAttrs(layout, dbObject)
     return dbObject
   }
