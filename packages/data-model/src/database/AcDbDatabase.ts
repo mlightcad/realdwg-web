@@ -1412,7 +1412,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
-    filer.writeStart(entity.dxfEntityTypeName)
+    filer.writeStart(entity.dxfTypeName)
     entity.dxfOut(filer)
 
     if (entity instanceof AcDb2dPolyline) {

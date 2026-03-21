@@ -40,6 +40,10 @@ export class AcDbCircle extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = 'Circle'
 
+  override get dxfTypeName() {
+    return 'CIRCLE'
+  }
+
   /** The underlying geometric circular arc object */
   private _geo: AcGeCircArc3d
 

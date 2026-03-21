@@ -88,6 +88,10 @@ export class AcDbTable extends AcDbBlockReference {
   /** The entity type name */
   static override typeName: string = 'Table'
 
+  override get dxfTypeName() {
+    return 'ACAD_TABLE'
+  }
+
   private _attachmentPoint: AcGiMTextAttachmentPoint
   private _numRows: number
   private _numColumns: number

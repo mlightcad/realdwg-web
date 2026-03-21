@@ -109,6 +109,10 @@ export class AcDbHatch extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Hatch'
 
+  override get dxfTypeName() {
+    return 'HATCH'
+  }
+
   /** The underlying geometric area object */
   private _geo: AcGeArea2d
   /** The flag to indicate whether the hatch object is configured for solid fill */

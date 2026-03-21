@@ -102,19 +102,15 @@ describe('DXF read and parse regressions', () => {
     sourceDb.tables.blockTable.modelSpace.appendEntity(text)
 
     let dxf = sourceDb.dxfOut(undefined, 6)
-    dxf = addHeaderVariable(
-      dxf,
-      '$ACADVER',
-      '$DWGCODEPAGE',
-      '3',
-      'ANSI_936'
-    )
+    dxf = addHeaderVariable(dxf, '$ACADVER', '$DWGCODEPAGE', '3', 'ANSI_936')
 
     const parser = new AcDbDxfParser()
     const parsed = parser.parse(
-      encodeAsciiWithReplacement(dxf, 'GBK_TEXT_PLACEHOLDER', [
-        0xd6, 0xd0, 0xce, 0xc4
-      ])
+      encodeAsciiWithReplacement(
+        dxf,
+        'GBK_TEXT_PLACEHOLDER',
+        [0xd6, 0xd0, 0xce, 0xc4]
+      )
     )
 
     const parsedText = parsed.entities.find(entity => entity.type === 'TEXT')
@@ -171,7 +167,9 @@ describe('DXF read and parse regressions', () => {
     expect(readAttDef?.prompt).toBe('Input name')
     expect(readAttDef?.textString).toBe('Default Name')
 
-    const modelEntities = targetDb.tables.blockTable.modelSpace.newIterator().toArray()
+    const modelEntities = targetDb.tables.blockTable.modelSpace
+      .newIterator()
+      .toArray()
     const readInsert = modelEntities.find(
       entity => entity instanceof AcDbBlockReference
     ) as AcDbBlockReference | undefined
@@ -205,10 +203,7 @@ describe('DXF read and parse regressions', () => {
     paperSpace.layoutId = layout.objectId
 
     paperSpace.appendEntity(
-      new AcDbLine(
-        { x: 100, y: 200, z: 0 },
-        { x: 140, y: 260, z: 0 }
-      )
+      new AcDbLine({ x: 100, y: 200, z: 0 }, { x: 140, y: 260, z: 0 })
     )
 
     const targetDb = await readDxf(sourceDb.dxfOut(undefined, 6))

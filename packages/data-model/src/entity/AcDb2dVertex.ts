@@ -40,6 +40,10 @@ export class AcDb2dVertex extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = '2dVertex'
 
+  override get dxfTypeName() {
+    return 'VERTEX'
+  }
+
   private _position: AcGePoint3d
   /**
    * The bulge factor used to indicate how much of an arc segment is present at this vertex.
@@ -229,7 +233,7 @@ export class AcDb2dVertex extends AcDbEntity {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbVertex')
     filer.writeSubclassMarker('AcDb2dVertex')
-    filer.writePoint3d(10, this.position)
+    filer.writePoint2d(10, this.position)
     filer.writeDouble(40, this.startWidth)
     filer.writeDouble(41, this.endWidth)
     filer.writeDouble(42, this.bulge)

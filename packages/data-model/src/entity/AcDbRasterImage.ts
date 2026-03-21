@@ -70,6 +70,10 @@ export class AcDbRasterImage extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'RasterImage'
 
+  override get dxfTypeName() {
+    return 'IMAGE'
+  }
+
   /** The current brightness value of the image (0-100) */
   private _brightness: number
   /** The current contrast value of the image (0-100) */

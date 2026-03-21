@@ -53,6 +53,10 @@ export class AcDb2dPolyline extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = '2dPolyline'
 
+  override get dxfTypeName() {
+    return 'POLYLINE'
+  }
+
   /** The curve/spline-fit type for this 2d polyline */
   private _polyType: AcDbPoly2dType
   /** The elevation (Z-coordinate) of the polyline plane */
@@ -348,7 +352,10 @@ export class AcDb2dPolyline extends AcDbCurve {
     if (this.polyType === AcDbPoly2dType.CubicSplinePoly) flag |= 8
     filer.writeInt16(66, this.numberOfVertices > 0 ? 1 : 0)
     filer.writeInt16(70, flag)
-    filer.writeDouble(38, this.elevation)
+    // Legacy POLYLINE stores elevation at group code 30 with dummy 10/20 values.
+    filer.writeDouble(10, 0)
+    filer.writeDouble(20, 0)
+    filer.writeDouble(30, this.elevation)
     return this
   }
 }

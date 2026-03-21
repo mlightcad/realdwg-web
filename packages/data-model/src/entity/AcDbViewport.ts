@@ -34,6 +34,10 @@ export class AcDbViewport extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Viewport'
 
+  override get dxfTypeName() {
+    return 'VIEWPORT'
+  }
+
   private _centerPoint: AcGePoint3d
   private _height: number
   private _width: number
