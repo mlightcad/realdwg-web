@@ -234,7 +234,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimaunit: item.DIMAUNIT,
         dimfrac: item.DIMFRAC,
         dimlunit: item.DIMLUNIT,
-        dimdsep: item.DIMDSEP,
+        dimdsep: item.DIMDSEP || '.',
         dimtmove: item.DIMTMOVE || 0,
         dimjust: item.DIMJUST as unknown as AcDbDimTextHorizontal.Center,
         dimsd1: item.DIMSD1,

@@ -181,6 +181,17 @@ export class AcDb2dPolyline extends AcDbCurve {
   }
 
   /**
+   * Gets the bulge value of the vertex at the specified index.
+   *
+   * @param index - The index of the vertex
+   * @returns The bulge value of the vertex
+   */
+  getBulgeAt(index: number): number {
+    const vertex = this._geo.vertices[index]
+    return vertex?.bulge || 0
+  }
+
+  /**
    * Gets the geometric extents (bounding box) of this polyline.
    *
    * @returns The bounding box that encompasses the entire polyline

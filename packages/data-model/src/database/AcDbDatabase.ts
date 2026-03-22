@@ -1428,6 +1428,7 @@ export class AcDbDatabase extends AcDbObject {
           y: entity.getPointAt(i).y,
           z: entity.elevation
         })
+        filer.writeDouble(42, entity.getBulgeAt(i))
         filer.writeInt16(70, 0)
       }
       filer.writeStart('SEQEND')

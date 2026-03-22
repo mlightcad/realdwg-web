@@ -897,7 +897,7 @@ export class AcDbEntityConverter {
     dbEntity.layer = entity.layer || '0'
     // I found some dxf file may have entity without handle. If so, let's use objectId
     // created by AcDbObject constructor instead.
-    if (entity.handle) dbEntity.objectId = entity.handle
+    if (entity.handle) dbEntity.objectId = entity.handle.toString()
     dbEntity.ownerId = entity.ownerBlockRecordSoftId || ''
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType
