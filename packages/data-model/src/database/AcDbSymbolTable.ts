@@ -69,6 +69,20 @@ export class AcDbSymbolTable<
   add(record: RecordType) {
     record.database = this.database
     record.ownerId = this.objectId
+
+    // Generate a new handle from the database if the record doesn't have a valid one
+    // or if the current objectId is a temporary one
+    if (
+      !record.objectId ||
+      record.objectId.startsWith('TEMP_') ||
+      this.hasId(record.objectId)
+    ) {
+      record.objectId = this.database.generateHandle()
+    } else {
+      // Update maxHandle if the record's objectId is greater
+      this.database.updateMaxHandle(record.objectId)
+    }
+
     const normalizedName = this.normalizeName(record.name)
     this._recordsByName.set(normalizedName, record)
     this._recordsById.set(record.objectId, record)

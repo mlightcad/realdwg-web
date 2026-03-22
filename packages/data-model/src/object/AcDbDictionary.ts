@@ -84,6 +84,20 @@ export class AcDbDictionary<
   setAt(key: string, value: TObjectType) {
     value.database = this.database
     value.ownerId = this.objectId
+
+    // Generate a new handle from the database if the object doesn't have a valid one
+    // or if the current objectId is a temporary one
+    if (
+      !value.objectId ||
+      value.objectId.startsWith('TEMP_') ||
+      this.hasId(value.objectId)
+    ) {
+      value.objectId = this.database.generateHandle()
+    } else {
+      // Update maxHandle if the object's objectId is greater
+      this.database.updateMaxHandle(value.objectId)
+    }
+
     this._recordsByName.set(key, value)
     this._recordsById.set(value.objectId, value)
     this.database.events.dictObjetSet.dispatch({

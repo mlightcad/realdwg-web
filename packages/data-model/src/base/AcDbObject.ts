@@ -1,9 +1,4 @@
-import {
-  AcCmAttributes,
-  AcCmObject,
-  AcCmStringKey,
-  defaults
-} from '@mlightcad/common'
+import { AcCmAttributes, AcCmObject, AcCmStringKey } from '@mlightcad/common'
 import { uid } from 'uid'
 
 import type { AcDbDatabase } from '../database/AcDbDatabase'
@@ -81,9 +76,27 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   constructor(attrs?: Partial<ATTRS>, defaultAttrs?: Partial<ATTRS>) {
     attrs = attrs || {}
-    defaults(attrs, { objectId: uid() })
     this._attrs = new AcCmObject<ATTRS>(attrs, defaultAttrs)
     this._xDataMap = new Map()
+
+    // Generate objectId from database if not provided
+    if (!this._attrs.get('objectId')) {
+      try {
+        this._attrs.set('objectId', this.database.generateHandle())
+      } catch {
+        // Fallback: generate a temporary handle, will be reassigned when added to database
+        this._attrs.set('objectId', this.generateTemporaryHandle())
+      }
+    }
+  }
+
+  /**
+   * Generates a temporary handle when database is not available
+   * This is a fallback and will be replaced when the object is added to a database
+   * @returns A temporary hexadecimal string
+   */
+  private generateTemporaryHandle(): AcDbObjectId {
+    return 'TEMP_' + uid()
   }
 
   /**
@@ -196,6 +209,11 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   set objectId(value: AcDbObjectId) {
     this._attrs.set('objectId', value)
+
+    // Update the database's maxHandle if the new objectId is a valid hex handle
+    if (value && !value.startsWith('TEMP_')) {
+      this.database.updateMaxHandle(value)
+    }
   }
 
   /**

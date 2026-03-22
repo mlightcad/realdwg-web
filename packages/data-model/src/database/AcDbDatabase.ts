@@ -317,6 +317,8 @@ export class AcDbDatabase extends AcDbObject {
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
+  /** The maximum handle value in the database, used for generating unique object IDs */
+  private _maxHandle: number
 
   /**
    * Events that can be triggered by the database.
@@ -351,7 +353,7 @@ export class AcDbDatabase extends AcDbObject {
    * Creates a new AcDbDatabase instance.
    */
   constructor() {
-    super()
+    super({ objectId: '0' })
     this._version = new AcDbDwgVersion('AC1014')
     this._angBase = 0
     this._angDir = 0
@@ -369,6 +371,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
+    this._maxHandle = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
@@ -418,6 +421,41 @@ export class AcDbDatabase extends AcDbObject {
    */
   get objects() {
     return this._objects
+  }
+
+  /**
+   * Generates a new unique object ID (handle) for the database.
+   * The handle is a hexadecimal string that increments from the current max handle.
+   *
+   * @returns A new unique object ID as a hexadecimal string
+   *
+   * @example
+   * ```typescript
+   * const newHandle = database.generateHandle();
+   * console.log(`New handle: ${newHandle}`);
+   * ```
+   */
+  generateHandle(): AcDbObjectId {
+    this._maxHandle++
+    return this._maxHandle.toString(16).toUpperCase()
+  }
+
+  /**
+   * Updates the maximum handle value if the provided handle is greater.
+   * This is called when setting an object's objectId from external sources (e.g., reading DXF/DWG).
+   *
+   * @param handle - The handle to check and potentially update maxHandle with
+   *
+   * @example
+   * ```typescript
+   * database.updateMaxHandle('1A2B');
+   * ```
+   */
+  updateMaxHandle(handle: string): void {
+    const handleValue = parseInt(handle, 16)
+    if (!isNaN(handleValue) && handleValue > this._maxHandle) {
+      this._maxHandle = handleValue
+    }
   }
 
   /**
