@@ -189,19 +189,20 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   appendEntity(entity: AcDbEntity | AcDbEntity[]) {
+    const commitEntity = (item: AcDbEntity) => {
+      item.database = this.database
+      item.ownerId = this.objectId
+      this.database.commitObjectHandle(item, id => this._entities.has(id))
+      item.resolveEffectiveProperties()
+      this._entities.set(item.objectId, item)
+    }
+
     if (Array.isArray(entity)) {
       for (let i = 0; i < entity.length; ++i) {
-        const item = entity[i]
-        item.database = this.database
-        item.ownerId = this.objectId
-        item.resolveEffectiveProperties()
-        this._entities.set(item.objectId, item)
+        commitEntity(entity[i])
       }
     } else {
-      entity.database = this.database
-      entity.ownerId = this.objectId
-      entity.resolveEffectiveProperties()
-      this._entities.set(entity.objectId, entity)
+      commitEntity(entity)
     }
 
     // When creating one block, it will also go to this function. But we don't want `entityAppended` event

@@ -459,6 +459,26 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Commits an object's handle into the database.
+   *
+   * Generates a new handle when the object doesn't have one, when it is temporary,
+   * or when a duplicate id exists in the target collection.
+   *
+   * @internal
+   */
+  commitObjectHandle(
+    object: AcDbObject,
+    hasId?: (id: AcDbObjectId) => boolean
+  ) {
+    const objectId = object.getAttrWithoutException('objectId')
+    if (!objectId || object.isTemp || (hasId && hasId(objectId))) {
+      object.objectId = this.generateHandle()
+    } else {
+      this.updateMaxHandle(objectId)
+    }
+  }
+
+  /**
    * Gets the object ID of the AcDbBlockTableRecord of the current space.
    *
    * The current space can be either model space or paper space.

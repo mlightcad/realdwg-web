@@ -864,7 +864,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       | DxfTable<VPortTableEntry>,
     dbTable: AcDbSymbolTable
   ) {
-    dbTable.objectId = table.handle
+    if (table.handle != null) {
+      dbTable.objectId = table.handle
+    }
     dbTable.ownerId = table.ownerObjectId
   }
 

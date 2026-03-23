@@ -130,8 +130,7 @@ const getExportFileName = (fileName: string) => {
 }
 
 const updateExportButton = () => {
-  const shouldShow =
-    lastFile != null && getFileType(lastFile.name) === AcDbFileType.DWG
+  const shouldShow = lastFile != null
   exportButton.hidden = !shouldShow
   exportButton.disabled = !shouldShow || lastParsedDatabase == null
 }
@@ -261,7 +260,7 @@ const runParse = async () => {
     console.error(error)
     lines.push(`Error: ${(error as Error).message}`)
   } finally {
-    lastParsedDatabase = fileType === AcDbFileType.DWG ? parsedDatabase : null
+    lastParsedDatabase = parsedDatabase
     setStatus('')
     output.textContent = lines.join('\n')
     runButton.disabled = false

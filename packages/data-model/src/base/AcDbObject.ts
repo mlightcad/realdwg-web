@@ -9,6 +9,9 @@ import { AcDbResultBuffer } from './AcDbResultBuffer'
 /** Type alias for object ID as string */
 export type AcDbObjectId = string
 
+/** Prefix for temporary object IDs that are not yet committed to the database */
+export const TEMP_OBJECT_ID_PREFIX = 'TEMP_'
+
 let hostApplicationServicesProvider:
   | (() => { workingDatabase: AcDbDatabase })
   | undefined
@@ -96,7 +99,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * @returns A temporary hexadecimal string
    */
   private generateTemporaryHandle(): AcDbObjectId {
-    return 'TEMP_' + uid()
+    return TEMP_OBJECT_ID_PREFIX + uid()
   }
 
   /**
@@ -211,9 +214,19 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     this._attrs.set('objectId', value)
 
     // Update the database's maxHandle if the new objectId is a valid hex handle
-    if (value && !value.startsWith('TEMP_')) {
+    if (value && !value.startsWith(TEMP_OBJECT_ID_PREFIX)) {
       this.database.updateMaxHandle(value)
     }
+  }
+
+  /**
+   * Returns true if this object is temporary and not yet committed to the database.
+   *
+   * A temporary object is identified by its objectId starting with the TEMP prefix.
+   */
+  get isTemp() {
+    const id = this.getAttrWithoutException('objectId')
+    return !!id && id.startsWith(TEMP_OBJECT_ID_PREFIX)
   }
 
   /**
