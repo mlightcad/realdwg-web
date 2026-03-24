@@ -752,6 +752,7 @@ export class AcDbEntityConverter {
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
+    dbImage.imageSize.copy(image.imageSize)
 
     dbImage.isShownClipped = (image.flags | 0x0004) > 0
     dbImage.isImageShown = (image.flags | 0x0003) > 0
@@ -790,6 +791,7 @@ export class AcDbEntityConverter {
     dbWipeout.brightness = wipeout.brightness
     dbWipeout.contrast = wipeout.contrast
     dbWipeout.fade = wipeout.fade
+    dbWipeout.imageSize.copy(wipeout.imageSize)
 
     dbWipeout.isShownClipped = (wipeout.displayFlag | 0x0004) > 0
     dbWipeout.isImageShown = (wipeout.displayFlag | 0x0003) > 0

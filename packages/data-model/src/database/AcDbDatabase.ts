@@ -19,6 +19,9 @@ import {
   AcDbAngleUnits,
   AcDbDataGenerator,
   AcDbUnitsValue,
+  ByBlock,
+  ByLayer,
+  DEFAULT_LINE_TYPE,
   DEFAULT_TEXT_STYLE
 } from '../misc'
 import { AcDbDictionary } from '../object/AcDbDictionary'
@@ -53,6 +56,7 @@ import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 import { AcDbLayout } from '../object/layout/AcDbLayout'
 import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary'
+import { AcDbSymbolTable } from './AcDbSymbolTable'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -1201,7 +1205,7 @@ export class AcDbDatabase extends AcDbObject {
         new AcDbLayerTableRecord({
           name: '0',
           standardFlags: 0,
-          linetype: 'Continuous',
+          linetype: DEFAULT_LINE_TYPE,
           lineWeight: 0,
           isOff: false,
           color: defaultColor,
@@ -1210,30 +1214,30 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.linetypeTable.has('ByBlock')) {
+    if (!this.tables.linetypeTable.has(ByBlock)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'ByBlock',
+          name: ByBlock,
           standardFlag: 0,
           description: '',
           totalPatternLength: 0
         })
       )
     }
-    if (!this.tables.linetypeTable.has('ByLayer')) {
+    if (!this.tables.linetypeTable.has(ByLayer)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'ByLayer',
+          name: ByLayer,
           standardFlag: 0,
           description: '',
           totalPatternLength: 0
         })
       )
     }
-    if (!this.tables.linetypeTable.has('Continuous')) {
+    if (!this.tables.linetypeTable.has(DEFAULT_LINE_TYPE)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'Continuous',
+          name: DEFAULT_LINE_TYPE,
           standardFlag: 0,
           description: 'Solid line',
           totalPatternLength: 0
@@ -1267,9 +1271,9 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.viewportTable.has('*ACTIVE')) {
+    if (!this.tables.viewportTable.has('*Active')) {
       const viewport = new AcDbViewportTableRecord()
-      viewport.name = '*ACTIVE'
+      viewport.name = '*Active'
       this.tables.viewportTable.add(viewport)
     }
 
@@ -1324,36 +1328,42 @@ export class AcDbDatabase extends AcDbObject {
     this.writeDxfTable(
       filer,
       'VPORT',
+      this.tables.viewportTable,
       this.tables.viewportTable.newIterator(),
       'VPORT'
     )
     this.writeDxfTable(
       filer,
       'LTYPE',
+      this.tables.linetypeTable,
       this.tables.linetypeTable.newIterator(),
       'LTYPE'
     )
     this.writeDxfTable(
       filer,
       'LAYER',
+      this.tables.layerTable,
       this.tables.layerTable.newIterator(),
       'LAYER'
     )
     this.writeDxfTable(
       filer,
       'STYLE',
+      this.tables.textStyleTable,
       this.tables.textStyleTable.newIterator(),
       'STYLE'
     )
     this.writeDxfTable(
       filer,
       'APPID',
+      this.tables.appIdTable,
       this.tables.appIdTable.newIterator(),
       'APPID'
     )
     this.writeDxfTable(
       filer,
       'DIMSTYLE',
+      this.tables.dimStyleTable,
       this.tables.dimStyleTable.newIterator(),
       'DIMSTYLE'
     )
@@ -1361,6 +1371,7 @@ export class AcDbDatabase extends AcDbObject {
       this.writeDxfTable(
         filer,
         'BLOCK_RECORD',
+        this.tables.blockTable,
         this.tables.blockTable.newIterator(),
         'BLOCK_RECORD'
       )
@@ -1446,14 +1457,19 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
-  private writeDxfTable<TRecord extends AcDbObject>(
+  private writeDxfTable<
+    TRecord extends AcDbObject,
+    TTable extends AcDbSymbolTable
+  >(
     filer: AcDbDxfFiler,
     tableName: string,
+    table: TTable,
     records: Iterable<TRecord>,
     recordType: string
   ) {
     const items = [...records]
-    filer.startTable(tableName, items.length)
+    filer.startTable(tableName)
+    table.dxfOut(filer)
     for (const record of items) {
       if (
         recordType === 'BLOCK_RECORD' &&

@@ -1,3 +1,4 @@
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbDatabase } from './AcDbDatabase'
@@ -42,6 +43,8 @@ export class AcDbSymbolTable<
   constructor(db: AcDbDatabase) {
     super()
     this.database = db
+    // Symbol tables are owned by the database object (handle "0").
+    this.ownerId = db.objectId
     this._recordsByName = new Map<string, RecordType>()
     this._recordsById = new Map<string, RecordType>()
   }
@@ -262,5 +265,14 @@ export class AcDbSymbolTable<
    */
   protected normalizeName(name: string) {
     return name
+  }
+
+  override dxfOutFields(filer: AcDbDxfFiler) {
+    super.dxfOutFields(filer)
+    filer.writeSubclassMarker('AcDbSymbolTable')
+    // DXF common symbol table group code 70: maximum number of entries.
+    // We emit the current count, which matches typical DXF output behavior.
+    filer.writeInt16(70, this.numEntries)
+    return this
   }
 }

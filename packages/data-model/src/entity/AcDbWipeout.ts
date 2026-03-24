@@ -46,7 +46,7 @@ export class AcDbWipeout extends AcDbRasterImage {
 
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeSubclassMarker('AcDbWipeout')
+    // WIPEOUT has the same subclassMarker as its parent
     return this
   }
 }

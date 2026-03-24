@@ -229,10 +229,9 @@ export class AcDbDxfFiler {
     return this
   }
 
-  startTable(name: string, count: number) {
+  startTable(name: string) {
     this.writeStart('TABLE')
     this.writeString(2, name)
-    this.writeInt16(70, count)
     return this
   }
 

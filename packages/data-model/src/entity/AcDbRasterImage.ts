@@ -90,6 +90,8 @@ export class AcDbRasterImage extends AcDbEntity {
   private _rotation: number
   /** The scale factors for the image */
   private _scale: AcGeVector2d
+  /** The image size in pixels (U and V values) */
+  private _imageSize: AcGePoint2d
   /** The clip boundary type */
   private _clipBoundaryType: AcDbRasterImageClipBoundaryType
   /** The clip boundary points */
@@ -132,6 +134,7 @@ export class AcDbRasterImage extends AcDbEntity {
     this._position = new AcGePoint3d()
     this._scale = new AcGeVector2d(1, 1)
     this._rotation = 0
+    this._imageSize = new AcGePoint2d()
     this._clipBoundaryType = AcDbRasterImageClipBoundaryType.Rect
     this._clipBoundary = []
     this._isClipped = false
@@ -227,6 +230,16 @@ export class AcDbRasterImage extends AcDbEntity {
   }
   set scale(value: AcGeVector2d) {
     this._scale.copy(value)
+  }
+
+  /**
+   * The image size in pixels (U and V values).
+   */
+  get imageSize() {
+    return this._imageSize
+  }
+  set imageSize(value: AcGePoint2d) {
+    this._imageSize.copy(value)
   }
 
   /**
@@ -415,16 +428,34 @@ export class AcDbRasterImage extends AcDbEntity {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbRasterImage')
     filer.writePoint3d(10, this.position)
-    filer.writePoint3d(11, { x: this.width * this.scale.x, y: 0, z: 0 })
-    filer.writePoint3d(12, { x: 0, y: this.height * this.scale.y, z: 0 })
+    const wcsWidth = this.width * this.scale.x
+    const wcsHeight = this.height * this.scale.y
+    const imageSize =
+      this._imageSize.x > 0 && this._imageSize.y > 0
+        ? this._imageSize
+        : { x: wcsWidth, y: wcsHeight }
+    const pixelWidth = imageSize.x > 0 ? wcsWidth / imageSize.x : wcsWidth
+    const pixelHeight = imageSize.y > 0 ? wcsHeight / imageSize.y : wcsHeight
+    const cos = Math.cos(this._rotation)
+    const sin = Math.sin(this._rotation)
+    filer.writePoint3d(11, { x: pixelWidth * cos, y: pixelWidth * sin, z: 0 })
+    filer.writePoint3d(12, {
+      x: -pixelHeight * sin,
+      y: pixelHeight * cos,
+      z: 0
+    })
+    filer.writePoint2d(13, imageSize)
     filer.writeObjectId(340, this.imageDefId)
-    filer.writeInt16(70, this.isImageShown ? 1 : 0)
-    filer.writeInt16(280, this.clipBoundaryType)
-    filer.writeInt16(281, this.isClipped ? 1 : 0)
-    filer.writeInt16(282, this.isImageTransparent ? 1 : 0)
-    filer.writeInt16(283, this.brightness)
-    filer.writeInt16(360, this.contrast)
-    filer.writeInt16(361, this.fade)
+    const displayFlags =
+      (this.isImageShown ? AcDbRasterImageImageDisplayOpt.Show : 0) |
+      (this.isShownClipped ? AcDbRasterImageImageDisplayOpt.Clip : 0) |
+      (this.isImageTransparent ? AcDbRasterImageImageDisplayOpt.Transparent : 0)
+    filer.writeInt16(70, displayFlags)
+    filer.writeInt16(280, this.isClipped ? 1 : 0)
+    filer.writeInt16(281, this.brightness)
+    filer.writeInt16(282, this.contrast)
+    filer.writeInt16(283, this.fade)
+    filer.writeInt16(71, this.clipBoundaryType)
     if (this.isClipped) {
       filer.writeInt16(91, this.clipBoundary.length)
       for (const point of this.clipBoundary) {

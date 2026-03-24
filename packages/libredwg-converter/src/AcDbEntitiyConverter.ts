@@ -652,6 +652,7 @@ export class AcDbEntityConverter {
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
+    dbImage.imageSize.copy(image.imageSize)
     dbImage.imageDefId = image.imageDefHandle as string
     dbImage.isClipped = image.clipping > 0
     dbImage.isShownClipped = (image.flags | 0x0004) > 0
