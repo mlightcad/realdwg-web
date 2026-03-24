@@ -43,6 +43,7 @@ export class AcDbSymbolTable<
   constructor(db: AcDbDatabase) {
     super()
     this.database = db
+    this.objectId = db.generateHandle()
     // Symbol tables are owned by the database object (handle "0").
     this.ownerId = db.objectId
     this._recordsByName = new Map<string, RecordType>()

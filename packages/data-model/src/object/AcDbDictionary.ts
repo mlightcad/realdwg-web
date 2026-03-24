@@ -47,6 +47,7 @@ export class AcDbDictionary<
   constructor(db: AcDbDatabase) {
     super()
     this.database = db
+    this.objectId = db.generateHandle()
     this._recordsByName = new Map<string, TObjectType>()
     this._recordsById = new Map<string, TObjectType>()
   }

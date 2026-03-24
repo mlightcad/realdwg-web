@@ -285,7 +285,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   dxfOutBlockBegin(filer: AcDbDxfFiler) {
     filer.writeStart('BLOCK')
-    filer.writeHandle(5, `BLOCK:${this.objectId}`)
+    filer.writeHandle(5, `${this.objectId}`)
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
     filer.writeSubclassMarker('AcDbBlockBegin')
@@ -299,7 +299,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   dxfOutBlockEnd(filer: AcDbDxfFiler) {
     filer.writeStart('ENDBLK')
-    filer.writeHandle(5, `ENDBLK:${this.objectId}`)
+    filer.writeHandle(5, `${this.objectId}`)
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
     filer.writeSubclassMarker('AcDbBlockEnd')
