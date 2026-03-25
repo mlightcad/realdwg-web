@@ -365,8 +365,9 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     filer.writeHandle(5, this.database.generateHandle())
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
-    filer.writeSubclassMarker('AcDbBlockBegin')
+    // TODO: Assign the correct layer name
     filer.writeString(8, '0')
+    filer.writeSubclassMarker('AcDbBlockBegin')
     filer.writeString(2, this.name)
     filer.writeInt16(70, 0)
     filer.writePoint3d(10, this.origin)

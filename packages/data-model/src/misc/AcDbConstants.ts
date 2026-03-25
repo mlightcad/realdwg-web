@@ -30,3 +30,13 @@ export const ByLayer = 'ByLayer'
  * from the block it belongs to.
  */
 export const ByBlock = 'ByBlock'
+
+/**
+ * Application ID for MLightCAD used in dictionaries and XData registration.
+ */
+export const MLIGHTCAD_APPID = 'mlightcad'
+
+/**
+ * Built-in AutoCAD application ID used for standard XData registration.
+ */
+export const ACAD_APPID = 'ACAD'

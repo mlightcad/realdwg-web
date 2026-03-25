@@ -16,13 +16,15 @@ import {
   AcDbEntity
 } from '../entity'
 import {
+  ACAD_APPID,
   AcDbAngleUnits,
   AcDbDataGenerator,
   AcDbUnitsValue,
   ByBlock,
   ByLayer,
   DEFAULT_LINE_TYPE,
-  DEFAULT_TEXT_STYLE
+  DEFAULT_TEXT_STYLE,
+  MLIGHTCAD_APPID
 } from '../misc'
 import { AcDbDictionary } from '../object/AcDbDictionary'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
@@ -351,8 +353,6 @@ export class AcDbDatabase extends AcDbObject {
     openProgress: new AcCmEventManager<AcDbProgressdEventArgs>()
   }
 
-  public static MLIGHTCAD_APPID = 'mlightcad'
-
   /**
    * Creates a new AcDbDatabase instance.
    */
@@ -391,9 +391,6 @@ export class AcDbDatabase extends AcDbObject {
       layout: new AcDbLayoutDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
-    this._tables.appIdTable.add(
-      new AcDbRegAppTableRecord(AcDbDatabase.MLIGHTCAD_APPID)
-    )
   }
 
   /**
@@ -1005,6 +1002,8 @@ export class AcDbDatabase extends AcDbObject {
       },
       options?.timeout
     )
+
+    this.ensureDatabaseDefaults()
   }
 
   /**
@@ -1110,7 +1109,7 @@ export class AcDbDatabase extends AcDbObject {
     version: AcDbDwgVersion | string | number = this.version.name,
     _saveThumbnailImage: boolean = false
   ) {
-    this.ensureDxfExportDefaults()
+    this.ensureDatabaseDefaults()
 
     const outVersion =
       version instanceof AcDbDwgVersion ? version : new AcDbDwgVersion(version)
@@ -1197,7 +1196,14 @@ export class AcDbDatabase extends AcDbObject {
     }
   }
 
-  private ensureDxfExportDefaults() {
+  /**
+   * Ensures required default database data exists.
+   *
+   * This is used after opening a file (or before exporting) to fill in any
+   * missing defaults such as layers, linetypes, text styles, dim styles,
+   * viewports, layouts, and registered application IDs.
+   */
+  private ensureDatabaseDefaults() {
     if (!this.tables.layerTable.has('0')) {
       const defaultColor = new AcCmColor()
       defaultColor.colorIndex = 7
@@ -1289,6 +1295,12 @@ export class AcDbDatabase extends AcDbObject {
       layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
       this.objects.layout.setAt(layout.layoutName, layout)
       modelSpace.layoutId = layout.objectId
+    }
+    if (!this.tables.appIdTable.has(ACAD_APPID)) {
+      this.tables.appIdTable.add(new AcDbRegAppTableRecord(ACAD_APPID))
+    }
+    if (!this.tables.appIdTable.has(MLIGHTCAD_APPID)) {
+      this.tables.appIdTable.add(new AcDbRegAppTableRecord(MLIGHTCAD_APPID))
     }
   }
 
@@ -1382,7 +1394,7 @@ export class AcDbDatabase extends AcDbObject {
   private writeDxfBlocksSection(filer: AcDbDxfFiler) {
     filer.startSection('BLOCKS')
     for (const btr of this.tables.blockTable.newIterator()) {
-      btr.dxfOutBlockBegin(filer)
+        btr.dxfOutBlockBegin(filer)
 
       if (!btr.isModelSapce && !btr.isPaperSapce) {
         for (const entity of btr.newIterator()) {
@@ -1475,9 +1487,9 @@ export class AcDbDatabase extends AcDbObject {
         recordType === 'BLOCK_RECORD' &&
         record instanceof AcDbBlockTableRecord
       ) {
-        record.dxfOutBlockRecord(filer)
-        continue
-      }
+          record.dxfOutBlockRecord(filer)
+          continue
+        }
 
       filer.writeStart(recordType)
       record.dxfOut(filer)
