@@ -1,6 +1,7 @@
 import {
   AcCmColor,
   AcDbBatchProcessing,
+  AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbConversionProgressCallback,
   AcDbDatabase,
@@ -396,6 +397,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.ownerId = btr.ownerHandle
         dbBlock.origin.copy(btr.basePoint)
         dbBlock.layoutId = btr.layout
+        dbBlock.blockInsertUnits = btr.insertionUnits
+        dbBlock.explodability = btr.explodability
+        dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
+        if (btr.bmpPreview) {
+          dbBlock.bmpPreview = btr.bmpPreview
+        }
         db.tables.blockTable.add(dbBlock)
       }
 

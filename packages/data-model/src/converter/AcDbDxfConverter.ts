@@ -25,6 +25,7 @@ import {
 
 import { AcDbObjectId } from '../base'
 import {
+  AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbDatabase,
   AcDbDatabaseConverterConfig,
@@ -480,6 +481,12 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         dbBlock.objectId = btr.handle
         dbBlock.name = btr.name
         dbBlock.layoutId = btr.layoutObjects
+        dbBlock.blockInsertUnits = btr.insertionUnits
+        dbBlock.explodability = btr.explodability
+        dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
+        if (btr.bmpPreview) {
+          dbBlock.bmpPreview = btr.bmpPreview
+        }
         db.tables.blockTable.add(dbBlock)
       })
     }
