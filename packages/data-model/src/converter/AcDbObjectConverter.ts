@@ -133,6 +133,9 @@ export class AcDbObjectConverter {
     dbObject.printLineweights = (flag & 128) !== 0
     dbObject.drawViewportsFirst = (flag & 512) !== 0
     dbObject.modelType = (flag & 1024) !== 0
+    if (layout.viewportId) {
+      dbObject.viewportArray.push(layout.viewportId)
+    }
 
     if (layout.layoutName === 'Model') {
       // Upper case model space name

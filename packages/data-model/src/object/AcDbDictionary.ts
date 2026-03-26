@@ -277,6 +277,10 @@ export class AcDbDictionary<
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbDictionary')
+    // 280 Hard-owner flag. If set to 1, indicates that elements of the dictionary are to
+    // be treated as hard-owned
+    // TODO: Different dictionary may have different value
+    filer.writeInt16(280, 1)
     filer.writeInt16(281, 1)
     for (const [key, value] of this._recordsByName) {
       filer.writeString(3, key)

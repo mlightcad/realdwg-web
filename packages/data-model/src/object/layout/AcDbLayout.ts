@@ -31,6 +31,8 @@ export class AcDbLayout extends AcDbPlotSettings {
   private _limits: AcGeBox2d
   /** The current extents setting of the layout */
   private _extents: AcGeBox3d
+  /** Object IDs for viewports in this layout (paperspace). */
+  private _viewportArray: string[]
 
   /**
    * Creates a new AcDbLayout instance.
@@ -48,6 +50,7 @@ export class AcDbLayout extends AcDbPlotSettings {
     this._layoutName = ''
     this._limits = new AcGeBox2d()
     this._extents = new AcGeBox3d()
+    this._viewportArray = []
   }
 
   /**
@@ -233,6 +236,20 @@ export class AcDbLayout extends AcDbPlotSettings {
    */
   set extents(value: AcGeBox3d) {
     this._extents.copy(value)
+  }
+
+  /**
+   * Gets the paperspace viewport object IDs for this layout.
+   */
+  get viewportArray() {
+    return this._viewportArray
+  }
+
+  /**
+   * Sets the paperspace viewport object IDs for this layout.
+   */
+  set viewportArray(value: string[]) {
+    this._viewportArray = value.slice()
   }
 
   /**

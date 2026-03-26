@@ -1451,49 +1451,61 @@ export class AcDbDatabase extends AcDbObject {
    */
   private writeDxfObjectsSection(filer: AcDbDxfFiler) {
     filer.startSection('OBJECTS')
-    this.objects.layout.ownerId = this.objects.dictionary.objectId
-    this.objects.imageDefinition.ownerId = this.objects.dictionary.objectId
-    this.objects.xrecord.ownerId = this.objects.dictionary.objectId
+    const rootDict = this.objects.dictionary
+    rootDict.ownerId = '0'
 
-    filer.writeStart('DICTIONARY')
-    filer.writeHandle(5, this.objects.dictionary.objectId)
-    filer.writeSubclassMarker('AcDbDictionary')
-    filer.writeInt16(281, 1)
-    filer.writeString(3, 'ACAD_LAYOUT')
-    filer.writeObjectId(350, this.objects.layout.objectId)
+    const writeDictionary = (dict: AcDbDictionary) => {
+      // Dictionary entries (3/350 pairs) are embedded in the DICTIONARY object.
+      filer.writeStart('DICTIONARY')
+      dict.dxfOut(filer)
+    }
+
+    const ensureRootEntry = (key: string, dict: AcDbDictionary) => {
+      if (rootDict.getAt(key) !== dict) {
+        rootDict.setAt(key, dict)
+      }
+    }
+
+    const dropRootEntry = (key: string) => {
+      if (rootDict.getAt(key)) {
+        rootDict.remove(key)
+      }
+    }
+
+    ensureRootEntry('ACAD_LAYOUT', this.objects.layout)
     if (this.objects.imageDefinition.numEntries > 0) {
-      filer.writeString(3, 'ISM_RASTER_IMAGE_DICT')
-      filer.writeObjectId(350, this.objects.imageDefinition.objectId)
+      ensureRootEntry('ISM_RASTER_IMAGE_DICT', this.objects.imageDefinition)
+    } else {
+      dropRootEntry('ISM_RASTER_IMAGE_DICT')
     }
     if (this.objects.xrecord.numEntries > 0) {
-      filer.writeString(3, 'MLIGHT_XRECORD')
-      filer.writeObjectId(350, this.objects.xrecord.objectId)
+      ensureRootEntry('MLIGHT_XRECORD', this.objects.xrecord)
+    } else {
+      dropRootEntry('MLIGHT_XRECORD')
     }
 
-    filer.writeStart('DICTIONARY')
-    this.objects.layout.dxfOut(filer)
+    writeDictionary(rootDict)
+    writeDictionary(this.objects.layout)
 
     if (this.objects.imageDefinition.numEntries > 0) {
-      filer.writeStart('DICTIONARY')
-      this.objects.imageDefinition.dxfOut(filer)
+      writeDictionary(this.objects.imageDefinition)
     }
 
     if (this.objects.xrecord.numEntries > 0) {
-      filer.writeStart('DICTIONARY')
-      this.objects.xrecord.dxfOut(filer)
+      writeDictionary(this.objects.xrecord)
     }
 
-    for (const layout of this.objects.layout.newIterator()) {
+    for (const [_, layout] of this.objects.layout.entries()) {
       filer.writeStart('LAYOUT')
       layout.dxfOut(filer)
     }
 
-    for (const imageDef of this.objects.imageDefinition.newIterator()) {
+    for (const [_, imageDef] of this.objects.imageDefinition.entries()) {
       filer.writeStart('IMAGEDEF')
       imageDef.dxfOut(filer)
     }
 
-    for (const xrecord of this.objects.xrecord.newIterator()) {
+    for (const [_, xrecord] of this.objects.xrecord.entries()) {
       filer.writeStart('XRECORD')
       xrecord.dxfOut(filer)
     }
