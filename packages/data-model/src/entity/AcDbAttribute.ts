@@ -20,6 +20,10 @@ export class AcDbAttribute extends AcDbText {
   /** The DXF entity type name. */
   static override typeName: string = 'Attrib'
 
+  override get dxfTypeName() {
+    return 'ATTRIB'
+  }
+
   /**
    * Attribute behavior flags.
    * @see AcDbAttributeFlags

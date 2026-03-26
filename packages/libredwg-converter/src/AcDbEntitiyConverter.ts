@@ -508,9 +508,20 @@ export class AcDbEntityConverter {
       table.rowCount,
       table.columnCount
     )
+    // dbEntity.tableDataVersion = table.version
+    dbEntity.tableStyleId = table.tableStyleId
+    dbEntity.owningBlockRecordId = table.blockRecordHandle
+    if (table.directionVector) {
+      dbEntity.horizontalDirection = new AcGeVector3d(table.directionVector)
+    }
     dbEntity.attachmentPoint =
       table.attachmentPoint as unknown as AcGiMTextAttachmentPoint
     dbEntity.position.copy(table.startPoint)
+    dbEntity.tableValueFlag = table.tableValue
+    dbEntity.tableOverrideFlag = table.overrideFlag
+    dbEntity.borderColorOverrideFlag = table.borderColorOverrideFlag
+    dbEntity.borderLineweightOverrideFlag = table.borderLineWeightOverrideFlag
+    dbEntity.borderVisibilityOverrideFlag = table.borderVisibilityOverrideFlag
     table.columnWidthArr.forEach((width, index) =>
       dbEntity.setColumnWidth(index, width)
     )
@@ -641,6 +652,7 @@ export class AcDbEntityConverter {
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
+    dbImage.imageSize.copy(image.imageSize)
     dbImage.imageDefId = image.imageDefHandle as string
     dbImage.isClipped = image.clipping > 0
     dbImage.isShownClipped = (image.flags | 0x0004) > 0

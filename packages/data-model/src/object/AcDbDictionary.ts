@@ -47,6 +47,7 @@ export class AcDbDictionary<
   constructor(db: AcDbDatabase) {
     super()
     this.database = db
+    this.objectId = db.generateHandle()
     this._recordsByName = new Map<string, TObjectType>()
     this._recordsById = new Map<string, TObjectType>()
   }
@@ -84,6 +85,9 @@ export class AcDbDictionary<
   setAt(key: string, value: TObjectType) {
     value.database = this.database
     value.ownerId = this.objectId
+
+    this.database.commitObjectHandle(value, id => this.hasId(id))
+
     this._recordsByName.set(key, value)
     this._recordsById.set(value.objectId, value)
     this.database.events.dictObjetSet.dispatch({

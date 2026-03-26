@@ -22,6 +22,10 @@ import { AcDbRasterImage } from './AcDbRasterImage'
 export class AcDbWipeout extends AcDbRasterImage {
   /** The entity type name */
   static override typeName: string = 'Wipeout'
+
+  override get dxfTypeName() {
+    return 'WIPEOUT'
+  }
   /**
    * Draws the wipeout entity.
    *
@@ -42,7 +46,7 @@ export class AcDbWipeout extends AcDbRasterImage {
 
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeSubclassMarker('AcDbWipeout')
+    // WIPEOUT has the same subclassMarker as its parent
     return this
   }
 }

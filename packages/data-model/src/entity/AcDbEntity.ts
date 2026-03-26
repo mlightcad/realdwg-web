@@ -78,37 +78,18 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
-   * DXF entity name written to the file.
+   * Gets the DXF entity type name written to the file.
+   *
+   * This value is the literal DXF record type emitted for the entity during
+   * DXF export, such as `LINE`, `INSERT`, or `DIMENSION`.
+   *
+   * Every concrete entity class must explicitly define this property so the
+   * DXF export contract stays local to the entity implementation rather than
+   * being inferred by the base class.
+   *
+   * @returns The DXF entity type name used during export
    */
-  get dxfEntityTypeName() {
-    switch (this.type) {
-      case 'BlockReference':
-        return 'INSERT'
-      case 'Polyline':
-        return 'LWPOLYLINE'
-      case '2dPolyline':
-      case '3dPolyline':
-        return 'POLYLINE'
-      case '2dVertex':
-      case '3dVertex':
-        return 'VERTEX'
-      case 'Face':
-        return '3DFACE'
-      case 'RasterImage':
-        return 'IMAGE'
-      case 'Table':
-        return 'ACAD_TABLE'
-      case 'AlignedDimension':
-      case 'RadialDimension':
-      case 'DiametricDimension':
-      case 'OrdinateDimension':
-      case '3PointAngularDimension':
-      case 'ArcDimension':
-        return 'DIMENSION'
-      default:
-        return this.type.toUpperCase()
-    }
-  }
+  abstract get dxfTypeName(): string
 
   /**
    * Gets the name of the layer referenced by this entity.

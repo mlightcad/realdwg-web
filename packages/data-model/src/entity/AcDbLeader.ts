@@ -52,6 +52,10 @@ export class AcDbLeader extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = 'Leader'
 
+  override get dxfTypeName() {
+    return 'LEADER'
+  }
+
   /** Whether this leader is spline-fit */
   private _isSplined: boolean
   /** The spline geometry if this leader is spline-fit */

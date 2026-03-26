@@ -615,9 +615,20 @@ export class AcDbEntityConverter {
       table.rowCount,
       table.columnCount
     )
+    dbEntity.tableDataVersion = table.version
+    dbEntity.tableStyleId = table.tableStyleId
+    dbEntity.owningBlockRecordId = table.blockRecordHandle
+    if (table.directionVector) {
+      dbEntity.horizontalDirection = new AcGeVector3d(table.directionVector)
+    }
     dbEntity.attachmentPoint =
       table.attachmentPoint as unknown as AcGiMTextAttachmentPoint
     dbEntity.position.copy(table.startPoint)
+    dbEntity.tableValueFlag = table.tableValue
+    dbEntity.tableOverrideFlag = table.overrideFlag
+    dbEntity.borderColorOverrideFlag = table.borderColorOverrideFlag
+    dbEntity.borderLineweightOverrideFlag = table.borderLineWeightOverrideFlag
+    dbEntity.borderVisibilityOverrideFlag = table.borderVisibilityOverrideFlag
     table.columnWidthArr.forEach((width, index) =>
       dbEntity.setColumnWidth(index, width)
     )
@@ -741,6 +752,7 @@ export class AcDbEntityConverter {
     dbImage.brightness = image.brightness
     dbImage.contrast = image.contrast
     dbImage.fade = image.fade
+    dbImage.imageSize.copy(image.imageSize)
 
     dbImage.isShownClipped = (image.flags | 0x0004) > 0
     dbImage.isImageShown = (image.flags | 0x0003) > 0
@@ -779,6 +791,7 @@ export class AcDbEntityConverter {
     dbWipeout.brightness = wipeout.brightness
     dbWipeout.contrast = wipeout.contrast
     dbWipeout.fade = wipeout.fade
+    dbWipeout.imageSize.copy(wipeout.imageSize)
 
     dbWipeout.isShownClipped = (wipeout.displayFlag | 0x0004) > 0
     dbWipeout.isImageShown = (wipeout.displayFlag | 0x0003) > 0
@@ -897,7 +910,7 @@ export class AcDbEntityConverter {
     dbEntity.layer = entity.layer || '0'
     // I found some dxf file may have entity without handle. If so, let's use objectId
     // created by AcDbObject constructor instead.
-    if (entity.handle) dbEntity.objectId = entity.handle
+    if (entity.handle) dbEntity.objectId = entity.handle.toString()
     dbEntity.ownerId = entity.ownerBlockRecordSoftId || ''
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType

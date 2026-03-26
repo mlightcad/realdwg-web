@@ -1,9 +1,16 @@
 import { AcCmColor } from '@mlightcad/common'
 import {
+  BlockRecordTableEntry,
+  DimStylesTableEntry,
+  DxfTable,
   InsertEntity,
+  LayerTableEntry,
+  LTypeTableEntry,
   MTextEntity,
   ParsedDxf,
-  TextEntity
+  StyleTableEntry,
+  TextEntity,
+  VPortTableEntry
 } from '@mlightcad/dxf-json'
 import { DxfBlock } from '@mlightcad/dxf-json'
 import { CommonDxfEntity } from '@mlightcad/dxf-json'
@@ -18,6 +25,7 @@ import {
 
 import { AcDbObjectId } from '../base'
 import {
+  AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbDatabase,
   AcDbDatabaseConverterConfig,
@@ -30,6 +38,7 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
+  AcDbSymbolTable,
   AcDbSymbolTableRecord,
   AcDbTextStyleTableRecord,
   AcDbViewportTableRecord
@@ -472,6 +481,12 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         dbBlock.objectId = btr.handle
         dbBlock.name = btr.name
         dbBlock.layoutId = btr.layoutObjects
+        dbBlock.blockInsertUnits = btr.insertionUnits
+        dbBlock.explodability = btr.explodability
+        dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
+        if (btr.bmpPreview) {
+          dbBlock.bmpPreview = btr.bmpPreview
+        }
         db.tables.blockTable.add(dbBlock)
       })
     }
@@ -531,111 +546,117 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processViewports(model: ParsedDxf, db: AcDbDatabase) {
-    const viewports = model.tables?.VPORT?.entries
-    if (viewports && viewports.length > 0) {
-      viewports.forEach(item => {
-        const record = new AcDbViewportTableRecord()
-        this.processCommonTableEntryAttrs(item, record)
-        if (item.circleSides) {
-          record.circleSides = item.circleSides
-        }
-        record.standardFlag = item.standardFlag
-        record.center.copy(item.center)
-        record.lowerLeftCorner.copy(item.lowerLeftCorner)
-        record.upperRightCorner.copy(item.upperRightCorner)
-        if (item.snapBasePoint) {
-          record.snapBase.copy(item.snapBasePoint)
-        }
-        if (item.snapRotationAngle) {
-          record.snapAngle = item.snapRotationAngle
-        }
-        if (item.snapSpacing) {
-          record.snapIncrements.copy(item.snapSpacing)
-        }
-        if (item.majorGridLines) {
-          record.gridMajor = item.majorGridLines
-        }
-        if (item.gridSpacing) {
-          record.gridIncrements.copy(item.gridSpacing)
-        }
-        if (item.backgroundObjectId) {
-          record.backgroundObjectId = item.backgroundObjectId
-        }
+    const viewportTable = model.tables?.VPORT
+    if (viewportTable) {
+      this.processCommonTableAttrs(viewportTable, db.tables.viewportTable)
+      const viewports = viewportTable.entries
+      if (viewports && viewports.length > 0) {
+        viewports.forEach(item => {
+          const record = new AcDbViewportTableRecord()
+          this.processCommonTableEntryAttrs(item, record)
+          if (item.circleSides) {
+            record.circleSides = item.circleSides
+          }
+          record.standardFlag = item.standardFlag
+          record.center.copy(item.center)
+          record.lowerLeftCorner.copy(item.lowerLeftCorner)
+          record.upperRightCorner.copy(item.upperRightCorner)
+          if (item.snapBasePoint) {
+            record.snapBase.copy(item.snapBasePoint)
+          }
+          if (item.snapRotationAngle) {
+            record.snapAngle = item.snapRotationAngle
+          }
+          if (item.snapSpacing) {
+            record.snapIncrements.copy(item.snapSpacing)
+          }
+          if (item.majorGridLines) {
+            record.gridMajor = item.majorGridLines
+          }
+          if (item.gridSpacing) {
+            record.gridIncrements.copy(item.gridSpacing)
+          }
+          if (item.backgroundObjectId) {
+            record.backgroundObjectId = item.backgroundObjectId
+          }
 
-        record.gsView.center.copy(item.center)
-        record.gsView.viewDirectionFromTarget.copy(item.viewDirectionFromTarget)
-        record.gsView.viewTarget.copy(item.viewTarget)
-        if (item.lensLength) {
-          record.gsView.lensLength = item.lensLength
-        }
-        if (item.frontClippingPlane) {
-          record.gsView.frontClippingPlane = item.frontClippingPlane
-        }
-        if (item.backClippingPlane) {
-          record.gsView.backClippingPlane = item.backClippingPlane
-        }
-        if (item.viewHeight) {
-          record.gsView.viewHeight = item.viewHeight
-        }
-        if (item.viewTwistAngle) {
-          record.gsView.viewTwistAngle = item.viewTwistAngle
-        }
-        if (item.frozenLayers) {
-          record.gsView.frozenLayers = item.frozenLayers
-        }
-        if (item.styleSheet) {
-          record.gsView.styleSheet = item.styleSheet
-        }
-        if (item.renderMode) {
-          record.gsView.renderMode =
-            item.renderMode as unknown as AcGiRenderMode
-        }
-        if (item.viewMode) {
-          record.gsView.viewMode = item.viewMode
-        }
-        if (item.ucsIconSetting) {
-          record.gsView.ucsIconSetting = item.ucsIconSetting
-        }
-        if (item.ucsOrigin) {
-          record.gsView.ucsOrigin.copy(item.ucsOrigin)
-        }
-        if (item.ucsXAxis) {
-          record.gsView.ucsXAxis.copy(item.ucsXAxis)
-        }
-        if (item.ucsYAxis) {
-          record.gsView.ucsYAxis.copy(item.ucsYAxis)
-        }
-        if (item.orthographicType) {
-          record.gsView.orthographicType =
-            item.orthographicType as unknown as AcGiOrthographicType
-        }
-        if (item.shadePlotSetting) {
-          record.gsView.shadePlotSetting = item.shadePlotSetting
-        }
-        if (item.shadePlotObjectId) {
-          record.gsView.shadePlotObjectId = item.shadePlotObjectId
-        }
-        if (item.visualStyleObjectId) {
-          record.gsView.visualStyleObjectId = item.visualStyleObjectId
-        }
-        if (item.isDefaultLightingOn) {
-          record.gsView.isDefaultLightingOn = item.isDefaultLightingOn
-        }
-        if (item.defaultLightingType) {
-          record.gsView.defaultLightingType =
-            item.defaultLightingType as unknown as AcGiDefaultLightingType
-        }
-        if (item.brightness) {
-          record.gsView.brightness = item.brightness
-        }
-        if (item.contrast) {
-          record.gsView.contrast = item.contrast
-        }
-        if (item.ambientColor) {
-          record.gsView.ambientColor = item.ambientColor
-        }
-        db.tables.viewportTable.add(record)
-      })
+          record.gsView.center.copy(item.center)
+          record.gsView.viewDirectionFromTarget.copy(
+            item.viewDirectionFromTarget
+          )
+          record.gsView.viewTarget.copy(item.viewTarget)
+          if (item.lensLength) {
+            record.gsView.lensLength = item.lensLength
+          }
+          if (item.frontClippingPlane) {
+            record.gsView.frontClippingPlane = item.frontClippingPlane
+          }
+          if (item.backClippingPlane) {
+            record.gsView.backClippingPlane = item.backClippingPlane
+          }
+          if (item.viewHeight) {
+            record.gsView.viewHeight = item.viewHeight
+          }
+          if (item.viewTwistAngle) {
+            record.gsView.viewTwistAngle = item.viewTwistAngle
+          }
+          if (item.frozenLayers) {
+            record.gsView.frozenLayers = item.frozenLayers
+          }
+          if (item.styleSheet) {
+            record.gsView.styleSheet = item.styleSheet
+          }
+          if (item.renderMode) {
+            record.gsView.renderMode =
+              item.renderMode as unknown as AcGiRenderMode
+          }
+          if (item.viewMode) {
+            record.gsView.viewMode = item.viewMode
+          }
+          if (item.ucsIconSetting) {
+            record.gsView.ucsIconSetting = item.ucsIconSetting
+          }
+          if (item.ucsOrigin) {
+            record.gsView.ucsOrigin.copy(item.ucsOrigin)
+          }
+          if (item.ucsXAxis) {
+            record.gsView.ucsXAxis.copy(item.ucsXAxis)
+          }
+          if (item.ucsYAxis) {
+            record.gsView.ucsYAxis.copy(item.ucsYAxis)
+          }
+          if (item.orthographicType) {
+            record.gsView.orthographicType =
+              item.orthographicType as unknown as AcGiOrthographicType
+          }
+          if (item.shadePlotSetting) {
+            record.gsView.shadePlotSetting = item.shadePlotSetting
+          }
+          if (item.shadePlotObjectId) {
+            record.gsView.shadePlotObjectId = item.shadePlotObjectId
+          }
+          if (item.visualStyleObjectId) {
+            record.gsView.visualStyleObjectId = item.visualStyleObjectId
+          }
+          if (item.isDefaultLightingOn) {
+            record.gsView.isDefaultLightingOn = item.isDefaultLightingOn
+          }
+          if (item.defaultLightingType) {
+            record.gsView.defaultLightingType =
+              item.defaultLightingType as unknown as AcGiDefaultLightingType
+          }
+          if (item.brightness) {
+            record.gsView.brightness = item.brightness
+          }
+          if (item.contrast) {
+            record.gsView.contrast = item.contrast
+          }
+          if (item.ambientColor) {
+            record.gsView.ambientColor = item.ambientColor
+          }
+          db.tables.viewportTable.add(record)
+        })
+      }
     }
   }
 
@@ -655,23 +676,27 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processLayers(model: ParsedDxf, db: AcDbDatabase) {
-    const layers = model.tables?.LAYER?.entries
-    if (layers && layers.length > 0) {
-      layers.forEach(item => {
-        const color = new AcCmColor()
-        color.colorIndex = item.colorIndex
-        const record = new AcDbLayerTableRecord({
-          name: item.name,
-          standardFlags: item.standardFlag,
-          linetype: item.lineType,
-          lineWeight: item.lineweight,
-          isOff: item.colorIndex < 0,
-          color: color,
-          isPlottable: item.isPlotting
+    const layerTable = model.tables?.LAYER
+    if (layerTable) {
+      this.processCommonTableAttrs(layerTable, db.tables.layerTable)
+      const layers = layerTable.entries
+      if (layers && layers.length > 0) {
+        layers.forEach(item => {
+          const color = new AcCmColor()
+          color.colorIndex = item.colorIndex
+          const record = new AcDbLayerTableRecord({
+            name: item.name,
+            standardFlags: item.standardFlag,
+            linetype: item.lineType,
+            lineWeight: item.lineweight,
+            isOff: item.colorIndex < 0,
+            color: color,
+            isPlottable: item.isPlotting
+          })
+          this.processCommonTableEntryAttrs(item, record)
+          db.tables.layerTable.add(record)
         })
-        this.processCommonTableEntryAttrs(item, record)
-        db.tables.layerTable.add(record)
-      })
+      }
     }
   }
 
@@ -690,14 +715,18 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processLineTypes(model: ParsedDxf, db: AcDbDatabase) {
-    const lineTypes = model.tables?.LTYPE?.entries
-    if (lineTypes && lineTypes.length > 0) {
-      lineTypes.forEach(item => {
-        const record = new AcDbLinetypeTableRecord(item)
-        this.processCommonTableEntryAttrs(item, record)
-        record.name = item.name
-        db.tables.linetypeTable.add(record)
-      })
+    const lineTypeTable = model.tables?.LTYPE
+    if (lineTypeTable) {
+      this.processCommonTableAttrs(lineTypeTable, db.tables.linetypeTable)
+      const lineTypes = lineTypeTable.entries
+      if (lineTypes && lineTypes.length > 0) {
+        lineTypes.forEach(item => {
+          const record = new AcDbLinetypeTableRecord(item)
+          this.processCommonTableEntryAttrs(item, record)
+          record.name = item.name
+          db.tables.linetypeTable.add(record)
+        })
+      }
     }
   }
 
@@ -716,13 +745,17 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processTextStyles(model: ParsedDxf, db: AcDbDatabase) {
-    const textStyles = model.tables.STYLE?.entries
-    if (textStyles && textStyles.length > 0) {
-      textStyles.forEach(item => {
-        const record = new AcDbTextStyleTableRecord(item)
-        this.processCommonTableEntryAttrs(item, record)
-        db.tables.textStyleTable.add(record)
-      })
+    const textStyleTable = model.tables?.STYLE
+    if (textStyleTable) {
+      this.processCommonTableAttrs(textStyleTable, db.tables.textStyleTable)
+      const textStyles = textStyleTable.entries
+      if (textStyles && textStyles.length > 0) {
+        textStyles.forEach(item => {
+          const record = new AcDbTextStyleTableRecord(item)
+          this.processCommonTableEntryAttrs(item, record)
+          db.tables.textStyleTable.add(record)
+        })
+      }
     }
   }
 
@@ -742,86 +775,106 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processDimStyles(model: ParsedDxf, db: AcDbDatabase) {
-    const dimStyles = model.tables.DIMSTYLE?.entries
-    if (dimStyles && dimStyles.length > 0) {
-      dimStyles.forEach(item => {
-        const attrs: AcDbDimStyleTableRecordAttrs = {
-          name: item.name,
-          ownerId: item.ownerObjectId,
-          dimpost: item.DIMPOST || '',
-          dimapost: item.DIMAPOST || '',
-          dimscale: item.DIMSCALE,
-          dimasz: item.DIMASZ,
-          dimexo: item.DIMEXO,
-          dimdli: item.DIMDLI,
-          dimexe: item.DIMEXE,
-          dimrnd: item.DIMRND,
-          dimdle: item.DIMDLE,
-          dimtp: item.DIMTP,
-          dimtm: item.DIMTM,
-          dimtxt: item.DIMTXT,
-          dimcen: item.DIMCEN,
-          dimtsz: item.DIMTSZ,
-          dimaltf: item.DIMALTF,
-          dimlfac: item.DIMLFAC,
-          dimtvp: item.DIMTVP,
-          dimtfac: item.DIMTFAC,
-          dimgap: item.DIMGAP,
-          dimaltrnd: item.DIMALTRND,
-          dimtol: item.DIMTOL == null || item.DIMTOL == 0 ? 0 : 1,
-          dimlim: item.DIMLIM == null || item.DIMLIM == 0 ? 0 : 1,
-          dimtih: item.DIMTIH == null || item.DIMTIH == 0 ? 0 : 1,
-          dimtoh: item.DIMTOH == null || item.DIMTOH == 0 ? 0 : 1,
-          dimse1: item.DIMSE1 == null || item.DIMSE1 == 0 ? 0 : 1,
-          dimse2: item.DIMSE2 == null || item.DIMSE2 == 0 ? 0 : 1,
-          dimtad: item.DIMTAD as unknown as AcDbDimTextVertical.Center,
-          dimzin: item.DIMZIN as unknown as AcDbDimZeroSuppression.Feet,
-          dimazin:
-            item.DIMAZIN as unknown as AcDbDimZeroSuppressionAngular.None,
-          dimalt: item.DIMALT,
-          dimaltd: item.DIMALTD,
-          dimtofl: item.DIMTOFL,
-          dimsah: item.DIMSAH,
-          dimtix: item.DIMTIX,
-          dimsoxd: item.DIMSOXD,
-          dimclrd: item.DIMCLRD,
-          dimclre: item.DIMCLRE,
-          dimclrt: item.DIMCLRT,
-          dimadec: item.DIMADEC || 0,
-          dimunit: item.DIMUNIT || 2,
-          dimdec: item.DIMDEC,
-          dimtdec: item.DIMTDEC,
-          dimaltu: item.DIMALTU,
-          dimalttd: item.DIMALTTD,
-          dimaunit: item.DIMAUNIT,
-          dimfrac: item.DIMFRAC,
-          dimlunit: item.DIMLUNIT,
-          dimdsep: item.DIMDSEP,
-          dimtmove: item.DIMTMOVE || 0,
-          dimjust: item.DIMJUST as unknown as AcDbDimTextHorizontal.Center,
-          dimsd1: item.DIMSD1,
-          dimsd2: item.DIMSD2,
-          dimtolj:
-            item.DIMTOLJ as unknown as AcDbDimVerticalJustification.Bottom,
-          dimtzin: item.DIMTZIN as unknown as AcDbDimZeroSuppression.Feet,
-          dimaltz: item.DIMALTZ as unknown as AcDbDimZeroSuppression.Feet,
-          dimalttz: item.DIMALTTZ as unknown as AcDbDimZeroSuppression.Feet,
-          dimfit: item.DIMFIT || 0,
-          dimupt: item.DIMUPT,
-          dimatfit: item.DIMATFIT,
-          dimtxsty: item.DIMTXSTY || DEFAULT_TEXT_STYLE,
-          dimldrblk: item.DIMLDRBLK || '',
-          dimblk: item.DIMBLK || '',
-          dimblk1: item.DIMBLK1 || '',
-          dimblk2: item.DIMBLK2 || '',
-          dimlwd: item.DIMLWD,
-          dimlwe: item.DIMLWE
-        }
-        const record = new AcDbDimStyleTableRecord(attrs)
-        this.processCommonTableEntryAttrs(item, record)
-        db.tables.dimStyleTable.add(record)
-      })
+    const dimStyleTable = model.tables?.DIMSTYLE
+    if (dimStyleTable) {
+      this.processCommonTableAttrs(dimStyleTable, db.tables.dimStyleTable)
+      const dimStyles = dimStyleTable.entries
+      if (dimStyles && dimStyles.length > 0) {
+        dimStyles.forEach(item => {
+          const attrs: AcDbDimStyleTableRecordAttrs = {
+            name: item.name,
+            ownerId: item.ownerObjectId,
+            dimpost: item.DIMPOST || '',
+            dimapost: item.DIMAPOST || '',
+            dimscale: item.DIMSCALE,
+            dimasz: item.DIMASZ,
+            dimexo: item.DIMEXO,
+            dimdli: item.DIMDLI,
+            dimexe: item.DIMEXE,
+            dimrnd: item.DIMRND,
+            dimdle: item.DIMDLE,
+            dimtp: item.DIMTP,
+            dimtm: item.DIMTM,
+            dimtxt: item.DIMTXT,
+            dimcen: item.DIMCEN,
+            dimtsz: item.DIMTSZ,
+            dimaltf: item.DIMALTF,
+            dimlfac: item.DIMLFAC,
+            dimtvp: item.DIMTVP,
+            dimtfac: item.DIMTFAC,
+            dimgap: item.DIMGAP,
+            dimaltrnd: item.DIMALTRND,
+            dimtol: item.DIMTOL == null || item.DIMTOL == 0 ? 0 : 1,
+            dimlim: item.DIMLIM == null || item.DIMLIM == 0 ? 0 : 1,
+            dimtih: item.DIMTIH == null || item.DIMTIH == 0 ? 0 : 1,
+            dimtoh: item.DIMTOH == null || item.DIMTOH == 0 ? 0 : 1,
+            dimse1: item.DIMSE1 == null || item.DIMSE1 == 0 ? 0 : 1,
+            dimse2: item.DIMSE2 == null || item.DIMSE2 == 0 ? 0 : 1,
+            dimtad: item.DIMTAD as unknown as AcDbDimTextVertical.Center,
+            dimzin: item.DIMZIN as unknown as AcDbDimZeroSuppression.Feet,
+            dimazin:
+              item.DIMAZIN as unknown as AcDbDimZeroSuppressionAngular.None,
+            dimalt: item.DIMALT,
+            dimaltd: item.DIMALTD,
+            dimtofl: item.DIMTOFL,
+            dimsah: item.DIMSAH,
+            dimtix: item.DIMTIX,
+            dimsoxd: item.DIMSOXD,
+            dimclrd: item.DIMCLRD,
+            dimclre: item.DIMCLRE,
+            dimclrt: item.DIMCLRT,
+            dimadec: item.DIMADEC || 0,
+            dimunit: item.DIMUNIT || 2,
+            dimdec: item.DIMDEC,
+            dimtdec: item.DIMTDEC,
+            dimaltu: item.DIMALTU,
+            dimalttd: item.DIMALTTD,
+            dimaunit: item.DIMAUNIT,
+            dimfrac: item.DIMFRAC,
+            dimlunit: item.DIMLUNIT,
+            dimdsep: item.DIMDSEP ? item.DIMDSEP.toString() : '.',
+            dimtmove: item.DIMTMOVE || 0,
+            dimjust: item.DIMJUST as unknown as AcDbDimTextHorizontal.Center,
+            dimsd1: item.DIMSD1,
+            dimsd2: item.DIMSD2,
+            dimtolj:
+              item.DIMTOLJ as unknown as AcDbDimVerticalJustification.Bottom,
+            dimtzin: item.DIMTZIN as unknown as AcDbDimZeroSuppression.Feet,
+            dimaltz: item.DIMALTZ as unknown as AcDbDimZeroSuppression.Feet,
+            dimalttz: item.DIMALTTZ as unknown as AcDbDimZeroSuppression.Feet,
+            dimfit: item.DIMFIT || 0,
+            dimupt: item.DIMUPT,
+            dimatfit: item.DIMATFIT,
+            dimtxsty: item.DIMTXSTY || DEFAULT_TEXT_STYLE,
+            dimldrblk: item.DIMLDRBLK || '',
+            dimblk: item.DIMBLK || '',
+            dimblk1: item.DIMBLK1 || '',
+            dimblk2: item.DIMBLK2 || '',
+            dimlwd: item.DIMLWD,
+            dimlwe: item.DIMLWE
+          }
+          const record = new AcDbDimStyleTableRecord(attrs)
+          this.processCommonTableEntryAttrs(item, record)
+          db.tables.dimStyleTable.add(record)
+        })
+      }
     }
+  }
+
+  private processCommonTableAttrs(
+    table:
+      | DxfTable<BlockRecordTableEntry>
+      | DxfTable<DimStylesTableEntry>
+      | DxfTable<StyleTableEntry>
+      | DxfTable<LayerTableEntry>
+      | DxfTable<LTypeTableEntry>
+      | DxfTable<VPortTableEntry>,
+    dbTable: AcDbSymbolTable
+  ) {
+    if (table.handle != null) {
+      dbTable.objectId = table.handle
+    }
+    dbTable.ownerId = table.ownerObjectId
   }
 
   /**

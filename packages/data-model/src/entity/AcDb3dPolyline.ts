@@ -37,6 +37,10 @@ export class AcDb3dPolyline extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = '3dPolyline'
 
+  override get dxfTypeName() {
+    return 'POLYLINE'
+  }
+
   /** The spline-fit type for this 3D polyline */
   private _polyType: AcDbPoly3dType
   /** The underlying geometric polyline object */

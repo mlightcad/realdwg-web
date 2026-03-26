@@ -32,6 +32,10 @@ export class AcDbXline extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = 'Xline'
 
+  override get dxfTypeName() {
+    return 'XLINE'
+  }
+
   /** The base point of the xline */
   private _basePoint: AcGePoint3d
   /** The unit direction vector of the xline */

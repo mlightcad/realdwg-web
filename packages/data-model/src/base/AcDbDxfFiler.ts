@@ -76,8 +76,14 @@ export class AcDbDxfFiler {
 
   registerHandle(key: string) {
     if (!this._handleMap.has(key)) {
-      this._handleMap.set(key, this._nextHandle.toString(16).toUpperCase())
-      this._nextHandle += 1
+      // If key is already a valid hex handle, preserve it
+      if (/^[0-9A-F]+$/i.test(key)) {
+        this._handleMap.set(key, key.toUpperCase())
+      } else {
+        this._handleMap.set(key, this._nextHandle.toString(16).toUpperCase())
+        this._nextHandle += 1
+        console.log(`Registered handle ${key} as ${this._handleMap.get(key)}`)
+      }
     }
     return this._handleMap.get(key)!
   }
@@ -223,10 +229,9 @@ export class AcDbDxfFiler {
     return this
   }
 
-  startTable(name: string, count: number) {
+  startTable(name: string) {
     this.writeStart('TABLE')
     this.writeString(2, name)
-    this.writeInt16(70, count)
     return this
   }
 

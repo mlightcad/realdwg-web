@@ -61,6 +61,10 @@ export class AcDbPolyline extends AcDbCurve {
   /** The entity type name */
   static override typeName: string = 'Polyline'
 
+  override get dxfTypeName() {
+    return 'LWPOLYLINE'
+  }
+
   /** The elevation (Z-coordinate) of the polyline plane */
   private _elevation: number
   /** The underlying geometric polyline object */

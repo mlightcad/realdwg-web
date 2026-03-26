@@ -20,6 +20,10 @@ export class AcDbFace extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Face'
 
+  override get dxfTypeName() {
+    return '3DFACE'
+  }
+
   /** The three or four vertices of the face */
   private _vertices: AcGePoint3d[]
   /** The invisibility of the edges of the face */

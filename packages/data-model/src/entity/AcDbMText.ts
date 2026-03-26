@@ -45,6 +45,10 @@ export class AcDbMText extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'MText'
 
+  override get dxfTypeName() {
+    return 'MTEXT'
+  }
+
   /** The height of the text */
   private _height: number
   /** The maximum width for word wrap formatting */

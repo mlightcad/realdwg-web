@@ -16,10 +16,15 @@ import {
   AcDbEntity
 } from '../entity'
 import {
+  ACAD_APPID,
   AcDbAngleUnits,
   AcDbDataGenerator,
   AcDbUnitsValue,
-  DEFAULT_TEXT_STYLE
+  ByBlock,
+  ByLayer,
+  DEFAULT_LINE_TYPE,
+  DEFAULT_TEXT_STYLE,
+  MLIGHTCAD_APPID
 } from '../misc'
 import { AcDbDictionary } from '../object/AcDbDictionary'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
@@ -53,6 +58,7 @@ import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 import { AcDbLayout } from '../object/layout/AcDbLayout'
 import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary'
+import { AcDbSymbolTable } from './AcDbSymbolTable'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -317,6 +323,8 @@ export class AcDbDatabase extends AcDbObject {
   }
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
+  /** The maximum handle value in the database, used for generating unique object IDs */
+  private _maxHandle: number
 
   /**
    * Events that can be triggered by the database.
@@ -345,13 +353,11 @@ export class AcDbDatabase extends AcDbObject {
     openProgress: new AcCmEventManager<AcDbProgressdEventArgs>()
   }
 
-  public static MLIGHTCAD_APPID = 'mlightcad'
-
   /**
    * Creates a new AcDbDatabase instance.
    */
   constructor() {
-    super()
+    super({ objectId: '0' })
     this._version = new AcDbDwgVersion('AC1014')
     this._angBase = 0
     this._angDir = 0
@@ -369,6 +375,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
+    this._maxHandle = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
@@ -384,9 +391,6 @@ export class AcDbDatabase extends AcDbObject {
       layout: new AcDbLayoutDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
-    this._tables.appIdTable.add(
-      new AcDbRegAppTableRecord(AcDbDatabase.MLIGHTCAD_APPID)
-    )
   }
 
   /**
@@ -418,6 +422,61 @@ export class AcDbDatabase extends AcDbObject {
    */
   get objects() {
     return this._objects
+  }
+
+  /**
+   * Generates a new unique object ID (handle) for the database.
+   * The handle is a hexadecimal string that increments from the current max handle.
+   *
+   * @returns A new unique object ID as a hexadecimal string
+   *
+   * @example
+   * ```typescript
+   * const newHandle = database.generateHandle();
+   * console.log(`New handle: ${newHandle}`);
+   * ```
+   */
+  generateHandle(): AcDbObjectId {
+    this._maxHandle++
+    return this._maxHandle.toString(16).toUpperCase()
+  }
+
+  /**
+   * Updates the maximum handle value if the provided handle is greater.
+   * This is called when setting an object's objectId from external sources (e.g., reading DXF/DWG).
+   *
+   * @param handle - The handle to check and potentially update maxHandle with
+   *
+   * @example
+   * ```typescript
+   * database.updateMaxHandle('1A2B');
+   * ```
+   */
+  updateMaxHandle(handle: string): void {
+    const handleValue = parseInt(handle, 16)
+    if (!isNaN(handleValue) && handleValue > this._maxHandle) {
+      this._maxHandle = handleValue
+    }
+  }
+
+  /**
+   * Commits an object's handle into the database.
+   *
+   * Generates a new handle when the object doesn't have one, when it is temporary,
+   * or when a duplicate id exists in the target collection.
+   *
+   * @internal
+   */
+  commitObjectHandle(
+    object: AcDbObject,
+    hasId?: (id: AcDbObjectId) => boolean
+  ) {
+    const objectId = object.getAttrWithoutException('objectId')
+    if (!objectId || object.isTemp || (hasId && hasId(objectId))) {
+      object.objectId = this.generateHandle()
+    } else {
+      this.updateMaxHandle(objectId)
+    }
   }
 
   /**
@@ -943,6 +1002,8 @@ export class AcDbDatabase extends AcDbObject {
       },
       options?.timeout
     )
+
+    this.ensureDatabaseDefaults()
   }
 
   /**
@@ -1048,7 +1109,7 @@ export class AcDbDatabase extends AcDbObject {
     version: AcDbDwgVersion | string | number = this.version.name,
     _saveThumbnailImage: boolean = false
   ) {
-    this.ensureDxfExportDefaults()
+    this.ensureDatabaseDefaults()
 
     const outVersion =
       version instanceof AcDbDwgVersion ? version : new AcDbDwgVersion(version)
@@ -1135,7 +1196,14 @@ export class AcDbDatabase extends AcDbObject {
     }
   }
 
-  private ensureDxfExportDefaults() {
+  /**
+   * Ensures required default database data exists.
+   *
+   * This is used after opening a file (or before exporting) to fill in any
+   * missing defaults such as layers, linetypes, text styles, dim styles,
+   * viewports, layouts, and registered application IDs.
+   */
+  private ensureDatabaseDefaults() {
     if (!this.tables.layerTable.has('0')) {
       const defaultColor = new AcCmColor()
       defaultColor.colorIndex = 7
@@ -1143,7 +1211,7 @@ export class AcDbDatabase extends AcDbObject {
         new AcDbLayerTableRecord({
           name: '0',
           standardFlags: 0,
-          linetype: 'Continuous',
+          linetype: DEFAULT_LINE_TYPE,
           lineWeight: 0,
           isOff: false,
           color: defaultColor,
@@ -1152,30 +1220,30 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.linetypeTable.has('ByBlock')) {
+    if (!this.tables.linetypeTable.has(ByBlock)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'ByBlock',
+          name: ByBlock,
           standardFlag: 0,
           description: '',
           totalPatternLength: 0
         })
       )
     }
-    if (!this.tables.linetypeTable.has('ByLayer')) {
+    if (!this.tables.linetypeTable.has(ByLayer)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'ByLayer',
+          name: ByLayer,
           standardFlag: 0,
           description: '',
           totalPatternLength: 0
         })
       )
     }
-    if (!this.tables.linetypeTable.has('Continuous')) {
+    if (!this.tables.linetypeTable.has(DEFAULT_LINE_TYPE)) {
       this.tables.linetypeTable.add(
         new AcDbLinetypeTableRecord({
-          name: 'Continuous',
+          name: DEFAULT_LINE_TYPE,
           standardFlag: 0,
           description: 'Solid line',
           totalPatternLength: 0
@@ -1209,9 +1277,9 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.viewportTable.has('*ACTIVE')) {
+    if (!this.tables.viewportTable.has('*Active')) {
       const viewport = new AcDbViewportTableRecord()
-      viewport.name = '*ACTIVE'
+      viewport.name = '*Active'
       this.tables.viewportTable.add(viewport)
     }
 
@@ -1227,6 +1295,12 @@ export class AcDbDatabase extends AcDbObject {
       layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
       this.objects.layout.setAt(layout.layoutName, layout)
       modelSpace.layoutId = layout.objectId
+    }
+    if (!this.tables.appIdTable.has(ACAD_APPID)) {
+      this.tables.appIdTable.add(new AcDbRegAppTableRecord(ACAD_APPID))
+    }
+    if (!this.tables.appIdTable.has(MLIGHTCAD_APPID)) {
+      this.tables.appIdTable.add(new AcDbRegAppTableRecord(MLIGHTCAD_APPID))
     }
   }
 
@@ -1266,36 +1340,42 @@ export class AcDbDatabase extends AcDbObject {
     this.writeDxfTable(
       filer,
       'VPORT',
+      this.tables.viewportTable,
       this.tables.viewportTable.newIterator(),
       'VPORT'
     )
     this.writeDxfTable(
       filer,
       'LTYPE',
+      this.tables.linetypeTable,
       this.tables.linetypeTable.newIterator(),
       'LTYPE'
     )
     this.writeDxfTable(
       filer,
       'LAYER',
+      this.tables.layerTable,
       this.tables.layerTable.newIterator(),
       'LAYER'
     )
     this.writeDxfTable(
       filer,
       'STYLE',
+      this.tables.textStyleTable,
       this.tables.textStyleTable.newIterator(),
       'STYLE'
     )
     this.writeDxfTable(
       filer,
       'APPID',
+      this.tables.appIdTable,
       this.tables.appIdTable.newIterator(),
       'APPID'
     )
     this.writeDxfTable(
       filer,
       'DIMSTYLE',
+      this.tables.dimStyleTable,
       this.tables.dimStyleTable.newIterator(),
       'DIMSTYLE'
     )
@@ -1303,6 +1383,7 @@ export class AcDbDatabase extends AcDbObject {
       this.writeDxfTable(
         filer,
         'BLOCK_RECORD',
+        this.tables.blockTable,
         this.tables.blockTable.newIterator(),
         'BLOCK_RECORD'
       )
@@ -1313,7 +1394,7 @@ export class AcDbDatabase extends AcDbObject {
   private writeDxfBlocksSection(filer: AcDbDxfFiler) {
     filer.startSection('BLOCKS')
     for (const btr of this.tables.blockTable.newIterator()) {
-      btr.dxfOutBlockBegin(filer)
+        btr.dxfOutBlockBegin(filer)
 
       if (!btr.isModelSapce && !btr.isPaperSapce) {
         for (const entity of btr.newIterator()) {
@@ -1388,22 +1469,27 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
-  private writeDxfTable<TRecord extends AcDbObject>(
+  private writeDxfTable<
+    TRecord extends AcDbObject,
+    TTable extends AcDbSymbolTable
+  >(
     filer: AcDbDxfFiler,
     tableName: string,
+    table: TTable,
     records: Iterable<TRecord>,
     recordType: string
   ) {
     const items = [...records]
-    filer.startTable(tableName, items.length)
+    filer.startTable(tableName)
+    table.dxfOut(filer)
     for (const record of items) {
       if (
         recordType === 'BLOCK_RECORD' &&
         record instanceof AcDbBlockTableRecord
       ) {
-        record.dxfOutBlockRecord(filer)
-        continue
-      }
+          record.dxfOutBlockRecord(filer)
+          continue
+        }
 
       filer.writeStart(recordType)
       record.dxfOut(filer)
@@ -1412,7 +1498,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
-    filer.writeStart(entity.dxfEntityTypeName)
+    filer.writeStart(entity.dxfTypeName)
     entity.dxfOut(filer)
 
     if (entity instanceof AcDb2dPolyline) {
@@ -1428,6 +1514,7 @@ export class AcDbDatabase extends AcDbObject {
           y: entity.getPointAt(i).y,
           z: entity.elevation
         })
+        filer.writeDouble(42, entity.getBulgeAt(i))
         filer.writeInt16(70, 0)
       }
       filer.writeStart('SEQEND')

@@ -37,6 +37,10 @@ export class AcDbPoint extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Point'
 
+  override get dxfTypeName() {
+    return 'POINT'
+  }
+
   /** The underlying geometric point object */
   private _geo: AcGePoint3d
 

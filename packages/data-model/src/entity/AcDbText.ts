@@ -76,6 +76,10 @@ export class AcDbText extends AcDbEntity {
   /** The entity type name */
   static override typeName: string = 'Text'
 
+  override get dxfTypeName() {
+    return 'TEXT'
+  }
+
   /** The text string content */
   private _textString: string
   /** The thickness (extrusion) of the text */

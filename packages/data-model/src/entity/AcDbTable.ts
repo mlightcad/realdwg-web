@@ -40,7 +40,7 @@ export interface AcDbTableCell {
   /** Optional value indicating merged cell information */
   mergedValue?: number
   /** Optional auto-fit behavior setting */
-  autoFit?: number
+  autoFit?: boolean
   /** Optional border width for merged cells */
   borderWidth?: number
   /** Optional border height for merged cells */
@@ -49,6 +49,11 @@ export interface AcDbTableCell {
   overrideFlag?: number
   /** Optional virtual edge flag for cell borders */
   virtualEdgeFlag?: number
+  /** Optional border visibility overrides (cell-level) */
+  topBorderVisibility?: boolean
+  rightBorderVisibility?: boolean
+  bottomBorderVisibility?: boolean
+  leftBorderVisibility?: boolean
   /** Optional field object ID for text type cells */
   fieldObjetId?: string // only for text type cell
   /** Optional block table record ID for block type cells */
@@ -60,11 +65,47 @@ export interface AcDbTableCell {
   /** Optional array of attribute definition IDs */
   attrDefineId?: string[]
   /** Optional attribute text content */
-  attrText?: string
+  attrText?: string | string[]
   /** The height of text in the cell */
   textHeight: number
   /** Extended cell flags from AutoCAD 2007 and later */
   extendedCellFlags?: number // from AutoCAD 2007
+  /** Cell value block begin marker (from AutoCAD 2007) */
+  cellValueBlockBegin?: string
+}
+
+export interface AcDbTableBorderColors {
+  left?: number
+  top?: number
+  insideHorizontal?: number
+  bottom?: number
+  insideVertical?: number
+  right?: number
+}
+
+export interface AcDbTableCellTypeOverride {
+  textStyle?: string
+  textHeight?: number
+  alignment?: number
+  backgroundColor?: number
+  contentColor?: number
+  backgroundColorEnabled?: boolean
+  borderLineweights?: {
+    top?: number
+    right?: number
+    bottom?: number
+    left?: number
+    insideHorizontal?: number
+    insideVertical?: number
+  }
+  borderVisibility?: {
+    top?: boolean
+    right?: boolean
+    bottom?: boolean
+    left?: boolean
+    insideHorizontal?: boolean
+    insideVertical?: boolean
+  }
 }
 
 const tempVector = /*@__PURE__*/ new AcGeVector3d()
@@ -88,12 +129,55 @@ export class AcDbTable extends AcDbBlockReference {
   /** The entity type name */
   static override typeName: string = 'Table'
 
+  override get dxfTypeName() {
+    return 'ACAD_TABLE'
+  }
+
   private _attachmentPoint: AcGiMTextAttachmentPoint
   private _numRows: number
   private _numColumns: number
   private _rowHeight: number[]
   private _columnWidth: number[]
   private _cells: AcDbTableCell[]
+
+  /** Table data version number (DXF group code 280) */
+  tableDataVersion?: number
+  /** Hard pointer ID of the TABLESTYLE object (DXF group code 342) */
+  tableStyleId?: string
+  /** Hard pointer ID of the owning BLOCK record (DXF group code 343) */
+  owningBlockRecordId?: string
+  /** Horizontal direction vector (DXF group code 11,21,31) */
+  horizontalDirection?: AcGeVector3d
+  /** Flag for table value (DXF group code 90) */
+  tableValueFlag?: number
+  /** Flag for an override (DXF group code 93) */
+  tableOverrideFlag?: number
+  /** Flag for an override of border color (DXF group code 94) */
+  borderColorOverrideFlag?: number
+  /** Flag for an override of border lineweight (DXF group code 95) */
+  borderLineweightOverrideFlag?: number
+  /** Flag for an override of border visibility (DXF group code 96) */
+  borderVisibilityOverrideFlag?: number
+  /** Flow direction; table-level override (DXF group code 70) */
+  flowDirection?: number
+  /** Horizontal cell margin; table-level override (DXF group code 40) */
+  horizontalCellMargin?: number
+  /** Vertical cell margin; table-level override (DXF group code 41) */
+  verticalCellMargin?: number
+  /** Flag for whether the title is suppressed; table-level override (DXF group code 280) */
+  suppressTitle?: boolean
+  /** Flag for whether the header row is suppressed; table-level override (DXF group code 281) */
+  suppressHeader?: boolean
+  /** Table-level border colors (DXF group codes 63/64/65/66/68/69) */
+  tableBorderColors?: AcDbTableBorderColors
+  /** Table-level cell-type overrides (one entry per cell type) */
+  cellTypeOverrides?: AcDbTableCellTypeOverride[]
+  /** Standard/title/header row data type (DXF group code 97) */
+  rowDataTypes?: number[]
+  /** Standard/title/header row unit type (DXF group code 98) */
+  rowUnitTypes?: number[]
+  /** Standard/title/header row format string (DXF group code 4) */
+  rowFormats?: string[]
 
   /**
    * Creates a new table entity.
@@ -257,7 +341,8 @@ export class AcDbTable extends AcDbBlockReference {
    */
   // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
   textString(row: number, col: number, content?: number) {
-    return this._cells[row * col].text
+    const index = row * this._numColumns + col
+    return this._cells[index]?.text
   }
 
   /**
@@ -268,7 +353,17 @@ export class AcDbTable extends AcDbBlockReference {
    * @param text - Text string to set
    */
   setTextString(row: number, col: number, text: string) {
-    this._cells[row * col].text = text
+    const index = row * this._numColumns + col
+    if (!this._cells[index]) {
+      this._cells[index] = {
+        text,
+        attachmentPoint: this._attachmentPoint,
+        cellType: 1,
+        textHeight: 0
+      }
+      return
+    }
+    this._cells[index].text = text
   }
 
   /**
@@ -279,7 +374,8 @@ export class AcDbTable extends AcDbBlockReference {
    * @returns True if the content of the specified cell is empty, false otherwise
    */
   isEmpty(row: number, col: number) {
-    return !this._cells[row * col].text
+    const index = row * this._numColumns + col
+    return !this._cells[index]?.text
   }
 
   /**
@@ -627,6 +723,21 @@ export class AcDbTable extends AcDbBlockReference {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbTable')
+
+    const version =
+      filer.version ?? filer.database?.version ?? this.database?.version
+    const is2007OrLater = version?.value != null ? version.value >= 27 : false
+
+    filer.writeInt16(280, this.tableDataVersion)
+    filer.writeObjectId(342, this.tableStyleId)
+    filer.writeObjectId(343, this.owningBlockRecordId)
+    filer.writeVector3d(11, this.horizontalDirection)
+    filer.writeUInt32(90, this.tableValueFlag)
+    filer.writeUInt32(93, this.tableOverrideFlag)
+    filer.writeUInt32(94, this.borderColorOverrideFlag)
+    filer.writeUInt32(95, this.borderLineweightOverrideFlag)
+    filer.writeUInt32(96, this.borderVisibilityOverrideFlag)
+
     filer.writeInt16(71, this.attachmentPoint)
     filer.writeInt32(91, this.numRows)
     filer.writeInt32(92, this.numColumns)
@@ -636,7 +747,199 @@ export class AcDbTable extends AcDbBlockReference {
     for (let i = 0; i < this.numColumns; ++i) {
       filer.writeDouble(142, this.columnWidth(i))
     }
+
+    const totalCells =
+      this._cells.length > 0
+        ? this._cells.length
+        : this.numRows * this.numColumns
+    for (let i = 0; i < totalCells; i++) {
+      const cell = this._cells[i]
+      const cellType = cell?.cellType ?? (cell?.blockTableRecordId ? 2 : 1)
+      filer.writeInt16(171, cellType)
+      filer.writeInt16(172, cell?.flagValue ?? 0)
+      filer.writeInt16(173, cell?.mergedValue ?? 0)
+      filer.writeBoolean(174, cell?.autoFit)
+      filer.writeInt16(175, cell?.borderWidth)
+      filer.writeInt16(176, cell?.borderHeight)
+      if (cell?.overrideFlag != null) {
+        if (is2007OrLater) {
+          filer.writeInt32(91, cell.overrideFlag)
+        } else {
+          filer.writeInt16(177, cell.overrideFlag)
+        }
+      }
+      filer.writeInt16(178, cell?.virtualEdgeFlag)
+      filer.writeAngle(145, cell?.rotation)
+      if (is2007OrLater) {
+        filer.writeInt16(92, cell?.extendedCellFlags)
+      }
+
+      if (cellType === 1) {
+        if (cell?.fieldObjetId) {
+          filer.writeObjectId(344, cell.fieldObjetId)
+        } else {
+          this.writeCellText(
+            filer,
+            cell?.text ?? '',
+            is2007OrLater,
+            cell?.cellValueBlockBegin
+          )
+        }
+      } else if (cellType === 2) {
+        filer.writeObjectId(340, cell?.blockTableRecordId)
+        filer.writeDouble(144, cell?.blockScale)
+        filer.writeInt16(179, cell?.blockAttrNum)
+        if (cell?.attrDefineId?.length) {
+          for (const attrId of cell.attrDefineId) {
+            filer.writeObjectId(331, attrId)
+          }
+        }
+        if (cell?.attrText != null) {
+          if (Array.isArray(cell.attrText)) {
+            for (const text of cell.attrText) {
+              filer.writeString(300, text)
+            }
+          } else {
+            filer.writeString(300, cell.attrText)
+          }
+        }
+      }
+
+      if (cell?.textStyle) {
+        filer.writeString(7, cell.textStyle)
+      }
+      if (cell?.textHeight != null) {
+        filer.writeDouble(140, cell.textHeight)
+      }
+      if (cell?.attachmentPoint != null) {
+        filer.writeInt16(170, cell.attachmentPoint)
+      }
+      if (cell?.topBorderVisibility != null) {
+        filer.writeInt16(289, cell.topBorderVisibility ? 1 : 0)
+      }
+      if (cell?.rightBorderVisibility != null) {
+        filer.writeInt16(285, cell.rightBorderVisibility ? 1 : 0)
+      }
+      if (cell?.bottomBorderVisibility != null) {
+        filer.writeInt16(286, cell.bottomBorderVisibility ? 1 : 0)
+      }
+      if (cell?.leftBorderVisibility != null) {
+        filer.writeInt16(288, cell.leftBorderVisibility ? 1 : 0)
+      }
+    }
+
+    filer.writeInt16(70, this.flowDirection)
+    filer.writeDouble(40, this.horizontalCellMargin)
+    filer.writeDouble(41, this.verticalCellMargin)
+    if (this.suppressTitle != null) {
+      filer.writeInt16(280, this.suppressTitle ? 1 : 0)
+    }
+    if (this.suppressHeader != null) {
+      filer.writeInt16(281, this.suppressHeader ? 1 : 0)
+    }
+
+    if (this.cellTypeOverrides?.length) {
+      for (const override of this.cellTypeOverrides) {
+        filer.writeString(7, override.textStyle)
+        filer.writeDouble(140, override.textHeight)
+        filer.writeInt16(170, override.alignment)
+        filer.writeInt16(63, override.backgroundColor)
+        filer.writeInt16(64, override.contentColor)
+        if (override.backgroundColorEnabled != null) {
+          filer.writeInt16(283, override.backgroundColorEnabled ? 1 : 0)
+        }
+        const lw = override.borderLineweights
+        if (lw) {
+          filer.writeInt16(274, lw.top)
+          filer.writeInt16(275, lw.right)
+          filer.writeInt16(276, lw.bottom)
+          filer.writeInt16(277, lw.left)
+          filer.writeInt16(278, lw.insideHorizontal)
+          filer.writeInt16(279, lw.insideVertical)
+        }
+        const vis = override.borderVisibility
+        if (vis) {
+          filer.writeInt16(284, vis.top ? 1 : 0)
+          filer.writeInt16(285, vis.right ? 1 : 0)
+          filer.writeInt16(286, vis.bottom ? 1 : 0)
+          filer.writeInt16(287, vis.left ? 1 : 0)
+          filer.writeInt16(288, vis.insideHorizontal ? 1 : 0)
+          filer.writeInt16(289, vis.insideVertical ? 1 : 0)
+        }
+      }
+    }
+
+    if (this.tableBorderColors) {
+      filer.writeInt16(63, this.tableBorderColors.left)
+      filer.writeInt16(64, this.tableBorderColors.top)
+      filer.writeInt16(65, this.tableBorderColors.insideHorizontal)
+      filer.writeInt16(66, this.tableBorderColors.bottom)
+      filer.writeInt16(68, this.tableBorderColors.insideVertical)
+      filer.writeInt16(69, this.tableBorderColors.right)
+    }
+
+    if (this.rowDataTypes?.length) {
+      for (const dataType of this.rowDataTypes) {
+        filer.writeInt16(97, dataType)
+      }
+    }
+    if (this.rowUnitTypes?.length) {
+      for (const unitType of this.rowUnitTypes) {
+        filer.writeInt16(98, unitType)
+      }
+    }
+    if (this.rowFormats?.length) {
+      for (const format of this.rowFormats) {
+        filer.writeString(4, format)
+      }
+    }
     return this
+  }
+
+  private writeCellText(
+    filer: AcDbDxfFiler,
+    text: string,
+    is2007OrLater: boolean,
+    cellValueBlockBegin?: string
+  ) {
+    const chunkSize = 250
+    if (!is2007OrLater) {
+      if (text.length <= chunkSize) {
+        filer.writeString(1, text)
+        return
+      }
+      const chunks = Math.ceil(text.length / chunkSize)
+      for (let i = 0; i < chunks; i++) {
+        const start = i * chunkSize
+        const end = start + chunkSize
+        const chunk = text.slice(start, end)
+        if (i === chunks - 1) {
+          filer.writeString(1, chunk)
+        } else {
+          filer.writeString(2, chunk)
+        }
+      }
+      return
+    }
+
+    filer.writeString(301, cellValueBlockBegin ?? 'CELL_VALUE')
+    if (text.length <= chunkSize) {
+      filer.writeString(302, text)
+      filer.writeString(304, 'ACVALUE_END')
+      return
+    }
+    const chunks = Math.ceil(text.length / chunkSize)
+    for (let i = 0; i < chunks; i++) {
+      const start = i * chunkSize
+      const end = start + chunkSize
+      const chunk = text.slice(start, end)
+      if (i === chunks - 1) {
+        filer.writeString(302, chunk)
+      } else {
+        filer.writeString(303, chunk)
+      }
+    }
+    filer.writeString(304, 'ACVALUE_END')
   }
 }
 

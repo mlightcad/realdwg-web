@@ -1,6 +1,7 @@
 import {
   AcCmColor,
   AcDbBatchProcessing,
+  AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbConversionProgressCallback,
   AcDbDatabase,
@@ -234,7 +235,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimaunit: item.DIMAUNIT,
         dimfrac: item.DIMFRAC,
         dimlunit: item.DIMLUNIT,
-        dimdsep: item.DIMDSEP,
+        dimdsep: item.DIMDSEP || '.',
         dimtmove: item.DIMTMOVE || 0,
         dimjust: item.DIMJUST as unknown as AcDbDimTextHorizontal.Center,
         dimsd1: item.DIMSD1,
@@ -396,6 +397,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.ownerId = btr.ownerHandle
         dbBlock.origin.copy(btr.basePoint)
         dbBlock.layoutId = btr.layout
+        dbBlock.blockInsertUnits = btr.insertionUnits
+        dbBlock.explodability = btr.explodability
+        dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
+        if (btr.bmpPreview) {
+          dbBlock.bmpPreview = btr.bmpPreview
+        }
         db.tables.blockTable.add(dbBlock)
       }
 

@@ -4,10 +4,13 @@ import { AcDbAttribute } from '../src/entity/AcDbAttribute'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
+import { AcDbTable } from '../src/entity/AcDbTable'
 import { AcDbText } from '../src/entity/AcDbText'
 import { AcDbLayout } from '../src/object/layout/AcDbLayout'
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGeVector3d } from '@mlightcad/geometry-engine'
+import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
 interface DxfPair {
   code: string
@@ -311,5 +314,57 @@ describe('AcDbDatabase.dxfOut', () => {
       )
     })
     expect(blocksPaperLine).toBeUndefined()
+  })
+
+  it('exports table cells with text content using 2007+ cell value blocks', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+
+    const table = new AcDbTable('TEST_TABLE', 2, 2)
+    table.tableDataVersion = 5
+    table.tableStyleId = 'EE'
+    table.owningBlockRecordId = db.tables.blockTable.modelSpace.objectId
+    table.horizontalDirection = new AcGeVector3d(1, 0, 0)
+    table.tableValueFlag = 22
+    table.attachmentPoint = AcGiMTextAttachmentPoint.TopLeft
+    table.position = new AcGePoint3d(0, 0, 0)
+
+    table.setRowHeight(0, 11)
+    table.setRowHeight(1, 9)
+    table.setColumnWidth(0, 63.5)
+    table.setColumnWidth(1, 63.5)
+
+    const cellDefaults = {
+      attachmentPoint: AcGiMTextAttachmentPoint.TopLeft,
+      cellType: 1,
+      textHeight: 6
+    }
+    table.setCell(0, { ...cellDefaults, text: 'A1' })
+    table.setCell(1, { ...cellDefaults, text: 'A2' })
+    table.setCell(2, { ...cellDefaults, text: 'B1' })
+    table.setCell(3, { ...cellDefaults, text: 'B2' })
+
+    db.tables.blockTable.modelSpace.appendEntity(table)
+
+    const entities = parseRecords(
+      getSection(db.dxfOut(undefined, 6, 'AC1021'), 'ENTITIES')
+    )
+    const tableRecord = findRecord(entities, 'ACAD_TABLE')
+    expect(tableRecord).toBeDefined()
+    expect(valuesByCode(tableRecord!, '100')).toContain('AcDbTable')
+    expect(valuesByCode(tableRecord!, '91')).toContain('2')
+    expect(valuesByCode(tableRecord!, '92')).toContain('2')
+    expect(valuesByCode(tableRecord!, '141')).toEqual(['11', '9'])
+    expect(valuesByCode(tableRecord!, '142')).toEqual(['63.5', '63.5'])
+    expect(valuesByCode(tableRecord!, '171')).toEqual(['1', '1', '1', '1'])
+    expect(valuesByCode(tableRecord!, '301')).toEqual([
+      'CELL_VALUE',
+      'CELL_VALUE',
+      'CELL_VALUE',
+      'CELL_VALUE'
+    ])
+    expect(valuesByCode(tableRecord!, '302')).toEqual(['A1', 'A2', 'B1', 'B2'])
+    expect(valuesByCode(tableRecord!, '140')).toEqual(['6', '6', '6', '6'])
+    expect(valuesByCode(tableRecord!, '170')).toEqual(['1', '1', '1', '1'])
   })
 })

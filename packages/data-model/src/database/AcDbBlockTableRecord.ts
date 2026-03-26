@@ -4,6 +4,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**
@@ -24,6 +25,11 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  * blockRecord.appendEntity(new AcDbLine());
  * ```
  */
+export enum AcDbBlockScaling {
+  Any,
+  Uniform
+}
+
 export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   /** Name constant for model space block table record */
   static MODEL_SPACE_NAME = '*Model_Space'
@@ -36,6 +42,14 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   private _layoutId: AcDbObjectId
   /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
+  /** Block insertion units (DXF group code 70) */
+  private _blockInsertUnits: AcDbUnitsValue
+  /** Block explodability flag (DXF group code 280) */
+  private _explodability: number
+  /** Block scalability flag (DXF group code 281) */
+  private _blockScaling: AcDbBlockScaling
+  /** Binary data for bitmap preview (DXF group code 310, optional) */
+  private _bmpPreview?: string
 
   /**
    * Returns true if the specified name is the name of the model space block table record.
@@ -92,6 +106,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     this._origin = new AcGePoint3d()
     this._layoutId = ''
     this._entities = new Map<string, AcDbEntity>()
+    this._blockInsertUnits = 0
+    this._explodability = 1
+    this._blockScaling = AcDbBlockScaling.Uniform
+    this._bmpPreview = undefined
   }
 
   /**
@@ -175,6 +193,62 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   }
 
   /**
+   * Gets or sets the block insertion units.
+   *
+   * This corresponds to DXF group code 70 in BLOCK_RECORD entries.
+   *
+   * @returns The insertion units value
+   */
+  get blockInsertUnits() {
+    return this._blockInsertUnits
+  }
+  set blockInsertUnits(value: AcDbUnitsValue) {
+    this._blockInsertUnits = value
+  }
+
+  /**
+   * Gets or sets the block explodability flag.
+   *
+   * This corresponds to DXF group code 280 in BLOCK_RECORD entries.
+   *
+   * @returns The explodability value
+   */
+  get explodability() {
+    return this._explodability
+  }
+  set explodability(value: number) {
+    this._explodability = value
+  }
+
+  /**
+   * Gets or sets the block scalability flag.
+   *
+   * This corresponds to DXF group code 281 in BLOCK_RECORD entries.
+   *
+   * @returns The scalability value
+   */
+  get blockScaling() {
+    return this._blockScaling
+  }
+  set blockScaling(value: AcDbBlockScaling) {
+    this._blockScaling = value
+  }
+
+  /**
+   * Gets or sets the bitmap preview data.
+   *
+   * This corresponds to DXF group code 310 in BLOCK_RECORD entries.
+   *
+   * @returns The bitmap preview data
+   */
+  get bmpPreview() {
+    return this._bmpPreview
+  }
+  set bmpPreview(value: string | undefined) {
+    this._bmpPreview = value
+  }
+
+  /**
    * Appends the specified entity or entities to this block table record.
    *
    * This method adds an entity to the block and sets up the necessary
@@ -189,19 +263,20 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   appendEntity(entity: AcDbEntity | AcDbEntity[]) {
+    const commitEntity = (item: AcDbEntity) => {
+      item.database = this.database
+      item.ownerId = this.objectId
+      this.database.commitObjectHandle(item, id => this._entities.has(id))
+      item.resolveEffectiveProperties()
+      this._entities.set(item.objectId, item)
+    }
+
     if (Array.isArray(entity)) {
       for (let i = 0; i < entity.length; ++i) {
-        const item = entity[i]
-        item.database = this.database
-        item.ownerId = this.objectId
-        item.resolveEffectiveProperties()
-        this._entities.set(item.objectId, item)
+        commitEntity(entity[i])
       }
     } else {
-      entity.database = this.database
-      entity.ownerId = this.objectId
-      entity.resolveEffectiveProperties()
-      this._entities.set(entity.objectId, entity)
+      commitEntity(entity)
     }
 
     // When creating one block, it will also go to this function. But we don't want `entityAppended` event
@@ -284,11 +359,15 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   dxfOutBlockBegin(filer: AcDbDxfFiler) {
     filer.writeStart('BLOCK')
-    filer.writeHandle(5, `BLOCK:${this.objectId}`)
+    // DWG/DXF parser doesn't parse AcDbBlockBegin and AcDbBlockEnd.
+    // There is no handle data avaiable for AcDbBlockBegin. So generate
+    // one new handle dynamically.
+    filer.writeHandle(5, this.database.generateHandle())
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
-    filer.writeSubclassMarker('AcDbBlockBegin')
+    // TODO: Assign the correct layer name
     filer.writeString(8, '0')
+    filer.writeSubclassMarker('AcDbBlockBegin')
     filer.writeString(2, this.name)
     filer.writeInt16(70, 0)
     filer.writePoint3d(10, this.origin)
@@ -298,7 +377,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
 
   dxfOutBlockEnd(filer: AcDbDxfFiler) {
     filer.writeStart('ENDBLK')
-    filer.writeHandle(5, `ENDBLK:${this.objectId}`)
+    // DWG/DXF parser doesn't parse AcDbBlockBegin and AcDbBlockEnd.
+    // There is no handle data avaiable for AcDbBlockBegin. So generate
+    // one new handle dynamically.
+    filer.writeHandle(5, this.database.generateHandle())
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
     filer.writeSubclassMarker('AcDbBlockEnd')
@@ -309,8 +391,14 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockTableRecord')
     filer.writeString(2, this.name)
-    filer.writeInt16(70, 0)
-    filer.writeObjectId(340, this.layoutId)
+    filer.writeInt16(70, this.blockInsertUnits)
+    filer.writeInt16(280, this.explodability)
+    filer.writeInt16(281, this.blockScaling)
+    // TODO: Oupput preview bitmap with the correct format
+    // filer.writeString(310, this.bmpPreview)
+    if (this.isModelSapce || this.isPaperSapce) {
+      filer.writeObjectId(340, this.layoutId)
+    }
     return this
   }
 }
