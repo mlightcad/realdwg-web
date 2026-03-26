@@ -644,6 +644,37 @@ export class AcDbBlockReference extends AcDbEntity {
     }
   }
 
+  /**
+   * Writes the INSERT entity record and any attached ATTRIB/SEQEND records.
+   *
+   * @param filer - DXF output writer.
+   * @param allXdata - When true, emits all XData attached to this entity.
+   * @returns The entity instance (for chaining).
+   */
+  /**
+   * Writes this object to the DXF output.
+   *
+   * @param filer - DXF output writer.
+   * @param allXdata - When true, emits all XData attached to this object.
+   * @returns The instance (for chaining).
+   */
+  override dxfOut(filer: AcDbDxfFiler, allXdata = false) {
+    super.dxfOut(filer, allXdata)
+    let hasAttributes = false
+    for (const attrib of this.attributeIterator()) {
+      hasAttributes = true
+      filer.writeStart('ATTRIB')
+      attrib.dxfOut(filer)
+    }
+    if (hasAttributes) {
+      filer.writeStart('SEQEND')
+      filer.writeHandle(5, this.database.generateHandle())
+      filer.writeObjectId(330, this.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+    }
+    return this
+  }
+
   private subEntityGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
     pickPoint: AcGePoint3dLike,
@@ -677,6 +708,12 @@ export class AcDbBlockReference extends AcDbEntity {
     }
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockReference')

@@ -239,6 +239,12 @@ export class AcDbFace extends AcDbEntity {
     return renderer.lineSegments(buffer, 3, indices)
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     const p0 = this.getVertexAt(0)

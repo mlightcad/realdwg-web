@@ -476,6 +476,15 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   /**
    * Writes the common DXF wrapper for this object and then delegates the
    * object-specific payload to {@link dxfOutFields}.
+   *
+   * @param filer - DXF output writer.
+   * @param allXdata - When true, emits all XData attached to this object.
+   * @returns The object instance (for chaining).
+   */
+  /**
+   * Writes this object to the DXF output.
+   *
+   * @returns The instance (for chaining).
    */
   dxfOut(...args: unknown[]): unknown {
     const [filer, allXdata = false] = args as [
@@ -501,6 +510,15 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    *
    * Subclasses should override this method and call `super.dxfOutFields(filer)`
    * first so the subclass markers remain consistent.
+   *
+   * @param _filer - DXF output writer.
+   * @returns The object instance (for chaining).
+   */
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
    */
   dxfOutFields(_filer: AcDbDxfFiler) {
     // For better downstream compatibility, the object-level marker (AcDbObject) is omitted.

@@ -1,7 +1,3 @@
-import { AcCmColor } from '@mlightcad/common'
-import { AcGiLineWeight } from '@mlightcad/graphic-interface'
-
-import { DEFAULT_LINE_TYPE } from '../misc'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbLayerTableRecord } from './AcDbLayerTableRecord'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
@@ -38,18 +34,6 @@ export class AcDbLayerTable extends AcDbSymbolTable<AcDbLayerTableRecord> {
    */
   constructor(db: AcDbDatabase) {
     super(db)
-    // The empty database should have one layer named '0'
-    const defaultColor = new AcCmColor()
-    const layer0 = new AcDbLayerTableRecord({
-      name: '0',
-      standardFlags: 0,
-      linetype: DEFAULT_LINE_TYPE,
-      lineWeight: AcGiLineWeight.ByLineWeightDefault,
-      isOff: false,
-      color: defaultColor,
-      isPlottable: true
-    })
-    this.add(layer0)
   }
 
   /**

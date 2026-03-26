@@ -415,6 +415,12 @@ export class AcDbCircle extends AcDbCurve {
     return renderer.circularArc(this._geo)
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbCircle')

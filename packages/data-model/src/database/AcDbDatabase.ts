@@ -9,12 +9,7 @@ import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
-import {
-  AcDb2dPolyline,
-  AcDb3dPolyline,
-  AcDbBlockReference,
-  AcDbEntity
-} from '../entity'
+import { AcDbEntity } from '../entity'
 import {
   ACAD_APPID,
   AcDbAngleUnits,
@@ -1102,6 +1097,16 @@ export class AcDbDatabase extends AcDbObject {
    * The `fileName` parameter is kept for ObjectARX API parity. In this web
    * implementation the method returns the DXF payload instead of writing the
    * filesystem directly.
+   *
+   * This is the top-level DXF export entry point. It emits the sectioned
+   * structure in the canonical order: HEADER, TABLES, BLOCKS, ENTITIES,
+   * OBJECTS, and EOF.
+   *
+   * @param _fileName - Kept for ObjectARX parity. Ignored in this implementation.
+   * @param precision - Numeric precision used by the DXF filer.
+   * @param version - Target DXF/DWG version name or value.
+   * @param _saveThumbnailImage - Kept for ObjectARX parity. Ignored here.
+   * @returns The serialized DXF contents.
    */
   dxfOut(
     _fileName?: string,
@@ -1304,6 +1309,11 @@ export class AcDbDatabase extends AcDbObject {
     }
   }
 
+  /**
+   * Writes the HEADER section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   */
   private writeDxfHeaderSection(filer: AcDbDxfFiler) {
     filer.startSection('HEADER')
     filer.writeString(9, '$ACADVER')
@@ -1335,6 +1345,12 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
+  /**
+   * Writes the TABLES section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   * @param version - Target DXF/DWG version, used for conditional tables.
+   */
   private writeDxfTablesSection(filer: AcDbDxfFiler, version: AcDbDwgVersion) {
     filer.startSection('TABLES')
     this.writeDxfTable(
@@ -1391,10 +1407,15 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
+  /**
+   * Writes the BLOCKS section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   */
   private writeDxfBlocksSection(filer: AcDbDxfFiler) {
     filer.startSection('BLOCKS')
     for (const btr of this.tables.blockTable.newIterator()) {
-        btr.dxfOutBlockBegin(filer)
+      btr.dxfOutBlockBegin(filer)
 
       if (!btr.isModelSapce && !btr.isPaperSapce) {
         for (const entity of btr.newIterator()) {
@@ -1407,6 +1428,11 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
+  /**
+   * Writes the ENTITIES section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   */
   private writeDxfEntitiesSection(filer: AcDbDxfFiler) {
     filer.startSection('ENTITIES')
     for (const btr of this.tables.blockTable.newIterator()) {
@@ -1418,6 +1444,11 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
+  /**
+   * Writes the OBJECTS section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   */
   private writeDxfObjectsSection(filer: AcDbDxfFiler) {
     filer.startSection('OBJECTS')
     this.objects.layout.ownerId = this.objects.dictionary.objectId
@@ -1469,6 +1500,15 @@ export class AcDbDatabase extends AcDbObject {
     filer.endSection()
   }
 
+  /**
+   * Writes a single TABLE and its records into the TABLES section.
+   *
+   * @param filer - DXF output writer.
+   * @param tableName - DXF table name (e.g. LAYER, LTYPE).
+   * @param table - The symbol table instance.
+   * @param records - Records to serialize.
+   * @param recordType - DXF record type name for each table record.
+   */
   private writeDxfTable<
     TRecord extends AcDbObject,
     TTable extends AcDbSymbolTable
@@ -1487,9 +1527,9 @@ export class AcDbDatabase extends AcDbObject {
         recordType === 'BLOCK_RECORD' &&
         record instanceof AcDbBlockTableRecord
       ) {
-          record.dxfOutBlockRecord(filer)
-          continue
-        }
+        record.dxfOutBlockRecord(filer)
+        continue
+      }
 
       filer.writeStart(recordType)
       record.dxfOut(filer)
@@ -1497,70 +1537,19 @@ export class AcDbDatabase extends AcDbObject {
     filer.endTable()
   }
 
+  /**
+   * Writes a single entity record into the DXF stream.
+   *
+   * The entity is responsible for emitting any additional records (such as
+   * VERTEX/SEQEND for polylines or ATTRIB/SEQEND for block references) inside
+   * its own `dxfOut` override.
+   *
+   * @param filer - DXF output writer.
+   * @param entity - Entity to serialize.
+   */
   private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
     filer.writeStart(entity.dxfTypeName)
     entity.dxfOut(filer)
-
-    if (entity instanceof AcDb2dPolyline) {
-      for (let i = 0; i < entity.numberOfVertices; ++i) {
-        filer.writeStart('VERTEX')
-        filer.writeHandle(5, `VERTEX:${entity.objectId}:${i}`)
-        filer.writeObjectId(330, entity.objectId)
-        filer.writeSubclassMarker('AcDbEntity')
-        filer.writeSubclassMarker('AcDbVertex')
-        filer.writeSubclassMarker('AcDb2dVertex')
-        filer.writePoint3d(10, {
-          x: entity.getPointAt(i).x,
-          y: entity.getPointAt(i).y,
-          z: entity.elevation
-        })
-        filer.writeDouble(42, entity.getBulgeAt(i))
-        filer.writeInt16(70, 0)
-      }
-      filer.writeStart('SEQEND')
-      filer.writeHandle(5, `SEQEND:${entity.objectId}`)
-      filer.writeObjectId(330, entity.objectId)
-      filer.writeSubclassMarker('AcDbEntity')
-      return
-    }
-
-    if (entity instanceof AcDb3dPolyline) {
-      for (let i = 0; i < entity.numberOfVertices; ++i) {
-        const point = entity.getPointAt(i)
-        filer.writeStart('VERTEX')
-        filer.writeHandle(5, `VERTEX:${entity.objectId}:${i}`)
-        filer.writeObjectId(330, entity.objectId)
-        filer.writeSubclassMarker('AcDbEntity')
-        filer.writeSubclassMarker('AcDbVertex')
-        filer.writeSubclassMarker('AcDb3dPolylineVertex')
-        filer.writePoint3d(10, {
-          x: point.x,
-          y: point.y,
-          z: 0
-        })
-        filer.writeInt16(70, 32)
-      }
-      filer.writeStart('SEQEND')
-      filer.writeHandle(5, `SEQEND:${entity.objectId}`)
-      filer.writeObjectId(330, entity.objectId)
-      filer.writeSubclassMarker('AcDbEntity')
-      return
-    }
-
-    if (entity instanceof AcDbBlockReference) {
-      let hasAttributes = false
-      for (const attrib of entity.attributeIterator()) {
-        hasAttributes = true
-        filer.writeStart('ATTRIB')
-        attrib.dxfOut(filer)
-      }
-      if (hasAttributes) {
-        filer.writeStart('SEQEND')
-        filer.writeHandle(5, `SEQEND:${entity.objectId}`)
-        filer.writeObjectId(330, entity.objectId)
-        filer.writeSubclassMarker('AcDbEntity')
-      }
-    }
   }
 
   /**

@@ -518,6 +518,12 @@ export class AcDbEllipse extends AcDbCurve {
     return renderer.ellipticalArc(this._geo)
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbEllipse')
