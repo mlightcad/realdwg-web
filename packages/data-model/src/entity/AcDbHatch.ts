@@ -377,6 +377,12 @@ export class AcDbHatch extends AcDbEntity {
     return renderer.area(this._geo)
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     const loops = this._geo.loops

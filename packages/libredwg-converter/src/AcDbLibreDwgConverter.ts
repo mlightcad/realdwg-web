@@ -538,6 +538,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       const dbLayout = new AcDbLayout()
       dbLayout.layoutName = layout.layoutName
       dbLayout.tabOrder = layout.tabOrder
+
       // layout.paperSpaceTableId doesn't point to the block table record asscicated with
       // this layout. So let's get the assocated block table record id from block table.
       const btrs = db.tables.blockTable.newIterator()
@@ -562,6 +563,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       dbLayout.limits.max.copy(layout.maxLimit)
       dbLayout.extents.min.copy(layout.minExtent)
       dbLayout.extents.max.copy(layout.maxExtent)
+      if (layout.viewportId) {
+        dbLayout.viewportArray.push(layout.viewportId)
+      }
       this.processCommonObjectAttrs(layout, dbLayout)
       layoutDict.setAt(dbLayout.layoutName, dbLayout)
     })

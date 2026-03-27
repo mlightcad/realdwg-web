@@ -335,6 +335,20 @@ export abstract class AcDbEntity extends AcDbObject {
     this._transparency = value.clone()
   }
 
+  /**
+   * Writes common entity-level DXF fields (layer, linetype, color, etc.).
+   *
+   * Subclasses should call this first, then write their own fields.
+   *
+   * @param filer - DXF output writer.
+   * @returns The entity instance (for chaining).
+   */
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     // For better downstream compatibility, emit only the entity-level subclass
     // marker here. The object-level marker (AcDbObject) is omitted for entities.

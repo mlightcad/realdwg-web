@@ -276,6 +276,58 @@ export class AcDb3dPolyline extends AcDbCurve {
     return renderer.lines(points)
   }
 
+  /**
+   * Writes the DXF record for the polyline, plus VERTEX/SEQEND records.
+   *
+   * The extra records are required by the legacy POLYLINE entity format.
+   *
+   * @param filer - DXF output writer.
+   * @param allXdata - When true, emits all XData attached to this entity.
+   * @returns The entity instance (for chaining).
+   */
+  /**
+   * Writes this object to the DXF output.
+   *
+   * @param filer - DXF output writer.
+   * @param allXdata - When true, emits all XData attached to this object.
+   * @returns The instance (for chaining).
+   */
+  override dxfOut(filer: AcDbDxfFiler, allXdata = false) {
+    super.dxfOut(filer, allXdata)
+    for (let i = 0; i < this.numberOfVertices; ++i) {
+      const point = this.getPointAt(i)
+      filer.writeStart('VERTEX')
+      filer.writeHandle(5, this.database.generateHandle())
+      filer.writeObjectId(330, this.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      filer.writeSubclassMarker('AcDbVertex')
+      filer.writeSubclassMarker('AcDb3dPolylineVertex')
+      filer.writePoint3d(10, {
+        x: point.x,
+        y: point.y,
+        z: 0
+      })
+      filer.writeInt16(70, 32)
+    }
+    filer.writeStart('SEQEND')
+    filer.writeHandle(5, this.database.generateHandle())
+    filer.writeObjectId(330, this.objectId)
+    filer.writeSubclassMarker('AcDbEntity')
+    return this
+  }
+
+  /**
+   * Writes the POLYLINE entity fields (header) for a 3D polyline.
+   *
+   * @param filer - DXF output writer.
+   * @returns The entity instance (for chaining).
+   */
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDb3dPolyline')

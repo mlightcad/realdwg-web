@@ -351,12 +351,24 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     return this._entities.get(id)
   }
 
+  /**
+   * Writes the BLOCK_RECORD table entry for this block table record.
+   *
+   * @param filer - DXF output writer.
+   * @returns The block table record instance (for chaining).
+   */
   dxfOutBlockRecord(filer: AcDbDxfFiler) {
     filer.writeStart('BLOCK_RECORD')
     this.dxfOut(filer)
     return this
   }
 
+  /**
+   * Writes the BLOCK entity that begins a block definition in the BLOCKS section.
+   *
+   * @param filer - DXF output writer.
+   * @returns The block table record instance (for chaining).
+   */
   dxfOutBlockBegin(filer: AcDbDxfFiler) {
     filer.writeStart('BLOCK')
     // DWG/DXF parser doesn't parse AcDbBlockBegin and AcDbBlockEnd.
@@ -375,6 +387,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     return this
   }
 
+  /**
+   * Writes the ENDBLK entity that terminates a block definition.
+   *
+   * @param filer - DXF output writer.
+   * @returns The block table record instance (for chaining).
+   */
   dxfOutBlockEnd(filer: AcDbDxfFiler) {
     filer.writeStart('ENDBLK')
     // DWG/DXF parser doesn't parse AcDbBlockBegin and AcDbBlockEnd.
@@ -387,6 +405,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     return this
   }
 
+  /**
+   * Writes the BLOCK_RECORD fields for this block table record.
+   *
+   * @param filer - DXF output writer.
+   * @returns The block table record instance (for chaining).
+   */
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockTableRecord')

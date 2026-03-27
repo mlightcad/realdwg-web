@@ -31,6 +31,8 @@ export class AcDbLayout extends AcDbPlotSettings {
   private _limits: AcGeBox2d
   /** The current extents setting of the layout */
   private _extents: AcGeBox3d
+  /** Object IDs for viewports in this layout (paperspace). */
+  private _viewportArray: string[]
 
   /**
    * Creates a new AcDbLayout instance.
@@ -48,6 +50,7 @@ export class AcDbLayout extends AcDbPlotSettings {
     this._layoutName = ''
     this._limits = new AcGeBox2d()
     this._extents = new AcGeBox3d()
+    this._viewportArray = []
   }
 
   /**
@@ -235,13 +238,37 @@ export class AcDbLayout extends AcDbPlotSettings {
     this._extents.copy(value)
   }
 
+  /**
+   * Gets the paperspace viewport object IDs for this layout.
+   */
+  get viewportArray() {
+    return this._viewportArray
+  }
+
+  /**
+   * Sets the paperspace viewport object IDs for this layout.
+   */
+  set viewportArray(value: string[]) {
+    this._viewportArray = value.slice()
+  }
+
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbLayout')
     filer.writeString(1, this.layoutName)
     filer.writeInt16(70, this.tabSelected ? 1 : 0)
     filer.writeInt16(71, this.tabOrder)
+    // 330 - ID/handle to this layout's associated paper space block table record
     filer.writeObjectId(330, this.blockTableRecordId)
+    // 331 - ID/handle to the viewport that was last active in this layout when the layout was current
+    // TODO: Not sure passing 0 is the correct behavior if viewport array is empty
+    filer.writeObjectId(331, this._viewportArray.length > 0 ? this._viewportArray[0] : '0')
     filer.writePoint2d(10, this.limits.min)
     filer.writePoint2d(11, this.limits.max)
     filer.writePoint3d(14, this.extents.min)

@@ -12,6 +12,12 @@ export class AcDbRegAppTableRecord extends AcDbSymbolTableRecord {
     this.name = name
   }
 
+  /**
+   * Writes DXF fields for this object.
+   *
+   * @param filer - DXF output writer.
+   * @returns The instance (for chaining).
+   */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbRegAppTableRecord')
