@@ -38,6 +38,7 @@ import { AcDbLinetypeTable } from './AcDbLinetypeTable'
 import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
 import { AcDbTextStyleTable } from './AcDbTextStyleTable'
 import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
+import { AcDbViewTable } from './AcDbViewTable'
 import { AcDbViewportTable } from './AcDbViewportTable'
 import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
 import {
@@ -241,6 +242,8 @@ export interface AcDbTables {
   readonly linetypeTable: AcDbLinetypeTable
   /** Text style table containing text style definitions */
   readonly textStyleTable: AcDbTextStyleTable
+  /** View table containing named view definitions */
+  readonly viewTable: AcDbViewTable
   /** Layer table containing layer definitions */
   readonly layerTable: AcDbLayerTable
   /** Viewport table containing viewport definitions */
@@ -377,6 +380,7 @@ export class AcDbDatabase extends AcDbObject {
       dimStyleTable: new AcDbDimStyleTable(this),
       linetypeTable: new AcDbLinetypeTable(this),
       textStyleTable: new AcDbTextStyleTable(this),
+      viewTable: new AcDbViewTable(this),
       layerTable: new AcDbLayerTable(this),
       viewportTable: new AcDbViewportTable(this)
     }
@@ -1362,6 +1366,13 @@ export class AcDbDatabase extends AcDbObject {
     )
     this.writeDxfTable(
       filer,
+      'VIEW',
+      this.tables.viewTable,
+      this.tables.viewTable.newIterator(),
+      'VIEW'
+    )
+    this.writeDxfTable(
+      filer,
       'LTYPE',
       this.tables.linetypeTable,
       this.tables.linetypeTable.newIterator(),
@@ -1581,6 +1592,7 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.dimStyleTable.removeAll()
     this._tables.linetypeTable.removeAll()
     this._tables.textStyleTable.removeAll()
+    this._tables.viewTable.removeAll()
     this._tables.layerTable.removeAll()
     this._tables.viewportTable.removeAll()
     this._objects.layout.removeAll()
