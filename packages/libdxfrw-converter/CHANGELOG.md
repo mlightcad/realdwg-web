@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.9
+
+### Patch Changes
+
+- feat: improve DXF export
+- Updated dependencies
+  - @mlightcad/data-model@1.7.9
+
 ## 3.5.8
 
 ### Patch Changes

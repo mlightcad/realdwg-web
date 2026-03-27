@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.9
+
+### Patch Changes
+
+- feat: improve DXF export
+
 ## 1.4.8
 
 ### Patch Changes

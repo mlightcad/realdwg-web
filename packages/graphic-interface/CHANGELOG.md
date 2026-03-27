@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.9
+
+### Patch Changes
+
+- feat: improve DXF export
+- Updated dependencies
+  - @mlightcad/common@1.4.9
+  - @mlightcad/geometry-engine@3.2.9
+
 ## 3.3.8
 
 ### Patch Changes

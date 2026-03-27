@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.9
+
+### Patch Changes
+
+- feat: improve DXF export
+- Updated dependencies
+  - @mlightcad/data-model@1.7.9
+  - @mlightcad/libredwg-converter@3.5.9
+
 ## 0.1.8
 
 ### Patch Changes

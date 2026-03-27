@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.9
+
+### Patch Changes
+
+- feat: improve DXF export
+- Updated dependencies
+  - @mlightcad/common@1.4.9
+
 ## 3.2.8
 
 ### Patch Changes
