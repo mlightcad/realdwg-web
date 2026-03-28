@@ -729,7 +729,7 @@ export class AcDbEntityConverter {
       const entity = dimension as RadialDiameterDimensionEntity
       const dbEntity = new AcDbRadialDimension(
         entity.definitionPoint,
-        entity.centerPoint,
+        entity.subDefinitionPoint,
         entity.leaderLength
       )
       this.processDimensionCommonAttrs(dimension, dbEntity)
@@ -738,7 +738,7 @@ export class AcDbEntityConverter {
       const entity = dimension as RadialDiameterDimensionEntity
       const dbEntity = new AcDbDiametricDimension(
         entity.definitionPoint,
-        entity.centerPoint,
+        entity.subDefinitionPoint,
         entity.leaderLength
       )
       this.processDimensionCommonAttrs(dimension, dbEntity)

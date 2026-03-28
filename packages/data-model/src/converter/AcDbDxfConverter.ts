@@ -895,7 +895,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     entry: CommonDxfTableEntry,
     dbEntry: AcDbSymbolTableRecord
   ) {
-    dbEntry.name = entry.name
+    dbEntry.name = ('name' in entry) ? (entry.name as string) : ''
     // All of objects in drawing database should have handle. However, some VPORT objects in DXF file
     // don't have handle. In this time, just use objectId created in constructor of AcDbObject.
     // https://github.com/mlightcad/cad-viewer/issues/101
