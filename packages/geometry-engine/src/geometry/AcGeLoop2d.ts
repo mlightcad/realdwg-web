@@ -31,6 +31,73 @@ export class AcGeLoop2d extends AcGeCurve2d {
   }
 
   /**
+   * Build loops from a list of boundary edges.
+   *
+   * This method greedily connects the nearest edge endpoints to form one or more
+   * closed loops. If a loop cannot be closed within the given tolerance, it will
+   * still return the best-effort loop with the collected edges.
+   *
+   * @param edges Input edges
+   * @param tolerance Distance tolerance to treat two points as connected
+   * @returns Loops constructed from the input edges
+   */
+  static buildFromEdges(
+    edges: ReadonlyArray<AcGeBoundaryEdgeType>,
+    tolerance = 1e-3
+  ): AcGeLoop2d[] {
+    if (edges.length === 0) return []
+
+    // Work on a mutable copy so we can consume edges as we form loops.
+    const remaining = [...edges]
+    const loops: AcGeLoop2d[] = []
+    const toleranceSq = tolerance * tolerance
+
+    // Squared-distance check to avoid repeated sqrt calls.
+    const isClose = (a: AcGePoint2d, b: AcGePoint2d) => {
+      const dx = a.x - b.x
+      const dy = a.y - b.y
+      return dx * dx + dy * dy <= toleranceSq
+    }
+
+    while (remaining.length > 0) {
+      const loopEdges: AcGeBoundaryEdgeType[] = []
+      const current = remaining.shift() as AcGeBoundaryEdgeType
+      loopEdges.push(current)
+
+      const start = AcGeLoop2d.getEdgeStartPoint(current)
+      let end = AcGeLoop2d.getEdgeEndPoint(current)
+
+      // If the first edge is already closed, keep it as a single-edge loop.
+      if (!isClose(start, end)) {
+        while (remaining.length > 0) {
+          // Find the closest edge endpoint to the current end point.
+          const match = AcGeLoop2d.findConnectingEdge(
+            remaining,
+            end,
+            toleranceSq
+          )
+          if (match.index < 0) break
+
+          let next = remaining.splice(match.index, 1)[0]
+          // Reverse the edge direction if its end is closer than its start.
+          if (match.reverse) {
+            next = AcGeLoop2d.reverseEdge(next)
+          }
+          loopEdges.push(next)
+          end = AcGeLoop2d.getEdgeEndPoint(next)
+
+          // Stop once we close the loop back to the original start.
+          if (isClose(end, start)) break
+        }
+      }
+
+      loops.push(new AcGeLoop2d(loopEdges))
+    }
+
+    return loops
+  }
+
+  /**
    * Append an edge to this loop
    * @param curve
    */
@@ -114,5 +181,131 @@ export class AcGeLoop2d extends AcGeCurve2d {
       })
     })
     return points
+  }
+
+  private static findConnectingEdge(
+    edges: AcGeBoundaryEdgeType[],
+    target: AcGePoint2d,
+    toleranceSq: number
+  ) {
+    let bestIndex = -1
+    let bestReverse = false
+    let bestDistance = Number.POSITIVE_INFINITY
+
+    for (let i = 0; i < edges.length; i++) {
+      const edge = edges[i]
+      const start = AcGeLoop2d.getEdgeStartPoint(edge)
+      const end = AcGeLoop2d.getEdgeEndPoint(edge)
+
+      // Distance from target to edge start.
+      const dxStart = target.x - start.x
+      const dyStart = target.y - start.y
+      const distStart = dxStart * dxStart + dyStart * dyStart
+
+      if (distStart < bestDistance) {
+        bestDistance = distStart
+        bestIndex = i
+        bestReverse = false
+      }
+
+      // Distance from target to edge end.
+      const dxEnd = target.x - end.x
+      const dyEnd = target.y - end.y
+      const distEnd = dxEnd * dxEnd + dyEnd * dyEnd
+
+      if (distEnd < bestDistance) {
+        bestDistance = distEnd
+        bestIndex = i
+        bestReverse = true
+      }
+    }
+
+    // If the closest edge is still too far away, report no match.
+    if (bestDistance > toleranceSq) {
+      return { index: -1, reverse: false }
+    }
+    return { index: bestIndex, reverse: bestReverse }
+  }
+
+  /**
+   * Get the start point of an edge as a 2D point.
+   * @param edge Input edge
+   * @returns Start point
+   */
+  private static getEdgeStartPoint(edge: AcGeBoundaryEdgeType) {
+    const start = edge.startPoint as AcGePoint2d
+    return new AcGePoint2d(start.x, start.y)
+  }
+
+  /**
+   * Get the end point of an edge as a 2D point.
+   * @param edge Input edge
+   * @returns End point
+   */
+  private static getEdgeEndPoint(edge: AcGeBoundaryEdgeType) {
+    const end = edge.endPoint as AcGePoint2d
+    return new AcGePoint2d(end.x, end.y)
+  }
+
+  /**
+   * Reverse an edge so its start/end direction is flipped.
+   * @param edge Input edge
+   * @returns Reversed edge
+   */
+  private static reverseEdge(edge: AcGeBoundaryEdgeType): AcGeBoundaryEdgeType {
+    if (edge instanceof AcGeLine2d) {
+      return new AcGeLine2d(edge.endPoint, edge.startPoint)
+    }
+    if (edge instanceof AcGeCircArc2d) {
+      return new AcGeCircArc2d(
+        edge.center,
+        edge.radius,
+        edge.endAngle,
+        edge.startAngle,
+        !edge.clockwise
+      )
+    }
+    if (edge instanceof AcGeEllipseArc2d) {
+      return new AcGeEllipseArc2d(
+        edge.center,
+        edge.majorAxisRadius,
+        edge.minorAxisRadius,
+        edge.endAngle,
+        edge.startAngle,
+        !edge.clockwise,
+        edge.rotation
+      )
+    }
+    if (edge instanceof AcGeSpline3d) {
+      // Reverse spline by reversing control points and knot vector.
+      return AcGeLoop2d.reverseSplineEdge(edge)
+    }
+    return edge
+  }
+
+  /**
+   * Reverse a spline edge by mirroring its knots and control points.
+   * @param edge Input spline edge
+   * @returns Reversed spline edge
+   */
+  private static reverseSplineEdge(edge: AcGeSpline3d) {
+    // Mirror knot values around the midpoint and reverse the order.
+    const controlPoints = [...edge.controlPoints].reverse()
+    const knots = edge.knots
+    const knotStart = knots[0]
+    const knotEnd = knots[knots.length - 1]
+    const reversedKnots = knots
+      .map(knot => knotStart + knotEnd - knot)
+      .reverse()
+    const weights = edge.weights
+    const reversedWeights =
+      weights.length > 0 ? [...weights].reverse() : undefined
+    return new AcGeSpline3d(
+      controlPoints,
+      reversedKnots,
+      reversedWeights,
+      edge.degree,
+      edge.closed
+    )
   }
 }

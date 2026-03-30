@@ -1,11 +1,13 @@
 import {
+  computeParameterValues,
   generateUniformKnots,
   generateChordKnots,
   generateSqrtChordKnots,
   basisFunction,
   evaluateNurbsPoint,
   calculateCurveLength,
-  interpolateControlPoints
+  interpolateControlPoints,
+  interpolateNurbsCurve
 } from '../src/util/AcGeNurbsUtil'
 
 describe('AcGeNurbsUtil', () => {
@@ -234,7 +236,7 @@ describe('AcGeNurbsUtil', () => {
   })
 
   describe('interpolateControlPoints', () => {
-    it('should return copy of fit points', () => {
+    it('should interpolate control points', () => {
       const fitPoints = [
         [0, 0, 0],
         [1, 1, 0],
@@ -246,18 +248,91 @@ describe('AcGeNurbsUtil', () => {
 
       expect(controlPoints).toHaveLength(4)
       expect(controlPoints[0]).toEqual([0, 0, 0])
-      expect(controlPoints[1]).toEqual([1, 1, 0])
-      expect(controlPoints[2]).toEqual([2, 0, 0])
       expect(controlPoints[3]).toEqual([3, 1, 0])
 
       // Should be different arrays (copies)
       expect(controlPoints).not.toBe(fitPoints)
       expect(controlPoints[0]).not.toBe(fitPoints[0])
+      expect(controlPoints[1]).not.toEqual(fitPoints[1])
     })
 
     it('should handle empty array', () => {
       const controlPoints = interpolateControlPoints([])
       expect(controlPoints).toEqual([])
+    })
+  })
+
+  describe('interpolateNurbsCurve', () => {
+    it('should interpolate fit points with uniform parameterization', () => {
+      const fitPoints = [
+        [0, 0, 0],
+        [1, 1, 0],
+        [2, 0, 0],
+        [3, 1, 0]
+      ]
+      const degree = 3
+
+      const result = interpolateNurbsCurve(fitPoints, degree, 'Uniform')
+      const params = computeParameterValues(fitPoints, 'Uniform')
+
+      params.forEach((u, index) => {
+        const point = evaluateNurbsPoint(
+          u,
+          degree,
+          result.knots,
+          result.controlPoints,
+          result.weights
+        )
+        expect(point[0]).toBeCloseTo(fitPoints[index][0], 6)
+        expect(point[1]).toBeCloseTo(fitPoints[index][1], 6)
+        expect(point[2]).toBeCloseTo(fitPoints[index][2], 6)
+      })
+    })
+
+    it('should respect start and end tangents', () => {
+      const fitPoints = [
+        [0, 0, 0],
+        [1, 1, 0],
+        [2, 0, 0]
+      ]
+      const degree = 3
+      const startTangent = [1, 0, 0]
+      const endTangent = [1, 0, 0]
+
+      const result = interpolateNurbsCurve(
+        fitPoints,
+        degree,
+        'Uniform',
+        startTangent,
+        endTangent
+      )
+      const n = result.controlPoints.length - 1
+      const startDenom = result.knots[degree + 1] - result.knots[0]
+      const endDenom = result.knots[n + degree + 1] - result.knots[n]
+
+      const startScale = startDenom !== 0 ? degree / startDenom : 0
+      const endScale = endDenom !== 0 ? degree / endDenom : 0
+
+      const startDerivative = [
+        startScale * (result.controlPoints[1][0] - result.controlPoints[0][0]),
+        startScale * (result.controlPoints[1][1] - result.controlPoints[0][1]),
+        startScale * (result.controlPoints[1][2] - result.controlPoints[0][2])
+      ]
+
+      const endDerivative = [
+        endScale *
+          (result.controlPoints[n][0] - result.controlPoints[n - 1][0]),
+        endScale *
+          (result.controlPoints[n][1] - result.controlPoints[n - 1][1]),
+        endScale * (result.controlPoints[n][2] - result.controlPoints[n - 1][2])
+      ]
+
+      expect(startDerivative[0]).toBeCloseTo(startTangent[0], 6)
+      expect(startDerivative[1]).toBeCloseTo(startTangent[1], 6)
+      expect(startDerivative[2]).toBeCloseTo(startTangent[2], 6)
+      expect(endDerivative[0]).toBeCloseTo(endTangent[0], 6)
+      expect(endDerivative[1]).toBeCloseTo(endTangent[1], 6)
+      expect(endDerivative[2]).toBeCloseTo(endTangent[2], 6)
     })
   })
 

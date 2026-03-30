@@ -2,9 +2,7 @@ import { AcGePoint3d, AcGePoint3dLike } from '../math'
 import {
   calculateCurveLength,
   evaluateNurbsPoint,
-  generateChordKnots,
-  generateSqrtChordKnots,
-  generateUniformKnots
+  interpolateNurbsCurve
 } from '../util'
 import { AcGeCatmullRomCurve3d } from './AcGeCatmullRomCurve3d'
 
@@ -111,28 +109,30 @@ export class AcGeNurbsCurve {
   static byPoints(
     points: number[][],
     degree: number,
-    parameterization: AcGeKnotParameterizationType = 'Uniform'
+    parameterization: AcGeKnotParameterizationType = 'Uniform',
+    startTangent?: number[],
+    endTangent?: number[]
   ): AcGeNurbsCurve {
-    // Generate knots based on parameterization type
-    let knots: number[]
-    switch (parameterization) {
-      case 'Chord':
-        knots = generateChordKnots(degree, points)
-        break
-      case 'SqrtChord':
-        knots = generateSqrtChordKnots(degree, points)
-        break
-      case 'Uniform':
-      default:
-        knots = generateUniformKnots(degree, points.length)
-        break
-    }
+    const result = interpolateNurbsCurve(
+      points,
+      degree,
+      parameterization,
+      startTangent,
+      endTangent
+    )
 
-    // Convert number[][] to AcGePoint3dLike[] for control points
-    const controlPoints = points.map(p => ({ x: p[0], y: p[1], z: p[2] }))
-    const weights = new Array(controlPoints.length).fill(1.0)
+    const controlPoints = result.controlPoints.map(p => ({
+      x: p[0],
+      y: p[1],
+      z: p[2]
+    }))
 
-    return new AcGeNurbsCurve(degree, knots, controlPoints, weights)
+    return new AcGeNurbsCurve(
+      degree,
+      result.knots,
+      controlPoints,
+      result.weights
+    )
   }
 
   /**

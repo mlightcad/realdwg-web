@@ -1,5 +1,4 @@
 import { AcCmErrors } from '@mlightcad/common'
-import verb from 'verb-nurbs-web'
 
 import {
   AcGeBox3d,
@@ -12,12 +11,14 @@ import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
 
 export class AcGeSpline3d extends AcGeCurve3d {
-  private _nurbsCurve: verb.geom.NurbsCurve
+  private _nurbsCurve: AcGeNurbsCurve
   private _fitPoints?: AcGePoint3dLike[]
   private _knotParameterization?: AcGeKnotParameterizationType
   private _controlPoints: AcGePoint3dLike[]
   private _closed: boolean
   private _degree: number
+  private _startTangent?: AcGePointLike
+  private _endTangent?: AcGePointLike
 
   constructor(
     controlPoints: AcGePoint3dLike[],
@@ -30,22 +31,31 @@ export class AcGeSpline3d extends AcGeCurve3d {
     fitPoints: AcGePointLike[],
     knotParam: AcGeKnotParameterizationType,
     degree?: number,
-    closed?: boolean
+    closed?: boolean,
+    startTangent?: AcGePointLike,
+    endTangent?: AcGePointLike
   )
-  constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown, e?: unknown) {
+  constructor(
+    a?: unknown,
+    b?: unknown,
+    c?: unknown,
+    d?: unknown,
+    e?: unknown,
+    f?: unknown
+  ) {
     super()
     // Count the number of arguments passed (including undefined)
     const argsLength = arguments.length
-
-    if (argsLength < 2 || argsLength > 5) {
-      throw AcCmErrors.ILLEGAL_PARAMETERS
-    }
 
     // Default degree is 3
     this._degree = 3
     this._closed = false
 
     if (!Array.isArray(b)) {
+      if (argsLength < 2 || argsLength > 6) {
+        throw AcCmErrors.ILLEGAL_PARAMETERS
+      }
+
       // Constructor with fit points
       this._fitPoints = a as AcGePoint3dLike[]
       this._knotParameterization = b as AcGeKnotParameterizationType
@@ -54,19 +64,65 @@ export class AcGeSpline3d extends AcGeCurve3d {
       if (argsLength >= 3) {
         this._degree = (c as number) || 3
       }
-      if (argsLength >= 4) {
+      const hasClosedArg = typeof d === 'boolean'
+      if (argsLength >= 4 && hasClosedArg) {
         this._closed = d as boolean
       }
 
+      if (hasClosedArg) {
+        if (argsLength >= 5) {
+          this._startTangent = e as AcGePointLike
+        }
+        if (argsLength >= 6) {
+          this._endTangent = f as AcGePointLike
+        }
+      } else {
+        if (argsLength >= 4) {
+          this._startTangent = d as AcGePointLike
+        }
+        if (argsLength >= 5) {
+          this._endTangent = e as AcGePointLike
+        }
+      }
+
+      if (this._closed) {
+        this._startTangent = undefined
+        this._endTangent = undefined
+      }
+
       // Validate minimum number of fit points for the specified degree
-      if (this._fitPoints.length < this._degree + 1) {
+      const tangentCount =
+        (this._startTangent ? 1 : 0) + (this._endTangent ? 1 : 0)
+      if (this._fitPoints.length + tangentCount < this._degree + 1) {
         throw AcCmErrors.ILLEGAL_PARAMETERS
       }
 
-      const points = this.toNurbsPoints(this._fitPoints)
-      this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
-      this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
+      if (this._closed) {
+        this._nurbsCurve = AcGeNurbsCurve.createClosedCurve(
+          this._fitPoints,
+          this._degree,
+          this._knotParameterization
+        )
+      } else {
+        const points = this.toNurbsPoints(this._fitPoints)
+        this._nurbsCurve = AcGeNurbsCurve.byPoints(
+          points,
+          this._degree,
+          this._knotParameterization,
+          this._startTangent
+            ? this.toNurbsPoint(this._startTangent)
+            : undefined,
+          this._endTangent ? this.toNurbsPoint(this._endTangent) : undefined
+        )
+      }
+      this._controlPoints = this.toGePoints(
+        this._nurbsCurve.controlPoints().map(p => [p.x, p.y, p.z || 0])
+      )
     } else {
+      if (argsLength < 2 || argsLength > 5) {
+        throw AcCmErrors.ILLEGAL_PARAMETERS
+      }
+
       // Constructor with control points
       this._controlPoints = a as AcGePoint3dLike[]
 
@@ -110,11 +166,10 @@ export class AcGeSpline3d extends AcGeCurve3d {
         throw AcCmErrors.ILLEGAL_PARAMETERS
       }
 
-      const points = this.toVerbPoints(this._controlPoints)
-      this._nurbsCurve = verb.geom.NurbsCurve.byKnotsControlPointsWeights(
+      this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
         this._degree,
-        b as verb.core.Data.KnotArray,
-        points,
+        b as number[],
+        this._controlPoints,
         weights
       )
     }
@@ -136,13 +191,27 @@ export class AcGeSpline3d extends AcGeCurve3d {
           this._fitPoints
         )
         const points = this.toNurbsPoints(newFitPoints)
-        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
+        this._nurbsCurve = AcGeNurbsCurve.byPoints(
+          points,
+          this._degree,
+          this._knotParameterization
+        )
       } else {
         // Create open curve from fit points
         const points = this.toNurbsPoints(this._fitPoints)
-        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
+        this._nurbsCurve = AcGeNurbsCurve.byPoints(
+          points,
+          this._degree,
+          this._knotParameterization,
+          this._startTangent
+            ? this.toNurbsPoint(this._startTangent)
+            : undefined,
+          this._endTangent ? this.toNurbsPoint(this._endTangent) : undefined
+        )
       }
-      this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
+      this._controlPoints = this.toGePoints(
+        this._nurbsCurve.controlPoints().map(p => [p.x, p.y, p.z || 0])
+      )
     } else if (this._controlPoints) {
       // Build from control points
       if (this._closed) {
@@ -151,18 +220,23 @@ export class AcGeSpline3d extends AcGeCurve3d {
           this._controlPoints
         )
         const points = this.toNurbsPoints(newFitPoints)
-        this._nurbsCurve = verb.geom.NurbsCurve.byPoints(points, this._degree)
-        this._controlPoints = this.toGePoints(this._nurbsCurve.controlPoints())
+        this._nurbsCurve = AcGeNurbsCurve.byPoints(
+          points,
+          this._degree,
+          this._knotParameterization
+        )
+        this._controlPoints = this.toGePoints(
+          this._nurbsCurve.controlPoints().map(p => [p.x, p.y, p.z || 0])
+        )
       } else {
         // Create open curve from control points
         // Get knots and weights from the current NURBS curve
         const knots = this._nurbsCurve.knots()
         const weights = this._nurbsCurve.weights()
-        const points = this.toVerbPoints(this._controlPoints)
-        this._nurbsCurve = verb.geom.NurbsCurve.byKnotsControlPointsWeights(
+        this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
           this._degree,
           knots,
-          points,
+          this._controlPoints,
           weights
         )
       }
@@ -307,10 +381,11 @@ export class AcGeSpline3d extends AcGeCurve3d {
   getCurvePoints(curve: AcGeNurbsCurve, count: number) {
     const points = []
     const knots = curve.knots() // Get the knot vector from the curve
+    const degree = curve.degree()
 
     // The valid parameter range is between knots[degree] and knots[knots.length - degree - 1]
-    const startParam = knots[3]
-    const endParam = knots[knots.length - 4]
+    const startParam = knots[degree]
+    const endParam = knots[knots.length - degree - 1]
 
     const step = (endParam - startParam) / (count - 1) // Adjust step size for correct range
 
@@ -360,19 +435,6 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
 
   /**
-   * Convert input points to points in verb-nurbs-web format
-   * @param points Input points to convert
-   * @returns Return converted points
-   */
-  private toVerbPoints(points: AcGePointLike[]): number[][] {
-    const verbPoints = new Array(points.length)
-    points.forEach((point, index) => {
-      verbPoints[index] = [point.x, point.y, point.z || 0]
-    })
-    return verbPoints
-  }
-
-  /**
    * Convert input points to points in geometry engine format
    * @param points Input points to convert
    * @returns Return converted points
@@ -383,6 +445,10 @@ export class AcGeSpline3d extends AcGeCurve3d {
       gePoints[index] = { x: point[0], y: point[1], z: point[2] }
     })
     return gePoints
+  }
+
+  private toNurbsPoint(point: AcGePointLike): number[] {
+    return [point.x, point.y, point.z || 0]
   }
 
   /**
