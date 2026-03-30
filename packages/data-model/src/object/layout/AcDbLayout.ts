@@ -268,7 +268,10 @@ export class AcDbLayout extends AcDbPlotSettings {
     filer.writeObjectId(330, this.blockTableRecordId)
     // 331 - ID/handle to the viewport that was last active in this layout when the layout was current
     // TODO: Not sure passing 0 is the correct behavior if viewport array is empty
-    filer.writeObjectId(331, this._viewportArray.length > 0 ? this._viewportArray[0] : '0')
+    filer.writeObjectId(
+      331,
+      this._viewportArray.length > 0 ? this._viewportArray[0] : '0'
+    )
     filer.writePoint2d(10, this.limits.min)
     filer.writePoint2d(11, this.limits.max)
     filer.writePoint3d(14, this.extents.min)

@@ -7,6 +7,10 @@ The target of this project is to create one web-version of AutoCAD RealDWG by pr
 - [**🌐 DWG/DXF JSON Viewer**](https://dwg.thingraph.site/dwg_json_viewer.html)
 - [**🌐 API Docs**](https://mlightcad.github.io/realdwg-web/)
 
+## App Based on Realdwg-Web
+
+- [Google Drive DWG Viewer](https://workspace.google.com/u/0/marketplace/app/dwg_viewer/641533811831)
+
 ## Converter Registration Mechanism
 
 To support reading both DXF and DWG files (and potentially other formats in the future), this project provides a flexible mechanism for registering and unregistering file converters. This is managed by the `AcDbDatabaseConverterManager` class.

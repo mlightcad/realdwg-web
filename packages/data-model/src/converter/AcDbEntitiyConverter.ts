@@ -47,6 +47,7 @@ import {
   RadialDiameterDimensionEntity
 } from '@mlightcad/dxf-json'
 import {
+  AcGeBoundaryEdgeType,
   AcGeCircArc2d,
   AcGeEllipseArc2d,
   AcGeLine2d,
@@ -522,14 +523,14 @@ export class AcDbEntityConverter {
         dbEntity.add(polyline)
       } else {
         const edgePath = path as EdgeBoundaryPath<BoundaryPathEdge>
-        const loop = new AcGeLoop2d()
+        const edges: AcGeBoundaryEdgeType[] = []
         edgePath.edges.forEach(edge => {
           if (edge.type == 1) {
             const line = edge as LineEdge
-            loop.add(new AcGeLine2d(line.start, line.end))
+            edges.push(new AcGeLine2d(line.start, line.end))
           } else if (edge.type == 2) {
             const arc = edge as ArcEdge
-            loop.add(
+            edges.push(
               new AcGeCircArc2d(
                 arc.center,
                 arc.radius,
@@ -556,7 +557,7 @@ export class AcDbEntityConverter {
               startAngle = Math.PI * 2 - startAngle
               endAngle = Math.PI * 2 - endAngle
             }
-            loop.add(
+            edges.push(
               new AcGeEllipseArc2d(
                 { ...ellipse.center, z: 0 },
                 majorAxisRadius,
@@ -584,7 +585,7 @@ export class AcDbEntityConverter {
                 if (item.weight == null) hasWeights = false
                 return item.weight || 1
               })
-              loop.add(
+              edges.push(
                 new AcGeSpline3d(
                   controlPoints,
                   spline.knots,
@@ -599,11 +600,17 @@ export class AcDbEntityConverter {
                   z: 0
                 }
               })
-              loop.add(new AcGeSpline3d(fitPoints, 'Uniform'))
+              edges.push(new AcGeSpline3d(fitPoints, 'Uniform'))
             }
           }
         })
-        dbEntity.add(loop)
+        const loops = AcGeLoop2d.buildFromEdges(edges)
+        if (loops.length == 0 && edges.length > 0) {
+          // Fallback: keep original order if we failed to build any loop.
+          dbEntity.add(new AcGeLoop2d(edges))
+        } else {
+          loops.forEach(loop => dbEntity.add(loop))
+        }
       }
     })
     return dbEntity

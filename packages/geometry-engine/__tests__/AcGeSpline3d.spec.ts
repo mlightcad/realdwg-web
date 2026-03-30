@@ -1,5 +1,9 @@
 import { AcGeSpline3d, AcGeKnotParameterizationType } from '../src'
 import { AcGePoint3d, AcGeBox3d, AcGeMatrix3d } from '../src'
+import {
+  computeParameterValues,
+  evaluateNurbsPoint
+} from '../src/util/AcGeNurbsUtil'
 import { AcCmErrors } from '@mlightcad/common'
 
 describe('AcGeSpline3d', () => {
@@ -116,6 +120,69 @@ describe('AcGeSpline3d', () => {
       expect(spline.degree).toBe(3)
       expect(spline.knotParameterization).toBe(parameterization)
       expect(spline.closed).toBe(true)
+    })
+
+    it('should create spline from fit points with start/end tangents', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 }
+      ]
+      const startTangent = { x: 1, y: 0, z: 0 }
+      const endTangent = { x: 1, y: 0, z: 0 }
+      const degree = 3
+
+      const spline = new AcGeSpline3d(
+        fitPoints,
+        'Uniform',
+        degree,
+        false,
+        startTangent,
+        endTangent
+      )
+
+      const knots = spline.knots
+      const controlPoints = spline.controlPoints
+      const n = controlPoints.length - 1
+
+      const startDenom = knots[degree + 1] - knots[0]
+      const endDenom = knots[n + degree + 1] - knots[n]
+      const startScale = startDenom !== 0 ? degree / startDenom : 0
+      const endScale = endDenom !== 0 ? degree / endDenom : 0
+
+      const startDerivative = {
+        x: startScale * (controlPoints[1].x - controlPoints[0].x),
+        y: startScale * (controlPoints[1].y - controlPoints[0].y),
+        z: startScale * (controlPoints[1].z - controlPoints[0].z)
+      }
+      const endDerivative = {
+        x: endScale * (controlPoints[n].x - controlPoints[n - 1].x),
+        y: endScale * (controlPoints[n].y - controlPoints[n - 1].y),
+        z: endScale * (controlPoints[n].z - controlPoints[n - 1].z)
+      }
+
+      expect(startDerivative.x).toBeCloseTo(startTangent.x, 6)
+      expect(startDerivative.y).toBeCloseTo(startTangent.y, 6)
+      expect(startDerivative.z).toBeCloseTo(startTangent.z, 6)
+      expect(endDerivative.x).toBeCloseTo(endTangent.x, 6)
+      expect(endDerivative.y).toBeCloseTo(endTangent.y, 6)
+      expect(endDerivative.z).toBeCloseTo(endTangent.z, 6)
+
+      const params = computeParameterValues(
+        fitPoints.map(point => [point.x, point.y, point.z || 0]),
+        'Uniform'
+      )
+      const evaluatedMid = evaluateNurbsPoint(
+        params[1],
+        degree,
+        knots,
+        controlPoints.map(point => [point.x, point.y, point.z || 0]),
+        spline.weights
+      )
+
+      expect(evaluatedMid[0]).toBeCloseTo(fitPoints[1].x, 6)
+      expect(evaluatedMid[1]).toBeCloseTo(fitPoints[1].y, 6)
+      expect(evaluatedMid[2]).toBeCloseTo(fitPoints[1].z, 6)
     })
 
     it('should create spline with chord parameterization', () => {

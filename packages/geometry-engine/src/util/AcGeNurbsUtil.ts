@@ -2,6 +2,8 @@
  * NURBS utility functions for spline calculations
  */
 
+type KnotParameterizationType = 'Uniform' | 'Chord' | 'SqrtChord'
+
 /**
  * Generate uniform knot vector
  */
@@ -77,6 +79,75 @@ export function generateChordKnots(
 }
 
 /**
+ * Compute parameter values for fit points
+ */
+export function computeParameterValues(
+  points: number[][],
+  parameterization: KnotParameterizationType = 'Uniform'
+): number[] {
+  const count = points.length
+  if (count === 0) {
+    return []
+  }
+  if (count === 1) {
+    return [0]
+  }
+
+  const m = count - 1
+  if (parameterization === 'Uniform') {
+    return new Array(count).fill(0).map((_, i) => i / m)
+  }
+
+  const params: number[] = [0]
+  let total = 0
+  for (let i = 1; i <= m; i++) {
+    const dx = points[i][0] - points[i - 1][0]
+    const dy = points[i][1] - points[i - 1][1]
+    const dz = points[i][2] - points[i - 1][2]
+    const length = Math.sqrt(dx * dx + dy * dy + dz * dz)
+    const segment =
+      parameterization === 'SqrtChord' ? Math.sqrt(length) : length
+    total += segment
+    params.push(total)
+  }
+
+  if (total < 1e-12) {
+    return new Array(count).fill(0).map((_, i) => i / m)
+  }
+
+  return params.map(value => value / total)
+}
+
+/**
+ * Generate a clamped knot vector using averaging method
+ */
+export function generateAveragedKnots(
+  degree: number,
+  parameters: number[]
+): number[] {
+  const n = parameters.length - 1
+  const p = degree
+  const m = n + p + 1
+
+  const knots = new Array(m + 1).fill(0)
+  const endValue = parameters[parameters.length - 1]
+
+  for (let i = m - p; i <= m; i++) {
+    knots[i] = endValue
+  }
+
+  for (let j = 1; j <= n - p; j++) {
+    let sum = 0
+    for (let i = j; i < j + p; i++) {
+      sum += parameters[i]
+    }
+    knots[j + p] = sum / p
+  }
+
+  return knots
+}
+
+/**
  * Generate sqrt-chord parameterized knots
  */
 export function generateSqrtChordKnots(
@@ -120,6 +191,170 @@ export function generateSqrtChordKnots(
   }
 
   return knots
+}
+
+function solveLinearSystem(matrix: number[][], rhs: number[]): number[] {
+  const n = matrix.length
+  const a = matrix.map(row => row.slice())
+  const b = rhs.slice()
+
+  for (let k = 0; k < n; k++) {
+    let pivotRow = k
+    let pivotValue = Math.abs(a[k][k])
+    for (let i = k + 1; i < n; i++) {
+      const value = Math.abs(a[i][k])
+      if (value > pivotValue) {
+        pivotValue = value
+        pivotRow = i
+      }
+    }
+
+    if (pivotValue < 1e-12) {
+      throw new Error('Interpolation matrix is singular.')
+    }
+
+    if (pivotRow !== k) {
+      const tmpRow = a[k]
+      a[k] = a[pivotRow]
+      a[pivotRow] = tmpRow
+
+      const tmpValue = b[k]
+      b[k] = b[pivotRow]
+      b[pivotRow] = tmpValue
+    }
+
+    for (let i = k + 1; i < n; i++) {
+      const factor = a[i][k] / a[k][k]
+      if (Math.abs(factor) < 1e-14) {
+        continue
+      }
+      for (let j = k; j < n; j++) {
+        a[i][j] -= factor * a[k][j]
+      }
+      b[i] -= factor * b[k]
+    }
+  }
+
+  const x = new Array(n).fill(0)
+  for (let i = n - 1; i >= 0; i--) {
+    let sum = b[i]
+    for (let j = i + 1; j < n; j++) {
+      sum -= a[i][j] * x[j]
+    }
+    x[i] = sum / a[i][i]
+  }
+
+  return x
+}
+
+/**
+ * Interpolate a NURBS curve from fit points with optional end tangents
+ */
+export function interpolateNurbsCurve(
+  fitPoints: number[][],
+  degree: number,
+  parameterization: KnotParameterizationType = 'Uniform',
+  startTangent?: number[],
+  endTangent?: number[]
+): { controlPoints: number[][]; knots: number[]; weights: number[] } {
+  if (fitPoints.length === 0) {
+    return { controlPoints: [], knots: [], weights: [] }
+  }
+
+  const safePoints = fitPoints.map(point => [point[0], point[1], point[2] ?? 0])
+
+  // Tangents are interpreted as first derivatives in the parameter domain.
+  const hasStartTangent = !!startTangent
+  const hasEndTangent = !!endTangent
+  const tangentCount = (hasStartTangent ? 1 : 0) + (hasEndTangent ? 1 : 0)
+
+  const m = safePoints.length - 1
+  const n = m + tangentCount
+
+  if (n < degree) {
+    throw new Error('Not enough points to interpolate a curve of this degree.')
+  }
+
+  const params = computeParameterValues(safePoints, parameterization)
+  const extendedParams = params.slice()
+  if (hasStartTangent) {
+    extendedParams.unshift(params[0])
+  }
+  if (hasEndTangent) {
+    extendedParams.push(params[params.length - 1])
+  }
+
+  const knots = generateAveragedKnots(degree, extendedParams)
+  const size = n + 1
+
+  const matrix = new Array(size)
+  const rhsX = new Array(size)
+  const rhsY = new Array(size)
+  const rhsZ = new Array(size)
+
+  let row = 0
+  matrix[row] = new Array(size).fill(0)
+  matrix[row][0] = 1
+  rhsX[row] = safePoints[0][0]
+  rhsY[row] = safePoints[0][1]
+  rhsZ[row] = safePoints[0][2]
+  row++
+
+  for (let i = 1; i <= m - 1; i++) {
+    const u = params[i]
+    matrix[row] = new Array(size).fill(0)
+    for (let j = 0; j <= n; j++) {
+      matrix[row][j] = basisFunction(j, degree, u, knots)
+    }
+    rhsX[row] = safePoints[i][0]
+    rhsY[row] = safePoints[i][1]
+    rhsZ[row] = safePoints[i][2]
+    row++
+  }
+
+  matrix[row] = new Array(size).fill(0)
+  matrix[row][n] = 1
+  rhsX[row] = safePoints[m][0]
+  rhsY[row] = safePoints[m][1]
+  rhsZ[row] = safePoints[m][2]
+  row++
+
+  if (hasStartTangent) {
+    const denom = knots[degree + 1] - knots[0]
+    const coeff = denom !== 0 ? degree / denom : 0
+    matrix[row] = new Array(size).fill(0)
+    matrix[row][0] = -coeff
+    matrix[row][1] = coeff
+    rhsX[row] = startTangent?.[0] ?? 0
+    rhsY[row] = startTangent?.[1] ?? 0
+    rhsZ[row] = startTangent?.[2] ?? 0
+    row++
+  }
+
+  if (hasEndTangent) {
+    const denom = knots[n + degree + 1] - knots[n]
+    const coeff = denom !== 0 ? degree / denom : 0
+    matrix[row] = new Array(size).fill(0)
+    matrix[row][n - 1] = -coeff
+    matrix[row][n] = coeff
+    rhsX[row] = endTangent?.[0] ?? 0
+    rhsY[row] = endTangent?.[1] ?? 0
+    rhsZ[row] = endTangent?.[2] ?? 0
+    row++
+  }
+
+  const solutionX = solveLinearSystem(matrix, rhsX)
+  const solutionY = solveLinearSystem(matrix, rhsY)
+  const solutionZ = solveLinearSystem(matrix, rhsZ)
+
+  const controlPoints = new Array(size)
+  for (let i = 0; i < size; i++) {
+    controlPoints[i] = [solutionX[i], solutionY[i], solutionZ[i]]
+  }
+
+  const weights = new Array(size).fill(1.0)
+
+  return { controlPoints, knots, weights }
 }
 
 /**
@@ -264,12 +499,23 @@ export function calculateCurveLength(
 
 /**
  * Generate control points from fit points using interpolation
- * This is a simplified implementation - for production use, you might want
- * to implement a more sophisticated interpolation algorithm
  */
-export function interpolateControlPoints(fitPoints: number[][]): number[][] {
-  // For now, use fit points as control points
-  // In a full implementation, you would solve the interpolation system
-  // by setting up and solving a linear system of equations
-  return fitPoints.map(p => [...p])
+export function interpolateControlPoints(
+  fitPoints: number[][],
+  degree: number = 3,
+  parameterization: KnotParameterizationType = 'Uniform',
+  startTangent?: number[],
+  endTangent?: number[]
+): number[][] {
+  if (fitPoints.length === 0) {
+    return []
+  }
+
+  return interpolateNurbsCurve(
+    fitPoints,
+    degree,
+    parameterization,
+    startTangent,
+    endTangent
+  ).controlPoints
 }
