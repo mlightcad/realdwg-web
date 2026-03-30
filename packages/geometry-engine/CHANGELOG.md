@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.10
+
+### Patch Changes
+
+- fix: fix bugs on building loops for hatch and revome dependency on verb-nurbs
+- Updated dependencies
+  - @mlightcad/common@1.4.10
+
 ## 3.2.9
 
 ### Patch Changes

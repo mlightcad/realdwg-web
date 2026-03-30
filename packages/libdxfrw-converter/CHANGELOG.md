@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.10
+
+### Patch Changes
+
+- fix: fix bugs on building loops for hatch and revome dependency on verb-nurbs
+- Updated dependencies
+  - @mlightcad/data-model@1.7.10
+
 ## 3.5.9
 
 ### Patch Changes

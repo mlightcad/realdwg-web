@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.10
+
+### Patch Changes
+
+- fix: fix bugs on building loops for hatch and revome dependency on verb-nurbs
+- Updated dependencies
+  - @mlightcad/data-model@1.7.10
+  - @mlightcad/libredwg-converter@3.5.10
+
 ## 0.1.9
 
 ### Patch Changes

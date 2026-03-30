@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.10
+
+### Patch Changes
+
+- fix: fix bugs on building loops for hatch and revome dependency on verb-nurbs
+- Updated dependencies
+  - @mlightcad/common@1.4.10
+  - @mlightcad/geometry-engine@3.2.10
+  - @mlightcad/graphic-interface@3.3.10
+
 ## 1.7.9
 
 ### Patch Changes

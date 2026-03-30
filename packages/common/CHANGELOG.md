@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.10
+
+### Patch Changes
+
+- fix: fix bugs on building loops for hatch and revome dependency on verb-nurbs
+
 ## 1.4.9
 
 ### Patch Changes
