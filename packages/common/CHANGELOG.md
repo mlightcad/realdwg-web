@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.12
+
+### Patch Changes
+
+- fix: upgrade dxf-json to fix bug #132 in cad-viewer repo
+
 ## 1.4.11
 
 ### Patch Changes

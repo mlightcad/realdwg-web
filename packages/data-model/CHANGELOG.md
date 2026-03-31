@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.12
+
+### Patch Changes
+
+- fix: upgrade dxf-json to fix bug #132 in cad-viewer repo
+- Updated dependencies
+  - @mlightcad/common@1.4.12
+  - @mlightcad/geometry-engine@3.2.12
+  - @mlightcad/graphic-interface@3.3.12
+
 ## 1.7.11
 
 ### Patch Changes

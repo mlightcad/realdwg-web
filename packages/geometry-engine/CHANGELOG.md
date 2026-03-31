@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.12
+
+### Patch Changes
+
+- fix: upgrade dxf-json to fix bug #132 in cad-viewer repo
+- Updated dependencies
+  - @mlightcad/common@1.4.12
+
 ## 3.2.11
 
 ### Patch Changes

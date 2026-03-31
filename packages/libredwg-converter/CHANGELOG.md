@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.12
+
+### Patch Changes
+
+- fix: upgrade dxf-json to fix bug #132 in cad-viewer repo
+- Updated dependencies
+  - @mlightcad/data-model@1.7.12
+
 ## 3.5.11
 
 ### Patch Changes
