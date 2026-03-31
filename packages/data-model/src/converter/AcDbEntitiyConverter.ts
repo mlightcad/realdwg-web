@@ -380,18 +380,12 @@ export class AcDbEntityConverter {
           !!(spline.flag & 0x01)
         )
       } else if (spline.numberOfFitPoints > 0) {
-        const fitPoints = this.numberArrayToPointArray(
+        return new AcDbSpline(
           spline.fitPoints,
-          spline.numberOfFitPoints
+          'Uniform',
+          spline.degree,
+          !!(spline.flag & 0x01)
         )
-        if (fitPoints != null) {
-          return new AcDbSpline(
-            fitPoints,
-            'Uniform',
-            spline.degree,
-            !!(spline.flag & 0x01)
-          )
-        }
       }
     } catch (error) {
       console.log(`Failed to convert spline with error: ${error}`)
@@ -943,45 +937,5 @@ export class AcDbEntityConverter {
     if (entity.transparency != null) {
       dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
-  }
-
-  /**
-   * Converts a number array to an array of 3D points.
-   *
-   * This utility method takes a flat array of numbers and converts it to
-   * an array of AcGePoint3dLike objects. It automatically detects whether
-   * the input represents 2D or 3D points based on the array length and
-   * number of points.
-   *
-   * @param numbers - Flat array of numbers representing point coordinates
-   * @param numberOfPoints - Expected number of points in the array
-   * @returns Array of AcGePoint3dLike objects, or undefined if the conversion fails
-   *
-   * @example
-   * ```typescript
-   * const numbers = [0, 0, 10, 10, 20, 20]; // 3 points in 2D
-   * const points = converter.numberArrayToPointArray(numbers, 3);
-   * // Returns: [{x: 0, y: 0, z: 0}, {x: 10, y: 10, z: 0}, {x: 20, y: 20, z: 0}]
-   * ```
-   */
-  private numberArrayToPointArray(numbers: number[], numberOfPoints: number) {
-    const count = numbers.length
-    let dimension = 0
-    if (count / 2 == numberOfPoints) {
-      dimension = 2
-    } else if (count / 3 == numberOfPoints) {
-      dimension = 3
-    }
-    if (dimension == 0) return undefined
-
-    const points: AcGePoint3dLike[] = []
-    for (let index = 0, size = count / dimension; index < size; ++index) {
-      points.push({
-        x: numbers[index * dimension],
-        y: numbers[index * dimension + 1],
-        z: dimension == 3 ? numbers[index * dimension + 2] : 0
-      })
-    }
-    return points
   }
 }
