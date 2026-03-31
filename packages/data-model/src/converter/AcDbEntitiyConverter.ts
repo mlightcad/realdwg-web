@@ -95,6 +95,8 @@ import {
   AcDbPoint,
   AcDbPoly2dType,
   AcDbPoly3dType,
+  AcDbPolyFaceMesh,
+  AcDbPolygonMesh,
   AcDbPolyline,
   AcDbRadialDimension,
   AcDbRasterImage,
@@ -420,20 +422,56 @@ export class AcDbEntityConverter {
     // 128 = The linetype pattern is generated continuously around the vertices of this polyline
     const isClosed = !!(polyline.flag & 0x01)
     const is3dPolyline = !!(polyline.flag & 0x08)
+    const isPolygonMesh = !!(polyline.flag & 0x10) // 16
+    const isPolyfaceMesh = !!(polyline.flag & 0x40) // 64
+    const isClosedN = !!(polyline.flag & 0x20) // 32
+
     // Filter out spline control points
     const vertices: AcGePoint3dLike[] = []
     const bulges: number[] = []
+    const faces: number[][] = []
+
     polyline.vertices.map(vertex => {
       if (!(vertex.flag & VertexFlag.SPLINE_CONTROL_POINT)) {
-        vertices.push({
-          x: vertex.x,
-          y: vertex.y,
-          z: vertex.z
-        })
-        bulges.push(vertex.bulge ?? 0)
+        // For polyface mesh, vertex flag 128 bit is set for all vertices
+        if (isPolyfaceMesh && vertex.flag & 0x80) {
+          // 128 bit set
+          // Check if this is a face vertex (64 bit not set)
+          if (!(vertex.flag & 0x40)) {
+            // 64 bit not set
+            if (vertex.faces && vertex.faces.length >= 3) {
+              faces.push([...vertex.faces])
+            }
+          } else {
+            // This is a regular vertex (64 bit set)
+            vertices.push({
+              x: vertex.x,
+              y: vertex.y,
+              z: vertex.z
+            })
+            bulges.push(vertex.bulge ?? 0)
+          }
+        } else {
+          // This is a regular vertex
+          vertices.push({
+            x: vertex.x,
+            y: vertex.y,
+            z: vertex.z
+          })
+          bulges.push(vertex.bulge ?? 0)
+        }
       }
     })
-    if (is3dPolyline) {
+
+    if (isPolygonMesh) {
+      // For polygon mesh, we need M and N counts
+      // In DXF, these are stored in the polyline entity as 71 and 72 group codes
+      const mCount = polyline.meshMVertexCount
+      const nCount = polyline.meshNVertexCount
+      return new AcDbPolygonMesh(mCount, nCount, vertices, isClosed, isClosedN)
+    } else if (isPolyfaceMesh) {
+      return new AcDbPolyFaceMesh(vertices, faces)
+    } else if (is3dPolyline) {
       let polyType = AcDbPoly3dType.SimplePoly
       if (polyline.flag & 0x04) {
         if (polyline.smoothType == SmoothType.CUBIC) {
