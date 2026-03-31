@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.11
+
+### Patch Changes
+
+- fix issue on converting spline with fit points
+- Updated dependencies
+  - @mlightcad/common@1.4.11
+
 ## 3.2.10
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.11
+
+### Patch Changes
+
+- fix issue on converting spline with fit points
+- Updated dependencies
+  - @mlightcad/data-model@1.7.11
+
 ## 3.5.10
 
 ### Patch Changes

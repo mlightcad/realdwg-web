@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.11
+
+### Patch Changes
+
+- fix issue on converting spline with fit points
+- Updated dependencies
+  - @mlightcad/data-model@1.7.11
+  - @mlightcad/libredwg-converter@3.5.11
+
 ## 0.1.10
 
 ### Patch Changes

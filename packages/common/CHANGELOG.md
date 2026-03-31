@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.11
+
+### Patch Changes
+
+- fix issue on converting spline with fit points
+
 ## 1.4.10
 
 ### Patch Changes
