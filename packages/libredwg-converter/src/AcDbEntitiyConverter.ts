@@ -28,6 +28,8 @@ import {
   AcDbPoint,
   AcDbPoly2dType,
   AcDbPoly3dType,
+  AcDbPolyFaceMesh,
+  AcDbPolygonMesh,
   AcDbPolyline,
   AcDbRadialDimension,
   AcDbRasterImage,
@@ -294,45 +296,92 @@ export class AcDbEntityConverter {
     // 64 = The polyline is a polyface mesh
     // 128 = The linetype pattern is generated continuously around the vertices of this polyline
     const isClosed = !!(polyline.flag & 0x01)
+    const isPolygonMesh = !!(polyline.flag & 0x10) // 16
+    const isPolyfaceMesh = !!(polyline.flag & 0x40) // 64
+    const isClosedN = !!(polyline.flag & 0x20) // 32
 
     // Filter out spline control points
     const vertices: AcGePoint3dLike[] = []
     const bulges: number[] = []
+    const faces: number[][] = []
     polyline.vertices.map(vertex => {
       // Check whether it is one spline control point
       if (!(vertex.flag & 0x10)) {
-        vertices.push({
-          x: vertex.x,
-          y: vertex.y,
-          z: vertex.z
-        })
-        bulges.push(vertex.bulge ?? 0)
+        // For polyface mesh, vertex flag 128 bit is set for all vertices
+        if (isPolyfaceMesh && vertex.flag & 0x80) {
+          // 128 bit set
+          // Check if this is a face vertex (64 bit not set)
+          if (!(vertex.flag & 0x40)) {
+            // 64 bit not set
+            // This is a face vertex
+            const faceVertices: number[] = []
+            // If the index is negative, the edge that begins with that vertex is invisible.
+            // The first 0 vertex marks the end of the vertices of the face.
+            if (vertex.polyfaceIndex0 != null && vertex.polyfaceIndex0 != 0)
+              faceVertices.push(Math.abs(vertex.polyfaceIndex0) - 1)
+            if (vertex.polyfaceIndex1 != null && vertex.polyfaceIndex1 != 0)
+              faceVertices.push(Math.abs(vertex.polyfaceIndex1) - 1)
+            if (vertex.polyfaceIndex2 != null && vertex.polyfaceIndex2 != 0)
+              faceVertices.push(Math.abs(vertex.polyfaceIndex2) - 1)
+            if (vertex.polyfaceIndex3 != null && vertex.polyfaceIndex3 != 0)
+              faceVertices.push(Math.abs(vertex.polyfaceIndex3) - 1)
+            if (faceVertices.length >= 3) {
+              faces.push(faceVertices)
+            }
+          } else {
+            // This is a regular vertex (64 bit set)
+            vertices.push({
+              x: vertex.x,
+              y: vertex.y,
+              z: vertex.z
+            })
+            bulges.push(vertex.bulge ?? 0)
+          }
+        } else {
+          // This is a regular vertex
+          vertices.push({
+            x: vertex.x,
+            y: vertex.y,
+            z: vertex.z
+          })
+          bulges.push(vertex.bulge ?? 0)
+        }
       }
     })
 
-    let polyType = AcDbPoly2dType.SimplePoly
-    if (polyline.flag & 0x02) {
-      polyType = AcDbPoly2dType.FitCurvePoly
-    } else if (polyline.flag & 0x04) {
-      // Please don't use enum DwgSmoothType value here.
-      // It will result in libredwg-web bundled in this package.
-      if (polyline.smoothType == 6) {
-        // DwgSmoothType.CUBIC
-        polyType = AcDbPoly2dType.CubicSplinePoly
-      } else if (polyline.smoothType == 5) {
-        // DwgSmoothType.QUADRATIC
-        polyType = AcDbPoly2dType.QuadSplinePoly
+    if (isPolygonMesh) {
+      // For polygon mesh, we need M and N counts
+      // In DXF, these are stored in the polyline entity as 71 and 72 group codes
+      const mCount = polyline.meshMVertexCount ?? 2
+      const nCount = polyline.meshNVertexCount ?? 2
+      return new AcDbPolygonMesh(mCount, nCount, vertices, isClosed, isClosedN)
+    } else if (isPolyfaceMesh) {
+      return new AcDbPolyFaceMesh(vertices, faces)
+    } else {
+      let polyType = AcDbPoly2dType.SimplePoly
+      if (polyline.flag & 0x02) {
+        polyType = AcDbPoly2dType.FitCurvePoly
+      } else if (polyline.flag & 0x04) {
+        // Please don't use enum DwgSmoothType value here.
+        // It will result in libredwg-web bundled in this package.
+        if (polyline.smoothType == 6) {
+          // DwgSmoothType.CUBIC
+          polyType = AcDbPoly2dType.CubicSplinePoly
+        } else if (polyline.smoothType == 5) {
+          // DwgSmoothType.QUADRATIC
+          polyType = AcDbPoly2dType.QuadSplinePoly
+        }
       }
+      return new AcDb2dPolyline(
+        polyType,
+        vertices,
+        0,
+        isClosed,
+        polyline.startWidth,
+        polyline.endWidth,
+        bulges
+      )
     }
-    return new AcDb2dPolyline(
-      polyType,
-      vertices,
-      0,
-      isClosed,
-      polyline.startWidth,
-      polyline.endWidth,
-      bulges
-    )
   }
 
   private convertPolyline3d(polyline: DwgPolyline3dEntity) {
