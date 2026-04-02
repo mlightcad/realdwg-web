@@ -528,10 +528,12 @@ export class AcDbEllipse extends AcDbCurve {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbEllipse')
     filer.writePoint3d(10, this.center)
+    const u = this._geo.majorAxis
+    const r = this.majorAxisRadius
     filer.writePoint3d(11, {
-      x: this.majorAxisRadius,
-      y: 0,
-      z: 0
+      x: u.x * r,
+      y: u.y * r,
+      z: u.z * r
     })
     filer.writeVector3d(210, this.normal)
     filer.writeDouble(40, this.minorAxisRadius / this.majorAxisRadius)

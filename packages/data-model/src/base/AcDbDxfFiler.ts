@@ -64,6 +64,10 @@ export class AcDbDxfFiler {
     return this._version
   }
 
+  get nextHandle() {
+    return this._nextHandle
+  }
+
   setVersion(value: string | number | AcDbDwgVersion) {
     this._version =
       value instanceof AcDbDwgVersion ? value : new AcDbDwgVersion(value)
@@ -82,7 +86,6 @@ export class AcDbDxfFiler {
       } else {
         this._handleMap.set(key, this._nextHandle.toString(16).toUpperCase())
         this._nextHandle += 1
-        console.log(`Registered handle ${key} as ${this._handleMap.get(key)}`)
       }
     }
     return this._handleMap.get(key)!
@@ -96,7 +99,10 @@ export class AcDbDxfFiler {
   writeGroup(code: number, value: unknown) {
     if (value == null) return this
     this._lines.push(String(Math.trunc(code)))
-    this._lines.push(this.formatValue(value))
+    const text = this.formatValue(value)
+    // Never emit an empty value line — it breaks DXF pairing (e.g. "70\n\n4") and
+    // strict readers like AutoCAD report a corrupted file.
+    this._lines.push(text === '' ? '0' : text)
     return this
   }
 
@@ -241,14 +247,29 @@ export class AcDbDxfFiler {
   }
 
   private formatValue(value: unknown): string {
-    if (typeof value === 'string') return value
+    if (typeof value === 'string') {
+      // ASCII DXF: one value must occupy a single line. Raw CR/LF inside a value
+      // breaks the code/value sequence and strict readers (e.g. AutoCAD) report corruption.
+      return this.sanitizeStringForDxfLine(value)
+    }
     if (typeof value === 'boolean') return value ? '1' : '0'
     if (typeof value === 'number') {
       if (!Number.isFinite(value)) return '0'
       if (Number.isInteger(value)) return String(value)
       const fixed = value.toFixed(this._precision)
-      return fixed.replace(/\.?0+$/, '')
+      const trimmed = fixed.replace(/\.?0+$/, '')
+      // e.g. 1e-12 with precision 6 -> "0.000000" -> trimmed "" — must not write blank value line
+      if (trimmed === '' || trimmed === '-') return '0'
+      return trimmed
     }
     return String(value)
+  }
+
+  /** Removes characters that must not appear on a single DXF value line. */
+  private sanitizeStringForDxfLine(s: string): string {
+    return s
+      .replace(/\r\n|\r|\n/g, ' ')
+      // eslint-disable-next-line no-control-regex
+      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
   }
 }

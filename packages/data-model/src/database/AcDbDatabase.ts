@@ -1322,6 +1322,12 @@ export class AcDbDatabase extends AcDbObject {
     filer.startSection('HEADER')
     filer.writeString(9, '$ACADVER')
     filer.writeString(1, filer.version?.name ?? this.version.name)
+    filer.writeString(9, '$HANDSEED')
+    filer.writeString(5, filer.nextHandle.toString(16).toUpperCase())
+    if (filer.version != null && filer.version.value >= 27) {
+      filer.writeString(9, '$DWGCODEPAGE')
+      filer.writeString(3, 'UTF-8')
+    }
     filer.writeString(9, '$INSUNITS')
     filer.writeInt16(70, this.insunits)
     filer.writeString(9, '$LTSCALE')
