@@ -369,7 +369,7 @@ export class AcDbDatabase extends AcDbObject {
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
     this._ltscale = 1
-    this._lwdisplay = true
+    this._lwdisplay = false
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
