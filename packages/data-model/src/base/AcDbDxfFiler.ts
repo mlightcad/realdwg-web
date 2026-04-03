@@ -267,9 +267,11 @@ export class AcDbDxfFiler {
 
   /** Removes characters that must not appear on a single DXF value line. */
   private sanitizeStringForDxfLine(s: string): string {
-    return s
-      .replace(/\r\n|\r|\n/g, ' ')
-      // eslint-disable-next-line no-control-regex
-      .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    return (
+      s
+        .replace(/\r\n|\r|\n/g, ' ')
+        // eslint-disable-next-line no-control-regex
+        .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
+    )
   }
 }
