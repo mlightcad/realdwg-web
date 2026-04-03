@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.14
+
+### Patch Changes
+
+- fix: improve DXF export functionality and refine AcDbSpline
+- Updated dependencies
+  - @mlightcad/data-model@1.7.14
+  - @mlightcad/libredwg-converter@3.5.14
+
 ## 0.1.13
 
 ### Patch Changes

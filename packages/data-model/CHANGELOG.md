@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.14
+
+### Patch Changes
+
+- fix: improve DXF export functionality and refine AcDbSpline
+- Updated dependencies
+  - @mlightcad/common@1.4.14
+  - @mlightcad/geometry-engine@3.2.14
+  - @mlightcad/graphic-interface@3.3.14
+
 ## 1.7.13
 
 ### Patch Changes

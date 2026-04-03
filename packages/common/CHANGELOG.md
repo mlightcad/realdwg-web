@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.14
+
+### Patch Changes
+
+- fix: improve DXF export functionality and refine AcDbSpline
+
 ## 1.4.13
 
 ### Patch Changes
