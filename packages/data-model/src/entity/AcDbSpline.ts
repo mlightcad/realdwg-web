@@ -46,7 +46,7 @@ export class AcDbSpline extends AcDbCurve {
   }
 
   /** The underlying geometric spline object */
-  private _geo: AcGeSpline3d
+  private _geo!: AcGeSpline3d
 
   /**
    * Creates a new spline entity from control points.
@@ -107,6 +107,73 @@ export class AcDbSpline extends AcDbCurve {
   )
   constructor(a?: unknown, b?: unknown, c?: unknown, d?: unknown, e?: unknown) {
     super()
+    this.rebuild(
+      a as AcGePoint3dLike[],
+      b as number[],
+      c as number[],
+      d as number | undefined,
+      e as boolean
+    )
+  }
+
+  /**
+   * Rebuilds the spline geometry with new parameters.
+   *
+   * This method recreates the underlying geometric spline object with the specified parameters.
+   * It supports the same parameter combinations as the constructor.
+   *
+   * @param controlPoints - Array of control points in WCS coordinates
+   * @param knots - Array of knot values that define the spline's parameterization
+   * @param weights - Optional array of weights for each control point (default: 1 for all)
+   * @param degree - Optional degree of the spline (default: 3)
+   * @param closed - Whether the spline should be closed (default: false)
+   *
+   * @example
+   * ```typescript
+   * const controlPoints = [
+   *   new AcGePoint3d(0, 0, 0),
+   *   new AcGePoint3d(5, 5, 0),
+   *   new AcGePoint3d(10, 0, 0)
+   * ];
+   * const knots = [0, 0, 0, 1, 1, 1];
+   * spline.rebuild(controlPoints, knots);
+   * ```
+   */
+  rebuild(
+    controlPoints: AcGePoint3dLike[],
+    knots: number[],
+    weights?: number[],
+    degree?: number,
+    closed?: boolean
+  ): void
+  /**
+   * Rebuilds the spline geometry with new parameters.
+   *
+   * This method recreates the underlying geometric spline object with the specified parameters.
+   * It supports the same parameter combinations as the constructor.
+   *
+   * @param fitPoints - Array of fit points in WCS coordinates
+   * @param knotParam - Knot parameterization type that defines how knots are generated
+   * @param degree - Optional degree of the spline (default: 3)
+   * @param closed - Whether the spline should be closed (default: false)
+   *
+   * @example
+   * ```typescript
+   * const fitPoints = [
+   *   new AcGePoint3d(0, 0, 0),
+   *   new AcGePoint3d(5, 5, 0),
+   *   new AcGePoint3d(10, 0, 0)
+   * ];
+   * spline.rebuild(fitPoints, AcGeKnotParameterizationType.Uniform);
+   * ```
+   */
+  rebuild(
+    fitPoints: AcGePoint3dLike[],
+    knotParam: AcGeKnotParameterizationType,
+    degree?: number,
+    closed?: boolean
+  ): void
+  rebuild(a?: unknown, b?: unknown, c?: unknown, d?: unknown, e?: unknown) {
     const argsLength =
       +(a !== undefined) +
       +(b !== undefined) +
@@ -118,7 +185,6 @@ export class AcDbSpline extends AcDbCurve {
       throw AcCmErrors.ILLEGAL_PARAMETERS
     }
 
-    // Determine if this is the fitPoints constructor (second arg is not an array)
     const isFitPointsConstructor = !Array.isArray(b)
 
     if (isFitPointsConstructor) {
