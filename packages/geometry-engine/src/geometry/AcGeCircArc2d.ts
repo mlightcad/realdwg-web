@@ -192,21 +192,28 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     const lengthCD = Math.abs(lengthAB / 2 / Math.tan(theta / 2))
     const normAB = ab.normalize()
 
+    // Calculate perpendicular vector: counter-clockwise for positive bulge, clockwise for negative bulge
+    const angle = bulge < 0 ? -Math.PI / 2 : Math.PI / 2
+    const normPerp = new AcGeVector2d(
+      normAB.x * Math.cos(angle) - normAB.y * Math.sin(angle),
+      normAB.y * Math.cos(angle) + normAB.x * Math.sin(angle)
+    )
+
     let d: AcGeVector2d
     if (theta < Math.PI) {
-      const normDC = new AcGeVector2d(
-        normAB.x * Math.cos(Math.PI / 2) - normAB.y * Math.sin(Math.PI / 2),
-        normAB.y * Math.cos(Math.PI / 2) + normAB.x * Math.sin(Math.PI / 2)
-      )
       // d is the center of the arc
-      d = c.add(normDC.multiplyScalar(-lengthCD))
+      if (bulge < 0) {
+        d = c.add(normPerp.multiplyScalar(lengthCD))
+      } else {
+        d = c.add(normPerp.multiplyScalar(-lengthCD))
+      }
     } else {
-      const normCD = new AcGeVector2d(
-        normAB.x * Math.cos(Math.PI / 2) - normAB.y * Math.sin(Math.PI / 2),
-        normAB.y * Math.cos(Math.PI / 2) + normAB.x * Math.sin(Math.PI / 2)
-      )
       // d is the center of the arc
-      d = c.add(normCD.multiplyScalar(lengthCD))
+      if (bulge < 0) {
+        d = c.add(normPerp.multiplyScalar(-lengthCD))
+      } else {
+        d = c.add(normPerp.multiplyScalar(lengthCD))
+      }
     }
 
     // Add points between start start and eng angle relative
@@ -344,10 +351,9 @@ export class AcGeCircArc2d extends AcGeCurve2d {
    */
   get midPoint(): AcGePoint2d {
     const internalStartAngle = this._getInternalAngle(this.startAngle)
-    const internalEndAngle = this._getInternalAngle(this.endAngle)
-    const internalMidAngle = AcGeMathUtil.normalizeAngle(
-      (internalStartAngle + internalEndAngle) / 2
-    )
+    const internalMidAngle = this._clockwise
+      ? AcGeMathUtil.normalizeAngle(internalStartAngle - this.deltaAngle / 2)
+      : AcGeMathUtil.normalizeAngle(internalStartAngle + this.deltaAngle / 2)
     const midAngle = this._clockwise
       ? this._mirrorAngle(internalMidAngle)
       : internalMidAngle

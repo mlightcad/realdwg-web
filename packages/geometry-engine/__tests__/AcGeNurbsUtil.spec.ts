@@ -198,6 +198,43 @@ describe('AcGeNurbsUtil', () => {
       // The weighted point should be influenced more by the second control point
       expect(point[0]).toBeGreaterThan(1)
     })
+
+    it('should treat uniform negative weights the same as uniform positive weights', () => {
+      const degree = 3
+      const knots = [3, 3, 3, 3, 4, 5, 6, 7, 8, 9, 9, 9, 9]
+      const controlPoints = [
+        [400.6139274363574, 122.2912929922276, 0],
+        [386.4614997325278, 116.6743761603575, 0],
+        [352.3194562446899, 127.4676673274804, 0],
+        [341.7464363258755, 147.6224865477202, 0],
+        [351.658642499764, 177.6895119418484, 0],
+        [389.32502596054, 183.3064287737185, 0],
+        [437.2340224676673, 161.1691683187011, 0],
+        [414.766355140187, 127.9082098240977, 0],
+        [400.6139274363574, 122.2912929922276, 0]
+      ]
+      const positiveWeights = new Array(controlPoints.length).fill(1)
+      const negativeWeights = new Array(controlPoints.length).fill(-1)
+
+      const positivePoint = evaluateNurbsPoint(
+        6,
+        degree,
+        knots,
+        controlPoints,
+        positiveWeights
+      )
+      const negativePoint = evaluateNurbsPoint(
+        6,
+        degree,
+        knots,
+        controlPoints,
+        negativeWeights
+      )
+
+      expect(negativePoint[0]).toBeCloseTo(positivePoint[0], 10)
+      expect(negativePoint[1]).toBeCloseTo(positivePoint[1], 10)
+      expect(negativePoint[2]).toBeCloseTo(positivePoint[2], 10)
+    })
   })
 
   describe('calculateCurveLength', () => {

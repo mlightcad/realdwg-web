@@ -8,6 +8,7 @@ import {
 
 import { AcDbRenderingCache } from '../misc'
 import { AcDbDatabase } from './AcDbDatabase'
+import { AcDbSysVarManager } from './AcDbSysVarManager'
 
 /**
  * Represents the different stages of DXF/DWG file conversion.
@@ -386,6 +387,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * @param db - The database to populate with converted data
    * @param minimumChunkSize - Minimum chunk size for batch processing
    * @param progress - Optional progress callback
+   * @param timeout - Optional timeout for parser web worker operations in milliseconds
+   * @param sysVars - Optional system variables to override in the database
    * @returns Promise that resolves when conversion is complete
    *
    */
@@ -394,7 +397,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     db: AcDbDatabase,
     minimumChunkSize: number,
     progress?: AcDbConversionProgressCallback,
-    timeout?: number
+    timeout?: number,
+    sysVars?: Record<string, number | boolean | string>
   ) {
     const loadDbTimeEntry: AcCmPerformanceEntry<AcDbConvertDatabasePerformanceData> =
       {
@@ -542,6 +546,13 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           progress: percentage,
           task: async (data: { model: TModel }) => {
             this.processHeader(data.model, db)
+            // Override system variable values
+            if (sysVars) {
+              const sysVarManager = AcDbSysVarManager.instance()
+              for (const [name, value] of Object.entries(sysVars)) {
+                sysVarManager.setVar(name, value, db)
+              }
+            }
             return data
           }
         },

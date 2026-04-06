@@ -222,6 +222,18 @@ export interface AcDbOpenDatabaseOptions {
    * file in a web worker. If omitted, the converter-level timeout is used.
    */
   timeout?: number
+
+  /**
+   * System variables to override in the database.
+   *
+   * This allows overriding system variable values when opening a database.
+   * For example, to disable line weight display regardless of the database's
+   * stored value, set { 'lwdisplay': false }.
+   *
+   * The keys are system variable names (case-insensitive), and values can be
+   * number, boolean, or string types.
+   */
+  sysVars?: Record<string, number | boolean | string>
 }
 
 /**
@@ -999,7 +1011,8 @@ export class AcDbDatabase extends AcDbObject {
           await options.fontLoader.load(fonts)
         }
       },
-      options?.timeout
+      options?.timeout,
+      options?.sysVars
     )
 
     this.ensureDatabaseDefaults()

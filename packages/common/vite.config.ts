@@ -1,14 +1,25 @@
+import strip from 'vite-plugin-strip-comments'
 import peerDepsExternal from 'rollup-plugin-peer-deps-external'
-import { defineConfig } from 'vite'
+import { defineConfig, PluginOption } from 'vite'
 
 export default defineConfig({
+  esbuild: {
+    drop: ['console'],
+    legalComments: 'none'
+  },
   build: {
     outDir: 'dist',
     lib: {
       entry: 'src/index.ts',
       name: 'common',
       fileName: 'common'
+    },
+    minify: 'esbuild',
+    rollupOptions: {
+      output: {
+        compact: true
+      }
     }
   },
-  plugins: [peerDepsExternal()]
+  plugins: [strip({ type: 'none' }), peerDepsExternal() as PluginOption]
 })

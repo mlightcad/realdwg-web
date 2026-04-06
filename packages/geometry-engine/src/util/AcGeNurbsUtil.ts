@@ -421,9 +421,9 @@ export function evaluateNurbsPoint(
     weight += w
   }
 
-  // If weight is very small (all basis functions are zero),
+  // If the homogeneous weight sum is close to zero,
   // check if we're at the end and return the last control point
-  if (weight < 1e-10) {
+  if (Math.abs(weight) < 1e-10) {
     // Check if we're at the end of the domain
     const endParam = knots[knots.length - p - 1]
     if (Math.abs(u - endParam) < 1e-8) {
@@ -435,7 +435,7 @@ export function evaluateNurbsPoint(
     }
   }
 
-  if (weight > 1e-10) {
+  if (Math.abs(weight) >= 1e-10) {
     point[0] /= weight
     point[1] /= weight
     point[2] /= weight
