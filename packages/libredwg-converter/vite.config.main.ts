@@ -1,9 +1,10 @@
+import strip from 'vite-plugin-strip-comments'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig, PluginOption } from 'vite'
 import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 
 export default defineConfig(({ mode }) => {
-  const plugins: PluginOption[] = []
+  const plugins: PluginOption[] = [strip({ type: 'none' })]
 
   if (mode === 'analyze') {
     plugins.push(visualizer())
@@ -11,6 +12,10 @@ export default defineConfig(({ mode }) => {
   plugins.push(peerDepsExternal() as PluginOption)
 
   return {
+    esbuild: {
+      drop: ['console'],
+      legalComments: 'none'
+    },
     build: {
       emptyOutDir: false,
       outDir: 'dist',
@@ -18,6 +23,12 @@ export default defineConfig(({ mode }) => {
         entry: 'src/index.ts',
         name: 'libredwg-converter',
         fileName: 'libredwg-converter'
+      },
+      minify: 'esbuild',
+      rollupOptions: {
+        output: {
+          compact: true
+        }
       }
     },
     plugins

@@ -1,6 +1,14 @@
 import { AcGeCircArc2d, AcGeTol, DEFAULT_TOL, ORIGIN_POINT_2D } from '../src'
 
 describe('Test AcGeCircArc2d', () => {
+  const expectPointClose = (
+    actual: { x: number; y: number },
+    expected: { x: number; y: number }
+  ) => {
+    expect(actual.x).toBeCloseTo(expected.x, 10)
+    expect(actual.y).toBeCloseTo(expected.y, 10)
+  }
+
   it('computes closed property correctly', () => {
     const closedArc1 = new AcGeCircArc2d(
       ORIGIN_POINT_2D,
@@ -119,5 +127,80 @@ describe('Test AcGeCircArc2d', () => {
     expect(arc2.startAngle).toBe(Math.PI)
     expect(AcGeTol.equalToZero(arc2.endAngle)).toBeTruthy()
     expect(arc2.clockwise).toBe(true)
+  })
+
+  it('creates non-semicircle minor arcs from bulge correctly', () => {
+    const quarterBulge = Math.SQRT2 - 1
+
+    const ccwArc = new AcGeCircArc2d(
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      quarterBulge
+    )
+    expect(ccwArc.clockwise).toBe(false)
+    expect(ccwArc.radius).toBeCloseTo(Math.SQRT2, 10)
+    expectPointClose(ccwArc.center, { x: 1, y: 1 })
+    expect(ccwArc.deltaAngle).toBeCloseTo(Math.PI / 2, 10)
+    expectPointClose(ccwArc.startPoint, { x: 0, y: 0 })
+    expectPointClose(ccwArc.endPoint, { x: 2, y: 0 })
+    expectPointClose(ccwArc.midPoint, { x: 1, y: 1 - Math.SQRT2 })
+
+    const cwArc = new AcGeCircArc2d(
+      { x: 0, y: 0 },
+      { x: 2, y: 0 },
+      -quarterBulge
+    )
+    expect(cwArc.clockwise).toBe(true)
+    expect(cwArc.radius).toBeCloseTo(Math.SQRT2, 10)
+    expectPointClose(cwArc.center, { x: 1, y: -1 })
+    expect(cwArc.deltaAngle).toBeCloseTo(Math.PI / 2, 10)
+    expectPointClose(cwArc.startPoint, { x: 0, y: 0 })
+    expectPointClose(cwArc.endPoint, { x: 2, y: 0 })
+    expectPointClose(cwArc.midPoint, { x: 1, y: Math.SQRT2 - 1 })
+  })
+
+  it('creates non-semicircle major arcs from bulge correctly', () => {
+    const majorBulge = 2
+
+    const ccwArc = new AcGeCircArc2d({ x: 0, y: 0 }, { x: 2, y: 0 }, majorBulge)
+    expect(ccwArc.clockwise).toBe(false)
+    expect(ccwArc.radius).toBeCloseTo(1.25, 10)
+    expectPointClose(ccwArc.center, { x: 1, y: -0.75 })
+    expect(ccwArc.deltaAngle).toBeCloseTo(4 * Math.atan(majorBulge), 10)
+    expectPointClose(ccwArc.startPoint, { x: 0, y: 0 })
+    expectPointClose(ccwArc.endPoint, { x: 2, y: 0 })
+    expectPointClose(ccwArc.midPoint, { x: 1, y: -2 })
+
+    const cwArc = new AcGeCircArc2d({ x: 0, y: 0 }, { x: 2, y: 0 }, -majorBulge)
+    expect(cwArc.clockwise).toBe(true)
+    expect(cwArc.radius).toBeCloseTo(1.25, 10)
+    expectPointClose(cwArc.center, { x: 1, y: 0.75 })
+    expect(cwArc.deltaAngle).toBeCloseTo(4 * Math.atan(majorBulge), 10)
+    expectPointClose(cwArc.startPoint, { x: 0, y: 0 })
+    expectPointClose(cwArc.endPoint, { x: 2, y: 0 })
+    expectPointClose(cwArc.midPoint, { x: 1, y: 2 })
+  })
+
+  it('creates bulge arcs correctly for non-axis-aligned chords', () => {
+    const from = { x: -3, y: 5 }
+    const to = { x: 4, y: -1 }
+
+    const minorArc = new AcGeCircArc2d(from, to, 0.25)
+    expect(minorArc.clockwise).toBe(false)
+    expect(minorArc.radius).toBeCloseTo(9.795765985873693, 10)
+    expectPointClose(minorArc.center, { x: 6.125, y: 8.5625 })
+    expect(minorArc.deltaAngle).toBeCloseTo(4 * Math.atan(0.25), 10)
+    expectPointClose(minorArc.startPoint, from)
+    expectPointClose(minorArc.endPoint, to)
+    expectPointClose(minorArc.midPoint, { x: -0.25, y: 1.125 })
+
+    const majorArc = new AcGeCircArc2d(from, to, -3)
+    expect(majorArc.clockwise).toBe(true)
+    expect(majorArc.radius).toBeCloseTo(7.682953714410739, 10)
+    expectPointClose(majorArc.center, { x: 4.5, y: 6.666666666666667 })
+    expect(majorArc.deltaAngle).toBeCloseTo(4 * Math.atan(3), 10)
+    expectPointClose(majorArc.startPoint, from)
+    expectPointClose(majorArc.endPoint, to)
+    expectPointClose(majorArc.midPoint, { x: 9.5, y: 12.5 })
   })
 })

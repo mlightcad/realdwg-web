@@ -25,6 +25,35 @@ describe('AcGeSpline3d', () => {
       expect(spline.getControlPointAt(0)).toBeDefined()
     })
 
+    it('should keep the same shape when all rational weights are scaled by -1', () => {
+      const controlPoints = [
+        { x: 400.6139274363574, y: 122.2912929922276, z: 0 },
+        { x: 386.4614997325278, y: 116.6743761603575, z: 0 },
+        { x: 352.3194562446899, y: 127.4676673274804, z: 0 },
+        { x: 341.7464363258755, y: 147.6224865477202, z: 0 },
+        { x: 351.658642499764, y: 177.6895119418484, z: 0 },
+        { x: 389.32502596054, y: 183.3064287737185, z: 0 },
+        { x: 437.2340224676673, y: 161.1691683187011, z: 0 },
+        { x: 414.766355140187, y: 127.9082098240977, z: 0 },
+        { x: 400.6139274363574, y: 122.2912929922276, z: 0 }
+      ]
+      const knots = [3, 3, 3, 3, 4, 5, 6, 7, 8, 9, 9, 9, 9]
+
+      const spline = new AcGeSpline3d(
+        controlPoints,
+        knots,
+        new Array(controlPoints.length).fill(-1)
+      )
+      const points = spline.getPoints(20)
+
+      points.forEach(point => {
+        expect(point.x).toBeGreaterThan(300)
+        expect(point.y).toBeGreaterThan(100)
+        expect(point.x).toBeLessThan(500)
+        expect(point.y).toBeLessThan(200)
+      })
+    })
+
     it('should create spline from control points with custom degree', () => {
       const controlPoints = [
         { x: 0, y: 0, z: 0 },

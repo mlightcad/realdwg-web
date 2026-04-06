@@ -89,6 +89,9 @@ importers:
       vite:
         specifier: ^5.2.10
         version: 5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6)
+      vite-plugin-strip-comments:
+        specifier: ^0.0.10
+        version: 0.0.10
 
   packages/common:
     dependencies:
@@ -2680,16 +2683,18 @@ packages:
 
   glob@10.4.5:
     resolution: {integrity: sha512-7Bv8RF0k6xjo7d4A/PxYLbUCfb6c+Vpd2/mB2yRDlew7Jb5hEXiCD9ibfO7wpk8i4sevK6DFny9h7EYbM3/sHg==}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@11.0.0:
     resolution: {integrity: sha512-9UiX/Bl6J2yaBbxKoEBRm4Cipxgok8kQYcOPEhScPwebu2I0HoQOuYdIO6S3hLuWoZgpDpwQZMzTFxgpkyT76g==}
     engines: {node: 20 || >=22}
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
     hasBin: true
 
   glob@7.2.3:
     resolution: {integrity: sha512-nFR0zLpU2YCaRxwoCJvL6UvCH2JFyFVIvwTLsIf21AuHlMskA1hhTdk+LlYJtOlYt9v6dvszD2BGRqBL+iQK9Q==}
-    deprecated: Glob versions prior to v9 are no longer supported
+    deprecated: Old versions of glob are not supported, and contain widely publicized security vulnerabilities, which have been fixed in the current version. Please update. Support for old versions may be purchased (at exorbitant rates) by contacting i@izs.me
 
   globals@11.12.0:
     resolution: {integrity: sha512-WOBp/EEGUiIsJSp7wcv/y6MO+lV9UoncWqxuFfm8eBwzWNgyfBd6Gz+IeKQ9jCmyhoH99g15M3T+QaVHFjizVA==}
@@ -4010,6 +4015,10 @@ packages:
     engines: {node: ^18.0.0 || >=20.0.0}
     peerDependencies:
       vite: ^5.0.0 || ^6.0.0 || ^7.0.0
+
+  vite-plugin-strip-comments@0.0.10:
+    resolution: {integrity: sha512-LuWP3zfnxIBy67LCvH8qKGey+glLznRv+/oIKr165dPzfNBxleaq9+YwfEP617FPgl6mB5D7d5IUWuZ3OrehsA==}
+    engines: {deno: '>=2.0.4', node: '>=20', pnpm: '>=9.10.0'}
 
   vite@5.3.2:
     resolution: {integrity: sha512-6lA7OBHBlXUxiJxbO5aAY2fsHHzDr1q7DvXYnyZycRs2Dz+dXBWuhpWHvmljTRTpQC2uvGmUFFkSHF2vGo90MA==}
@@ -9118,6 +9127,8 @@ snapshots:
       picocolors: 1.1.1
       tinyglobby: 0.2.15
       vite: 5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6)
+
+  vite-plugin-strip-comments@0.0.10: {}
 
   vite@5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6):
     dependencies:

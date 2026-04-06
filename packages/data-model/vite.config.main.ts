@@ -1,14 +1,19 @@
+import strip from 'vite-plugin-strip-comments'
 import { visualizer } from 'rollup-plugin-visualizer'
 import { defineConfig, type PluginOption } from 'vite'
 
 export default defineConfig(({ mode }) => {
-  const plugins: PluginOption[] = []
+  const plugins: PluginOption[] = [strip({ type: 'none' })]
 
   if (mode === 'analyze') {
     plugins.push(visualizer())
   }
 
   return {
+    esbuild: {
+      drop: ['console'],
+      legalComments: 'none'
+    },
     build: {
       emptyOutDir: false,
       outDir: 'dist',
@@ -17,11 +22,12 @@ export default defineConfig(({ mode }) => {
         fileName: 'data-model',
         formats: ['es', 'cjs']
       },
+      minify: 'esbuild',
       rollupOptions: {
-        // Bundle everything into this output (no shared chunks)
         external: [],
         output: {
-          inlineDynamicImports: true
+          inlineDynamicImports: true,
+          compact: true
         }
       }
     },
