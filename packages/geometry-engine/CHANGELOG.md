@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.15
+
+### Patch Changes
+
+- feat: improve geometry and optimize build configuration
+- Updated dependencies
+  - @mlightcad/common@1.4.15
+
 ## 3.2.14
 
 ### Patch Changes

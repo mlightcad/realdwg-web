@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.15
+
+### Patch Changes
+
+- feat: improve geometry and optimize build configuration
+- Updated dependencies
+  - @mlightcad/data-model@1.7.15
+
 ## 3.5.14
 
 ### Patch Changes

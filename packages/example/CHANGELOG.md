@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.15
+
+### Patch Changes
+
+- feat: improve geometry and optimize build configuration
+- Updated dependencies
+  - @mlightcad/data-model@1.7.15
+  - @mlightcad/libredwg-converter@3.5.15
+
 ## 0.1.14
 
 ### Patch Changes

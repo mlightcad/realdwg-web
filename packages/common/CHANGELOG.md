@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.15
+
+### Patch Changes
+
+- feat: improve geometry and optimize build configuration
+
 ## 1.4.14
 
 ### Patch Changes

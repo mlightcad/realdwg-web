@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.15
+
+### Patch Changes
+
+- feat: improve geometry and optimize build configuration
+- Updated dependencies
+  - @mlightcad/common@1.4.15
+  - @mlightcad/geometry-engine@3.2.15
+  - @mlightcad/graphic-interface@3.3.15
+
 ## 1.7.14
 
 ### Patch Changes
