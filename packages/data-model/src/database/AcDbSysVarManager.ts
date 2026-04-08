@@ -128,6 +128,24 @@ export class AcDbSysVarManager {
       isDbVar: false,
       defaultValue: '0'
     })
+    /**
+     * - 0: All Dynamic Input features, including dynamic prompts, off
+     * - 1: Pointer input on
+     * - 2: Dimensional input on
+     * - 3: Both pointer input and dimensional input on
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.DYNMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 3
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.DYNPROMPT,
+      type: 'boolean',
+      isDbVar: false,
+      defaultValue: true
+    })
     this.registerVar({
       name: AcDbSystemVariables.LWDISPLAY,
       type: 'boolean',
@@ -213,15 +231,30 @@ export class AcDbSysVarManager {
   public getVar(name: string, db: AcDbDatabase): AcDbSysVarType | undefined {
     name = this.normalizeName(name)
     const descriptor = this.getDescriptor(name)
-    if (descriptor) {
-      if (descriptor.isDbVar) {
-        return db[name.toLowerCase() as keyof AcDbDatabase] as AcDbSysVarType
-      } else if (this.cache.has(name)) {
-        return this.cache.get(name) as AcDbSysVarType
-      }
+    if (!descriptor) {
+      throw new Error(`System variable ${name} not found!`)
+    }
+
+    if (descriptor.isDbVar) {
+      return db[name.toLowerCase() as keyof AcDbDatabase] as AcDbSysVarType
+    } else if (this.cache.has(name)) {
+      return this.cache.get(name) as AcDbSysVarType
     }
 
     return undefined
+  }
+
+  /**
+   * Get system variable default value.
+   */
+  public getDefaultValue(name: string): AcDbSysVarType | undefined {
+    name = this.normalizeName(name)
+    const descriptor = this.getDescriptor(name)
+    if (!descriptor) {
+      throw new Error(`System variable ${name} not found!`)
+    }
+
+    return descriptor.defaultValue
   }
 
   /**
