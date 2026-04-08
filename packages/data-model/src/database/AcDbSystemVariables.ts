@@ -33,6 +33,13 @@ export const AcDbSystemVariables = {
   CLAYER: 'CLAYER',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
+  /** 
+   * Controls the display and behavior of dynamic input at the cursor, enabling or 
+   * disabling on-screen pointer and dimension input 
+   */
+  DYNMODE: 'DYNMODE',
+  /** Controls display of prompts in Dynamic Input tooltips. */
+  DYNPROMPT: 'DYNPROMPT',
   /** Upper-right corner of the model-space drawing extents. */
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */
