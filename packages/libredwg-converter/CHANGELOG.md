@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.16
+
+### Patch Changes
+
+- feat(sysvars): add DYNMODE and DYNPROMPT system variables
+- Updated dependencies
+  - @mlightcad/data-model@1.7.16
+
 ## 3.5.15
 
 ### Patch Changes

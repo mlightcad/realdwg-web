@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.16
+
+### Patch Changes
+
+- feat(sysvars): add DYNMODE and DYNPROMPT system variables
+
 ## 1.4.15
 
 ### Patch Changes

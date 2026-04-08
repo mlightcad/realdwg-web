@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.16
+
+### Patch Changes
+
+- feat(sysvars): add DYNMODE and DYNPROMPT system variables
+- Updated dependencies
+  - @mlightcad/common@1.4.16
+
 ## 3.2.15
 
 ### Patch Changes
