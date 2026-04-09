@@ -1,5 +1,11 @@
 import { AcGeEllipseArc2d, AcGeSpline3d } from '../geometry'
-import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math'
+import {
+  AcGeBox2d,
+  AcGeMatrix2d,
+  AcGeMatrix3d,
+  AcGePoint2d,
+  AcGePoint3d
+} from '../math'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
 import { AcGeLine2d } from './AcGeLine2d'
@@ -155,8 +161,34 @@ export class AcGeLoop2d extends AcGeCurve2d {
   /**
    * @inheritdoc
    */
-  transform(_matrix: AcGeMatrix2d) {
-    // TODO: implement it
+  transform(matrix: AcGeMatrix2d) {
+    const matrix3d = new AcGeMatrix3d().set(
+      matrix.elements[0],
+      matrix.elements[3],
+      0,
+      matrix.elements[6],
+      matrix.elements[1],
+      matrix.elements[4],
+      0,
+      matrix.elements[7],
+      0,
+      0,
+      1,
+      0,
+      0,
+      0,
+      0,
+      1
+    )
+
+    this._curves.forEach(curve => {
+      if (curve instanceof AcGeSpline3d) {
+        curve.transform(matrix3d)
+      } else {
+        curve.transform(matrix)
+      }
+    })
+
     this._boundingBoxNeedsUpdate = true
     return this
   }

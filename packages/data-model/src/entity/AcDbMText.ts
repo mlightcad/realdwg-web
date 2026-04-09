@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
@@ -371,6 +372,49 @@ export class AcDbMText extends AcDbEntity {
     if (AcDbOsnapMode.Insertion === osnapMode) {
       snapPoints.push(this._location)
     }
+  }
+
+  /**
+   * Transforms this mtext by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const origin = this._location.clone()
+    const xDir =
+      this._direction.lengthSq() > 0
+        ? this._direction.clone().normalize()
+        : new AcGeVector3d(
+            Math.cos(this._rotation),
+            Math.sin(this._rotation),
+            0
+          )
+    const yDir = new AcGeVector3d(-xDir.y, xDir.x, xDir.z)
+    if (yDir.lengthSq() === 0) {
+      yDir.set(0, 1, 0)
+    }
+    yDir.normalize()
+
+    const xAxisPoint = origin.clone().add(xDir)
+    const yAxisPoint = origin.clone().add(yDir)
+
+    origin.applyMatrix4(matrix)
+    xAxisPoint.applyMatrix4(matrix)
+    yAxisPoint.applyMatrix4(matrix)
+
+    const xAxis = new AcGeVector3d(xAxisPoint).sub(origin)
+    const yAxis = new AcGeVector3d(yAxisPoint).sub(origin)
+    const xScale = xAxis.length()
+    const yScale = yAxis.length()
+
+    this._location.copy(origin)
+    if (xScale > 0) {
+      this._direction.copy(xAxis).normalize()
+      this._rotation = Math.atan2(this._direction.y, this._direction.x)
+      this._width *= xScale
+    }
+    if (yScale > 0) {
+      this._height *= yScale
+    }
+    return this
   }
 
   /**

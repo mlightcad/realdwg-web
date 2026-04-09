@@ -410,7 +410,53 @@ export class AcGeCircArc2d extends AcGeCurve2d {
    * @inheritdoc
    */
   transform(_matrix: AcGeMatrix2d) {
-    // TODO: implement it
+    const matrix = _matrix
+    const transformedCenter = this.center.clone().applyMatrix2d(matrix)
+    const transformedStart = this.startPoint.clone().applyMatrix2d(matrix)
+
+    if (this.closed) {
+      this.center = transformedCenter
+      this.radius = transformedCenter.distanceTo(transformedStart)
+      this._startAngle = Math.atan2(
+        transformedStart.y - transformedCenter.y,
+        transformedStart.x - transformedCenter.x
+      )
+      this._endAngle = this._startAngle
+      this._clockwise =
+        matrix.determinant() < 0 ? !this._clockwise : this._clockwise
+      this._boundingBoxNeedsUpdate = true
+      return this
+    }
+
+    const transformedMid = this.midPoint.clone().applyMatrix2d(matrix)
+    const transformedEnd = this.endPoint.clone().applyMatrix2d(matrix)
+    const transformedArc = new AcGeCircArc2d(
+      transformedStart,
+      transformedMid,
+      transformedEnd
+    )
+    const clockwise =
+      matrix.determinant() < 0 ? !this.clockwise : this.clockwise
+    const toPublicAngle = (angle: number) => {
+      const normalized = AcGeMathUtil.normalizeAngle(angle)
+      return clockwise ? this._mirrorAngle(normalized) : normalized
+    }
+
+    this.center = transformedArc.center
+    this.radius = transformedArc.radius
+    this.clockwise = clockwise
+    this.startAngle = toPublicAngle(
+      Math.atan2(
+        transformedStart.y - transformedArc.center.y,
+        transformedStart.x - transformedArc.center.x
+      )
+    )
+    this.endAngle = toPublicAngle(
+      Math.atan2(
+        transformedEnd.y - transformedArc.center.y,
+        transformedEnd.x - transformedArc.center.x
+      )
+    )
     this._boundingBoxNeedsUpdate = true
     return this
   }

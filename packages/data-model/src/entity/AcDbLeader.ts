@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d
@@ -324,6 +325,20 @@ export class AcDbLeader extends AcDbCurve {
   }
   set closed(_value: boolean) {
     // TODO: Not sure whether the leader really support setting value of property 'closed'
+  }
+
+  /**
+   * Transforms this leader by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._vertices.forEach(point => point.applyMatrix4(matrix))
+    if (this._splineGeo) {
+      this._splineGeo.transform(matrix)
+      this._updated = false
+    } else {
+      this._updated = true
+    }
+    return this
   }
 
   /**

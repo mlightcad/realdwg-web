@@ -7,7 +7,10 @@ import {
   AcGeLine2d,
   AcGeLoop2d,
   AcGeLoop2dType,
+  AcGeMatrix2d,
+  AcGeMatrix3d,
   AcGePoint2d,
+  AcGePoint3d,
   AcGePolyline2d,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
@@ -427,6 +430,37 @@ export class AcDbHatch extends AcDbEntity {
     }
     const entities = areas.map(area => renderer.area(area))
     return renderer.group(entities)
+  }
+
+  /**
+   * Transforms this hatch by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const te = matrix.elements
+    const matrix2d = new AcGeMatrix2d(
+      te[0],
+      te[4],
+      te[12],
+      te[1],
+      te[5],
+      te[13],
+      0,
+      0,
+      1
+    )
+    this._geo.transform(matrix2d)
+    this._elevation = new AcGePoint3d(0, 0, this._elevation).applyMatrix4(
+      matrix
+    ).z
+
+    const xAxis = new AcGePoint3d(1, 0, 0).applyMatrix4(matrix)
+    const origin = new AcGePoint3d().applyMatrix4(matrix)
+    const xVector = new AcGePoint3d(xAxis).sub(origin)
+    if (xVector.length() > 0) {
+      this._patternAngle += Math.atan2(xVector.y, xVector.x)
+      this._patternScale *= xVector.length()
+    }
+    return this
   }
 
   /**

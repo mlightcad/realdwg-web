@@ -440,6 +440,74 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
    * @inheritdoc
    */
   transform(_matrix: AcGeMatrix3d) {
+    const matrix = _matrix
+    const transformedCenter = this.center.clone().applyMatrix4(matrix)
+    const transformedMajorPoint = this.getPointAtAngle(0)
+      .clone()
+      .applyMatrix4(matrix)
+    const transformedMinorPoint = this.getPointAtAngle(Math.PI / 2)
+      .clone()
+      .applyMatrix4(matrix)
+
+    const majorVector = new AcGeVector3d(transformedMajorPoint).sub(
+      transformedCenter
+    )
+    const transformedMinorVector = new AcGeVector3d(transformedMinorPoint).sub(
+      transformedCenter
+    )
+
+    const majorAxisRadius = majorVector.length()
+    const minorAxisRadius = transformedMinorVector.length()
+    const majorAxis = majorVector.clone().normalize()
+
+    const normal = new AcGeVector3d()
+      .crossVectors(majorVector, transformedMinorVector)
+      .normalize()
+    let minorAxis = new AcGeVector3d()
+      .crossVectors(normal, majorAxis)
+      .normalize()
+
+    if (minorAxis.dot(transformedMinorVector) < 0) {
+      normal.negate()
+      minorAxis = new AcGeVector3d().crossVectors(normal, majorAxis).normalize()
+    }
+
+    const getAngle = (point: AcGePoint3d) => {
+      const relative = new AcGeVector3d(point).sub(transformedCenter)
+      const x = relative.dot(majorAxis)
+      const y = relative.dot(minorAxis)
+      return AcGeMathUtil.normalizeAngle(
+        Math.atan2(y / minorAxisRadius, x / majorAxisRadius)
+      )
+    }
+
+    const transformedEllipse = this.closed
+      ? new AcGeEllipseArc3d(
+          transformedCenter,
+          normal,
+          majorAxis,
+          majorAxisRadius,
+          minorAxisRadius,
+          0,
+          TAU
+        )
+      : new AcGeEllipseArc3d(
+          transformedCenter,
+          normal,
+          majorAxis,
+          majorAxisRadius,
+          minorAxisRadius,
+          getAngle(this.startPoint.clone().applyMatrix4(matrix)),
+          getAngle(this.endPoint.clone().applyMatrix4(matrix))
+        )
+
+    this.center = transformedEllipse.center
+    this.normal = transformedEllipse.normal
+    this.majorAxis = transformedEllipse.majorAxis
+    this.majorAxisRadius = transformedEllipse.majorAxisRadius
+    this.minorAxisRadius = transformedEllipse.minorAxisRadius
+    this._startAngle = transformedEllipse._startAngle
+    this._endAngle = transformedEllipse._endAngle
     this._boundingBoxNeedsUpdate = true
     return this
   }

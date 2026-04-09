@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
@@ -268,6 +269,15 @@ export class AcDbXline extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this.basePoint)
     return gripPoints
+  }
+
+  /**
+   * Transforms this xline by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._basePoint.applyMatrix4(matrix)
+    this._unitDir.transformDirection(matrix)
+    return this
   }
 
   /**

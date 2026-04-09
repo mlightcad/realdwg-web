@@ -1,9 +1,11 @@
 import {
   AcGeBox2d,
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
-  AcGeVector2d
+  AcGeVector2d,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -372,6 +374,42 @@ export class AcDbRasterImage extends AcDbEntity {
     } else {
       return renderer.lines(points)
     }
+  }
+
+  /**
+   * Transforms this raster image by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const wcsWidth = this._width * this._scale.x
+    const wcsHeight = this._height * this._scale.y
+    const uAxis = new AcGeVector3d(
+      wcsWidth * Math.cos(this._rotation),
+      wcsWidth * Math.sin(this._rotation),
+      0
+    )
+    const vAxis = new AcGeVector3d(
+      -wcsHeight * Math.sin(this._rotation),
+      wcsHeight * Math.cos(this._rotation),
+      0
+    )
+
+    const origin = this._position.clone()
+    const uPoint = this._position.clone().add(uAxis)
+    const vPoint = this._position.clone().add(vAxis)
+
+    origin.applyMatrix4(matrix)
+    uPoint.applyMatrix4(matrix)
+    vPoint.applyMatrix4(matrix)
+
+    const transformedU = new AcGeVector3d(uPoint).sub(origin)
+    const transformedV = new AcGeVector3d(vPoint).sub(origin)
+
+    this._position.copy(origin)
+    this._rotation = Math.atan2(transformedU.y, transformedU.x)
+    this._width = transformedU.length()
+    this._height = transformedV.length()
+    this._scale.set(1, 1)
+    return this
   }
 
   protected boundaryPath() {

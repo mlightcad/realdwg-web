@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -124,6 +125,16 @@ export class AcDbArcDimension extends AcDbDimension {
   }
   set xLine2Point(value: AcGePoint3d) {
     this._xLine2Point.copy(value)
+  }
+
+  /**
+   * @inheritdoc
+   */
+  protected override subTransformBy(matrix: AcGeMatrix3d) {
+    this._arcPoint.applyMatrix4(matrix)
+    this._centerPoint.applyMatrix4(matrix)
+    this._xLine1Point.applyMatrix4(matrix)
+    this._xLine2Point.applyMatrix4(matrix)
   }
 
   /**

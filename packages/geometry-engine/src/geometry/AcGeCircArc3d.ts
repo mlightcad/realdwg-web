@@ -491,23 +491,45 @@ export class AcGeCircArc3d extends AcGeCurve3d {
    * @inheritdoc
    */
   transform(matrix: AcGeMatrix3d) {
-    const startVec = _vector3
-      .copy(this.refVec)
-      .applyAxisAngle(this.normal, this.startAngle)
-      .multiplyScalar(this.radius)
-    const endVec = _vector3
-      .copy(this.refVec)
-      .applyAxisAngle(this.normal, this.endAngle)
-      .multiplyScalar(this.radius)
+    const transformedCenter = this.center.clone().applyMatrix4(matrix)
+    const transformedStart = this.startPoint.clone().applyMatrix4(matrix)
+    const transformedEnd = this.endPoint.clone().applyMatrix4(matrix)
+    const referencePoint = this.getPointAtAngle(
+      this.closed ? Math.PI / 2 : this.startAngle + this.deltaAngle / 2
+    )
+      .clone()
+      .applyMatrix4(matrix)
 
-    this.center.applyMatrix4(matrix)
-    startVec.applyMatrix4(matrix)
-    endVec.applyMatrix4(matrix)
-    this.normal.applyMatrix4(matrix).normalize()
-    this.refVec.applyMatrix4(matrix).normalize()
+    const refVector = new AcGeVector3d(transformedStart)
+      .sub(transformedCenter)
+      .normalize()
+    const radius = transformedCenter.distanceTo(transformedStart)
 
-    this.startAngle = this.getAngle(startVec)
-    this.endAngle = this.getAngle(endVec)
+    let normal = new AcGeVector3d()
+      .crossVectors(
+        new AcGeVector3d(transformedStart).sub(transformedCenter),
+        new AcGeVector3d(referencePoint).sub(transformedCenter)
+      )
+      .normalize()
+
+    if (normal.lengthSq() === 0) {
+      normal = this.normal.clone().transformDirection(matrix)
+    }
+
+    const getAngle = (point: AcGePoint3d) => {
+      const vec = new AcGeVector3d(point).sub(transformedCenter)
+      return Math.atan2(
+        vec.dot(_vector3.crossVectors(normal, refVector)),
+        vec.dot(refVector)
+      )
+    }
+
+    this.center = transformedCenter
+    this.radius = radius
+    this.normal = normal
+    this.refVec = refVector
+    this.startAngle = 0
+    this.endAngle = this.closed ? TAU : getAngle(transformedEnd)
     this._boundingBoxNeedsUpdate = true
     return this
   }

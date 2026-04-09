@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -85,6 +86,14 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   }
   set leaderEndPoint(value: AcGePoint3d) {
     this._leaderEndPoint.copy(value)
+  }
+
+  /**
+   * @inheritdoc
+   */
+  protected override subTransformBy(matrix: AcGeMatrix3d) {
+    this._definingPoint.applyMatrix4(matrix)
+    this._leaderEndPoint.applyMatrix4(matrix)
   }
 
   /**

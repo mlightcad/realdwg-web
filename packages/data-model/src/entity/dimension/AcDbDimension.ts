@@ -340,6 +340,36 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Transforms this dimension by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d): this {
+    const origin = this._textPosition.clone()
+    const rotationPoint = this._textPosition
+      .clone()
+      .add(
+        new AcGeVector3d(
+          Math.cos(this._textRotation),
+          Math.sin(this._textRotation),
+          0
+        )
+      )
+
+    this._dimBlockPosition.applyMatrix4(matrix)
+    this._textPosition.applyMatrix4(matrix)
+    this._normal.transformDirection(matrix)
+
+    origin.applyMatrix4(matrix)
+    rotationPoint.applyMatrix4(matrix)
+    const rotationVector = new AcGeVector3d(rotationPoint).sub(origin)
+    if (rotationVector.lengthSq() > 0) {
+      this._textRotation = Math.atan2(rotationVector.y, rotationVector.x)
+    }
+
+    this.subTransformBy(matrix)
+    return this
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
@@ -616,6 +646,11 @@ export abstract class AcDbDimension extends AcDbEntity {
     // ------------------------------------------------------------
     return new AcGeMatrix3d().multiplyMatrices(mInsert, mBase)
   }
+
+  /**
+   * Subclasses can override this to transform their own definition points.
+   */
+  protected subTransformBy(_matrix: AcGeMatrix3d) {}
 
   /**
    * Writes DXF fields for this object.

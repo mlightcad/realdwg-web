@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -345,6 +346,37 @@ export class AcDbPolyline extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this polyline by the specified matrix.
+   *
+   * The lightweight polyline stores 2D vertices plus a shared elevation, so we
+   * transform each vertex in 3D and then write the projected XY values back.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const flipBulge = matrix.determinant() < 0
+    let elevation = this._elevation
+
+    this._geo.vertices.forEach(vertex => {
+      const transformedPoint = new AcGePoint3d(
+        vertex.x,
+        vertex.y,
+        this._elevation
+      ).applyMatrix4(matrix)
+      vertex.x = transformedPoint.x
+      vertex.y = transformedPoint.y
+      elevation = transformedPoint.z
+      if (flipBulge && vertex.bulge != null) {
+        vertex.bulge = -vertex.bulge
+      }
+    })
+
+    this._elevation = elevation
+    ;(this._geo as AcGePolyline2d<AcDbPolylineVertex> & {
+      _boundingBoxNeedsUpdate: boolean
+    })._boundingBoxNeedsUpdate = true
+    return this
   }
 
   /**

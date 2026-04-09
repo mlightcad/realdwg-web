@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike
@@ -211,6 +212,14 @@ export class AcDbFace extends AcDbEntity {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this face by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._vertices.forEach(vertex => vertex.applyMatrix4(matrix))
+    return this
   }
 
   /**

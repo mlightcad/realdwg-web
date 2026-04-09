@@ -67,8 +67,10 @@ export class AcGeArea2d extends AcGeShape2d {
   /**
    * @inheritdoc
    */
-  transform(_matrix: AcGeMatrix2d) {
-    // TODO: implement it
+  transform(matrix: AcGeMatrix2d) {
+    this._loops.forEach(loop => {
+      loop.transform(matrix)
+    })
     this._boundingBoxNeedsUpdate = true
     return this
   }

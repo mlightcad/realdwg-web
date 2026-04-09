@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -257,6 +258,14 @@ export class AcDbRadialDimension extends AcDbDimension {
    */
   set leaderLenght(value: number) {
     this._leaderLength = value
+  }
+
+  /**
+   * @inheritdoc
+   */
+  protected override subTransformBy(matrix: AcGeMatrix3d) {
+    this._center.applyMatrix4(matrix)
+    this._chordPoint.applyMatrix4(matrix)
   }
 
   /**
