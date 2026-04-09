@@ -415,8 +415,39 @@ export class AcGeSpline3d extends AcGeCurve3d {
   /**
    * @inheritdoc
    */
-  transform(_matrix: AcGeMatrix3d) {
-    // TODO: Implement this method
+  transform(matrix: AcGeMatrix3d) {
+    if (this._fitPoints && this._knotParameterization) {
+      this._fitPoints = this._fitPoints.map(point =>
+        new AcGePoint3d(point).applyMatrix4(matrix)
+      )
+
+      if (this._startTangent) {
+        this._startTangent = new AcGePoint3d(
+          this._startTangent
+        ).transformDirection(matrix)
+      }
+      if (this._endTangent) {
+        this._endTangent = new AcGePoint3d(this._endTangent).transformDirection(
+          matrix
+        )
+      }
+
+      this.buildCurve()
+    } else {
+      const knots = this._nurbsCurve.knots()
+      const weights = this._nurbsCurve.weights()
+
+      this._controlPoints = this._controlPoints.map(point =>
+        new AcGePoint3d(point).applyMatrix4(matrix)
+      )
+      this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
+        this._degree,
+        knots,
+        this._controlPoints,
+        weights.length > 0 ? weights : undefined
+      )
+    }
+
     this._boundingBoxNeedsUpdate = true
     return this
   }

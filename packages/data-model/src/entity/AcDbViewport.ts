@@ -1,4 +1,9 @@
-import { AcGeBox3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeBox3d,
+  AcGeMatrix3d,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
   AcGiRenderer,
@@ -185,6 +190,33 @@ export class AcDbViewport extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     // TODO: Implement it correctly
     return new AcGeBox3d()
+  }
+
+  /**
+   * Transforms this viewport entity by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const origin = this._centerPoint.clone()
+    const xAxisPoint = this._centerPoint
+      .clone()
+      .add(new AcGeVector3d(this._width, 0, 0))
+    const yAxisPoint = this._centerPoint
+      .clone()
+      .add(new AcGeVector3d(0, this._height, 0))
+
+    origin.applyMatrix4(matrix)
+    xAxisPoint.applyMatrix4(matrix)
+    yAxisPoint.applyMatrix4(matrix)
+
+    const xAxis = new AcGeVector3d(xAxisPoint).sub(origin)
+    const yAxis = new AcGeVector3d(yAxisPoint).sub(origin)
+    const yScale = this._height !== 0 ? yAxis.length() / this._height : 1
+
+    this._centerPoint.copy(origin)
+    this._width = xAxis.length()
+    this._height = yAxis.length()
+    this._viewHeight *= yScale
+    return this
   }
 
   /**

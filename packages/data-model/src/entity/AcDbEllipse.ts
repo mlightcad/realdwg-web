@@ -1,5 +1,6 @@
 import {
   AcGeEllipseArc3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
@@ -354,6 +355,14 @@ export class AcDbEllipse extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this ellipse by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._geo.transform(matrix)
+    return this
   }
 
   /**

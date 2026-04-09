@@ -1,6 +1,7 @@
 import { AcCmErrors } from '@mlightcad/common'
 import {
   AcGeKnotParameterizationType,
+  AcGeMatrix3d,
   AcGePoint3dLike,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
@@ -277,6 +278,14 @@ export class AcDbSpline extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this spline by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._geo.transform(matrix)
+    return this
   }
 
   /**

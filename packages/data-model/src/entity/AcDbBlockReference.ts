@@ -422,6 +422,54 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Transforms this block reference by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
+    const rotation = new AcGeMatrix3d().makeRotationZ(this._rotation)
+    const localToWcs = new AcGeMatrix3d().multiplyMatrices(extrusion, rotation)
+
+    const origin = this._position.clone()
+    const xAxisPoint = new AcGePoint3d(this._scaleFactors.x, 0, 0)
+      .applyMatrix4(localToWcs)
+      .add(origin)
+    const yAxisPoint = new AcGePoint3d(0, this._scaleFactors.y, 0)
+      .applyMatrix4(localToWcs)
+      .add(origin)
+    const zAxisPoint = new AcGePoint3d(0, 0, this._scaleFactors.z)
+      .applyMatrix4(localToWcs)
+      .add(origin)
+
+    origin.applyMatrix4(matrix)
+    xAxisPoint.applyMatrix4(matrix)
+    yAxisPoint.applyMatrix4(matrix)
+    zAxisPoint.applyMatrix4(matrix)
+
+    const xAxis = new AcGeVector3d(xAxisPoint).sub(origin)
+    const yAxis = new AcGeVector3d(yAxisPoint).sub(origin)
+    const zAxis = new AcGeVector3d(zAxisPoint).sub(origin)
+
+    let normal = new AcGeVector3d().crossVectors(xAxis, yAxis)
+    if (normal.lengthSq() === 0) {
+      normal = this._normal.clone().transformDirection(matrix)
+    } else {
+      normal.normalize()
+    }
+
+    const extrusionMatrix = new AcGeMatrix3d().setFromExtrusionDirection(normal)
+    const ocsInverse = extrusionMatrix.clone().invert()
+    const localXAxis = xAxis.clone().applyMatrix4(ocsInverse)
+
+    this._position.copy(origin)
+    this._normal.copy(normal)
+    this._rotation = Math.atan2(localXAxis.y, localXAxis.x)
+    this._scaleFactors.set(xAxis.length(), yAxis.length(), zAxis.length())
+
+    this._attribs.forEach(attrib => attrib.transformBy(matrix))
+    return this
+  }
+
+  /**
    * Returns the full property definition for this block reference entity, including
    * general group and geometry group.
    *

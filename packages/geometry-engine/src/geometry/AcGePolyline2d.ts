@@ -205,8 +205,18 @@ export class AcGePolyline2d<
   /**
    * @inheritdoc
    */
-  transform(_matrix: AcGeMatrix2d) {
-    // TODO: implement it
+  transform(matrix: AcGeMatrix2d) {
+    const flipBulge = matrix.determinant() < 0
+
+    this._vertices.forEach(vertex => {
+      const transformedPoint = new AcGePoint2d(vertex).applyMatrix2d(matrix)
+      vertex.x = transformedPoint.x
+      vertex.y = transformedPoint.y
+      if (flipBulge && vertex.bulge != null) {
+        vertex.bulge = -vertex.bulge
+      }
+    })
+
     this._boundingBoxNeedsUpdate = true
     return this
   }

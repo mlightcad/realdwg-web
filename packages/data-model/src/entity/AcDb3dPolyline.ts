@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
@@ -114,7 +115,9 @@ export class AcDb3dPolyline extends AcDbCurve {
   }
 
   getPointAt(index: number) {
-    return this._geo.getPointAt(index)
+    const vertex = this._geo.vertices[index] as AcGePolyline2dVertex &
+      AcGePoint3dLike
+    return new AcGePoint3d(vertex.x, vertex.y, vertex.z || 0)
   }
 
   /**
@@ -129,12 +132,11 @@ export class AcDb3dPolyline extends AcDbCurve {
    * ```
    */
   get geometricExtents(): AcGeBox3d {
-    const box = this._geo.box
-    // TODO: Set the correct z value for 3d box
-    return new AcGeBox3d(
-      { x: box.min.x, y: box.min.y, z: 0 },
-      { x: box.max.x, y: box.max.y, z: 0 }
+    const points = this._geo.vertices.map(
+      vertex =>
+        new AcGePoint3d(vertex.x, vertex.y, (vertex as AcGePoint3dLike).z || 0)
     )
+    return new AcGeBox3d().setFromPoints(points)
   }
 
   /**
@@ -176,14 +178,34 @@ export class AcDb3dPolyline extends AcDbCurve {
       case AcDbOsnapMode.EndPoint:
         {
           for (let i = 0; i < this._geo.numberOfVertices; ++i) {
-            const temp = this._geo.getPointAt(i)
-            snapPoints.push(new AcGePoint3d(temp.x, temp.y, 0))
+            snapPoints.push(this.getPointAt(i))
           }
         }
         break
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this 3D polyline by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._geo.vertices.forEach(vertex => {
+      const transformedPoint = new AcGePoint3d(
+        vertex.x,
+        vertex.y,
+        (vertex as AcGePoint3dLike).z || 0
+      ).applyMatrix4(matrix)
+      vertex.x = transformedPoint.x
+      vertex.y = transformedPoint.y
+      ;(vertex as AcGePoint3dLike).z = transformedPoint.z
+    })
+
+    ;(this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
+      _boundingBoxNeedsUpdate: boolean
+    })._boundingBoxNeedsUpdate = true
+    return this
   }
 
   /**
@@ -267,11 +289,9 @@ export class AcDb3dPolyline extends AcDbCurve {
    * @returns The rendered polyline entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const points: AcGePoint3d[] = []
-    const tmp = this._geo.getPoints(100)
-    // TODO: Set the correct z value
-    tmp.forEach(point =>
-      points.push(new AcGePoint3d().set(point.x, point.y, 0))
+    const points = this._geo.vertices.map(
+      vertex =>
+        new AcGePoint3d(vertex.x, vertex.y, (vertex as AcGePoint3dLike).z || 0)
     )
     return renderer.lines(points)
   }
@@ -305,7 +325,7 @@ export class AcDb3dPolyline extends AcDbCurve {
       filer.writePoint3d(10, {
         x: point.x,
         y: point.y,
-        z: 0
+        z: point.z
       })
       filer.writeInt16(70, 32)
     }

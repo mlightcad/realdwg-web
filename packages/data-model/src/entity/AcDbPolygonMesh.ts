@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -200,6 +201,16 @@ export class AcDbPolygonMesh extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this polygon mesh by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._vertices.forEach(vertex => {
+      vertex.position.applyMatrix4(matrix)
+    })
+    return this
   }
 
   /**

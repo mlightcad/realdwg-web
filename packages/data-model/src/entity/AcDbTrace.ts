@@ -1,6 +1,7 @@
 import {
   AcGeArea2d,
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
@@ -260,6 +261,15 @@ export class AcDbTrace extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this trace by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._vertices.forEach(vertex => vertex.applyMatrix4(matrix))
+    this._elevation = this._vertices[0].z
+    return this
   }
 
   /**

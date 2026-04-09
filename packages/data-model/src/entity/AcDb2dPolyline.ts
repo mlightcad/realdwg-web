@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
@@ -257,6 +258,34 @@ export class AcDb2dPolyline extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this legacy 2D polyline by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const flipBulge = matrix.determinant() < 0
+    let elevation = this._elevation
+
+    this._geo.vertices.forEach(vertex => {
+      const transformedPoint = new AcGePoint3d(
+        vertex.x,
+        vertex.y,
+        this._elevation
+      ).applyMatrix4(matrix)
+      vertex.x = transformedPoint.x
+      vertex.y = transformedPoint.y
+      elevation = transformedPoint.z
+      if (flipBulge && vertex.bulge != null) {
+        vertex.bulge = -vertex.bulge
+      }
+    })
+
+    this._elevation = elevation
+    ;(this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
+      _boundingBoxNeedsUpdate: boolean
+    })._boundingBoxNeedsUpdate = true
+    return this
   }
 
   /**

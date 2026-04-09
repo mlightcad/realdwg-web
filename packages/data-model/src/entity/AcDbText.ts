@@ -1,7 +1,9 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike
+  AcGePoint3dLike,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
@@ -474,6 +476,51 @@ export class AcDbText extends AcDbEntity {
     if (AcDbOsnapMode.Insertion === osnapMode) {
       snapPoints.push(this._position)
     }
+  }
+
+  /**
+   * Transforms this text by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    const origin = this._position.clone()
+    const xAxisPoint = this._position
+      .clone()
+      .add(
+        new AcGeVector3d(Math.cos(this._rotation), Math.sin(this._rotation), 0)
+      )
+    const yAxisPoint = this._position
+      .clone()
+      .add(
+        new AcGeVector3d(-Math.sin(this._rotation), Math.cos(this._rotation), 0)
+      )
+    const zAxisPoint = this._position.clone().add(new AcGeVector3d(0, 0, 1))
+
+    origin.applyMatrix4(matrix)
+    xAxisPoint.applyMatrix4(matrix)
+    yAxisPoint.applyMatrix4(matrix)
+    zAxisPoint.applyMatrix4(matrix)
+
+    const xAxis = new AcGeVector3d(xAxisPoint).sub(origin)
+    const yAxis = new AcGeVector3d(yAxisPoint).sub(origin)
+    const zAxis = new AcGeVector3d(zAxisPoint).sub(origin)
+    const yScale = yAxis.length()
+    const xScale = xAxis.length()
+    const zScale = zAxis.length()
+
+    this._position.copy(origin)
+    if (xScale > 0) {
+      this._rotation = Math.atan2(xAxis.y, xAxis.x)
+    }
+    if (yScale > 0) {
+      this._height *= yScale
+      if (xScale > 0) {
+        this._widthFactor *= xScale / yScale
+      }
+    }
+    if (zScale > 0) {
+      this._thickness *= zScale
+    }
+    return this
   }
 
   /**

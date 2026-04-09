@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d
@@ -296,6 +297,15 @@ export class AcDbRay extends AcDbCurve {
       default:
         break
     }
+  }
+
+  /**
+   * Transforms this ray by the specified matrix.
+   */
+  transformBy(matrix: AcGeMatrix3d) {
+    this._basePoint.applyMatrix4(matrix)
+    this._unitDir.transformDirection(matrix)
+    return this
   }
 
   /**

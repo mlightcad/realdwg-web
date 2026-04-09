@@ -2,6 +2,7 @@ import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeLine3d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
@@ -264,6 +265,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   set oblique(value: number) {
     this._oblique = value
+  }
+
+  /**
+   * @inheritdoc
+   */
+  protected override subTransformBy(matrix: AcGeMatrix3d) {
+    this._dimLinePoint.applyMatrix4(matrix)
+    this._xLine1Point.applyMatrix4(matrix)
+    this._xLine2Point.applyMatrix4(matrix)
+    this.calculateRotation()
   }
 
   /**

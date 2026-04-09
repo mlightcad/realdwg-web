@@ -253,8 +253,84 @@ export class AcGeEllipseArc2d extends AcGeCurve2d {
    * @inheritdoc
    */
   transform(_matrix: AcGeMatrix2d) {
+    const matrix = _matrix
+    const transformedCenter2d = new AcGePoint2d(this.center).applyMatrix2d(
+      matrix
+    )
+    const transformedCenter = new AcGePoint3d(
+      transformedCenter2d.x,
+      transformedCenter2d.y,
+      this.center.z
+    )
+    const transformedMajorPoint = this.getPointAtAngle(0)
+      .clone()
+      .applyMatrix2d(matrix)
+    const transformedMinorPoint = this.getPointAtAngle(Math.PI / 2)
+      .clone()
+      .applyMatrix2d(matrix)
+
+    const majorVector = new AcGePoint2d(transformedMajorPoint).sub(
+      transformedCenter2d
+    )
+    const minorVector = new AcGePoint2d(transformedMinorPoint).sub(
+      transformedCenter2d
+    )
+
+    const majorAxisRadius = majorVector.length()
+    const minorAxisRadius = minorVector.length()
+    const rotation = Math.atan2(majorVector.y, majorVector.x)
+    const majorDirection = majorVector.clone().normalize()
+    const minorDirection = minorVector.clone().normalize()
+
+    const getAngle = (point: AcGePoint2d) => {
+      const relative = new AcGePoint2d(point).sub(transformedCenter2d)
+      const x = relative.dot(majorDirection)
+      const y = relative.dot(minorDirection)
+      return AcGeMathUtil.normalizeAngle(
+        Math.atan2(y / minorAxisRadius, x / majorAxisRadius)
+      )
+    }
+
+    const clockwise =
+      matrix.determinant() < 0 ? !this.clockwise : this.clockwise
+
+    const transformedEllipse = this.closed
+      ? new AcGeEllipseArc2d(
+          transformedCenter,
+          majorAxisRadius,
+          minorAxisRadius,
+          0,
+          TAU,
+          clockwise,
+          rotation
+        )
+      : new AcGeEllipseArc2d(
+          transformedCenter,
+          majorAxisRadius,
+          minorAxisRadius,
+          getAngle(this.startPoint.clone().applyMatrix2d(matrix)),
+          getAngle(this.endPoint.clone().applyMatrix2d(matrix)),
+          clockwise,
+          rotation
+        )
+
+    this.center = transformedEllipse.center
+    this.majorAxisRadius = transformedEllipse.majorAxisRadius
+    this.minorAxisRadius = transformedEllipse.minorAxisRadius
+    this._startAngle = transformedEllipse._startAngle
+    this._endAngle = transformedEllipse._endAngle
+    this._clockwise = transformedEllipse._clockwise
+    this.rotation = transformedEllipse.rotation
     this._boundingBoxNeedsUpdate = true
     return this
+  }
+
+  private getPointAtAngle(angle: number) {
+    return this.getPoint(
+      this.closed
+        ? angle / TAU
+        : AcGeMathUtil.normalizeAngle(angle - this.startAngle) / this.deltaAngle
+    )
   }
 
   /**
