@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.17
+
+### Patch Changes
+
+- feat: implement missing geometry/entity transforms and expand transform regression coverage
+- Updated dependencies
+  - @mlightcad/common@1.4.17
+
 ## 3.2.16
 
 ### Patch Changes

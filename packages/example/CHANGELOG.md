@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.17
+
+### Patch Changes
+
+- feat: implement missing geometry/entity transforms and expand transform regression coverage
+- Updated dependencies
+  - @mlightcad/data-model@1.7.17
+  - @mlightcad/libredwg-converter@3.5.17
+
 ## 0.1.16
 
 ### Patch Changes

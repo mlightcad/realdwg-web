@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.17
+
+### Patch Changes
+
+- feat: implement missing geometry/entity transforms and expand transform regression coverage
+- Updated dependencies
+  - @mlightcad/data-model@1.7.17
+
 ## 3.5.16
 
 ### Patch Changes

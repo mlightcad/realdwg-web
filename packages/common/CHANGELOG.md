@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.17
+
+### Patch Changes
+
+- feat: implement missing geometry/entity transforms and expand transform regression coverage
+
 ## 1.4.16
 
 ### Patch Changes
