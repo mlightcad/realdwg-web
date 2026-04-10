@@ -60,6 +60,8 @@ export const AcDbSystemVariables = {
   PDSIZE: 'PDSIZE',
   /** Pickbox half-size, in pixels, used for selection hit testing in the UI. */
   PICKBOX: 'PICKBOX',
+  /** Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area. */
+  SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
   TEXTSTYLE: 'TEXTSTYLE',
   /** Flag indicating whether the drawing background should be rendered as white. */
