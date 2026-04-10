@@ -201,10 +201,11 @@ export class AcDb3dPolyline extends AcDbCurve {
       vertex.y = transformedPoint.y
       ;(vertex as AcGePoint3dLike).z = transformedPoint.z
     })
-
-    ;(this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
-      _boundingBoxNeedsUpdate: boolean
-    })._boundingBoxNeedsUpdate = true
+    ;(
+      this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
+        _boundingBoxNeedsUpdate: boolean
+      }
+    )._boundingBoxNeedsUpdate = true
     return this
   }
 

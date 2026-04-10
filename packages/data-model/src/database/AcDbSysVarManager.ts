@@ -185,6 +185,21 @@ export class AcDbSysVarManager {
       isDbVar: false,
       defaultValue: 10
     })
+    /**
+     * Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area.
+     * - 0: Disables all Default, Edit, and Command mode shortcut menus.
+     * - 1: Enables Default mode shortcut menus.
+     * - 2: Enables Edit mode shortcut menus.
+     * - 4: Enables Command mode shortcut menus whenever a command is active.
+     * - 8: Enables Command mode shortcut menus only when command options are currently available at the Command prompt.
+     * - 16: Enables the display of a shortcut menu when the right button on the pointing device is held down long enough
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.SHORTCUTMENU,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
     this.registerVar({
       name: AcDbSystemVariables.TEXTSTYLE,
       type: 'string',

@@ -373,9 +373,11 @@ export class AcDbPolyline extends AcDbCurve {
     })
 
     this._elevation = elevation
-    ;(this._geo as AcGePolyline2d<AcDbPolylineVertex> & {
-      _boundingBoxNeedsUpdate: boolean
-    })._boundingBoxNeedsUpdate = true
+    ;(
+      this._geo as AcGePolyline2d<AcDbPolylineVertex> & {
+        _boundingBoxNeedsUpdate: boolean
+      }
+    )._boundingBoxNeedsUpdate = true
     return this
   }
 
