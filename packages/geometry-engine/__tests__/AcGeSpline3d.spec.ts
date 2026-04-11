@@ -250,6 +250,57 @@ describe('AcGeSpline3d', () => {
       }).toThrow(AcCmErrors.ILLEGAL_PARAMETERS)
     })
 
+    it('covers constructor branch variants and argument guards', () => {
+      expect(() => new (AcGeSpline3d as any)([{ x: 0, y: 0, z: 0 }])).toThrow(
+        AcCmErrors.ILLEGAL_PARAMETERS
+      )
+
+      const controlPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const knots = [0, 0, 0, 0, 1, 1, 1, 1]
+
+      expect(
+        () =>
+          new (AcGeSpline3d as any)(
+            controlPoints,
+            knots,
+            undefined,
+            3,
+            false,
+            'x'
+          )
+      ).toThrow(AcCmErrors.ILLEGAL_PARAMETERS)
+
+      const degreeClosed = new AcGeSpline3d(
+        controlPoints,
+        knots,
+        3 as any,
+        true as any
+      )
+      expect(degreeClosed.closed).toBe(true)
+
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const tangentA = { x: 1, y: 0, z: 0 }
+      const tangentB = { x: 0, y: 1, z: 0 }
+      const fitWithTangents = new AcGeSpline3d(
+        fitPoints,
+        'Uniform',
+        3,
+        tangentA as any,
+        tangentB as any
+      )
+      expect(fitWithTangents.fitPoints?.length).toBe(4)
+    })
+
     it('should throw error for insufficient control points for degree 4', () => {
       const controlPoints = [
         { x: 0, y: 0, z: 0 },
@@ -563,6 +614,30 @@ describe('AcGeSpline3d', () => {
       const result = spline.transform(matrix)
 
       expect(result).toBe(spline)
+    })
+
+    it('covers fit/tangent transform branches and helper sampling', () => {
+      const fitPoints = [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+      const spline = new AcGeSpline3d(
+        fitPoints,
+        'Uniform',
+        3,
+        false,
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 }
+      )
+      spline.closed = false
+      expect(
+        spline.transform(new AcGeMatrix3d().makeTranslation(2, 0, 0))
+      ).toBe(spline)
+
+      const sampled = spline.getCurvePoints((spline as any)._nurbsCurve, 5)
+      expect(sampled).toHaveLength(5)
     })
   })
 

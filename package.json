@@ -22,7 +22,8 @@
     "lint": "nx run-many -t lint",
     "lint:fix": "nx run-many -t lint:fix",
     "release": "node tools/release.mjs",
-    "test": "jest"
+    "test": "jest",
+    "test:coverage": "jest --coverage"
   },
   "engines": {
     "pnpm": ">=8"
