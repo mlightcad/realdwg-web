@@ -13,7 +13,6 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
-import { AcDbTextStyleTableRecord } from '../database'
 import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBlockReference } from './AcDbBlockReference'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -656,13 +655,12 @@ export class AcDbTable extends AcDbBlockReference {
    */
   private getTextStyle(cell: AcDbTableCell): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
-    let style: AcDbTextStyleTableRecord | undefined
-    if (cell.textStyle) {
-      style = textStyleTable.getAt(cell.textStyle)
-    }
+    const style =
+      (cell.textStyle ? textStyleTable.getAt(cell.textStyle) : undefined) ??
+      textStyleTable.getAt(this.database.textstyle) ??
+      textStyleTable.getAt(DEFAULT_TEXT_STYLE)
     if (!style) {
-      style = (textStyleTable.getAt(DEFAULT_TEXT_STYLE) ||
-        textStyleTable.getAt(DEFAULT_TEXT_STYLE))!
+      throw new Error('No valid text style found in text style table.')
     }
     return style.textStyle
   }
