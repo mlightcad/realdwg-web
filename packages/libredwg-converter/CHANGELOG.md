@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.18
+
+### Patch Changes
+
+- feat: improve text style fallback resolution and bump libredwg-web to 0.6.10
+- Updated dependencies
+  - @mlightcad/data-model@1.7.18
+
 ## 3.5.17
 
 ### Patch Changes

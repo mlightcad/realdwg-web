@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.18
+
+### Patch Changes
+
+- feat: improve text style fallback resolution and bump libredwg-web to 0.6.10
+- Updated dependencies
+  - @mlightcad/common@1.4.18
+
 ## 3.2.17
 
 ### Patch Changes

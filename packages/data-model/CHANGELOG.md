@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.18
+
+### Patch Changes
+
+- feat: improve text style fallback resolution and bump libredwg-web to 0.6.10
+- Updated dependencies
+  - @mlightcad/common@1.4.18
+  - @mlightcad/geometry-engine@3.2.18
+  - @mlightcad/graphic-interface@3.3.18
+
 ## 1.7.17
 
 ### Patch Changes
