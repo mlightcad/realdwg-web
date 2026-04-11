@@ -1,4 +1,5 @@
 import { AcGeCircArc2d, AcGeTol, DEFAULT_TOL, ORIGIN_POINT_2D } from '../src'
+import { AcGeMatrix2d } from '../src'
 
 describe('Test AcGeCircArc2d', () => {
   const expectPointClose = (
@@ -202,5 +203,20 @@ describe('Test AcGeCircArc2d', () => {
     expectPointClose(majorArc.startPoint, from)
     expectPointClose(majorArc.endPoint, to)
     expectPointClose(majorArc.midPoint, { x: 9.5, y: 12.5 })
+  })
+
+  it('covers closed transform/getPoints and constructor guard', () => {
+    expect(() => new (AcGeCircArc2d as any)(ORIGIN_POINT_2D, 1)).toThrow()
+
+    const closed = new AcGeCircArc2d(ORIGIN_POINT_2D, 2, 0, Math.PI * 2, false)
+    expect(closed.closed).toBe(true)
+    expect(closed.getPoints(6)).toHaveLength(7)
+
+    const transformed = closed.transform(
+      new AcGeMatrix2d().makeTranslation(3, 4)
+    )
+    expect(transformed).toBe(closed)
+    expect(closed.center.x).toBeCloseTo(3, 8)
+    expect(closed.center.y).toBeCloseTo(4, 8)
   })
 })

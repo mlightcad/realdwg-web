@@ -62,6 +62,19 @@ describe('AcGeNurbsUtil', () => {
       expect(knots[4]).toBeGreaterThan(0)
       expect(knots[5]).toBeGreaterThan(0)
     })
+
+    it('should create interior chord knots when control points exceed degree + 1', () => {
+      const points = [
+        [0, 0, 0],
+        [1, 0, 0],
+        [3, 0, 0],
+        [6, 0, 0],
+        [10, 0, 0]
+      ]
+      const knots = generateChordKnots(2, points)
+      expect(knots[3]).toBeGreaterThan(0)
+      expect(knots[4]).toBeGreaterThan(knots[3])
+    })
   })
 
   describe('generateSqrtChordKnots', () => {
@@ -83,6 +96,36 @@ describe('AcGeNurbsUtil', () => {
       expect(knots[5]).toBeGreaterThan(0)
       expect(knots[6]).toBe(1)
       expect(knots[7]).toBe(1)
+    })
+
+    it('should create interior sqrt-chord knots when control points exceed degree + 1', () => {
+      const points = [
+        [0, 0, 0],
+        [1, 0, 0],
+        [3, 0, 0],
+        [6, 0, 0],
+        [10, 0, 0]
+      ]
+      const knots = generateSqrtChordKnots(2, points)
+      expect(knots[3]).toBeGreaterThan(0)
+      expect(knots[4]).toBeGreaterThan(knots[3])
+    })
+  })
+
+  describe('computeParameterValues', () => {
+    it('handles empty/single/degenerate distance inputs', () => {
+      expect(computeParameterValues([], 'Chord')).toEqual([])
+      expect(computeParameterValues([[1, 2, 3]], 'Chord')).toEqual([0])
+      expect(
+        computeParameterValues(
+          [
+            [1, 1, 1],
+            [1, 1, 1],
+            [1, 1, 1]
+          ],
+          'Chord'
+        )
+      ).toEqual([0, 0.5, 1])
     })
   })
 
@@ -300,6 +343,26 @@ describe('AcGeNurbsUtil', () => {
   })
 
   describe('interpolateNurbsCurve', () => {
+    it('should return empty result for empty fit points', () => {
+      expect(interpolateNurbsCurve([], 3)).toEqual({
+        controlPoints: [],
+        knots: [],
+        weights: []
+      })
+    })
+
+    it('should throw when not enough points for degree', () => {
+      expect(() =>
+        interpolateNurbsCurve(
+          [
+            [0, 0, 0],
+            [1, 0, 0]
+          ],
+          4
+        )
+      ).toThrow('Not enough points to interpolate a curve of this degree.')
+    })
+
     it('should interpolate fit points with uniform parameterization', () => {
       const fitPoints = [
         [0, 0, 0],
@@ -400,6 +463,27 @@ describe('AcGeNurbsUtil', () => {
       )
 
       expect(point).toEqual([0, 0, 0])
+    })
+
+    it('should handle zero weights at custom end parameter', () => {
+      const degree = 1
+      const knots = [0, 0, 1, 1, 0.5, 0.5]
+      const controlPoints = [
+        [1, 0, 0],
+        [2, 0, 0],
+        [3, 0, 0]
+      ]
+      const weights = [0, 0, 0]
+
+      const point = evaluateNurbsPoint(
+        0.5,
+        degree,
+        knots,
+        controlPoints,
+        weights
+      )
+
+      expect(point).toEqual([3, 0, 0])
     })
 
     it('should handle single control point', () => {

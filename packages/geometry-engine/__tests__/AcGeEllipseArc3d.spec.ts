@@ -1,5 +1,6 @@
 import {
   AcGeEllipseArc3d,
+  AcGeMatrix3d,
   AcGeVector3d,
   DEFAULT_TOL,
   ORIGIN_POINT_3D
@@ -70,5 +71,91 @@ describe('Test AcGeEllipseArc3d', () => {
       2 * Math.PI
     )
     expect(arc2.length).toBeCloseTo(9.688448220547675, 4)
+  })
+
+  it('covers branch-heavy getters and transform paths', () => {
+    const largeArc = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      3,
+      2,
+      0,
+      Math.PI * 1.5
+    )
+    expect(largeArc.isLargeArc).toBe(1)
+    expect(largeArc.clockwise).toBe(false)
+    expect(largeArc.getPoints()).toHaveLength(101)
+
+    const fullEllipse = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      3,
+      2,
+      0,
+      Math.PI * 2
+    )
+    expect(fullEllipse.midPoint).toBeInstanceOf(Object)
+    expect(fullEllipse.area).toBeCloseTo(Math.PI * 6, 8)
+
+    const skewAxis = new AcGeVector3d(1, 1, 0).normalize()
+    const skew = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      skewAxis,
+      4,
+      1.5,
+      0,
+      Math.PI
+    )
+    const skewBox = skew.calculateBoundingBox()
+    expect(skewBox.min.x).toBeLessThan(skewBox.max.x)
+    expect(skewBox.min.y).toBeLessThan(skewBox.max.y)
+
+    // closed branch in getPoints (startAngle === endAngle)
+    const closedEllipse = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      2,
+      1,
+      0,
+      0
+    )
+    expect(closedEllipse.closed).toBe(true)
+    expect(closedEllipse.getPoints(12)).toHaveLength(13)
+
+    // force minor-axis orientation correction branch in transform
+    const dotSpy = jest
+      .spyOn(AcGeVector3d.prototype, 'dot')
+      .mockImplementation(function () {
+        return -1
+      })
+    expect(closedEllipse.transform(new AcGeMatrix3d().makeScale(1, 1, 1))).toBe(
+      closedEllipse
+    )
+    dotSpy.mockRestore()
+
+    expect(
+      () =>
+        new AcGeEllipseArc3d(
+          ORIGIN_POINT_3D,
+          AcGeVector3d.Z_AXIS,
+          AcGeVector3d.X_AXIS,
+          -1,
+          1
+        )
+    ).toThrow()
+    expect(
+      () =>
+        new AcGeEllipseArc3d(
+          ORIGIN_POINT_3D,
+          AcGeVector3d.Z_AXIS,
+          AcGeVector3d.X_AXIS,
+          1,
+          -1
+        )
+    ).toThrow()
   })
 })
