@@ -620,10 +620,13 @@ export class AcDbMText extends AcDbEntity {
 
   private getTextStyle(): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
-    let style = textStyleTable.getAt(this.styleName)
+    const style =
+      textStyleTable.getAt(this.styleName) ??
+      textStyleTable.getAt(this.database.textstyle) ??
+      textStyleTable.getAt(DEFAULT_TEXT_STYLE)
+
     if (!style) {
-      style = (textStyleTable.getAt(DEFAULT_TEXT_STYLE) ||
-        textStyleTable.getAt(DEFAULT_TEXT_STYLE))!
+      throw new Error('No valid text style found in text style table.')
     }
     return style.textStyle
   }
