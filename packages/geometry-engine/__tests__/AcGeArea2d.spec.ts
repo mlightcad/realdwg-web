@@ -1,4 +1,10 @@
-import { AcGeArea2d, AcGeLine2d, AcGeLoop2d, AcGePolyline2d } from '../src'
+import {
+  AcGeArea2d,
+  AcGeLine2d,
+  AcGeLoop2d,
+  AcGeMatrix2d,
+  AcGePolyline2d
+} from '../src'
 
 describe('AcGeArea2d', () => {
   it('computes polygon area', () => {
@@ -58,5 +64,23 @@ describe('AcGeArea2d', () => {
     )
     area.add(degenerate)
     expect(area.area).toBe(0)
+  })
+
+  it('clones area with independent loops', () => {
+    const sourceLoop = new AcGeLoop2d([
+      new AcGeLine2d({ x: 0, y: 0 }, { x: 1, y: 0 }),
+      new AcGeLine2d({ x: 1, y: 0 }, { x: 1, y: 1 }),
+      new AcGeLine2d({ x: 1, y: 1 }, { x: 0, y: 1 }),
+      new AcGeLine2d({ x: 0, y: 1 }, { x: 0, y: 0 })
+    ])
+    const area = new AcGeArea2d()
+    area.add(sourceLoop)
+
+    const cloned = area.clone()
+    expect(cloned).not.toBe(area)
+    expect(cloned.loops.length).toBe(1)
+
+    cloned.transform(new AcGeMatrix2d().makeTranslation(5, 0))
+    expect((area.loops[0] as AcGeLoop2d).startPoint.x).toBeCloseTo(0, 8)
   })
 })

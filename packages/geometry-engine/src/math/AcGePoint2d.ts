@@ -10,6 +10,13 @@ export type AcGePoint2dLike = AcGeVector2dLike
  */
 export class AcGePoint2d extends AcGeVector2d {
   /**
+   * Return a new 2d point with the same x and y values as this one.
+   */
+  clone() {
+    return new AcGePoint2d(this.x, this.y)
+  }
+
+  /**
    * Convert one point array to one number array
    * @param array Input one point array
    * @returns Return converted number array

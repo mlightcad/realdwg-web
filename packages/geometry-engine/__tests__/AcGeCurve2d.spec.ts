@@ -14,6 +14,10 @@ class TestCurve2d extends AcGeCurve2d {
     return this
   }
 
+  clone(): this {
+    return new TestCurve2d() as this
+  }
+
   protected calculateBoundingBox() {
     return new AcGeBox2d({ x: 0, y: 0 }, { x: 1, y: 0 })
   }

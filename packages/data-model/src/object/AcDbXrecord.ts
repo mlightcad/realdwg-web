@@ -64,10 +64,8 @@ export class AcDbXrecord extends AcDbObject {
    * @remarks
    * The cloned Xrecord contains a cloned ResultBuffer.
    */
-  clone(): AcDbXrecord {
-    const xrec = new AcDbXrecord()
-    xrec._data = this._data?.clone() ?? null
-    return xrec
+  override clone(): this {
+    return super.clone()
   }
 
   /**

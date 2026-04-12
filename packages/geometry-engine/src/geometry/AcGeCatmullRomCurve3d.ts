@@ -373,6 +373,18 @@ export class AcGeCatmullRomCurve3d extends AcGeCurve3d {
   }
 
   /**
+   * Return a deep-cloned copy of this curve.
+   */
+  clone() {
+    return new AcGeCatmullRomCurve3d(
+      this._points.map(point => point.clone()),
+      this._closed,
+      this._curveType,
+      this._tension
+    )
+  }
+
+  /**
    * Transforms the curve by applying the input matrix.
    * @param matrix Input transformation matrix
    * @return Return this curve

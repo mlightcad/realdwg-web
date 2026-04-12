@@ -24,6 +24,11 @@ export abstract class AcGeShape2d extends AcGeShape {
   abstract transform(matrix: AcGeMatrix2d): this
 
   /**
+   * Return a deep-cloned copy of this 2d shape.
+   */
+  abstract clone(): AcGeShape2d
+
+  /**
    * The bounding box of this shape. Because it is a time-consuming operation to calculate the bounding
    * box of one shape, the bounding box value is cached. It will be calculated again lazily once there
    * are any changes to properties of this shape.

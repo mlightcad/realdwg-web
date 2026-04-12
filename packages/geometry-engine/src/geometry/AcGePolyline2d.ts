@@ -222,6 +222,16 @@ export class AcGePolyline2d<
   }
 
   /**
+   * Return a deep-cloned copy of this polyline.
+   */
+  clone() {
+    return new AcGePolyline2d<T>(
+      this._vertices.map(vertex => ({ ...vertex })),
+      this._closed
+    )
+  }
+
+  /**
    * Return an array of points to draw this polyline.
    * @param numPoints Input the nubmer of points returned for arc segmentation
    * @param elevation Input z value of points returned

@@ -1,0 +1,188 @@
+import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+
+import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
+import { AcDbDatabase } from '../src/database'
+import { AcDbLeader, AcDbLeaderAnnotationType } from '../src/entity'
+import { expectDetachedClone } from '../test-utils/cloneTestUtils'
+
+const createWorkingDb = () => {
+  const db = new AcDbDatabase()
+  db.createDefaultData()
+  acdbHostApplicationServices().workingDatabase = db
+  return db
+}
+
+const createRenderer = () => ({
+  lines: jest.fn((points: unknown[]) => ({ kind: 'lines', points }))
+})
+
+describe('AcDbLeader', () => {
+  it('exposes type names and public getters/setters', () => {
+    const leader = new AcDbLeader()
+
+    expect(AcDbLeader.typeName).toBe('Leader')
+    expect(leader.dxfTypeName).toBe('LEADER')
+
+    expect(leader.isSplined).toBe(false)
+    expect(leader.hasArrowHead).toBe(false)
+    expect(leader.hasHookLine).toBe(false)
+    expect(leader.numVertices).toBe(0)
+    expect(leader.vertices).toEqual([])
+    expect(leader.dimensionStyle).toBe('')
+    expect(leader.annoType).toBe(AcDbLeaderAnnotationType.NoAnnotation)
+    expect(leader.closed).toBe(false)
+
+    leader.isSplined = true
+    leader.hasArrowHead = true
+    leader.hasHookLine = true
+    leader.dimensionStyle = 'Standard'
+    leader.annoType = AcDbLeaderAnnotationType.MText
+    leader.closed = true
+
+    expect(leader.isSplined).toBe(true)
+    expect(leader.hasArrowHead).toBe(true)
+    expect(leader.hasHookLine).toBe(true)
+    expect(leader.dimensionStyle).toBe('Standard')
+    expect(leader.annoType).toBe(AcDbLeaderAnnotationType.MText)
+    expect(leader.closed).toBe(false)
+  })
+
+  it('supports appendVertex, numVertices and returns cloned vertices', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(2, 1, 0))
+
+    expect(leader.numVertices).toBe(2)
+    expect(leader.vertices).toHaveLength(2)
+
+    const exported = leader.vertices
+    exported[0].x = 999
+    expect(leader.vertices[0].x).toBe(0)
+  })
+
+  it('keeps current out-of-range behavior for setVertexAt and vertexAt', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+
+    expect(() => leader.setVertexAt(0, new AcGePoint3d(5, 5, 0))).toThrow(
+      'The vertex index is out of range!'
+    )
+    expect(() => leader.vertexAt(0)).toThrow(
+      'The vertex index is out of range!'
+    )
+
+    const raw = leader as unknown as { _vertices: Record<string, AcGePoint3d> }
+    raw._vertices['-1'] = new AcGePoint3d(1, 2, 3)
+    expect(() => leader.setVertexAt(-1, new AcGePoint3d(9, 8, 7))).toThrow(
+      'The vertex index is out of range!'
+    )
+    expect(raw._vertices['-1']).toMatchObject({ x: 9, y: 8, z: 7 })
+    expect(() => leader.vertexAt(-1)).toThrow(
+      'The vertex index is out of range!'
+    )
+  })
+
+  it('returns geometric extents for non-splined and splined leader', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(-1, 3, 0))
+    leader.appendVertex(new AcGePoint3d(4, -2, 1))
+
+    const extents = leader.geometricExtents
+    expect(extents.min).toMatchObject({ x: -1, y: -2, z: 0 })
+    expect(extents.max).toMatchObject({ x: 4, y: 3, z: 1 })
+
+    leader.appendVertex(new AcGePoint3d(6, 1, 2))
+    leader.appendVertex(new AcGePoint3d(8, 0, 0))
+    leader.isSplined = true
+    leader.subWorldDraw(createRenderer() as never)
+
+    const splineExtents = leader.geometricExtents
+    expect(splineExtents.isEmpty()).toBe(false)
+  })
+
+  it('draws polyline/spline branches in subWorldDraw', () => {
+    const rendererA = createRenderer()
+    const leaderA = new AcDbLeader()
+    leaderA.appendVertex(new AcGePoint3d(0, 0, 0))
+    const drawA = leaderA.subWorldDraw(rendererA as never)
+    expect(rendererA.lines).toHaveBeenCalledTimes(1)
+    expect(drawA).toMatchObject({ kind: 'lines' })
+    expect((rendererA.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(1)
+
+    const rendererB = createRenderer()
+    const leaderB = new AcDbLeader()
+    leaderB.appendVertex(new AcGePoint3d(0, 0, 0))
+    leaderB.isSplined = true
+    leaderB.subWorldDraw(rendererB as never)
+    expect((rendererB.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(1)
+
+    const rendererC = createRenderer()
+    const leaderC = new AcDbLeader()
+    leaderC.appendVertex(new AcGePoint3d(0, 0, 0))
+    leaderC.appendVertex(new AcGePoint3d(2, 1, 0))
+    leaderC.appendVertex(new AcGePoint3d(4, 0, 0))
+    leaderC.appendVertex(new AcGePoint3d(6, 1, 0))
+    leaderC.isSplined = true
+    leaderC.subWorldDraw(rendererC as never)
+    expect((rendererC.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(100)
+  })
+
+  it('transforms vertices and keeps working for splined geometry', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(1, 0, 0))
+
+    const matrix = new AcGeMatrix3d().makeTranslation(10, -2, 3)
+    expect(leader.transformBy(matrix)).toBe(leader)
+    expect(leader.vertices[0]).toMatchObject({ x: 10, y: -2, z: 3 })
+    expect(leader.vertices[1]).toMatchObject({ x: 11, y: -2, z: 3 })
+
+    leader.appendVertex(new AcGePoint3d(12, -1, 3))
+    leader.appendVertex(new AcGePoint3d(14, -2, 3))
+    leader.isSplined = true
+    leader.subWorldDraw(createRenderer() as never)
+    expect(
+      leader.transformBy(new AcGeMatrix3d().makeTranslation(1, 1, 0))
+    ).toBe(leader)
+
+    const renderer = createRenderer()
+    leader.subWorldDraw(renderer as never)
+    expect((renderer.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(100)
+  })
+
+  it('writes leader-specific DXF fields', () => {
+    const db = createWorkingDb()
+    const leader = new AcDbLeader()
+    db.tables.blockTable.modelSpace.appendEntity(leader)
+
+    leader.dimensionStyle = 'Standard'
+    leader.hasArrowHead = true
+    leader.hasHookLine = true
+    leader.isSplined = true
+    leader.annoType = AcDbLeaderAnnotationType.BlockReference
+    leader.appendVertex(new AcGePoint3d(1, 2, 3))
+    leader.appendVertex(new AcGePoint3d(4, 5, 6))
+
+    const filer = new AcDbDxfFiler()
+    expect(leader.dxfOutFields(filer)).toBe(leader)
+
+    const dxf = filer.toString()
+    expect(dxf).toContain('100\nAcDbLeader\n')
+    expect(dxf).toContain('\n3\nStandard\n')
+    expect(dxf).toContain('\n71\n1\n')
+    expect(dxf).toContain('\n72\n2\n')
+    expect(dxf).toContain('\n73\n1\n')
+    expect(dxf).toContain('\n74\n1\n')
+    expect(dxf).toContain('\n76\n2\n')
+    expect(dxf).toContain('\n10\n1\n')
+    expect(dxf).toContain('\n20\n2\n')
+    expect(dxf).toContain('\n30\n3\n')
+    expect(dxf).toContain('\n10\n4\n')
+    expect(dxf).toContain('\n20\n5\n')
+    expect(dxf).toContain('\n30\n6\n')
+  })
+
+  it('creates a detached clone with a new objectId', () => {
+    expectDetachedClone(() => new AcDbLeader())
+  })
+})

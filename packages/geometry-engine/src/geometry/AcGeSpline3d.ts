@@ -453,6 +453,50 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
 
   /**
+   * Return a deep-cloned copy of this spline.
+   */
+  clone() {
+    if (this._fitPoints && this._knotParameterization) {
+      return new AcGeSpline3d(
+        this._fitPoints.map(point => ({
+          x: point.x,
+          y: point.y,
+          z: point.z || 0
+        })),
+        this._knotParameterization,
+        this._degree,
+        this._closed,
+        this._startTangent
+          ? {
+              x: this._startTangent.x,
+              y: this._startTangent.y,
+              z: this._startTangent.z || 0
+            }
+          : undefined,
+        this._endTangent
+          ? {
+              x: this._endTangent.x,
+              y: this._endTangent.y,
+              z: this._endTangent.z || 0
+            }
+          : undefined
+      )
+    }
+
+    return new AcGeSpline3d(
+      this._controlPoints.map(point => ({
+        x: point.x,
+        y: point.y,
+        z: point.z || 0
+      })),
+      this._nurbsCurve.knots(),
+      this._nurbsCurve.weights(),
+      this._degree,
+      this._closed
+    )
+  }
+
+  /**
    * Convert input points to points in NURBS format
    * @param points Input points to convert
    * @returns Return converted points

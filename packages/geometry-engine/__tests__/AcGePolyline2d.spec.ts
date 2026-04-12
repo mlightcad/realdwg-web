@@ -68,4 +68,21 @@ describe('Test AcGePolyline2d', () => {
     )
     expect(open.endPoint.toArray()).toEqual([2, 3])
   })
+
+  it('clones polyline vertices deeply', () => {
+    const polyline = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: 1 },
+        { x: 1, y: 0, bulge: 0.5 }
+      ],
+      false
+    )
+    const cloned = polyline.clone()
+
+    expect(cloned).not.toBe(polyline)
+    expect(cloned.vertices).toEqual(polyline.vertices)
+
+    cloned.vertices[0].x = 9
+    expect(polyline.vertices[0].x).toBe(0)
+  })
 })

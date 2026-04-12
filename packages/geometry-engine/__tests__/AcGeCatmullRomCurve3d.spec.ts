@@ -86,4 +86,26 @@ describe('AcGeCatmullRomCurve3d', () => {
     expect(curve.tension).toBe(0.5)
     expect(curve.length).toBe(0)
   })
+
+  it('clones curve with deep-copied points', () => {
+    const curve = new AcGeCatmullRomCurve3d(
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 }
+      ],
+      true,
+      'catmullrom',
+      0.3
+    )
+    const cloned = curve.clone()
+
+    expect(cloned).not.toBe(curve)
+    expect(cloned.closed).toBe(true)
+    expect(cloned.curveType).toBe('catmullrom')
+    expect(cloned.tension).toBeCloseTo(0.3, 8)
+
+    cloned.points[0].x = 99
+    expect(curve.points[0].x).toBe(0)
+  })
 })

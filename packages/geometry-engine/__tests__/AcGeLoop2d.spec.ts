@@ -151,4 +151,18 @@ describe('AcGeLoop2d', () => {
     const reversedNoWeights = reverseEdge(splineNoWeights) as AcGeSpline3d
     expect(reversedNoWeights.weights.length).toBeGreaterThan(0)
   })
+
+  it('clones loop with independent edge instances', () => {
+    const loop = new AcGeLoop2d([
+      new AcGeLine2d({ x: 0, y: 0 }, { x: 2, y: 0 }),
+      new AcGeLine2d({ x: 2, y: 0 }, { x: 2, y: 2 })
+    ])
+
+    const cloned = loop.clone()
+    expect(cloned).not.toBe(loop)
+    expect(cloned.curves.length).toBe(loop.curves.length)
+
+    cloned.transform(new AcGeMatrix2d().makeTranslation(3, 0))
+    expect(loop.startPoint.x).toBeCloseTo(0, 8)
+  })
 })

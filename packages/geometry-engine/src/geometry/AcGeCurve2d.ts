@@ -221,4 +221,9 @@ export abstract class AcGeCurve2d extends AcGeShape2d {
     const t = this.getUtoTmapping(u)
     return this.getTangent(t)
   }
+
+  /**
+   * Return a deep-cloned copy of this curve.
+   */
+  abstract clone(): AcGeCurve2d
 }

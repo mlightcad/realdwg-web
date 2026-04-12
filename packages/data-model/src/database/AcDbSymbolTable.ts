@@ -100,7 +100,7 @@ export class AcDbSymbolTable<
     const record = this._recordsByName.get(normalizedName)
     if (record) {
       this._recordsById.delete(record.objectId)
-      this._recordsByName.delete(name)
+      this._recordsByName.delete(normalizedName)
       return true
     }
     return false
@@ -123,7 +123,7 @@ export class AcDbSymbolTable<
   removeId(id: AcDbObjectId) {
     const record = this._recordsById.get(id)
     if (record) {
-      this._recordsByName.delete(record.name)
+      this._recordsByName.delete(this.normalizeName(record.name))
       this._recordsById.delete(id)
       return true
     }
