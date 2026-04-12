@@ -10,6 +10,13 @@ export type AcGePoint3dLike = AcGeVector3dLike
  */
 export class AcGePoint3d extends AcGeVector3d {
   /**
+   * Return a new 3d point with the same x, y and z values as this one.
+   */
+  clone() {
+    return new AcGePoint3d(this.x, this.y, this.z)
+  }
+
+  /**
    * Convert one point array to one number array
    * @param array Input one point array
    * @param includeZ Include z cooridinate in returned number array if it is true.

@@ -474,6 +474,97 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   close() {}
 
   /**
+   * Creates a deep clone of this object.
+   *
+   * The cloned object is a detached in-memory object:
+   * - It has a new temporary objectId
+   * - It is not attached to any database instance
+   */
+  clone(): this {
+    const cloned = Object.create(Object.getPrototypeOf(this)) as this
+    const source = this as unknown as Record<string, unknown>
+    const target = cloned as unknown as Record<string, unknown>
+
+    for (const key of Object.keys(source)) {
+      if (key === '_database') {
+        continue
+      }
+      target[key] = this.cloneValue(source[key])
+    }
+
+    cloned.objectId = this.generateTemporaryHandle()
+    return cloned
+  }
+
+  /**
+   * Deep clones one internal field value while preserving known class types.
+   */
+  private cloneValue(value: unknown): unknown {
+    if (value == null || typeof value !== 'object') {
+      return value
+    }
+
+    if (value instanceof Date) {
+      return new Date(value.getTime())
+    }
+
+    if (value instanceof RegExp) {
+      return new RegExp(value.source, value.flags)
+    }
+
+    if (Array.isArray(value)) {
+      return value.map(item => this.cloneValue(item))
+    }
+
+    if (value instanceof Map) {
+      const clonedMap = new Map<unknown, unknown>()
+      for (const [key, item] of value.entries()) {
+        clonedMap.set(this.cloneValue(key), this.cloneValue(item))
+      }
+      return clonedMap
+    }
+
+    if (value instanceof Set) {
+      const clonedSet = new Set<unknown>()
+      for (const item of value.values()) {
+        clonedSet.add(this.cloneValue(item))
+      }
+      return clonedSet
+    }
+
+    if (ArrayBuffer.isView(value)) {
+      if (value instanceof DataView) {
+        return new DataView(value.buffer.slice(0))
+      }
+      const ctor = value.constructor as {
+        new (array: ArrayBufferView): ArrayBufferView
+      }
+      return new ctor(value)
+    }
+
+    if (value instanceof ArrayBuffer) {
+      return value.slice(0)
+    }
+
+    if (
+      'clone' in value &&
+      typeof (value as { clone?: unknown }).clone === 'function'
+    ) {
+      return (value as { clone: () => unknown }).clone()
+    }
+
+    const clonedObj = Object.create(Object.getPrototypeOf(value)) as Record<
+      string,
+      unknown
+    >
+    const objectValue = value as Record<string, unknown>
+    for (const key of Object.keys(objectValue)) {
+      clonedObj[key] = this.cloneValue(objectValue[key])
+    }
+    return clonedObj
+  }
+
+  /**
    * Writes the common DXF wrapper for this object and then delegates the
    * object-specific payload to {@link dxfOutFields}.
    *

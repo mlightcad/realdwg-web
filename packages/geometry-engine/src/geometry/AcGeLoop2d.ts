@@ -194,6 +194,13 @@ export class AcGeLoop2d extends AcGeCurve2d {
   }
 
   /**
+   * Return a deep-cloned copy of this loop.
+   */
+  clone() {
+    return new AcGeLoop2d(this._curves.map(curve => curve.clone()))
+  }
+
+  /**
    * @inheritdoc
    */
   get closed(): boolean {

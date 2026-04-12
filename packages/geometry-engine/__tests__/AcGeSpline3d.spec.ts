@@ -745,4 +745,46 @@ describe('AcGeSpline3d', () => {
       }).toThrow('At least 4 points are required for a degree 3 closed spline')
     })
   })
+
+  describe('Clone', () => {
+    it('clones control-point spline deeply', () => {
+      const spline = new AcGeSpline3d(
+        [
+          { x: 0, y: 0, z: 0 },
+          { x: 1, y: 1, z: 0 },
+          { x: 2, y: 0, z: 0 },
+          { x: 3, y: 1, z: 0 }
+        ],
+        [0, 0, 0, 0, 1, 1, 1, 1]
+      )
+
+      const cloned = spline.clone()
+      expect(cloned).not.toBe(spline)
+      expect(cloned.controlPoints).toEqual(spline.controlPoints)
+
+      const changed = cloned.getControlPointAt(0)
+      changed.x = 99
+      expect(spline.getControlPointAt(0).x).toBe(0)
+    })
+
+    it('clones fit-point spline and keeps constructor mode', () => {
+      const spline = new AcGeSpline3d(
+        [
+          { x: 0, y: 0, z: 0 },
+          { x: 1, y: 1, z: 0 },
+          { x: 2, y: 0, z: 0 },
+          { x: 3, y: 1, z: 0 }
+        ],
+        'Uniform',
+        3,
+        false,
+        { x: 1, y: 0, z: 0 },
+        { x: 0, y: 1, z: 0 }
+      )
+
+      const cloned = spline.clone()
+      expect(cloned.fitPoints).toEqual(spline.fitPoints)
+      expect(cloned.knotParameterization).toBe('Uniform')
+    })
+  })
 })

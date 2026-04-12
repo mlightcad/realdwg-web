@@ -11,4 +11,17 @@ describe('AcGeTol', () => {
     expect(AcGeTol.less(1, 2)).toBe(true)
     expect(AcGeTol.less(2, 1)).toBe(false)
   })
+
+  it('clones tolerance values', () => {
+    const tol = new AcGeTol()
+    tol.equalPointTol = 1e-3
+    tol.equalVectorTol = 1e-4
+
+    const cloned = tol.clone()
+    cloned.equalPointTol = 2e-3
+
+    expect(cloned).not.toBe(tol)
+    expect(cloned.equalVectorTol).toBe(1e-4)
+    expect(tol.equalPointTol).toBe(1e-3)
+  })
 })

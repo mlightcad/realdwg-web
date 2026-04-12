@@ -42,4 +42,13 @@ describe('AcGeVector3d', () => {
 
     expect([...new AcGeVector3d(4, 5, 6)]).toEqual([4, 5, 6])
   })
+
+  it('AcGePoint3d clone keeps point type and value', () => {
+    const point = new AcGePoint3d(7, 8, 9)
+    const cloned = point.clone()
+
+    expect(cloned).toBeInstanceOf(AcGePoint3d)
+    expect(cloned).not.toBe(point)
+    expect(cloned.toArray()).toEqual([7, 8, 9])
+  })
 })

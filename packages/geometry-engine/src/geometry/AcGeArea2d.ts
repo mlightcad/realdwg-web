@@ -76,6 +76,17 @@ export class AcGeArea2d extends AcGeShape2d {
   }
 
   /**
+   * Return a deep-cloned copy of this area.
+   */
+  clone() {
+    const area = new AcGeArea2d()
+    this._loops.forEach(loop => {
+      area.add(loop.clone())
+    })
+    return area
+  }
+
+  /**
    * Return boundary points of this area
    * @param numPoints Input the nubmer of points returned for arc segmentation
    * @returns Return points

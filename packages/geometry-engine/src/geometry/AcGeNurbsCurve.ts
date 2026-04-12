@@ -63,6 +63,18 @@ export class AcGeNurbsCurve {
   }
 
   /**
+   * Return a deep-cloned copy of this NURBS curve.
+   */
+  clone() {
+    return new AcGeNurbsCurve(
+      this._degree,
+      this._knots,
+      this._controlPoints,
+      this._weights
+    )
+  }
+
+  /**
    * Calculate a point on the curve at parameter u
    */
   point(u: number): number[] {

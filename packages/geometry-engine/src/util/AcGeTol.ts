@@ -50,6 +50,16 @@ export class AcGeTol {
   }
 
   /**
+   * Return a cloned tolerance object.
+   */
+  clone() {
+    const cloned = new AcGeTol()
+    cloned.equalPointTol = this.equalPointTol
+    cloned.equalVectorTol = this.equalVectorTol
+    return cloned
+  }
+
+  /**
    * Return true if two points are equal with the specified tolerance.
    * @param p1 Input the first 2d point
    * @param p2 Input the second 2d point

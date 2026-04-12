@@ -11,4 +11,9 @@ export abstract class AcGeShape {
   get boundingBoxNeedUpdate() {
     return this._boundingBoxNeedsUpdate
   }
+
+  /**
+   * Return a deep-cloned copy of this shape.
+   */
+  abstract clone(): AcGeShape
 }

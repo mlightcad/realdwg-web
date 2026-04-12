@@ -27,4 +27,9 @@ export abstract class AcGeCurve3d extends AcGeShape3d {
    * Length of this curve.
    */
   abstract get length(): number
+
+  /**
+   * Return a deep-cloned copy of this curve.
+   */
+  abstract clone(): AcGeCurve3d
 }

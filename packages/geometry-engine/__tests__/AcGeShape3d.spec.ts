@@ -2,6 +2,10 @@ import { AcGeBox3d, AcGeMatrix3d } from '../src'
 import { AcGeShape3d } from '../src/geometry/AcGeShape3d'
 
 class TestShape3d extends AcGeShape3d {
+  clone(): this {
+    return new TestShape3d() as this
+  }
+
   transform(_matrix: AcGeMatrix3d) {
     return this
   }

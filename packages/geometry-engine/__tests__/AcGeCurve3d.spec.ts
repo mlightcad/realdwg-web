@@ -22,6 +22,10 @@ class TestCurve3d extends AcGeCurve3d {
     return this
   }
 
+  clone(): this {
+    return new TestCurve3d() as this
+  }
+
   protected calculateBoundingBox() {
     return new AcGeBox3d({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 })
   }
