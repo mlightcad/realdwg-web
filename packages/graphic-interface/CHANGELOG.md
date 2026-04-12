@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.19
+
+### Patch Changes
+
+- feat: add clone method
+- Updated dependencies
+  - @mlightcad/common@1.4.19
+  - @mlightcad/geometry-engine@3.2.19
+
 ## 3.3.18
 
 ### Patch Changes

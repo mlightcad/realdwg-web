@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.19
+
+### Patch Changes
+
+- feat: add clone method
+- Updated dependencies
+  - @mlightcad/data-model@1.7.19
+  - @mlightcad/libredwg-converter@3.5.19
+
 ## 0.1.18
 
 ### Patch Changes

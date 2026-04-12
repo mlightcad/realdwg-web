@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.19
+
+### Patch Changes
+
+- feat: add clone method
+- Updated dependencies
+  - @mlightcad/common@1.4.19
+
 ## 3.2.18
 
 ### Patch Changes

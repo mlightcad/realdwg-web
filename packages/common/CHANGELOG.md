@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.19
+
+### Patch Changes
+
+- feat: add clone method
+
 ## 1.4.18
 
 ### Patch Changes

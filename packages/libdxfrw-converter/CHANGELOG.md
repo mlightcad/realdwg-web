@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.19
+
+### Patch Changes
+
+- feat: add clone method
+- Updated dependencies
+  - @mlightcad/data-model@1.7.19
+
 ## 3.5.18
 
 ### Patch Changes
