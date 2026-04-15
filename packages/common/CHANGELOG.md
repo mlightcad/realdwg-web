@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.20
+
+### Patch Changes
+
+- fix: fix issue #200 in cad-viewer
+
 ## 1.4.19
 
 ### Patch Changes

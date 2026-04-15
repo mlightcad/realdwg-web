@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.20
+
+### Patch Changes
+
+- fix: fix issue #200 in cad-viewer
+- Updated dependencies
+  - @mlightcad/data-model@1.7.20
+  - @mlightcad/libredwg-converter@3.5.20
+
 ## 0.1.19
 
 ### Patch Changes
