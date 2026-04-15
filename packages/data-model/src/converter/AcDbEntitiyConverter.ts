@@ -524,7 +524,7 @@ export class AcDbEntityConverter {
 
     hatch.definitionLines?.forEach(item => {
       dbEntity.definitionLines.push({
-        angle: item.angle,
+        angle: AcGeMathUtil.degToRad(item.angle || 0),
         base: item.base,
         offset: item.offset,
         dashLengths: item.numberOfDashLengths > 0 ? item.dashLengths : []
@@ -534,7 +534,7 @@ export class AcDbEntityConverter {
     dbEntity.hatchStyle = hatch.hatchStyle as unknown as AcDbHatchStyle
     dbEntity.patternName = hatch.patternName
     dbEntity.patternType = hatch.patternType as unknown as AcDbHatchPatternType
-    dbEntity.patternAngle = hatch.patternAngle == null ? 0 : hatch.patternAngle
+    dbEntity.patternAngle = hatch.patternAngle == null ? 0 : AcGeMathUtil.degToRad(hatch.patternAngle)
     dbEntity.patternScale = hatch.patternScale == null ? 0 : hatch.patternScale
 
     const paths = hatch.boundaryPaths
