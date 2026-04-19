@@ -534,7 +534,8 @@ export class AcDbEntityConverter {
     dbEntity.hatchStyle = hatch.hatchStyle as unknown as AcDbHatchStyle
     dbEntity.patternName = hatch.patternName
     dbEntity.patternType = hatch.patternType as unknown as AcDbHatchPatternType
-    dbEntity.patternAngle = hatch.patternAngle == null ? 0 : AcGeMathUtil.degToRad(hatch.patternAngle)
+    dbEntity.patternAngle =
+      hatch.patternAngle == null ? 0 : AcGeMathUtil.degToRad(hatch.patternAngle)
     dbEntity.patternScale = hatch.patternScale == null ? 0 : hatch.patternScale
 
     const paths = hatch.boundaryPaths

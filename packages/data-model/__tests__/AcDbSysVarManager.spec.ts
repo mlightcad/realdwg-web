@@ -34,6 +34,9 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.CLAYER, '0', db)
     expect(manager.getVar(AcDbSystemVariables.CLAYER, db)).toBe('0')
 
+    manager.setVar(AcDbSystemVariables.CELTYPE, 'BYLAYER', db)
+    expect(manager.getVar(AcDbSystemVariables.CELTYPE, db)).toBe('ByLayer')
+
     expect(() =>
       manager.setVar(AcDbSystemVariables.PICKBOX, 'NaN-input', db)
     ).toThrow('Invalid number input!')
@@ -67,6 +70,7 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDescriptor('__UNIT_BOOL__')?.name).toBe('__unit_bool__')
     expect(manager.getDefaultValue('__UNIT_BOOL__')).toBe(true)
     expect(manager.getVar('__UNIT_BOOL__', db)).toBe(true)
+    expect(manager.getDefaultValue(AcDbSystemVariables.CELTYPE)).toBe('ByLayer')
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'

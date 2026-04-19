@@ -101,6 +101,7 @@ describe('AcDbDatabase.dxfOut', () => {
 
     expect(dxf).toContain('9\n$ACADVER\n1\nAC1014\n')
     expect(dxf).toContain('9\n$CLAYER\n8\n0\n')
+    expect(dxf).toContain('9\n$CELTYPE\n6\nByLayer\n')
     expect(dxf).toContain('0\nTABLE\n2\nLAYER\n')
     expect(dxf).toContain('0\nLAYER\n')
     expect(dxf).toContain('2\n0\n')
@@ -230,6 +231,17 @@ describe('AcDbDatabase.dxfOut', () => {
 
     const seqendRecord = findRecord(entityRecords, 'SEQEND')
     expect(seqendRecord).toBeDefined()
+  })
+
+  it('uses the database CELTYPE for new entities without an explicit linetype', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    db.celtype = 'Continuous'
+
+    const line = new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 10, y: 5, z: 0 })
+    db.tables.blockTable.modelSpace.appendEntity(line)
+
+    expect(line.lineType).toBe('Continuous')
   })
 
   it('writes additional paper space layouts as BLOCK_RECORD, BLOCK, and LAYOUT objects', () => {

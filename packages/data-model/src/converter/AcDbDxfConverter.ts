@@ -48,7 +48,7 @@ import {
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
 import { AcDbAttribute, AcDbBlockReference, AcDbEntity } from '../entity'
-import { DEFAULT_TEXT_STYLE } from '../misc'
+import { ByLayer, DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -447,6 +447,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     db.angBase = header['$ANGBASE'] || 0
     db.angDir = header['$ANGDIR'] || 0
     if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
+    db.celtype = header['$CELTYPE'] || ByLayer
     db.celtscale = header['$CELTSCALE'] || 1
     db.ltscale = header['$LTSCALE'] || 1
     if (header['$EXTMAX']) db.extmax = header['$EXTMAX']

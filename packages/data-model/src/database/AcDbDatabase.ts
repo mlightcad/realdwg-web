@@ -302,6 +302,8 @@ export class AcDbDatabase extends AcDbObject {
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
   private _celtscale: number
+  /** Current entity linetype name */
+  private _celtype: string
   /** Current entity line weight value */
   private _celweight: AcGiLineWeight
   /** Current layer for the database */
@@ -374,6 +376,7 @@ export class AcDbDatabase extends AcDbObject {
     this._aunits = AcDbAngleUnits.DecimalDegrees
     this._celtscale = 1
     this._cecolor = new AcCmColor()
+    this._celtype = ByLayer
     this._celweight = AcGiLineWeight.ByLayer
     this._clayer = '0'
     this._textstyle = DEFAULT_TEXT_STYLE
@@ -752,6 +755,24 @@ export class AcDbDatabase extends AcDbObject {
       value ?? 1,
       nextValue => {
         this._celtscale = nextValue
+      }
+    )
+  }
+
+  /**
+   * The linetype of new objects as they are created.
+   */
+  get celtype(): string {
+    return this._celtype
+  }
+  set celtype(value: string) {
+    const nextValue = this.normalizeLinetypeName(value ?? ByLayer)
+    this.updateSysVar(
+      AcDbSystemVariables.CELTYPE,
+      this._celtype,
+      nextValue,
+      normalizedValue => {
+        this._celtype = normalizedValue
       }
     )
   }
@@ -1349,6 +1370,8 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt16(70, this.lwdisplay ? 1 : 0)
     filer.writeString(9, '$CLAYER')
     filer.writeString(8, this.clayer)
+    filer.writeString(9, '$CELTYPE')
+    filer.writeString(6, this.celtype)
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
     filer.writeString(9, '$ANGBASE')
@@ -1652,6 +1675,20 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     return !Object.is(currentValue, nextValue)
+  }
+
+  /**
+   * Normalizes special linetype aliases to the internal canonical names.
+   */
+  private normalizeLinetypeName(value: string) {
+    const normalizedValue = value.trim()
+    if (normalizedValue.toUpperCase() === 'BYLAYER') {
+      return ByLayer
+    }
+    if (normalizedValue.toUpperCase() === 'BYBLOCK') {
+      return ByBlock
+    }
+    return normalizedValue
   }
 
   /**

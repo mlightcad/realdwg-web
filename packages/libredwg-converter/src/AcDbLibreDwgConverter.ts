@@ -28,6 +28,7 @@ import {
   AcGiDefaultLightingType,
   AcGiOrthographicType,
   AcGiRenderMode,
+  ByLayer,
   createWorkerApi,
   DEFAULT_TEXT_STYLE
 } from '@mlightcad/data-model'
@@ -506,6 +507,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.angBase = header.ANGBASE ?? 0
     db.angDir = header.ANGDIR ?? 0
     db.aunits = header.AUNITS ?? 0
+    db.celtype = header.CELTYPE ?? ByLayer
     db.celtscale = header.CELTSCALE ?? 1
     db.ltscale = header.LTSCALE ?? 1
     if (header.EXTMAX!) db.extmax = header.EXTMAX
