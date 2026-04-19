@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.21
+
+### Patch Changes
+
+- feat: add CELTYPE support across database and DXF/DWG converters
+- Updated dependencies
+  - @mlightcad/common@1.4.21
+  - @mlightcad/geometry-engine@3.2.21
+
 ## 3.3.20
 
 ### Patch Changes

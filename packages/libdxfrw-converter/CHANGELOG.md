@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.21
+
+### Patch Changes
+
+- feat: add CELTYPE support across database and DXF/DWG converters
+- Updated dependencies
+  - @mlightcad/data-model@1.7.21
+
 ## 3.5.20
 
 ### Patch Changes

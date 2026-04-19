@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.21
+
+### Patch Changes
+
+- feat: add CELTYPE support across database and DXF/DWG converters
+- Updated dependencies
+  - @mlightcad/data-model@1.7.21
+  - @mlightcad/libredwg-converter@3.5.21
+
 ## 0.1.20
 
 ### Patch Changes

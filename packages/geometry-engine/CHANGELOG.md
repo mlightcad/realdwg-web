@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.21
+
+### Patch Changes
+
+- feat: add CELTYPE support across database and DXF/DWG converters
+- Updated dependencies
+  - @mlightcad/common@1.4.21
+
 ## 3.2.20
 
 ### Patch Changes
