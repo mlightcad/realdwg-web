@@ -21,6 +21,7 @@ import {
   AcGiBaseLineStyle,
   AcGiLineTypePatternElement,
   AcGiTextStyle,
+  ByLayer,
   DEFAULT_TEXT_STYLE
 } from '@mlightcad/data-model'
 import {
@@ -347,6 +348,10 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     variant = header.getVar('$AUNITS')
     // Initial value:	0
     db.aunits = variant ? variant.getInt() : 0
+
+    variant = header.getVar('$CELTYPE')
+    // Initial value: BYLAYER
+    db.celtype = variant ? variant.getString() : ByLayer
 
     variant = header.getVar('$INSUNITS')
     // Initial value:	1 (imperial) or 4 (metric)

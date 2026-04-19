@@ -244,18 +244,20 @@ describe('DXF read and parse regressions', () => {
     expect(modelLine).toBeUndefined()
   })
 
-  it('reads header values such as LTSCALE and CELTSCALE from DXF', async () => {
+  it('reads header values such as LTSCALE, CELTSCALE, and CELTYPE from DXF', async () => {
     const sourceDb = setWorkingDatabase(new AcDbDatabase())
     sourceDb.createDefaultData()
 
     let dxf = sourceDb.dxfOut(undefined, 6)
     dxf = replaceHeaderDouble(dxf, '$LTSCALE', 2.5)
+    dxf = addHeaderVariable(dxf, '$CLAYER', '$CELTYPE', '6', 'BYLAYER')
     dxf = addHeaderVariable(dxf, '$LTSCALE', '$CELTSCALE', '40', '0.25')
 
     const targetDb = await readDxf(dxf)
 
     expect(targetDb.ltscale).toBe(2.5)
     expect(targetDb.celtscale).toBe(0.25)
+    expect(targetDb.celtype).toBe('ByLayer')
     expect(targetDb.textstyle).toBe('Standard')
   })
 })

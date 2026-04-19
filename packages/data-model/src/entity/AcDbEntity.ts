@@ -49,7 +49,7 @@ export abstract class AcDbEntity extends AcDbObject {
   /** The color of this entity */
   private _color?: AcCmColor
   /** The linetype name for this entity */
-  private _lineType: string = ByLayer
+  private _lineType?: string
   /** The line weight for this entity */
   private _lineWeight?: AcGiLineWeight
   /** The linetype scale factor for this entity */
@@ -205,6 +205,9 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get lineType() {
+    if (this._lineType == null) {
+      this._lineType = this.database?.celtype ?? ByLayer
+    }
     return this._lineType
   }
 
@@ -219,7 +222,15 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   set lineType(value: string) {
-    this._lineType = value || ByLayer
+    if (!value) {
+      this._lineType = ByLayer
+    } else if (value.toUpperCase() === 'BYLAYER') {
+      this._lineType = ByLayer
+    } else if (value.toUpperCase() === 'BYBLOCK') {
+      this._lineType = ByBlock
+    } else {
+      this._lineType = value
+    }
   }
 
   /**
@@ -404,6 +415,10 @@ export abstract class AcDbEntity extends AcDbObject {
       if (this.database.cecolor) {
         this._color.copy(this.database.cecolor)
       }
+    }
+
+    if (this._lineType == null) {
+      this._lineType = this.database.celtype ?? ByLayer
     }
 
     if (this._linetypeScale == null) {

@@ -2,7 +2,7 @@ import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
-import { DEFAULT_TEXT_STYLE } from '../misc'
+import { ByLayer, DEFAULT_TEXT_STYLE } from '../misc'
 import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 
@@ -104,6 +104,12 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: true,
       defaultValue: -1
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.CELTYPE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: ByLayer
     })
     this.registerVar({
       name: AcDbSystemVariables.CELWEIGHT,

@@ -25,6 +25,8 @@ export const AcDbSystemVariables = {
   AUNITS: 'AUNITS',
   /** Current color applied to newly created entities. */
   CECOLOR: 'CECOLOR',
+  /** Current linetype name used when creating new entities. */
+  CELTYPE: 'CELTYPE',
   /** Current entity linetype scale multiplier for newly created entities. */
   CELTSCALE: 'CELTSCALE',
   /** Current lineweight applied to newly created entities. */
