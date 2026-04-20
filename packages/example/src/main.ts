@@ -14,6 +14,7 @@ const runButton = document.getElementById('runButton') as HTMLButtonElement
 const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
 const exportButton = document.createElement('button')
+const linetypePreviewPanel = document.createElement('section')
 
 exportButton.type = 'button'
 exportButton.textContent = 'Export DXF'
@@ -21,6 +22,10 @@ exportButton.hidden = true
 exportButton.disabled = true
 exportButton.style.marginLeft = '8px'
 runButton.insertAdjacentElement('afterend', exportButton)
+output.insertAdjacentElement('afterend', linetypePreviewPanel)
+
+linetypePreviewPanel.style.marginTop = '16px'
+linetypePreviewPanel.style.display = 'none'
 
 type ParseMode = 'compare' | 'main' | 'worker'
 
@@ -142,6 +147,69 @@ const renderLayers = (layerInfo?: { count: number; names: string[] }) => {
   return lines
 }
 
+const renderLinetypePreviews = (database: AcDbDatabase | null) => {
+  linetypePreviewPanel.innerHTML = ''
+  if (!database) {
+    linetypePreviewPanel.style.display = 'none'
+    return
+  }
+
+  const records = database.tables.linetypeTable
+    .newIterator()
+    .toArray()
+    .sort((a, b) => a.name.localeCompare(b.name))
+
+  const title = document.createElement('h3')
+  title.textContent = `Linetypes (${records.length})`
+  title.style.margin = '0 0 8px 0'
+  title.style.fontSize = '16px'
+  linetypePreviewPanel.appendChild(title)
+
+  const list = document.createElement('div')
+  list.style.display = 'grid'
+  list.style.gridTemplateColumns = '1fr'
+  list.style.gap = '8px'
+
+  for (const record of records) {
+    const row = document.createElement('div')
+    row.style.display = 'grid'
+    row.style.gridTemplateColumns = '220px auto'
+    row.style.alignItems = 'center'
+    row.style.gap = '12px'
+    row.style.padding = '6px 8px'
+    row.style.border = '1px solid #dadada'
+    row.style.borderRadius = '6px'
+
+    const label = document.createElement('div')
+    label.textContent = record.comments
+      ? `${record.name} - ${record.comments}`
+      : record.name
+    label.title = record.name
+    label.style.fontFamily = 'monospace'
+    label.style.fontSize = '13px'
+    label.style.whiteSpace = 'nowrap'
+    label.style.overflow = 'hidden'
+    label.style.textOverflow = 'ellipsis'
+
+    const preview = document.createElement('div')
+    preview.innerHTML = record.toPreviewSvgString({
+      width: 150,
+      height: 10,
+      padding: 8,
+      strokeWidth: 2,
+      stroke: '#202124',
+      repeats: 4
+    })
+
+    row.appendChild(label)
+    row.appendChild(preview)
+    list.appendChild(row)
+  }
+
+  linetypePreviewPanel.appendChild(list)
+  linetypePreviewPanel.style.display = 'block'
+}
+
 const updateModeOptions = (fileType: AcDbFileType) => {
   const compareOption = modeSelect.querySelector(
     'option[value="compare"]'
@@ -162,6 +230,7 @@ const updateModeOptions = (fileType: AcDbFileType) => {
 const runParse = async () => {
   if (!lastFile || !lastBuffer) {
     output.textContent = 'Please select a DWG or DXF file first.'
+    renderLinetypePreviews(null)
     return
   }
 
@@ -263,6 +332,7 @@ const runParse = async () => {
     lastParsedDatabase = parsedDatabase
     setStatus('')
     output.textContent = lines.join('\n')
+    renderLinetypePreviews(lastParsedDatabase)
     runButton.disabled = false
     modeSelect.disabled = false
     fileInput.disabled = false
@@ -275,6 +345,7 @@ fileInput.addEventListener('change', async () => {
   if (!file) return
   lastFile = file
   lastParsedDatabase = null
+  renderLinetypePreviews(null)
   updateModeOptions(getFileType(file.name))
   updateExportButton()
   output.textContent = 'Loading file...\n'
