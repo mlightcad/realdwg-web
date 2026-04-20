@@ -3,6 +3,39 @@ import { AcGiBaseLineStyle } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
+export interface AcDbLinetypePreviewSvgOptions {
+  /**
+   * Width of preview SVG.
+   * @default 220
+   */
+  width?: number
+  /**
+   * Height of preview SVG.
+   * @default 36
+   */
+  height?: number
+  /**
+   * Left/right horizontal padding in pixels.
+   * @default 8
+   */
+  padding?: number
+  /**
+   * Stroke width in pixels.
+   * @default 2
+   */
+  strokeWidth?: number
+  /**
+   * Stroke color.
+   * @default 'currentColor'
+   */
+  stroke?: string
+  /**
+   * How many pattern cycles to display in preview width.
+   * @default 4
+   */
+  repeats?: number
+}
+
 /**
  * Represents a record in the line type table within the AutoCAD drawing database.
  *
@@ -102,6 +135,130 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
       )
     }
     return this._linetype.pattern![index].elementLength
+  }
+
+  /**
+   * Converts this linetype preview to an SVG string.
+   *
+   * The preview is rendered as a horizontal line centered in the SVG viewport.
+   * Positive pattern elements are drawn as visible strokes, negative elements
+   * are treated as gaps, and zero-length elements are rendered as dots.
+   *
+   * @param options - Preview rendering options
+   * @returns SVG string for linetype preview
+   */
+  toPreviewSvgString(options?: AcDbLinetypePreviewSvgOptions) {
+    const width = Math.max(options?.width ?? 220, 1)
+    const height = Math.max(options?.height ?? 36, 1)
+    const padding = Math.min(
+      Math.max(options?.padding ?? 8, 0),
+      Math.floor(width / 2)
+    )
+    const strokeWidth = Math.max(options?.strokeWidth ?? 2, 0.5)
+    const stroke = this.escapeSvgAttribute(options?.stroke ?? 'currentColor')
+    const repeats = Math.max(options?.repeats ?? 4, 1)
+    const y = height / 2
+    const startX = padding
+    const endX = Math.max(width - padding, startX + 1)
+    const previewWidth = endX - startX
+    const pattern = this._linetype.pattern ?? []
+
+    if (
+      pattern.length === 0 ||
+      this.patternLength <= 0 ||
+      !pattern.some(item => item.elementLength !== 0)
+    ) {
+      return this.buildSvgString({
+        width,
+        height,
+        stroke,
+        strokeWidth,
+        lineSegments: [[startX, endX]],
+        dots: [],
+        y
+      })
+    }
+
+    const lineSegments: Array<[number, number]> = []
+    const dots: number[] = []
+    const unitToPx = previewWidth / (this.patternLength * repeats)
+    const minSegmentPx = 0.5
+    const dotStep = Math.max(strokeWidth * 2, 2)
+    let currentX = startX
+
+    while (currentX < endX) {
+      for (const item of pattern) {
+        if (currentX >= endX) break
+
+        const length = item.elementLength
+        if (length === 0) {
+          dots.push(currentX)
+          currentX = Math.min(currentX + dotStep, endX)
+          continue
+        }
+
+        const segmentLengthPx = Math.max(
+          Math.abs(length) * unitToPx,
+          minSegmentPx
+        )
+        const nextX = Math.min(currentX + segmentLengthPx, endX)
+        if (length > 0 && nextX > currentX) {
+          lineSegments.push([currentX, nextX])
+        }
+        currentX = nextX
+      }
+    }
+
+    return this.buildSvgString({
+      width,
+      height,
+      stroke,
+      strokeWidth,
+      lineSegments,
+      dots,
+      y
+    })
+  }
+
+  private buildSvgString(input: {
+    width: number
+    height: number
+    stroke: string
+    strokeWidth: number
+    lineSegments: Array<[number, number]>
+    dots: number[]
+    y: number
+  }) {
+    const { width, height, stroke, strokeWidth, lineSegments, dots, y } = input
+    const lines = lineSegments
+      .map(
+        ([x1, x2]) =>
+          `<line x1="${x1.toFixed(2)}" y1="${y.toFixed(2)}" x2="${x2.toFixed(
+            2
+          )}" y2="${y.toFixed(2)}" stroke="${stroke}" stroke-width="${strokeWidth.toFixed(
+            2
+          )}" stroke-linecap="round" />`
+      )
+      .join('')
+    const circles = dots
+      .map(
+        x =>
+          `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(
+            2
+          )}" r="${(strokeWidth / 2).toFixed(2)}" fill="${stroke}" />`
+      )
+      .join('')
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this.escapeSvgAttribute(this.name)} linetype preview">${lines}${circles}</svg>`
+  }
+
+  private escapeSvgAttribute(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/"/g, '&quot;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/'/g, '&#39;')
   }
 
   /**
