@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.22
+
+### Patch Changes
+
+- feat: render wide LWPOLYLINE entities as filled geometry and add SVG linetype previews and demo rendering in example app
+
 ## 1.4.21
 
 ### Patch Changes

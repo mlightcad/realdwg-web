@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.22
+
+### Patch Changes
+
+- feat: render wide LWPOLYLINE entities as filled geometry and add SVG linetype previews and demo rendering in example app
+- Updated dependencies
+  - @mlightcad/data-model@1.7.22
+
 ## 3.5.21
 
 ### Patch Changes

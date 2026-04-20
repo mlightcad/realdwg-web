@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.22
+
+### Patch Changes
+
+- feat: render wide LWPOLYLINE entities as filled geometry and add SVG linetype previews and demo rendering in example app
+- Updated dependencies
+  - @mlightcad/data-model@1.7.22
+  - @mlightcad/libredwg-converter@3.5.22
+
 ## 0.1.21
 
 ### Patch Changes

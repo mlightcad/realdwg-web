@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.22
+
+### Patch Changes
+
+- feat: render wide LWPOLYLINE entities as filled geometry and add SVG linetype previews and demo rendering in example app
+- Updated dependencies
+  - @mlightcad/common@1.4.22
+  - @mlightcad/geometry-engine@3.2.22
+
 ## 3.3.21
 
 ### Patch Changes
