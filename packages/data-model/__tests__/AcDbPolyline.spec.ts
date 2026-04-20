@@ -234,6 +234,71 @@ describe('AcDbPolyline', () => {
     expect(points.every(point => point.z === 5)).toBe(true)
   })
 
+  it('renders constant-width polyline as filled area', () => {
+    const polyline = new AcDbPolyline()
+    polyline.elevation = 2
+    polyline.closed = true
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 2, 2)
+    polyline.addVertexAt(1, new AcGePoint2d(10, 0), 0, 2, 2)
+    polyline.addVertexAt(2, new AcGePoint2d(10, 5), 0, 2, 2)
+    polyline.addVertexAt(3, new AcGePoint2d(0, 5), 0, 2, 2)
+
+    const giEntity = { id: 'wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 30,
+          definitionLines: [
+            {
+              angle: 0,
+              base: { x: 0, y: 0 },
+              offset: { x: 1, y: 0 },
+              dashLengths: []
+            }
+          ]
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.subEntityTraits.fillType).toMatchObject({
+      solidFill: true,
+      patternAngle: 0
+    })
+  })
+
+  it('renders variable-width polyline as filled area', () => {
+    const polyline = new AcDbPolyline()
+    polyline.elevation = 0
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 1, 6)
+    polyline.addVertexAt(1, new AcGePoint2d(20, 0), 0, 6, 2)
+    polyline.addVertexAt(2, new AcGePoint2d(25, 8), 0, 2, 2)
+
+    const giEntity = { id: 'variable-width-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+  })
+
   it('writes LWPOLYLINE-specific dxf fields and vertices', () => {
     const polyline = new AcDbPolyline()
     attachEntityToNewModelSpace(polyline)

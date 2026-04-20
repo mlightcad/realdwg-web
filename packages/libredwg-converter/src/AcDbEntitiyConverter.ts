@@ -271,13 +271,14 @@ export class AcDbEntityConverter {
     // Libredwg changes meaning of the 'flag' field. '512' means closed.
     const dbEntity = new AcDbPolyline()
     dbEntity.closed = !!(polyline.flag & 0x200)
+    const defaultWidth = polyline.constantWidth ?? -1
     polyline.vertices.forEach((vertex, index) => {
       dbEntity.addVertexAt(
         index,
         new AcGePoint2d(vertex.x, vertex.y),
         vertex.bulge,
-        vertex.startWidth,
-        vertex.endWidth
+        vertex.startWidth ?? defaultWidth,
+        vertex.endWidth ?? defaultWidth
       )
     })
     return dbEntity
