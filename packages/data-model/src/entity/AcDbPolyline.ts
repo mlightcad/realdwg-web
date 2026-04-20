@@ -1,5 +1,7 @@
 import {
+  AcGeArea2d,
   AcGeBox3d,
+  AcGeCircArc2d,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
@@ -471,9 +473,28 @@ export class AcDbPolyline extends AcDbCurve {
    * @returns The rendered polyline entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer) {
+    const centerline = this._geo.getPoints(100)
+    const widthProfile = this.createWidthProfile()
+    if (widthProfile != null) {
+      const loop = createWidePolylineLoop(widthProfile, this.closed)
+      if (
+        loop.length >= 3 &&
+        Math.abs(calculateSignedArea(loop)) > WIDTH_EPSILON
+      ) {
+        const area = new AcGeArea2d()
+        area.add(new AcGePolyline2d(loop, true))
+        const traits = renderer.subEntityTraits
+        traits.fillType = {
+          solidFill: true,
+          patternAngle: 0,
+          definitionLines: []
+        }
+        return renderer.area(area)
+      }
+    }
+
     const points: AcGePoint3d[] = []
-    const tmp = this._geo.getPoints(100)
-    tmp.forEach(point =>
+    centerline.forEach(point =>
       points.push(new AcGePoint3d().set(point.x, point.y, this.elevation))
     )
     return renderer.lines(points)
@@ -496,4 +517,299 @@ export class AcDbPolyline extends AcDbCurve {
     }
     return this
   }
+
+  /**
+   * Builds a sampled centerline profile carrying interpolated width values.
+   *
+   * This method converts polyline vertices (including bulge-based arc segments)
+   * into a point list where each sampled point stores:
+   * - 2D position on the centerline
+   * - Effective width at that position
+   *
+   * For each segment:
+   * - Width starts from the segment start vertex `startWidth`
+   * - Width ends at the segment start vertex `endWidth`
+   * - Width transitions linearly along sampled points
+   *
+   * Closed polylines avoid duplicating the seam point; open polylines include
+   * full start/end coverage.
+   *
+   * @returns A width profile suitable for wide-line loop construction, or `null`
+   * if the polyline has insufficient geometry or no renderable width.
+   */
+  private createWidthProfile(): WidePolylinePoint[] | null {
+    const vertices = this._geo.vertices
+    const count = vertices.length
+    if (count < 2) return null
+
+    const segmentCount = this.closed ? count : count - 1
+    const points: WidePolylinePoint[] = []
+    let hasRenderableWidth = false
+
+    for (let i = 0; i < segmentCount; i++) {
+      const startVertex = vertices[i]
+      const endVertex = vertices[(i + 1) % count]
+      const startWidth = Math.max(0, startVertex.startWidth ?? 0)
+      const endWidth = Math.max(0, startVertex.endWidth ?? 0)
+      if (startWidth > WIDTH_EPSILON || endWidth > WIDTH_EPSILON) {
+        hasRenderableWidth = true
+      }
+
+      const sampled = this.sampleSegment(startVertex, endVertex)
+      const lastIndex = sampled.length - 1
+      for (let j = 0; j <= lastIndex; j++) {
+        if (j === 0 && points.length > 0) {
+          continue
+        }
+        if (this.closed && i === segmentCount - 1 && j === lastIndex) {
+          continue
+        }
+        const t = lastIndex > 0 ? j / lastIndex : 0
+        points.push({
+          x: sampled[j].x,
+          y: sampled[j].y,
+          width: lerp(startWidth, endWidth, t)
+        })
+      }
+    }
+
+    return hasRenderableWidth && points.length >= 2 ? points : null
+  }
+
+  /**
+   * Samples one polyline segment into a point sequence.
+   *
+   * If the start vertex contains a non-zero bulge, this segment is treated as an
+   * arc and sampled via {@link AcGeCircArc2d}. Otherwise, the method returns the
+   * two segment endpoints as a straight segment.
+   *
+   * @param startVertex - Segment start vertex. Its `bulge` controls whether arc
+   * sampling is used.
+   * @param endVertex - Segment end vertex.
+   * @returns Sampled points in segment order (start to end), always at least two
+   * points for the straight fallback path.
+   */
+  private sampleSegment(
+    startVertex: AcDbPolylineVertex,
+    endVertex: AcDbPolylineVertex
+  ): AcGePoint2d[] {
+    if (startVertex.bulge && Math.abs(startVertex.bulge) > WIDTH_EPSILON) {
+      const arc = new AcGeCircArc2d(startVertex, endVertex, startVertex.bulge)
+      const sampled = arc.getPoints(32)
+      if (sampled.length > 1) {
+        return sampled.map(point => new AcGePoint2d(point.x, point.y))
+      }
+    }
+    return [
+      new AcGePoint2d(startVertex.x, startVertex.y),
+      new AcGePoint2d(endVertex.x, endVertex.y)
+    ]
+  }
+}
+
+const WIDTH_EPSILON = 1e-6
+const MITER_LIMIT = 4
+
+/**
+ * A sampled centerline point with local width used for wide polyline rendering.
+ */
+interface WidePolylinePoint {
+  x: number
+  y: number
+  width: number
+}
+
+/**
+ * Generates a closed polygon loop representing a variable-width polyline.
+ *
+ * The algorithm offsets each centerline sample to both left and right sides
+ * using locally computed join directions, then stitches:
+ * - left side in forward order
+ * - right side in reverse order
+ *
+ * The resulting loop can be consumed by area/fill rendering.
+ *
+ * @param points - Centerline samples with per-point widths.
+ * @param closed - Whether the source polyline is topologically closed.
+ * @returns A polygon loop vertex array, or an empty array if insufficient
+ * valid offset points are produced.
+ */
+function createWidePolylineLoop(
+  points: WidePolylinePoint[],
+  closed: boolean
+): AcGePolyline2dVertex[] {
+  if (points.length < 2) return []
+  const centerline = normalizeCenterline(points, closed)
+  if (centerline.length < 2) return []
+
+  const left: AcGePolyline2dVertex[] = []
+  const right: AcGePolyline2dVertex[] = []
+  for (let i = 0; i < centerline.length; i++) {
+    const point = centerline[i]
+    const halfWidth = Math.max(0, point.width) / 2
+    if (halfWidth <= WIDTH_EPSILON) {
+      continue
+    }
+    const offset = computeOffsetDirection(centerline, i, closed)
+    if (offset == null) {
+      continue
+    }
+    left.push({
+      x: point.x + offset.x * halfWidth,
+      y: point.y + offset.y * halfWidth
+    })
+    right.push({
+      x: point.x - offset.x * halfWidth,
+      y: point.y - offset.y * halfWidth
+    })
+  }
+
+  if (left.length < 2 || right.length < 2) return []
+  return [...left, ...right.reverse()]
+}
+
+/**
+ * Removes redundant centerline samples and normalizes closed-end duplication.
+ *
+ * Adjacent points that are effectively identical (position and width within
+ * epsilon) are collapsed. For closed polylines, a duplicated final point equal
+ * to the first point is removed to avoid seam artifacts in offset generation.
+ *
+ * @param points - Raw sampled centerline points.
+ * @param closed - Whether the source polyline is closed.
+ * @returns A normalized centerline sample array.
+ */
+function normalizeCenterline(points: WidePolylinePoint[], closed: boolean) {
+  const deduped: WidePolylinePoint[] = []
+  points.forEach(point => {
+    const last = deduped[deduped.length - 1]
+    if (
+      !last ||
+      Math.abs(last.x - point.x) > WIDTH_EPSILON ||
+      Math.abs(last.y - point.y) > WIDTH_EPSILON ||
+      Math.abs(last.width - point.width) > WIDTH_EPSILON
+    ) {
+      deduped.push(point)
+    }
+  })
+
+  if (closed && deduped.length > 1) {
+    const first = deduped[0]
+    const last = deduped[deduped.length - 1]
+    if (
+      Math.abs(first.x - last.x) <= WIDTH_EPSILON &&
+      Math.abs(first.y - last.y) <= WIDTH_EPSILON
+    ) {
+      deduped.pop()
+    }
+  }
+  return deduped
+}
+
+/**
+ * Computes the lateral offset direction at a centerline point.
+ *
+ * The direction is based on adjacent segment directions:
+ * - Endpoints of open polylines reuse the only available segment direction.
+ * - Interior points use a mitered join derived from neighboring left normals.
+ * - Miter length is clamped by `MITER_LIMIT` to avoid excessive spikes.
+ *
+ * @param points - Normalized centerline samples.
+ * @param index - Current sample index.
+ * @param closed - Whether the polyline is closed.
+ * @returns Scaled left-side offset direction, or `null` when direction cannot be
+ * determined (for example, fully degenerate local geometry).
+ */
+function computeOffsetDirection(
+  points: WidePolylinePoint[],
+  index: number,
+  closed: boolean
+) {
+  const count = points.length
+  const point = points[index]
+  const prev = points[(index - 1 + count) % count]
+  const next = points[(index + 1) % count]
+  let prevDir = normalizeDirection(point.x - prev.x, point.y - prev.y)
+  let nextDir = normalizeDirection(next.x - point.x, next.y - point.y)
+
+  if (!closed) {
+    if (index === 0) prevDir = nextDir
+    if (index === count - 1) nextDir = prevDir
+  }
+
+  if (prevDir == null && nextDir == null) return null
+  if (prevDir == null) return leftNormal(nextDir!)
+  if (nextDir == null) return leftNormal(prevDir)
+
+  const prevNormal = leftNormal(prevDir)
+  const nextNormal = leftNormal(nextDir)
+  const sumX = prevNormal.x + nextNormal.x
+  const sumY = prevNormal.y + nextNormal.y
+  const sumLength = Math.hypot(sumX, sumY)
+  if (sumLength <= WIDTH_EPSILON) {
+    return nextNormal
+  }
+
+  const miter = { x: sumX / sumLength, y: sumY / sumLength }
+  const projection = Math.abs(miter.x * nextNormal.x + miter.y * nextNormal.y)
+  const scale =
+    projection <= WIDTH_EPSILON
+      ? MITER_LIMIT
+      : Math.min(1 / projection, MITER_LIMIT)
+  return { x: miter.x * scale, y: miter.y * scale }
+}
+
+/**
+ * Converts a vector into a unit direction.
+ *
+ * @param dx - X component of the vector.
+ * @param dy - Y component of the vector.
+ * @returns A normalized vector, or `null` when the input length is too small.
+ */
+function normalizeDirection(dx: number, dy: number) {
+  const length = Math.hypot(dx, dy)
+  if (length <= WIDTH_EPSILON) return null
+  return { x: dx / length, y: dy / length }
+}
+
+/**
+ * Computes the left-hand normal of a 2D unit direction.
+ *
+ * @param direction - Input direction vector.
+ * @returns A 90-degree counterclockwise normal.
+ */
+function leftNormal(direction: { x: number; y: number }) {
+  return { x: -direction.y, y: direction.x }
+}
+
+/**
+ * Calculates signed polygon area using the shoelace formula.
+ *
+ * Positive sign indicates counterclockwise winding, negative indicates
+ * clockwise winding.
+ *
+ * @param points - Polygon vertices in order.
+ * @returns Signed area value.
+ */
+function calculateSignedArea(points: AcGePolyline2dVertex[]) {
+  let area = 0
+  const count = points.length
+  for (let i = 0; i < count; i++) {
+    const p1 = points[i]
+    const p2 = points[(i + 1) % count]
+    area += p1.x * p2.y - p2.x * p1.y
+  }
+  return area / 2
+}
+
+/**
+ * Performs linear interpolation between two scalar values.
+ *
+ * @param start - Start value at `t = 0`.
+ * @param end - End value at `t = 1`.
+ * @param t - Interpolation factor in `[0, 1]` (not clamped by this function).
+ * @returns Interpolated value.
+ */
+function lerp(start: number, end: number, t: number) {
+  return start + (end - start) * t
 }

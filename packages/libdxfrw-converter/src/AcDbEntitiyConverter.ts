@@ -323,6 +323,7 @@ export class AcDbEntityConverter {
     // 128 = The linetype pattern is generated continuously around the vertices of this polyline
     const dbEntity = new AcDbPolyline()
     dbEntity.closed = !!(polyline.flags & 0x01)
+    const defaultWidth = polyline.width ?? -1
     const vertices = polyline.getVertexList()
     for (let index = 0, size = vertices.size(); index < size; ++index) {
       const vertex = vertices.get(index)
@@ -331,8 +332,8 @@ export class AcDbEntityConverter {
           index,
           new AcGePoint2d(vertex.x, vertex.y),
           vertex.bulge,
-          vertex.startWidth,
-          vertex.endWidth
+          vertex.startWidth ?? defaultWidth,
+          vertex.endWidth ?? defaultWidth
         )
       }
     }
