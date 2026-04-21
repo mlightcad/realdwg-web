@@ -144,6 +144,71 @@ describe('AcDbBlockReference', () => {
     expect(infiniteLoopGuardSnaps).toHaveLength(0)
   })
 
+  it('transforms pick point to block space before querying sub-entity osnap', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'TEST_BLOCK')
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    block.appendEntity(line)
+
+    const blockRef = new AcDbBlockReference('TEST_BLOCK')
+    blockRef.position = new AcGePoint3d(10, 0, 0)
+    blockRef.rotation = Math.PI / 2
+    db.tables.blockTable.modelSpace.appendEntity(blockRef)
+
+    const nearestSnaps: AcGePoint3d[] = []
+    blockRef.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(11, 3, 0),
+      new AcGePoint3d(),
+      nearestSnaps,
+      line.objectId
+    )
+
+    expect(nearestSnaps).toHaveLength(1)
+    expect(nearestSnaps[0].x).toBeCloseTo(10)
+    expect(nearestSnaps[0].y).toBeCloseTo(3)
+    expect(nearestSnaps[0].z).toBeCloseTo(0)
+  })
+
+  it('resolves osnap points through nested block references', () => {
+    const db = createDb()
+    const leafBlock = createNamedBlock(db, 'LEAF_BLOCK')
+    const parentBlock = createNamedBlock(db, 'PARENT_BLOCK')
+
+    const nestedLine = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    leafBlock.appendEntity(nestedLine)
+
+    const nestedRef = new AcDbBlockReference('LEAF_BLOCK')
+    nestedRef.position = new AcGePoint3d(2, 0, 0)
+    parentBlock.appendEntity(nestedRef)
+
+    const topRef = new AcDbBlockReference('PARENT_BLOCK')
+    topRef.position = new AcGePoint3d(10, 0, 0)
+    topRef.rotation = Math.PI / 2
+    db.tables.blockTable.modelSpace.appendEntity(topRef)
+
+    const nestedSnaps: AcGePoint3d[] = []
+    topRef.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      nestedSnaps,
+      nestedLine.objectId
+    )
+
+    expect(nestedSnaps).toHaveLength(2)
+    expect(nestedSnaps[0].x).toBeCloseTo(10)
+    expect(nestedSnaps[0].y).toBeCloseTo(2)
+    expect(nestedSnaps[1].x).toBeCloseTo(10)
+    expect(nestedSnaps[1].y).toBeCloseTo(12)
+  })
+
   it('transforms insertion, scale, rotation, normal and attribute geometry', () => {
     const db = createDb()
     createNamedBlock(db, 'TEST_BLOCK')
