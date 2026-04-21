@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.23
+
+### Patch Changes
+
+- fix: fix block reference osnap resolution for transformed and nested entities and issue on color resolution for libredwg-converter
+- Updated dependencies
+  - @mlightcad/data-model@1.7.23
+
 ## 3.5.22
 
 ### Patch Changes

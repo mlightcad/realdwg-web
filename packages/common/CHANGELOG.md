@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.23
+
+### Patch Changes
+
+- fix: fix block reference osnap resolution for transformed and nested entities and issue on color resolution for libredwg-converter
+
 ## 1.4.22
 
 ### Patch Changes

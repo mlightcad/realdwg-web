@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.23
+
+### Patch Changes
+
+- fix: fix block reference osnap resolution for transformed and nested entities and issue on color resolution for libredwg-converter
+- Updated dependencies
+  - @mlightcad/data-model@1.7.23
+  - @mlightcad/libredwg-converter@3.5.23
+
 ## 0.1.22
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.23
+
+### Patch Changes
+
+- fix: fix block reference osnap resolution for transformed and nested entities and issue on color resolution for libredwg-converter
+- Updated dependencies
+  - @mlightcad/common@1.4.23
+  - @mlightcad/geometry-engine@3.2.23
+
 ## 3.3.22
 
 ### Patch Changes
