@@ -207,6 +207,14 @@ export class AcDbBlockReference extends AcDbEntity {
     this._normal.copy(value).normalize()
   }
 
+  /**
+   * Gets the name of the block definition referenced by this INSERT entity.
+   *
+   * The returned value is the block table record key used to resolve
+   * {@link blockTableRecord} from the current database.
+   *
+   * @returns The referenced block name.
+   */
   get blockName() {
     return this._blockName
   }
@@ -385,7 +393,7 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
-   * Gets the object snap points for this mtext.
+   * Gets the object snap points for this block reference.
    *
    * Object snap points are precise points that can be used for positioning
    * when drawing or editing. This method provides snap points based on the
@@ -400,29 +408,53 @@ export class AcDbBlockReference extends AcDbEntity {
    * to set GS marker of the subentity involved in the object snap operation. For
    * now, we don't provide such a GS marker mechanism yet. So passed id of subentity
    * as GS marker. Maybe this behavior will change in the future.
+   * @param insertionMat - Cumulative insertion transform matrix from parent
+   * block references.
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
     pickPoint: AcGePoint3dLike,
     lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[],
-    gsMark?: AcDbObjectId
+    gsMark?: AcDbObjectId,
+    insertionMat?: AcGeMatrix3d
   ) {
+    const parentInsertionMat = insertionMat ?? new AcGeMatrix3d()
+
     if (AcDbOsnapMode.Insertion === osnapMode) {
-      snapPoints.push(this._position)
+      snapPoints.push(this.getInsertionPoint(parentInsertionMat))
     } else if (gsMark) {
       this.subEntityGetOsnapPoints(
         osnapMode,
         pickPoint,
         lastPoint,
         snapPoints,
-        gsMark
+        gsMark,
+        parentInsertionMat
       )
     }
   }
 
   /**
-   * Transforms this block reference by the specified matrix.
+   * Transforms this block reference by an arbitrary world-space matrix.
+   *
+   * Unlike simple entities that can transform raw geometry directly, an INSERT
+   * stores placement as decomposed parameters (`position`, `rotation`,
+   * `scaleFactors`, and `normal`). This method applies the input matrix to a
+   * derived local frame, then reconstructs those parameters from the transformed
+   * frame so the reference remains representable as an INSERT.
+   *
+   * Recomposition pipeline:
+   *
+   * 1. Build local axes from current `rotation`, `normal`, and `scaleFactors`
+   * 2. Transform axis endpoints and origin by `matrix`
+   * 3. Recompute normal from transformed X/Y axes (with a degenerate fallback)
+   * 4. Project transformed X axis into the new OCS to recover `rotation`
+   * 5. Recover axis lengths as new `scaleFactors`
+   * 6. Transform all attached attributes with the same matrix
+   *
+   * @param matrix - Transformation matrix in WCS.
+   * @returns The current block reference instance.
    */
   transformBy(matrix: AcGeMatrix3d) {
     const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
@@ -693,18 +725,17 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
-   * Writes the INSERT entity record and any attached ATTRIB/SEQEND records.
+   * Writes this INSERT entity to DXF, including its attribute sequence.
+   *
+   * The output order follows DXF conventions:
+   *
+   * 1. Emit INSERT common/object fields via the base implementation
+   * 2. Emit one `ATTRIB` section for each attached attribute
+   * 3. Emit a terminating `SEQEND` record when attributes were written
    *
    * @param filer - DXF output writer.
    * @param allXdata - When true, emits all XData attached to this entity.
-   * @returns The entity instance (for chaining).
-   */
-  /**
-   * Writes this object to the DXF output.
-   *
-   * @param filer - DXF output writer.
-   * @param allXdata - When true, emits all XData attached to this object.
-   * @returns The instance (for chaining).
+   * @returns The current entity instance.
    */
   override dxfOut(filer: AcDbDxfFiler, allXdata = false) {
     super.dxfOut(filer, allXdata)
@@ -723,37 +754,134 @@ export class AcDbBlockReference extends AcDbEntity {
     return this
   }
 
+  /**
+   * Recursively resolves object snap points from nested block references.
+   *
+   * This helper traverses child entities under the current block reference to
+   * locate the sub-entity identified by `gsMark`. When found, it converts
+   * pick/last points into the target local space, asks that entity for snap
+   * points, then maps results back to the caller space as needed.
+   *
+   * The method tracks visited block references to prevent infinite recursion in
+   * cyclic block graphs.
+   *
+   * @param osnapMode - Requested osnap mode.
+   * @param pickPoint - User pick point in caller space.
+   * @param lastPoint - Previous point in caller space.
+   * @param snapPoints - Output collection to append resolved snap points into.
+   * @param gsMark - Object id of the target sub-entity.
+   * @param parentInsertionMat - Cumulative transform from ancestor INSERTs.
+   * @param visitedRefs - Internal recursion guard set.
+   * @returns `true` when the target sub-entity is found and processed, else `false`.
+   */
   private subEntityGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
     pickPoint: AcGePoint3dLike,
     lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[],
-    gsMark: AcDbObjectId
+    gsMark: AcDbObjectId,
+    parentInsertionMat: AcGeMatrix3d,
+    visitedRefs = new Set<AcDbObjectId>()
   ) {
     // Avoid an infinite loop
-    if (gsMark === this.objectId) return
+    if (gsMark === this.objectId || visitedRefs.has(this.objectId)) return false
 
-    const blockTable = this.database?.tables.blockTable
-    if (blockTable != null) {
-      const entity = blockTable.getEntityById(gsMark)
-      if (entity) {
-        const points: AcGePoint3d[] = []
-        entity.subGetOsnapPoints(
-          osnapMode,
-          pickPoint,
-          lastPoint,
-          points,
-          gsMark
-        )
+    visitedRefs.add(this.objectId)
 
-        // Apply matrix to all snap points
-        const matrix = this.blockTransform
-        points.forEach(point => {
-          const tmp = point.clone().applyMatrix4(matrix)
-          snapPoints.push(tmp)
-        })
+    try {
+      const blockTableRecord = this.blockTableRecord
+      if (blockTableRecord == null) return false
+
+      const thisInsertionMat = new AcGeMatrix3d().multiplyMatrices(
+        parentInsertionMat,
+        this.getFullInsertionTransform()
+      )
+
+      for (const entity of blockTableRecord.newIterator()) {
+        if (entity.objectId === gsMark) {
+          const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
+            thisInsertionMat.clone().invert()
+          )
+          const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
+            thisInsertionMat.clone().invert()
+          )
+          const localSnapPoints: AcGePoint3d[] = []
+
+          entity.subGetOsnapPoints(
+            osnapMode,
+            localPickPoint,
+            localLastPoint,
+            localSnapPoints,
+            gsMark,
+            thisInsertionMat
+          )
+
+          if (entity instanceof AcDbBlockReference) {
+            localSnapPoints.forEach(point => {
+              snapPoints.push(point.clone())
+            })
+          } else {
+            localSnapPoints.forEach(point => {
+              snapPoints.push(
+                new AcGePoint3d(point).applyMatrix4(thisInsertionMat)
+              )
+            })
+          }
+
+          return true
+        }
+
+        if (entity instanceof AcDbBlockReference) {
+          const found = entity.subEntityGetOsnapPoints(
+            osnapMode,
+            pickPoint,
+            lastPoint,
+            snapPoints,
+            gsMark,
+            thisInsertionMat,
+            visitedRefs
+          )
+          if (found) return true
+        }
       }
+
+      return false
+    } finally {
+      visitedRefs.delete(this.objectId)
     }
+  }
+
+  /**
+   * Computes the insertion osnap point in caller space.
+   *
+   * The insertion point is the block definition base point transformed by the
+   * full cumulative insertion transform (ancestor transform + this reference's
+   * own full insertion transform including extrusion).
+   *
+   * @param parentInsertionMat - Cumulative transform from parent block references.
+   * @returns The insertion point in the caller coordinate space.
+   */
+  private getInsertionPoint(parentInsertionMat: AcGeMatrix3d) {
+    const blockBasePoint = this.blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
+    const insertionMat = new AcGeMatrix3d().multiplyMatrices(
+      parentInsertionMat,
+      this.getFullInsertionTransform()
+    )
+    return new AcGePoint3d(blockBasePoint).applyMatrix4(insertionMat)
+  }
+
+  /**
+   * Builds the full INSERT transform for this block reference.
+   *
+   * {@link blockTransform} contains translation/rotation/scale in OCS only.
+   * This method prepends the extrusion transform derived from {@link normal} so
+   * the returned matrix maps block-local geometry all the way into WCS.
+   *
+   * @returns Full block insertion transform including OCS extrusion.
+   */
+  private getFullInsertionTransform() {
+    const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
+    return new AcGeMatrix3d().multiplyMatrices(extrusion, this.blockTransform)
   }
 
   /**

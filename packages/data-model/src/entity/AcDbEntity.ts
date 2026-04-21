@@ -490,6 +490,8 @@ export abstract class AcDbEntity extends AcDbObject {
    * to set GS marker of the subentity involved in the object snap operation. For
    * now, we don't provide such a GS marker mechanism yet. So passed id of subentity
    * as GS marker. Maybe this behavior will change in the future.
+   * @param insertionMat - Cumulative insertion transform matrix from nested block
+   * references. This parameter is primarily used by INSERT entities.
    *
    * @example
    * ```typescript
@@ -507,7 +509,9 @@ export abstract class AcDbEntity extends AcDbObject {
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
     snapPoints: AcGePoint3dLike[],
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-    gsMark?: AcDbObjectId
+    gsMark?: AcDbObjectId,
+    // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
+    insertionMat?: AcGeMatrix3d
   ) {}
 
   /**
