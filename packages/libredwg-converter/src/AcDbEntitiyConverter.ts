@@ -869,7 +869,20 @@ export class AcDbEntityConverter {
       dbEntity.color.setRGBValue(entity.color)
     }
     if (entity.colorIndex != null) {
-      dbEntity.color.colorIndex = entity.colorIndex
+      // ACI color precedence rule:
+      // - If the libredwg binding already resolved a concrete RGB for the
+      //   entity (entity.color != null), that RGB reflects the DWG's own
+      //   color table — trust it and do NOT overwrite with ACI resolution
+      //   from our default palette (which loses custom-palette mappings,
+      //   e.g. ACI 254 → #d8f5c2 in the source DWG vs. near-black in our
+      //   default palette).
+      // - Exception: colorIndex === 7 is semantically special (the
+      //   "foreground" color that flips with COLORTHEME). Preserve it as
+      //   ByACI(7) so that AcCmColor.isForeground stays true and text
+      //   keeps inverting with the theme.
+      if (entity.color == null || entity.colorIndex === 7) {
+        dbEntity.color.colorIndex = entity.colorIndex
+      }
     }
     if (entity.colorName) {
       dbEntity.color.colorName = entity.colorName
