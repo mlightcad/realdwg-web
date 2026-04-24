@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+- Updated dependencies
+  - @mlightcad/common@1.4.24
+  - @mlightcad/geometry-engine@3.2.24
+  - @mlightcad/graphic-interface@3.3.24
+
 ## 1.7.23
 
 ### Patch Changes

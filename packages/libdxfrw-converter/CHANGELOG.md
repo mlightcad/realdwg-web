@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+- Updated dependencies
+  - @mlightcad/data-model@1.7.24
+
 ## 3.5.23
 
 ### Patch Changes

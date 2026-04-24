@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+- Updated dependencies
+  - @mlightcad/common@1.4.24
+
 ## 3.2.23
 
 ### Patch Changes

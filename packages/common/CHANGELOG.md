@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+
 ## 1.4.23
 
 ### Patch Changes

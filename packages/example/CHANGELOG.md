@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+- Updated dependencies
+  - @mlightcad/data-model@1.7.24
+  - @mlightcad/libredwg-converter@3.5.24
+
 ## 0.1.23
 
 ### Patch Changes

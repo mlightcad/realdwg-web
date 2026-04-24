@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.24
+
+### Patch Changes
+
+- fix: fix issues on dimension selection and snapping
+- Updated dependencies
+  - @mlightcad/common@1.4.24
+  - @mlightcad/geometry-engine@3.2.24
+
 ## 3.3.23
 
 ### Patch Changes
