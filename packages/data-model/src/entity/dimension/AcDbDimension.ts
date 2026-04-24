@@ -1,4 +1,5 @@
 import {
+  AcGeBox3d,
   AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint2dLike,
@@ -18,6 +19,8 @@ import { AcDbObjectId } from '../../base'
 import { AcDbDxfFiler } from '../../base'
 import { AcDbDimStyleTableRecord } from '../../database'
 import { AcDbRenderingCache } from '../../misc'
+import { AcDbOsnapMode } from '../../misc'
+import { AcDbBlockReference } from '../AcDbBlockReference'
 import { AcDbEntity } from '../AcDbEntity'
 import { AcDbLine } from '../AcDbLine'
 
@@ -370,29 +373,124 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Resolves osnap points through the anonymous dimension block.
+   *
+   * Dimensions are rendered from `dimBlockId` contents, so osnap queries need
+   * to delegate to the block entities and map points between block-local space
+   * and WCS.
+   */
+  override subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[],
+    gsMark?: AcDbObjectId
+  ) {
+    const blockTableRecord = this.getDimBlockTableRecord()
+    if (!blockTableRecord) return
+
+    const blockTransform = this.getFullDimBlockTransform()
+    const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
+      blockTransform.clone().invert()
+    )
+    const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
+      blockTransform.clone().invert()
+    )
+
+    const appendEntitySnapPoints = (
+      entity: AcDbEntity,
+      subEntityId?: AcDbObjectId
+    ) => {
+      const localSnapPoints: AcGePoint3d[] = []
+      entity.subGetOsnapPoints(
+        osnapMode,
+        localPickPoint,
+        localLastPoint,
+        localSnapPoints,
+        subEntityId,
+        blockTransform
+      )
+
+      if (entity instanceof AcDbBlockReference) {
+        localSnapPoints.forEach(point => snapPoints.push(point.clone()))
+      } else {
+        localSnapPoints.forEach(point =>
+          snapPoints.push(new AcGePoint3d(point).applyMatrix4(blockTransform))
+        )
+      }
+    }
+
+    if (gsMark) {
+      const target = blockTableRecord.getIdAt(gsMark)
+      if (target) {
+        appendEntitySnapPoints(target, gsMark)
+        if (snapPoints.length > 0) return
+      }
+    }
+
+    for (const entity of blockTableRecord.newIterator()) {
+      appendEntitySnapPoints(entity)
+    }
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    if (this.dimBlockId) {
-      const blockTableRecord = this.database.tables.blockTable.getAt(
-        this.dimBlockId
+    const blockTableRecord = this.getDimBlockTableRecord()
+    if (blockTableRecord) {
+      const matrix = this.computeDimBlockTransform()
+      const group = AcDbRenderingCache.instance.draw(
+        renderer,
+        blockTableRecord,
+        this.rgbColor,
+        [],
+        false,
+        matrix,
+        this._normal
       )
-      if (blockTableRecord) {
-        const matrix = this.computeDimBlockTransform()
-        const group = AcDbRenderingCache.instance.draw(
-          renderer,
-          blockTableRecord,
-          this.rgbColor,
-          [],
-          false,
-          matrix,
-          this._normal
-        )
-        return group
-      }
+      return group
     }
     const group = renderer.group([])
     return group
+  }
+
+  /**
+   * Computes transformed geometric extents from the anonymous dimension block.
+   */
+  protected getDimBlockGeometricExtents(): AcGeBox3d {
+    const box = new AcGeBox3d()
+    const blockTableRecord = this.getDimBlockTableRecord()
+    if (!blockTableRecord) return box
+
+    for (const entity of blockTableRecord.newIterator()) {
+      box.union(entity.geometricExtents)
+    }
+
+    box.applyMatrix4(this.getFullDimBlockTransform())
+    return box
+  }
+
+  /**
+   * Looks up the anonymous block referenced by `dimBlockId`.
+   */
+  protected getDimBlockTableRecord() {
+    return this.dimBlockId
+      ? this.database.tables.blockTable.getAt(this.dimBlockId)
+      : undefined
+  }
+
+  /**
+   * Builds the complete dimension-block transform (OCS transform + extrusion).
+   */
+  protected getFullDimBlockTransform() {
+    const dimBlockTransform = this.computeDimBlockTransform()
+    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
+      return dimBlockTransform
+    }
+
+    const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
+    return new AcGeMatrix3d().multiplyMatrices(extrusion, dimBlockTransform)
   }
 
   protected get arrowScaleFactor() {
