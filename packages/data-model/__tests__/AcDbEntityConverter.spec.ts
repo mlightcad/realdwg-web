@@ -1,7 +1,7 @@
 import { AcDbEntityConverter } from '../src/converter/AcDbEntitiyConverter'
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
-import { AcDbPolyline } from '../src/entity'
+import { AcDbAlignedDimension, AcDbPolyline, AcDbRotatedDimension } from '../src/entity'
 
 describe('AcDbEntityConverter', () => {
   it('returns null for unsupported type', () => {
@@ -69,5 +69,37 @@ describe('AcDbEntityConverter', () => {
     expect(vertices).toHaveLength(2)
     expect(vertices[0]).toMatchObject({ startWidth: 4, endWidth: 4 })
     expect(vertices[1]).toMatchObject({ startWidth: 4, endWidth: 4 })
+  })
+
+  it('maps aligned and rotated dimension subclass markers to the matching AcDb classes', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const baseDimensionPayload = {
+      type: 'DIMENSION',
+      definitionPoint: { x: 3, y: 4, z: 0 },
+      subDefinitionPoint1: { x: 0, y: 0, z: 0 },
+      subDefinitionPoint2: { x: 10, y: 0, z: 0 },
+      insertionPoint: { x: 1, y: 2 },
+      rotationAngle: 30,
+      textPoint: { x: 5, y: 2, z: 0 },
+      styleName: 'Standard',
+      text: '10.000',
+      measurement: 10,
+      extrusionDirection: { x: 0, y: 0, z: 1 }
+    }
+
+    const aligned = converter.convert({
+      ...baseDimensionPayload,
+      subclassMarker: 'AcDbAlignedDimension'
+    } as any)
+
+    const rotated = converter.convert({
+      ...baseDimensionPayload,
+      subclassMarker: 'AcDbRotatedDimension'
+    } as any)
+
+    expect(aligned).toBeInstanceOf(AcDbAlignedDimension)
+    expect(rotated).toBeInstanceOf(AcDbRotatedDimension)
   })
 })

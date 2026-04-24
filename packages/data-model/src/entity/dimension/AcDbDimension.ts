@@ -665,12 +665,17 @@ export abstract class AcDbDimension extends AcDbEntity {
         ? this.database.tables.dimStyleTable.getAt(this.dimensionStyleName)
         : undefined
     filer.writeSubclassMarker('AcDbDimension')
+    filer.writeInt16(280, 0)
+    filer.writeString(2, this.dimBlockId ?? undefined)
     filer.writeString(3, this.dimensionStyleName ?? this.dimensionStyle.name)
     filer.writePoint3d(10, this.dimBlockPosition)
     filer.writeString(1, this.dimensionText ?? '')
     filer.writeAngle(53, this.textRotation)
     filer.writePoint3d(11, this.textPosition)
     filer.writeInt16(70, 0)
+    filer.writeInt16(72, this.textLineSpacingStyle)
+    filer.writeDouble(41, this.textLineSpacingFactor)
+    filer.writeDouble(42, this.measurement)
     filer.writeVector3d(210, this.normal)
     filer.writeObjectId(340, dimStyle?.objectId)
     return this

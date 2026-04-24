@@ -440,6 +440,13 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   /**
+   * DXF subclass marker written for this dimension subtype.
+   */
+  protected get dxfSubclassMarker() {
+    return 'AcDbAlignedDimension'
+  }
+
+  /**
    * Writes DXF fields for this object.
    *
    * @param filer - DXF output writer.
@@ -447,7 +454,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeSubclassMarker('AcDbAlignedDimension')
+    filer.writeSubclassMarker(this.dxfSubclassMarker)
     filer.writePoint3d(13, this.xLine1Point)
     filer.writePoint3d(14, this.xLine2Point)
     filer.writePoint3d(15, this.dimLinePoint)

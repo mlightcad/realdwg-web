@@ -35,6 +35,7 @@ import {
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
   AcDbRay,
+  AcDbRotatedDimension,
   AcDbSpline,
   AcDbTable,
   AcDbTableCell,
@@ -641,12 +642,26 @@ export class AcDbEntityConverter {
   }
 
   private convertDimension(dimension: DwgDimensionEntityCommon) {
-    if (
-      dimension.subclassMarker == 'AcDbAlignedDimension' ||
-      dimension.subclassMarker == 'AcDbRotatedDimension'
-    ) {
+    if (dimension.subclassMarker == 'AcDbAlignedDimension') {
       const entity = dimension as DwgAlignedDimensionEntity
       const dbEntity = new AcDbAlignedDimension(
+        entity.subDefinitionPoint1,
+        entity.subDefinitionPoint2,
+        entity.definitionPoint
+      )
+      if (entity.insertionPoint) {
+        dbEntity.dimBlockPosition = {
+          x: entity.insertionPoint.x,
+          y: entity.insertionPoint.y,
+          z: 0
+        }
+      }
+      dbEntity.rotation = entity.rotationAngle
+      this.processDimensionCommonAttrs(dimension, dbEntity)
+      return dbEntity
+    } else if (dimension.subclassMarker == 'AcDbRotatedDimension') {
+      const entity = dimension as DwgAlignedDimensionEntity
+      const dbEntity = new AcDbRotatedDimension(
         entity.subDefinitionPoint1,
         entity.subDefinitionPoint2,
         entity.definitionPoint
