@@ -168,8 +168,22 @@ export abstract class AcDbEntity extends AcDbObject {
         color = layerColor
       }
     } else if (color.isByBlock) {
-      // Do nothing for common entity and just use default color in database
-      // Block reference entity need to override this method handle 'byBlock'.
+      // For common entities, ByBlock falls back to current entity color (CECOLOR).
+      // If CECOLOR is ByLayer, resolve it further by current layer color.
+      const currentColor = this.database.cecolor
+      if (currentColor) {
+        color = currentColor
+        if (color.isByLayer) {
+          const currentLayerName = this.database.clayer || this.layer
+          const currentLayer =
+            this.database.tables.layerTable.getAt(currentLayerName)
+          if (currentLayer?.color?.RGB != null) {
+            color = currentLayer.color
+          }
+        }
+      }
+      // Block reference entity needs to override this method to resolve ByBlock
+      // against INSERT-level inherited traits.
     }
     return color
   }

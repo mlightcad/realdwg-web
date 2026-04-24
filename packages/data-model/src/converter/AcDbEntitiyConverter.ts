@@ -102,6 +102,7 @@ import {
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
   AcDbRay,
+  AcDbRotatedDimension,
   AcDbSpline,
   AcDbTable,
   AcDbTableCell,
@@ -732,12 +733,22 @@ export class AcDbEntityConverter {
   }
 
   private convertDimension(dimension: DimensionEntityCommon) {
-    if (
-      dimension.subclassMarker == 'AcDbAlignedDimension' ||
-      dimension.subclassMarker == 'AcDbRotatedDimension'
-    ) {
+    if (dimension.subclassMarker == 'AcDbAlignedDimension') {
       const entity = dimension as AlignedDimensionEntity
       const dbEntity = new AcDbAlignedDimension(
+        entity.subDefinitionPoint1,
+        entity.subDefinitionPoint2,
+        entity.definitionPoint
+      )
+      if (entity.insertionPoint) {
+        dbEntity.dimBlockPosition = { ...entity.insertionPoint, z: 0 }
+      }
+      dbEntity.rotation = AcGeMathUtil.degToRad(entity.rotationAngle || 0)
+      this.processDimensionCommonAttrs(dimension, dbEntity)
+      return dbEntity
+    } else if (dimension.subclassMarker == 'AcDbRotatedDimension') {
+      const entity = dimension as AlignedDimensionEntity
+      const dbEntity = new AcDbRotatedDimension(
         entity.subDefinitionPoint1,
         entity.subDefinitionPoint2,
         entity.definitionPoint
@@ -972,7 +983,11 @@ export class AcDbEntityConverter {
       dbEntity.color.colorName = entity.colorName
     }
     if (entity.isVisible != null) {
-      dbEntity.visibility = entity.isVisible
+      // DXF group code 60 uses 0 => visible, 1 => invisible.
+      // dxf-json parses it with a generic boolean converter, so here:
+      // - false means 0 (visible)
+      // - true means 1 (invisible)
+      dbEntity.visibility = !entity.isVisible
     }
     if (entity.transparency != null) {
       dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)

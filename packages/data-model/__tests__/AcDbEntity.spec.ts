@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
@@ -7,6 +8,9 @@ import {
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
+import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
+import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
 import { AcDb2dPolyline, AcDbPoly2dType } from '../src/entity/AcDb2dPolyline'
 import { AcDb2dVertex } from '../src/entity/AcDb2dVertex'
 import { AcDbArc } from '../src/entity/AcDbArc'
@@ -100,6 +104,66 @@ describe('AcDbEntity.dxfTypeName', () => {
         new AcGePoint3d(1, 1, 0)
       ).dxfTypeName
     ).toBe('DIMENSION')
+  })
+})
+
+describe('AcDbEntity.color resolution', () => {
+  let db: AcDbDatabase
+
+  const addLayerWithColor = (name: string, rgb: number) => {
+    db.tables.layerTable.add(
+      new AcDbLayerTableRecord({
+        name,
+        color: new AcCmColor().setRGBValue(rgb)
+      })
+    )
+  }
+
+  beforeEach(() => {
+    db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+  })
+
+  it('uses CECOLOR when entity color is explicitly ByBlock', () => {
+    addLayerWithColor('0', 0x101010)
+    db.clayer = '0'
+    db.cecolor = new AcCmColor().setRGBValue(0x336699)
+
+    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    line.layer = '0'
+    line.color.setByBlock()
+
+    expect(line.color.isByBlock).toBe(true)
+    expect(line.resolvedColor.RGB).toBe(0x336699)
+    expect(line.rgbColor).toBe(0x336699)
+  })
+
+  it('resolves ByBlock through current layer when CECOLOR is ByLayer', () => {
+    addLayerWithColor('ENTITY_LAYER', 0x00ff00)
+    addLayerWithColor('CURRENT_LAYER', 0x112233)
+    db.clayer = 'CURRENT_LAYER'
+    db.cecolor = new AcCmColor().setByLayer()
+
+    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    line.layer = 'ENTITY_LAYER'
+    line.color.setByBlock()
+
+    expect(line.resolvedColor.RGB).toBe(0x112233)
+    expect(line.rgbColor).toBe(0x112233)
+  })
+
+  it('resolves ByLayer against the entity layer color', () => {
+    addLayerWithColor('ENTITY_LAYER', 0xaa5500)
+    addLayerWithColor('CURRENT_LAYER', 0x123456)
+    db.clayer = 'CURRENT_LAYER'
+    db.cecolor = new AcCmColor().setRGBValue(0xff00ff)
+
+    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    line.layer = 'ENTITY_LAYER'
+    line.color.setByLayer()
+
+    expect(line.resolvedColor.RGB).toBe(0xaa5500)
+    expect(line.rgbColor).toBe(0xaa5500)
   })
 })
 

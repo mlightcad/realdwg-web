@@ -4,6 +4,7 @@ import { AcDbAttribute } from '../src/entity/AcDbAttribute'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
+import { AcDbRotatedDimension } from '../src/entity'
 import { AcDbTable } from '../src/entity/AcDbTable'
 import { AcDbText } from '../src/entity/AcDbText'
 import { AcDbLayout } from '../src/object/layout/AcDbLayout'
@@ -167,6 +168,38 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(valuesByCode(lwPolylineRecord!, '70')).toContain('1')
     expect(valuesByCode(lwPolylineRecord!, '10')).toEqual(['0', '5', '5'])
     expect(valuesByCode(lwPolylineRecord!, '20')).toEqual(['0', '0', '5'])
+  })
+
+  it('writes common DIMENSION fields including block name and text metadata', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+
+    const dimension = new AcDbRotatedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0),
+      new AcGePoint3d(5, 2, 0)
+    )
+    dimension.dimBlockId = '__DIM_BLOCK_TEST__'
+    dimension.dimensionStyleName = 'Standard'
+    dimension.dimensionText = '10.000'
+    dimension.textLineSpacingStyle = 2
+    dimension.textLineSpacingFactor = 1.25
+    dimension.measurement = 10
+    db.tables.blockTable.modelSpace.appendEntity(dimension)
+
+    const entities = parseRecords(
+      getSection(db.dxfOut(undefined, 6), 'ENTITIES')
+    )
+    const dimensionRecord = findRecord(entities, 'DIMENSION', record =>
+      valuesByCode(record, '100').includes('AcDbDimension')
+    )
+
+    expect(dimensionRecord).toBeDefined()
+    expect(valuesByCode(dimensionRecord!, '280')).toContain('0')
+    expect(valuesByCode(dimensionRecord!, '2')).toContain('__DIM_BLOCK_TEST__')
+    expect(valuesByCode(dimensionRecord!, '72')).toContain('2')
+    expect(valuesByCode(dimensionRecord!, '41')).toContain('1.25')
+    expect(valuesByCode(dimensionRecord!, '42')).toContain('10')
   })
 
   it('writes block definitions and insert attributes to BLOCKS and ENTITIES sections', () => {
