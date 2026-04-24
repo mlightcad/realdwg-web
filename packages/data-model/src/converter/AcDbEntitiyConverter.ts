@@ -431,7 +431,7 @@ export class AcDbEntityConverter {
     const bulges: number[] = []
     const faces: number[][] = []
 
-    polyline.vertices.map(vertex => {
+    polyline.vertices?.map(vertex => {
       if (!(vertex.flag & VertexFlag.SPLINE_CONTROL_POINT)) {
         // For polyface mesh, vertex flag 128 bit is set for all vertices
         if (isPolyfaceMesh && vertex.flag & 0x80) {
@@ -508,7 +508,7 @@ export class AcDbEntityConverter {
     const dbEntity = new AcDbPolyline()
     dbEntity.closed = !!(polyline.flag & 0x01)
     const defaultWidth = polyline.constantWidth ?? -1
-    polyline.vertices.forEach((vertex, index) => {
+    polyline.vertices?.forEach((vertex, index) => {
       dbEntity.addVertexAt(
         index,
         new AcGePoint2d(vertex.x, vertex.y),
