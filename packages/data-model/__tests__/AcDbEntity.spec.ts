@@ -129,7 +129,10 @@ describe('AcDbEntity.color resolution', () => {
     db.clayer = '0'
     db.cecolor = new AcCmColor().setRGBValue(0x336699)
 
-    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
     line.layer = '0'
     line.color.setByBlock()
 
@@ -144,7 +147,10 @@ describe('AcDbEntity.color resolution', () => {
     db.clayer = 'CURRENT_LAYER'
     db.cecolor = new AcCmColor().setByLayer()
 
-    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
     line.layer = 'ENTITY_LAYER'
     line.color.setByBlock()
 
@@ -158,7 +164,10 @@ describe('AcDbEntity.color resolution', () => {
     db.clayer = 'CURRENT_LAYER'
     db.cecolor = new AcCmColor().setRGBValue(0xff00ff)
 
-    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
     line.layer = 'ENTITY_LAYER'
     line.color.setByLayer()
 

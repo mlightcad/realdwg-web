@@ -1,6 +1,5 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
-  AcGeBox3d,
   AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d,
@@ -281,8 +280,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    // TODO: Finish it
-    return new AcGeBox3d()
+    return this.getDimBlockGeometricExtents()
   }
 
   /**

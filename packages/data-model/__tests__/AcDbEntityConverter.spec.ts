@@ -1,7 +1,11 @@
 import { AcDbEntityConverter } from '../src/converter/AcDbEntitiyConverter'
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
-import { AcDbAlignedDimension, AcDbPolyline, AcDbRotatedDimension } from '../src/entity'
+import {
+  AcDbAlignedDimension,
+  AcDbPolyline,
+  AcDbRotatedDimension
+} from '../src/entity'
 
 describe('AcDbEntityConverter', () => {
   it('returns null for unsupported type', () => {
