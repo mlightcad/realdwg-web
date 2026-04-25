@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base'
+import { AcDbEntityProperties } from '../AcDbEntityProperties'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -125,6 +126,34 @@ export class AcDbArcDimension extends AcDbDimension {
   }
   set xLine2Point(value: AcGePoint3d) {
     this._xLine2Point.copy(value)
+  }
+
+  override get properties(): AcDbEntityProperties {
+    const baseProperties = this.getBaseProperties()
+    return {
+      type: this.type,
+      groups: [
+        ...baseProperties.groups,
+        {
+          groupName: 'geometry',
+          properties: [
+            ...this.createPoint3dProperties(
+              'centerPoint',
+              () => this.centerPoint
+            ),
+            ...this.createPoint3dProperties(
+              'xLine1Point',
+              () => this.xLine1Point
+            ),
+            ...this.createPoint3dProperties(
+              'xLine2Point',
+              () => this.xLine2Point
+            ),
+            ...this.createPoint3dProperties('arcPoint', () => this.arcPoint)
+          ]
+        }
+      ]
+    }
   }
 
   /**
