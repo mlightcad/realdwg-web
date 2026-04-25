@@ -875,7 +875,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     if (table.handle != null) {
       dbTable.objectId = table.handle
     }
-    dbTable.ownerId = table.ownerObjectId
+    if (table.ownerObjectId != null) {
+      dbTable.ownerId = table.ownerObjectId
+    }
   }
 
   /**
@@ -901,7 +903,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     // don't have handle. In this time, just use objectId created in constructor of AcDbObject.
     // https://github.com/mlightcad/cad-viewer/issues/101
     if (entry.handle != null) dbEntry.objectId = entry.handle
-    dbEntry.ownerId = entry.ownerObjectId
+    if (entry.ownerObjectId != null) {
+      dbEntry.ownerId = entry.ownerObjectId
+    }
   }
 
   /**

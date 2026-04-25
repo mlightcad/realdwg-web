@@ -133,4 +133,17 @@ describe('AcDbObjectConverter', () => {
     )
     expect(layoutFallback.blockTableRecordId).toBe('fallback-btr')
   })
+
+  it('preserves default ownership when DXF object metadata omits owner id', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbObjectConverter()
+
+    const image = converter.convertImageDef({
+      fileName: 'b.png',
+      handle: '30'
+    } as any)
+
+    expect(image.objectId).toBe('30')
+    expect(image.getAttrWithoutException('ownerId')).toBeUndefined()
+  })
 })

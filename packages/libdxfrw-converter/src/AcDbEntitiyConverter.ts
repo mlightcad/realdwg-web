@@ -28,8 +28,8 @@ import {
   AcGePolyline2d,
   AcGeSpline3d,
   AcGeVector2d,
-  AcGeVector3d
-} from '@mlightcad/data-model'
+  AcGeVector3d,
+  transformOcsPointToWcs} from '@mlightcad/data-model'
 import {
   DRW_Arc,
   DRW_Circle,
@@ -106,17 +106,24 @@ export class AcDbEntityConverter {
   }
 
   private convertArc(arc: DRW_Arc) {
+    const normal = arc.extPoint ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      arc.center(),
+      transformOcsPointToWcs(arc.center(), normal),
       arc.radius,
       arc.startAngle,
-      arc.endAngle
+      arc.endAngle,
+      normal
     )
     return dbEntity
   }
 
   private convertCirle(circle: DRW_Circle) {
-    const dbEntity = new AcDbCircle(circle.basePoint, circle.radius)
+    const normal = circle.extPoint ?? AcGeVector3d.Z_AXIS
+    const dbEntity = new AcDbCircle(
+      transformOcsPointToWcs(circle.basePoint, normal),
+      circle.radius,
+      normal
+    )
     return dbEntity
   }
 
@@ -396,7 +403,9 @@ export class AcDbEntityConverter {
   private processCommonAttrs(entity: DRW_Entity, dbEntity: AcDbEntity) {
     dbEntity.layer = entity.layer
     dbEntity.objectId = entity.handle.toString()
-    dbEntity.ownerId = entity.parentHandle.toString()
+    if (entity.parentHandle != null) {
+      dbEntity.ownerId = entity.parentHandle.toString()
+    }
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType
     }

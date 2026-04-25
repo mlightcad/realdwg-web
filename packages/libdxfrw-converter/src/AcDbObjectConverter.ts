@@ -6,7 +6,9 @@ export class AcDbObjectConverter {
     const dbObject = new AcDbRasterImageDef()
     dbObject.sourceFileName = imageDef.path
     dbObject.objectId = imageDef.handle.toString()
-    dbObject.ownerId = imageDef.parentHandle.toString()
+    if (imageDef.parentHandle != null) {
+      dbObject.ownerId = imageDef.parentHandle.toString()
+    }
     return dbObject
   }
 }

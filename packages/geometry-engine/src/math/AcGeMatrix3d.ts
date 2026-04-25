@@ -1,4 +1,4 @@
-import { DEFAULT_TOL } from '../util'
+import { DEFAULT_TOL } from '../util/AcGeTol'
 import { AcGeMatrix2d } from './AcGeMatrix2d'
 import { AcGeQuaternion } from './AcGeQuaternion'
 import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d'

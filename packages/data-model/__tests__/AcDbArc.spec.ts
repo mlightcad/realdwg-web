@@ -246,4 +246,27 @@ describe('AcDbArc', () => {
     expect(out).toContain('220\n0')
     expect(out).toContain('230\n1')
   })
+
+  it('writes ARC center and angles in OCS for non-default extrusion', () => {
+    createWorkingDb()
+    const arc = new AcDbArc(
+      new AcGePoint3d(-1, 2, 0),
+      4,
+      0,
+      Math.PI / 2,
+      new AcGeVector3d(0, 0, -1)
+    )
+    arc.ownerId = 'ABC'
+    const filer = new AcDbDxfFiler()
+
+    arc.dxfOutFields(filer)
+
+    const out = filer.toString()
+    expect(out).toContain('10\n1')
+    expect(out).toContain('20\n2')
+    expect(out).toContain('30\n0')
+    expect(out).toContain('50\n0')
+    expect(out).toContain('51\n90')
+    expect(out).toContain('230\n-1')
+  })
 })

@@ -231,6 +231,24 @@ describe('AcDbCircle', () => {
     expect(dxf).toContain('40\n4.75\n')
     expect(dxf).toContain('210\n0\n220\n0\n230\n1\n')
   })
+
+  it('writes CIRCLE center in OCS for non-default extrusion', () => {
+    createWorkingDb()
+    const circle = new AcDbCircle(
+      new AcGePoint3d(-1.5, -2, 3.25),
+      4.75,
+      new AcGeVector3d(0, 0, -1)
+    )
+    circle.ownerId = 'ABC'
+    const filer = new AcDbDxfFiler()
+
+    circle.dxfOutFields(filer)
+
+    const dxf = filer.toString()
+    expect(dxf).toContain('10\n1.5\n20\n-2\n30\n-3.25\n')
+    expect(dxf).toContain('210\n0\n220\n0\n230\n-1\n')
+  })
+
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbCircle(new AcGePoint3d(), 1))
   })
