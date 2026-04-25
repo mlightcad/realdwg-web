@@ -12,6 +12,7 @@ import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../../base'
 import { AcDbBlockTableRecord } from '../../database'
 import { AcDbBlockReference } from '../AcDbBlockReference'
+import { AcDbEntityProperties } from '../AcDbEntityProperties'
 import { AcDbLine } from '../AcDbLine'
 import { AcDbMText } from '../AcDbMText'
 import { AcDbDimension } from './AcDbDimension'
@@ -266,6 +267,49 @@ export class AcDbAlignedDimension extends AcDbDimension {
     this._oblique = value
   }
 
+  override get properties(): AcDbEntityProperties {
+    const baseProperties = this.getBaseProperties()
+    return {
+      type: this.type,
+      groups: [
+        ...baseProperties.groups,
+        {
+          groupName: 'geometry',
+          properties: [
+            ...this.createPoint3dProperties(
+              'xLine1Point',
+              () => this.xLine1Point
+            ),
+            ...this.createPoint3dProperties(
+              'xLine2Point',
+              () => this.xLine2Point
+            ),
+            ...this.createPoint3dProperties(
+              'dimLinePoint',
+              () => this.dimLinePoint
+            ),
+            this.createProperty(
+              'rotation',
+              'float',
+              () => this.rotation,
+              (value: number) => {
+                this.rotation = value
+              }
+            ),
+            this.createProperty(
+              'oblique',
+              'float',
+              () => this.oblique,
+              (value: number) => {
+                this.oblique = value
+              }
+            )
+          ]
+        }
+      ]
+    }
+  }
+
   /**
    * @inheritdoc
    */
@@ -442,6 +486,10 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   protected get dxfSubclassMarker() {
     return 'AcDbAlignedDimension'
+  }
+
+  protected override getMeasurementPropertyValue() {
+    return this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
   }
 
   /**

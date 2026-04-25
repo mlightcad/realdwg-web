@@ -11,6 +11,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../../base'
+import { AcDbEntityProperties } from '../AcDbEntityProperties'
 import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
@@ -152,12 +153,67 @@ export class AcDbDiametricDimension extends AcDbDimension {
     return this._leaderLength
   }
 
+  set leaderLength(value: number) {
+    this._leaderLength = value
+  }
+
+  override get properties(): AcDbEntityProperties {
+    const baseProperties = this.getBaseProperties()
+    return {
+      type: this.type,
+      groups: [
+        ...baseProperties.groups,
+        {
+          groupName: 'geometry',
+          properties: [
+            ...this.createPoint3dProperties(
+              'chordPoint',
+              () => this.chordPoint
+            ),
+            ...this.createPoint3dProperties(
+              'farChordPoint',
+              () => this.farChordPoint
+            ),
+            this.createProperty(
+              'leaderLength',
+              'float',
+              () => this.leaderLength,
+              (value: number) => {
+                this.leaderLength = value
+              }
+            ),
+            this.createProperty(
+              'extArcStartAngle',
+              'float',
+              () => this.extArcStartAngle,
+              (value: number) => {
+                this.extArcStartAngle = value
+              }
+            ),
+            this.createProperty(
+              'extArcEndAngle',
+              'float',
+              () => this.extArcEndAngle,
+              (value: number) => {
+                this.extArcEndAngle = value
+              }
+            )
+          ]
+        }
+      ]
+    }
+  }
+
   /**
    * @inheritdoc
    */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._chordPoint.applyMatrix4(matrix)
     this._farChordPoint.applyMatrix4(matrix)
+  }
+
+  protected override getMeasurementPropertyValue() {
+    return this.measurement ?? this.chordPoint.distanceTo(this.farChordPoint)
   }
 
   /**

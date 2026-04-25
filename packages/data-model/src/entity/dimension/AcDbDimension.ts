@@ -22,6 +22,12 @@ import { AcDbRenderingCache } from '../../misc'
 import { AcDbOsnapMode } from '../../misc'
 import { AcDbBlockReference } from '../AcDbBlockReference'
 import { AcDbEntity } from '../AcDbEntity'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyGroup,
+  AcDbEntityPropertyType,
+  AcDbEntityRuntimeProperty
+} from '../AcDbEntityProperties'
 import { AcDbLine } from '../AcDbLine'
 
 /**
@@ -215,6 +221,7 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   set dimensionStyleName(value: string | null) {
     this._dimensionStyleName = value
+    this._dimStyle = undefined
   }
 
   /**
@@ -340,6 +347,17 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   set normal(value: AcGeVector3dLike) {
     this._normal.copy(value).normalize()
+  }
+
+  override get properties(): AcDbEntityProperties {
+    return this.getBaseProperties()
+  }
+
+  protected getBaseProperties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [this.getGeneralProperties(), this.getDimensionProperties()]
+    }
   }
 
   /**
@@ -478,6 +496,133 @@ export abstract class AcDbDimension extends AcDbEntity {
     return this.dimBlockId
       ? this.database.tables.blockTable.getAt(this.dimBlockId)
       : undefined
+  }
+
+  protected getDimensionProperties(): AcDbEntityPropertyGroup {
+    return {
+      groupName: 'dimension',
+      properties: [
+        this.createProperty(
+          'dimensionStyleName',
+          'string',
+          () => this.dimensionStyleName ?? '',
+          (value: string) => {
+            this.dimensionStyleName = value.trim() === '' ? null : value
+          }
+        ),
+        this.createProperty(
+          'dimensionText',
+          'string',
+          () => this.dimensionText ?? '',
+          (value: string) => {
+            this.dimensionText = value
+          }
+        ),
+        this.createProperty('measurement', 'float', () =>
+          this.getMeasurementPropertyValue()
+        ),
+        this.createProperty(
+          'dimBlockId',
+          'string',
+          () => this.dimBlockId ?? ''
+        ),
+        ...this.createPoint3dProperties(
+          'dimBlockPosition',
+          () => this.dimBlockPosition
+        ),
+        ...this.createPoint3dProperties(
+          'textPosition',
+          () => this.textPosition
+        ),
+        this.createProperty(
+          'textRotation',
+          'float',
+          () => this.textRotation,
+          (value: number) => {
+            this.textRotation = value
+          }
+        ),
+        this.createProperty(
+          'textLineSpacingFactor',
+          'float',
+          () => this.textLineSpacingFactor,
+          (value: number) => {
+            this.textLineSpacingFactor = value
+          }
+        ),
+        this.createProperty(
+          'textLineSpacingStyle',
+          'enum',
+          () => this.textLineSpacingStyle,
+          (value: AcDbLineSpacingStyle) => {
+            this.textLineSpacingStyle = value
+          },
+          [
+            {
+              label: AcDbLineSpacingStyle[AcDbLineSpacingStyle.AtLeast],
+              value: AcDbLineSpacingStyle.AtLeast
+            },
+            {
+              label: AcDbLineSpacingStyle[AcDbLineSpacingStyle.Exactly],
+              value: AcDbLineSpacingStyle.Exactly
+            }
+          ]
+        ),
+        ...this.createPoint3dProperties('normal', () => this.normal)
+      ]
+    }
+  }
+
+  protected createProperty<T>(
+    name: string,
+    type: AcDbEntityPropertyType,
+    get: () => T,
+    set?: (value: T) => void,
+    options?: { label: string; value: unknown }[]
+  ): AcDbEntityRuntimeProperty<T> {
+    return {
+      name,
+      type,
+      editable: set != null,
+      options,
+      accessor: set ? { get, set } : { get }
+    }
+  }
+
+  protected createPoint3dProperties(
+    prefix: string,
+    getPoint: () => AcGePoint3d
+  ): AcDbEntityRuntimeProperty<number>[] {
+    return [
+      this.createProperty(
+        `${prefix}X`,
+        'float',
+        () => getPoint().x,
+        (value: number) => {
+          getPoint().x = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Y`,
+        'float',
+        () => getPoint().y,
+        (value: number) => {
+          getPoint().y = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Z`,
+        'float',
+        () => getPoint().z,
+        (value: number) => {
+          getPoint().z = value
+        }
+      )
+    ]
+  }
+
+  protected getMeasurementPropertyValue(): number | undefined {
+    return this.measurement
   }
 
   /**
