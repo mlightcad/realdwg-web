@@ -421,6 +421,7 @@ export class AcDbHatch extends AcDbEntity {
       patternAngle: this.patternAngle,
       definitionLines: this.definitionLines
     }
+    traits.drawOrder = -1
     const areas = this.buildAreasFromLoops()
     if (areas.length === 0) {
       return renderer.area(this._geo)
