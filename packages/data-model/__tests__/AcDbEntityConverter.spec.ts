@@ -3,6 +3,8 @@ import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServ
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import {
   AcDbAlignedDimension,
+  AcDbArc,
+  AcDbCircle,
   AcDbPolyline,
   AcDbRotatedDimension
 } from '../src/entity'
@@ -105,5 +107,37 @@ describe('AcDbEntityConverter', () => {
 
     expect(aligned).toBeInstanceOf(AcDbAlignedDimension)
     expect(rotated).toBeInstanceOf(AcDbRotatedDimension)
+  })
+
+  it('converts ARC/CIRCLE OCS geometry into WCS when extrusion points to -Z', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const arc = converter.convert({
+      type: 'ARC',
+      center: { x: 1, y: 2, z: 0 },
+      radius: 1,
+      startAngle: 0,
+      endAngle: 90,
+      extrusionDirection: { x: 0, y: 0, z: -1 }
+    } as any)
+
+    const circle = converter.convert({
+      type: 'CIRCLE',
+      center: { x: 1, y: 2, z: 0 },
+      radius: 1,
+      extrusionDirection: { x: 0, y: 0, z: -1 }
+    } as any)
+
+    expect(arc).toBeInstanceOf(AcDbArc)
+    expect(circle).toBeInstanceOf(AcDbCircle)
+
+    const dbArc = arc as AcDbArc
+    const dbCircle = circle as AcDbCircle
+
+    expect(dbArc.center).toMatchObject({ x: -1, y: 2, z: 0 })
+    expect(dbArc.startPoint).toMatchObject({ x: -2, y: 2, z: 0 })
+    expect(dbArc.endPoint).toMatchObject({ x: -1, y: 3, z: 0 })
+    expect(dbCircle.center).toMatchObject({ x: -1, y: 2, z: 0 })
   })
 })

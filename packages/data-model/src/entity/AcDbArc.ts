@@ -5,8 +5,10 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
-  AcGeVector3dLike
-} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike,
+  getOcsAngle,
+  getOcsReferenceVector,
+  transformWcsPointToOcs} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
@@ -89,13 +91,14 @@ export class AcDbArc extends AcDbCurve {
     normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
+    const refVec = getOcsReferenceVector(normal)
     this._geo = new AcGeCircArc3d(
       center,
       radius,
       startAngle,
       endAngle,
       normal,
-      AcGeVector3d.X_AXIS
+      refVec
     )
   }
 
@@ -576,11 +579,12 @@ export class AcDbArc extends AcDbCurve {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
+    const centerOcs = transformWcsPointToOcs(this.center, this.normal)
     filer.writeSubclassMarker('AcDbArc')
-    filer.writePoint3d(10, this.center)
+    filer.writePoint3d(10, centerOcs)
     filer.writeDouble(40, this.radius)
-    filer.writeAngle(50, this.startAngle)
-    filer.writeAngle(51, this.endAngle)
+    filer.writeAngle(50, getOcsAngle(this.center, this.startPoint, this.normal))
+    filer.writeAngle(51, getOcsAngle(this.center, this.endPoint, this.normal))
     filer.writeVector3d(210, this.normal)
     return this
   }

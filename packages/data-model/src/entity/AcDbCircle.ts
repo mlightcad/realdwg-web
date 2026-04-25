@@ -6,8 +6,9 @@ import {
   AcGePointLike,
   AcGeVector3d,
   AcGeVector3dLike,
-  TAU
-} from '@mlightcad/geometry-engine'
+  getOcsReferenceVector,
+  TAU,
+  transformWcsPointToOcs} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
@@ -80,14 +81,8 @@ export class AcDbCircle extends AcDbCurve {
     normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
-    this._geo = new AcGeCircArc3d(
-      center,
-      radius,
-      0,
-      TAU,
-      normal,
-      AcGeVector3d.X_AXIS
-    )
+    const refVec = getOcsReferenceVector(normal)
+    this._geo = new AcGeCircArc3d(center, radius, 0, TAU, normal, refVec)
   }
 
   /**
@@ -423,8 +418,9 @@ export class AcDbCircle extends AcDbCurve {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
+    const centerOcs = transformWcsPointToOcs(this.center, this.normal)
     filer.writeSubclassMarker('AcDbCircle')
-    filer.writePoint3d(10, this.center)
+    filer.writePoint3d(10, centerOcs)
     filer.writeDouble(40, this.radius)
     filer.writeVector3d(210, this.normal)
     return this

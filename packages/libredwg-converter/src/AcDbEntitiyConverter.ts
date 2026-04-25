@@ -59,8 +59,8 @@ import {
   AcGeVector2d,
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
-  AcGiMTextFlowDirection
-} from '@mlightcad/data-model'
+  AcGiMTextFlowDirection,
+  transformOcsPointToWcs} from '@mlightcad/data-model'
 import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
@@ -179,21 +179,23 @@ export class AcDbEntityConverter {
   }
 
   private convertArc(arc: DwgArcEntity) {
+    const normal = arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      arc.center,
+      transformOcsPointToWcs(arc.center, normal),
       arc.radius,
       arc.startAngle,
       arc.endAngle,
-      arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
+      normal
     )
     return dbEntity
   }
 
   private convertCirle(circle: DwgCircleEntity) {
+    const normal = circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbCircle(
-      circle.center,
+      transformOcsPointToWcs(circle.center, normal),
       circle.radius,
-      circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
+      normal
     )
     return dbEntity
   }
@@ -870,7 +872,9 @@ export class AcDbEntityConverter {
   private processCommonAttrs(entity: DwgEntity, dbEntity: AcDbEntity) {
     dbEntity.layer = entity.layer || '0'
     dbEntity.objectId = entity.handle
-    dbEntity.ownerId = entity.ownerBlockRecordSoftId
+    if (entity.ownerBlockRecordSoftId != null) {
+      dbEntity.ownerId = entity.ownerBlockRecordSoftId
+    }
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType
     }

@@ -1,4 +1,4 @@
-import { clamp } from '../util'
+import { clamp } from '../util/AcGeMathUtil'
 import { AcGeMatrix3d } from './AcGeMatrix3d'
 import { AcGeQuaternion } from './AcGeQuaternion'
 import { AcGeVector3d } from './AcGeVector3d'

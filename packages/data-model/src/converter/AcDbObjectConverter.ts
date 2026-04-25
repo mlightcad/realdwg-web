@@ -216,6 +216,8 @@ export class AcDbObjectConverter {
    */
   private processCommonAttrs(object: CommonDXFObject, dbObject: AcDbObject) {
     dbObject.objectId = object.handle
-    dbObject.ownerId = object.ownerObjectId
+    if (object.ownerObjectId != null) {
+      dbObject.ownerId = object.ownerObjectId
+    }
   }
 }

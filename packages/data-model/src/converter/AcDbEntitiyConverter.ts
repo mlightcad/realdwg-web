@@ -59,8 +59,8 @@ import {
   AcGePolyline2d,
   AcGeSpline3d,
   AcGeVector2d,
-  AcGeVector3d
-} from '@mlightcad/geometry-engine'
+  AcGeVector3d,
+  transformOcsPointToWcs} from '@mlightcad/geometry-engine'
 import {
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection
@@ -254,12 +254,13 @@ export class AcDbEntityConverter {
    * ```
    */
   private convertArc(arc: ArcEntity) {
+    const normal = arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      arc.center,
+      transformOcsPointToWcs(arc.center, normal),
       arc.radius,
       AcGeMathUtil.degToRad(arc.startAngle),
       AcGeMathUtil.degToRad(arc.endAngle),
-      arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
+      normal
     )
     return dbEntity
   }
@@ -325,10 +326,11 @@ export class AcDbEntityConverter {
    * ```
    */
   private convertCirle(circle: CircleEntity) {
+    const normal = circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbCircle(
-      circle.center,
+      transformOcsPointToWcs(circle.center, normal),
       circle.radius,
-      circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
+      normal
     )
     return dbEntity
   }

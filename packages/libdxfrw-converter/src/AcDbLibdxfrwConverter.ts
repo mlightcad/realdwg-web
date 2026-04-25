@@ -330,7 +330,9 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
   ) {
     dbEntry.name = entry.name
     dbEntry.objectId = entry.handle.toString()
-    dbEntry.ownerId = entry.parentHandle.toString()
+    if (entry.parentHandle != null) {
+      dbEntry.ownerId = entry.parentHandle.toString()
+    }
   }
 
   protected processHeader(model: DRW_Database, db: AcDbDatabase) {

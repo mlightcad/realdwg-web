@@ -525,7 +525,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   ) {
     dbEntry.name = entry.name
     dbEntry.objectId = entry.handle
-    dbEntry.ownerId = entry.ownerHandle
+    if (entry.ownerHandle != null) {
+      dbEntry.ownerId = entry.ownerHandle
+    }
   }
 
   protected processObjects(model: DwgDatabase, db: AcDbDatabase) {
@@ -589,7 +591,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     dbObject: AcDbObject
   ) {
     dbObject.objectId = object.handle
-    dbObject.ownerId = object.ownerHandle
+    if (object.ownerHandle != null) {
+      dbObject.ownerId = object.ownerHandle
+    }
   }
 
   /**
