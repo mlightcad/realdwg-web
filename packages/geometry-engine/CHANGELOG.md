@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.25
+
+### Patch Changes
+
+- feat: introduce explicit draw order and fix issues on closed wide LWPOLYLINE rendering and OCS arc/circle conversion
+- Updated dependencies
+  - @mlightcad/common@1.4.25
+
 ## 3.2.24
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.25
+
+### Patch Changes
+
+- feat: introduce explicit draw order and fix issues on closed wide LWPOLYLINE rendering and OCS arc/circle conversion
+- Updated dependencies
+  - @mlightcad/data-model@1.7.25
+
 ## 3.5.24
 
 ### Patch Changes

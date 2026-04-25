@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.25
+
+### Patch Changes
+
+- feat: introduce explicit draw order and fix issues on closed wide LWPOLYLINE rendering and OCS arc/circle conversion
+
 ## 1.4.24
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.25
+
+### Patch Changes
+
+- feat: introduce explicit draw order and fix issues on closed wide LWPOLYLINE rendering and OCS arc/circle conversion
+- Updated dependencies
+  - @mlightcad/data-model@1.7.25
+  - @mlightcad/libredwg-converter@3.5.25
+
 ## 0.1.24
 
 ### Patch Changes
