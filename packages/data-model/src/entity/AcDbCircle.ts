@@ -8,7 +8,8 @@ import {
   AcGeVector3dLike,
   getOcsReferenceVector,
   TAU,
-  transformWcsPointToOcs} from '@mlightcad/geometry-engine'
+  transformWcsPointToOcs
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'

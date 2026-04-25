@@ -4,7 +4,7 @@ import {
   AcGePoint3d
 } from '@mlightcad/geometry-engine'
 
-import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
+import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { TEMP_OBJECT_ID_PREFIX } from '../src/base/AcDbObject'
 import { AcDbDatabase } from '../src/database'
 import { AcDbPolyline } from '../src/entity'
@@ -264,13 +264,51 @@ describe('AcDbPolyline', () => {
     }
 
     const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
+      area: number
+      loops: Array<{
+        getPoints: (numPoints: number) => Array<{ x: number; y: number }>
+      }>
+    }
+    const boundaries = areaArg.loops.map(loop => loop.getPoints(4))
+    const loopBoxes = boundaries
+      .map(points => ({
+        minX: Math.min(...points.map(point => point.x)),
+        maxX: Math.max(...points.map(point => point.x)),
+        minY: Math.min(...points.map(point => point.y)),
+        maxY: Math.max(...points.map(point => point.y))
+      }))
+      .sort(
+        (a, b) =>
+          (b.maxX - b.minX) * (b.maxY - b.minY) -
+          (a.maxX - a.minX) * (a.maxY - a.minY)
+      )
+
     expect(result).toBe(giEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops).toHaveLength(2)
+    expect(areaArg.area).toBeCloseTo(60, 8)
+    expect(loopBoxes[0]).toMatchObject({
+      minX: -1,
+      maxX: 11,
+      minY: -1,
+      maxY: 6
+    })
+    expect(loopBoxes[1]).toMatchObject({
+      minX: 1,
+      maxX: 9,
+      minY: 1,
+      maxY: 4
+    })
     expect(renderer.subEntityTraits.fillType).toMatchObject({
       solidFill: true,
       patternAngle: 0
     })
+    expect(
+      (renderer.subEntityTraits.fillType as { isHatchFill?: boolean })
+        .isHatchFill
+    ).toBeUndefined()
   })
 
   it('renders variable-width polyline as filled area', () => {
@@ -297,6 +335,10 @@ describe('AcDbPolyline', () => {
     expect(result).toBe(giEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.lines).not.toHaveBeenCalled()
+    expect(
+      (renderer.subEntityTraits.fillType as { isHatchFill?: boolean })
+        .isHatchFill
+    ).toBeUndefined()
   })
 
   it('writes LWPOLYLINE-specific dxf fields and vertices', () => {

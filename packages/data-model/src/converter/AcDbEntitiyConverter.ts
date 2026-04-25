@@ -60,7 +60,8 @@ import {
   AcGeSpline3d,
   AcGeVector2d,
   AcGeVector3d,
-  transformOcsPointToWcs} from '@mlightcad/geometry-engine'
+  transformOcsPointToWcs
+} from '@mlightcad/geometry-engine'
 import {
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection
