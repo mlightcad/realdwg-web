@@ -476,13 +476,8 @@ export class AcDbPolyline extends AcDbCurve {
     const centerline = this._geo.getPoints(100)
     const widthProfile = this.createWidthProfile()
     if (widthProfile != null) {
-      const loop = createWidePolylineLoop(widthProfile, this.closed)
-      if (
-        loop.length >= 3 &&
-        Math.abs(calculateSignedArea(loop)) > WIDTH_EPSILON
-      ) {
-        const area = new AcGeArea2d()
-        area.add(new AcGePolyline2d(loop, true))
+      const area = createWidePolylineArea(widthProfile, this.closed)
+      if (area != null) {
         const traits = renderer.subEntityTraits
         traits.fillType = {
           solidFill: true,
@@ -620,28 +615,56 @@ interface WidePolylinePoint {
 }
 
 /**
- * Generates a closed polygon loop representing a variable-width polyline.
+ * Builds a renderable filled area for a wide polyline.
  *
- * The algorithm offsets each centerline sample to both left and right sides
- * using locally computed join directions, then stitches:
- * - left side in forward order
- * - right side in reverse order
- *
- * The resulting loop can be consumed by area/fill rendering.
+ * Open wide polylines are represented as a single stitched shell loop. Closed
+ * wide polylines are represented as two loops (outer + inner hole) so the
+ * stroke ring does not degenerate into a self-intersecting polygon.
  *
  * @param points - Centerline samples with per-point widths.
  * @param closed - Whether the source polyline is topologically closed.
- * @returns A polygon loop vertex array, or an empty array if insufficient
- * valid offset points are produced.
+ * @returns An area ready for fill rendering, or `null` when no valid area can
+ * be constructed.
  */
-function createWidePolylineLoop(
-  points: WidePolylinePoint[],
-  closed: boolean
-): AcGePolyline2dVertex[] {
-  if (points.length < 2) return []
+function createWidePolylineArea(points: WidePolylinePoint[], closed: boolean) {
+  if (points.length < 2) return null
   const centerline = normalizeCenterline(points, closed)
-  if (centerline.length < 2) return []
+  if (centerline.length < 2) return null
 
+  const { left, right } = createWidePolylineBoundaries(centerline, closed)
+  if (left.length < 2 || right.length < 2) return null
+
+  const area = new AcGeArea2d()
+  if (closed) {
+    if (!isRenderableLoop(left) || !isRenderableLoop(right)) {
+      return null
+    }
+    const leftArea = Math.abs(calculateSignedArea(left))
+    const rightArea = Math.abs(calculateSignedArea(right))
+    const [outer, inner] = leftArea >= rightArea ? [left, right] : [right, left]
+    area.add(new AcGePolyline2d(outer, true))
+    area.add(new AcGePolyline2d(inner, true))
+    return area
+  }
+
+  const loop = [...left, ...right.reverse()]
+  if (!isRenderableLoop(loop)) return null
+  area.add(new AcGePolyline2d(loop, true))
+  return area
+}
+
+/**
+ * Computes offset boundaries on the left and right sides of a sampled
+ * centerline.
+ *
+ * @param centerline - Normalized centerline samples with local widths.
+ * @param closed - Whether the polyline is topologically closed.
+ * @returns Left and right boundary vertices.
+ */
+function createWidePolylineBoundaries(
+  centerline: WidePolylinePoint[],
+  closed: boolean
+) {
   const left: AcGePolyline2dVertex[] = []
   const right: AcGePolyline2dVertex[] = []
   for (let i = 0; i < centerline.length; i++) {
@@ -664,8 +687,7 @@ function createWidePolylineLoop(
     })
   }
 
-  if (left.length < 2 || right.length < 2) return []
-  return [...left, ...right.reverse()]
+  return { left, right }
 }
 
 /**
@@ -800,6 +822,18 @@ function calculateSignedArea(points: AcGePolyline2dVertex[]) {
     area += p1.x * p2.y - p2.x * p1.y
   }
   return area / 2
+}
+
+/**
+ * Checks whether a loop can represent a non-degenerate filled polygon.
+ *
+ * @param points - Loop vertices in order.
+ * @returns `true` when the loop encloses non-zero area.
+ */
+function isRenderableLoop(points: AcGePolyline2dVertex[]) {
+  return (
+    points.length >= 3 && Math.abs(calculateSignedArea(points)) > WIDTH_EPSILON
+  )
 }
 
 /**
