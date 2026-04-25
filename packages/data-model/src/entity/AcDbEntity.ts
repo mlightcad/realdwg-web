@@ -618,6 +618,7 @@ export abstract class AcDbEntity extends AcDbObject {
     traits.lineWeight = this.lineWeight
     traits.transparency = this.transparency
     traits.layer = this.layer
+    traits.drawOrder = 0
     if ('thickness' in this) {
       traits.thickness = this.thickness as number
     }

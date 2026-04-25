@@ -65,4 +65,15 @@ export interface AcGiSubEntityTraits {
    * Corresponds to AutoCAD layer name (i.e. current layer in drawing).
    */
   layer: string
+
+  /**
+   * Explicit render-order tier used when different primitive types
+   * share the same Z plane.
+   *
+   * Lower values render earlier. The default `0` matches normal
+   * linework / text. Solid hatches use `-1` so they stay below
+   * outlines and text, while wide polylines keep `0` because they
+   * are visually linework even though they are rasterized as meshes.
+   */
+  drawOrder: number
 }
