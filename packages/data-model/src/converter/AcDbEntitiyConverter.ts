@@ -29,6 +29,7 @@ import {
   LineEntity,
   LWPolylineEntity,
   MTextEntity,
+  MultiLeaderEntity,
   PointEntity,
   PolylineEntity,
   RayEntity,
@@ -93,6 +94,9 @@ import {
   AcDbLeaderAnnotationType,
   AcDbLine,
   AcDbLineSpacingStyle,
+  AcDbMLeader,
+  AcDbMLeaderContentType,
+  AcDbMLeaderLineType,
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
@@ -204,6 +208,8 @@ export class AcDbEntityConverter {
       return this.convertLWPolyline(entity as LWPolylineEntity)
     } else if (entity.type == 'MTEXT') {
       return this.convertMText(entity as MTextEntity)
+    } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+      return this.convertMLeader(entity as MultiLeaderEntity)
     } else if (entity.type == 'POLYLINE') {
       return this.convertPolyline(entity as PolylineEntity)
     } else if (entity.type == 'POINT') {
@@ -760,6 +766,161 @@ export class AcDbEntityConverter {
     return dbEntity
   }
 
+  private convertMLeader(mleader: MultiLeaderEntity) {
+    const dbEntity = new AcDbMLeader()
+    const raw = mleader as MultiLeaderEntity & Record<string, unknown>
+
+    dbEntity.leaderLineType = (this.readNumber(raw, [
+      'multileaderType',
+      'leaderLineType',
+      'leaderType'
+    ]) ?? AcDbMLeaderLineType.StraightLeader) as AcDbMLeaderLineType
+
+    const contentType =
+      this.readNumber(raw, ['contentType']) ??
+      (mleader.textContent
+        ? AcDbMLeaderContentType.MTextContent
+        : mleader.blockContent
+          ? AcDbMLeaderContentType.BlockContent
+          : AcDbMLeaderContentType.NoneContent)
+    dbEntity.contentType = contentType as AcDbMLeaderContentType
+
+    dbEntity.doglegEnabled =
+      this.readBoolean(raw, ['doglegEnabled', 'enableDogleg']) ?? false
+    dbEntity.doglegLength = this.readNumber(raw, ['doglegLength']) ?? 0
+    if (mleader.landingPoint) dbEntity.landingPoint = mleader.landingPoint
+    if (mleader.doglegVector) dbEntity.doglegVector = mleader.doglegVector
+
+    const styleId = this.readString(raw, [
+      'mleaderStyleId',
+      'mLeaderStyleId',
+      'mleaderStyleHandle',
+      'styleHandle',
+      'styleName'
+    ])
+    if (styleId) dbEntity.mleaderStyleId = styleId
+
+    const normal = this.readPoint(raw, ['normal', 'extrusionDirection'])
+    if (normal) dbEntity.normal = normal
+
+    const textStyleName = this.readString(raw, [
+      'textStyleName',
+      'textStyle',
+      'styleName'
+    ])
+    if (textStyleName) dbEntity.textStyleName = textStyleName
+
+    dbEntity.textHeight =
+      this.readNumber(raw, [
+        'textHeight',
+        'mtextHeight',
+        'textContentHeight'
+      ]) ?? dbEntity.textHeight
+    dbEntity.textWidth =
+      this.readNumber(raw, ['textWidth', 'mtextWidth', 'textContentWidth']) ??
+      dbEntity.textWidth
+    const textRotation = this.readNumber(raw, [
+      'textRotation',
+      'mtextRotation',
+      'textContentRotation'
+    ])
+    if (textRotation != null) {
+      dbEntity.textRotation = AcGeMathUtil.degToRad(textRotation)
+    }
+
+    const textDirection = this.readPoint(raw, [
+      'textDirection',
+      'mtextDirection',
+      'textDirectionVector'
+    ])
+    if (textDirection) dbEntity.textDirection = textDirection
+
+    const textAttachmentPoint = this.readNumber(raw, [
+      'textAttachmentPoint',
+      'attachmentPoint'
+    ])
+    if (textAttachmentPoint != null) {
+      dbEntity.textAttachmentPoint =
+        textAttachmentPoint as unknown as AcGiMTextAttachmentPoint
+    }
+
+    const textDrawingDirection = this.readNumber(raw, [
+      'textDrawingDirection',
+      'drawingDirection'
+    ])
+    if (textDrawingDirection != null) {
+      dbEntity.textDrawingDirection =
+        textDrawingDirection as unknown as AcGiMTextFlowDirection
+    }
+
+    if (mleader.textContent) {
+      dbEntity.mtextContent = {
+        text: mleader.textContent.text,
+        anchorPoint: mleader.textContent.anchorPoint
+      }
+    } else {
+      const text = this.readString(raw, ['text', 'contents', 'mtext'])
+      const anchorPoint = this.readPoint(raw, [
+        'textLocation',
+        'textPosition',
+        'textAnchorPoint'
+      ])
+      if (text != null && anchorPoint) {
+        dbEntity.mtextContent = { text, anchorPoint }
+      }
+    }
+
+    if (mleader.blockContent) {
+      dbEntity.blockContent = {
+        blockHandle: mleader.blockContent.blockHandle,
+        position: mleader.blockContent.position
+      }
+    } else {
+      const blockHandle = this.readString(raw, [
+        'blockHandle',
+        'blockContentHandle',
+        'blockId'
+      ])
+      const blockPosition = this.readPoint(raw, [
+        'blockPosition',
+        'blockContentPosition'
+      ])
+      if (blockHandle && blockPosition) {
+        dbEntity.blockContent = {
+          blockHandle,
+          position: blockPosition
+        }
+      }
+    }
+
+    mleader.leaders?.forEach(leader => {
+      const leaderIndex = dbEntity.addLeader({
+        landingPoint: leader.landingPoint ?? mleader.landingPoint,
+        doglegVector: leader.doglegVector ?? mleader.doglegVector,
+        doglegLength: leader.doglegLength ?? mleader.doglegLength
+      })
+      leader.leaderLines.forEach(line => {
+        const lineIndex = dbEntity.addLeaderLine(leaderIndex, line.vertices)
+        line.breaks?.forEach(item => {
+          dbEntity.addBreak(leaderIndex, lineIndex, item.start, item.end)
+        })
+      })
+    })
+
+    if (dbEntity.numberOfLeaders === 0) {
+      this.readLeaderLineArray(raw)?.forEach(line => {
+        const leaderIndex = dbEntity.addLeader({
+          landingPoint: mleader.landingPoint,
+          doglegVector: mleader.doglegVector,
+          doglegLength: mleader.doglegLength
+        })
+        dbEntity.addLeaderLine(leaderIndex, line)
+      })
+    }
+
+    return dbEntity
+  }
+
   private convertDimension(dimension: DimensionEntityCommon) {
     if (dimension.subclassMarker == 'AcDbAlignedDimension') {
       const entity = dimension as AlignedDimensionEntity
@@ -1020,5 +1181,76 @@ export class AcDbEntityConverter {
     if (entity.transparency != null) {
       dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
+  }
+
+  private readNumber(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+    }
+    return undefined
+  }
+
+  private readString(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'string') return value
+    }
+    return undefined
+  }
+
+  private readBoolean(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value !== 0
+    }
+    return undefined
+  }
+
+  private readPoint(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (this.isPointLike(value)) return value
+      if (
+        Array.isArray(value) &&
+        typeof value[0] === 'number' &&
+        typeof value[1] === 'number'
+      ) {
+        return { x: value[0], y: value[1], z: value[2] ?? 0 }
+      }
+    }
+    return undefined
+  }
+
+  private readLeaderLineArray(source: Record<string, unknown>) {
+    const leaderLines = source.leaderLines
+    if (Array.isArray(leaderLines)) {
+      return leaderLines
+        .map(line => {
+          if (!line || typeof line !== 'object') return undefined
+          const vertices = (line as Record<string, unknown>).vertices
+          return Array.isArray(vertices)
+            ? vertices.filter(point => this.isPointLike(point))
+            : undefined
+        })
+        .filter((line): line is AcGePoint3dLike[] => !!line && line.length > 0)
+    }
+
+    const vertices = source.vertices
+    if (Array.isArray(vertices)) {
+      const line = vertices.filter(point => this.isPointLike(point))
+      return line.length > 0 ? [line] : undefined
+    }
+    return undefined
+  }
+
+  private isPointLike(value: unknown): value is AcGePoint3dLike {
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      typeof (value as AcGePoint3dLike).x === 'number' &&
+      typeof (value as AcGePoint3dLike).y === 'number'
+    )
   }
 }

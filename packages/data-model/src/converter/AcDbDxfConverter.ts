@@ -7,6 +7,7 @@ import {
   LayerTableEntry,
   LTypeTableEntry,
   MTextEntity,
+  MultiLeaderEntity,
   ParsedDxf,
   StyleTableEntry,
   TextEntity,
@@ -208,6 +209,20 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       } else if (entity.type == 'TEXT') {
         const text = entity as TextEntity
         const fontNames = styleMap.get(text.styleName)
+        fontNames?.forEach(name => fonts.add(name))
+      } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+        const mleader = entity as MultiLeaderEntity & Record<string, unknown>
+        const text = mleader.textContent?.text ?? ''
+        ;[...text.matchAll(regex)].forEach(match => {
+          fonts.add(match[1].toLowerCase())
+        })
+        const styleName =
+          typeof mleader.textStyleName === 'string'
+            ? mleader.textStyleName
+            : typeof mleader.styleName === 'string'
+              ? mleader.styleName
+              : undefined
+        const fontNames = styleName ? styleMap.get(styleName) : undefined
         fontNames?.forEach(name => fonts.add(name))
       } else if (entity.type == 'INSERT') {
         const insert = entity as InsertEntity
