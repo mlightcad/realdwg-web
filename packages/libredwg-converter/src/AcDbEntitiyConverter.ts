@@ -123,6 +123,8 @@ export class AcDbEntityConverter {
       return this.convertArc(entity as DwgArcEntity)
     } else if (entity.type == 'ATTDEF') {
       return this.convertAttributeDefinition(entity as DwgAttdefEntity)
+    } else if (entity.type == 'ATTRIB') {
+      return this.convertAttribute(entity as DwgAttribEntity)
     } else if (entity.type == 'CIRCLE') {
       return this.convertCirle(entity as DwgCircleEntity)
     } else if (entity.type == 'DIMENSION') {
@@ -842,10 +844,25 @@ export class AcDbEntityConverter {
     dbBlockReference.scaleFactors.z = blockReference.zScale
     dbBlockReference.rotation = blockReference.rotation
     dbBlockReference.normal.copy(blockReference.extrusionDirection)
+    // Pre-assign the BlockReference's objectId from the DWG handle so that
+    // `appendAttributes` below (which sets `attrib.ownerId = this.objectId`)
+    // produces a valid ownerId pointing at this INSERT, matching ObjectARX
+    // semantics. Without this, ownerId would be assigned undefined here and
+    // only later when `processCommonAttrs` runs on the returned BlockReference.
+    if (blockReference.handle != null) {
+      dbBlockReference.objectId = blockReference.handle
+    }
     if (blockReference.attribs) {
       blockReference.attribs.forEach(attrib => {
-        const dbAttrib = this.convertAttribute(attrib)
-        dbBlockReference.appendAttributes(dbAttrib)
+        // Route through `convert()` rather than `convertAttribute()` so
+        // `processCommonAttrs` runs and the AcDbAttribute receives its
+        // layer / color / objectId / lineType / lineWeight / linetypeScale
+        // from the DWG. Without this, ATTRIBs render with default styling
+        // and cannot be addressed individually by per-layer toggles.
+        const dbAttrib = this.convert(attrib)
+        if (dbAttrib instanceof AcDbAttribute) {
+          dbBlockReference.appendAttributes(dbAttrib)
+        }
       })
     }
     return dbBlockReference
