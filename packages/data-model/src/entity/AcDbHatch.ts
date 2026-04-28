@@ -80,6 +80,42 @@ export enum AcDbHatchStyle {
   Ignore = 2
 }
 
+export enum AcDbHatchObjectType {
+  /**
+   * Indicates that the object is currently a classic hatch
+   */
+  HatchObject = 0,
+  /**
+   * Indicates that the object is currently a color gradient
+   */
+  GradientObject = 1
+}
+
+export type AcDbGradientName =
+  | 'LINEAR'
+  | 'CYLINDER'
+  | 'INVCYLINDER'
+  | 'SPHERICAL'
+  | 'INVSPHERICAL'
+  | 'HEMISPHERICAL'
+  | 'INVHEMISPHERICAL'
+  | 'CURVED'
+  | 'INVCURVED'
+
+/**
+ * Defines the gradient pattern type for hatch.
+ */
+export enum AcDbGradientPatternType {
+  /**
+   * Indicates that the gradient name refers to one of the predefined gradient patterns
+   */
+  PreDefinedGradient = 0,
+  /**
+   * Indicates that the gradient name refers to one of the user-defined gradient patterns.
+   */
+  UserDefinedGradient = 1
+}
+
 /**
  * Represents a hatch entity in AutoCAD.
  *
@@ -135,6 +171,29 @@ export class AcDbHatch extends AcDbEntity {
   private _patternScale: number
   /** The hatch style for determining which areas to hatch */
   private _hatchStyle: AcDbHatchStyle
+  /**
+   * The current state of the gradient object.
+   */
+  private _hatchObjectType: AcDbHatchObjectType
+  /** The angle, in radians, at which the current gradient definition is applied. */
+  private _gradientAngle: number = 0
+  /**
+   * The current interpolation value between the gradient definition's default and shifted
+   * values. The default is 0.0f.
+   */
+  private _gradientShift: number
+  /**The one-color tint shade (luminance) value. */
+  private _shadeTintValue: number
+  /** The type of the gradient pattern. */
+  private _gradientType: AcDbGradientPatternType
+  /** The name of the current gradient. */
+  private _gradientName: string
+  /**
+   * Indicates whether the gradient hatch is transitioning from a start to a stop color (two-color)
+   * or from a color to an adjusted luminance version of the same color (one-color). In the latter
+   * case, the full luminance version is the "tint" and the zero luminance version is the "shade."
+   */
+  private _gradientOneColorMode: boolean
 
   /**
    * Creates a new hatch entity.
@@ -161,6 +220,27 @@ export class AcDbHatch extends AcDbEntity {
     this._patternAngle = 0
     this._patternScale = 1
     this._hatchStyle = AcDbHatchStyle.Normal
+    this._hatchObjectType = AcDbHatchObjectType.HatchObject
+    this._gradientAngle = 0
+    this._gradientShift = 0
+    this._shadeTintValue = 0
+    this._gradientType = AcDbGradientPatternType.PreDefinedGradient
+    this._gradientName = ''
+    this._gradientOneColorMode = false
+  }
+
+  /**
+   * Gets whether the hatch object is currently a gradient object.
+   */
+  get isGradient() {
+    return this._hatchObjectType === AcDbHatchObjectType.GradientObject
+  }
+
+  /**
+   * Gets whether the hatch object is currently using a hatched pattern.
+   */
+  get isHatch() {
+    return this._hatchObjectType === AcDbHatchObjectType.HatchObject
   }
 
   /**
@@ -249,6 +329,108 @@ export class AcDbHatch extends AcDbEntity {
   }
   set elevation(value: number) {
     this._elevation = value
+  }
+
+  /**
+   * Gets the current state of the gradient object.
+   */
+  get hatchObjectType(): AcDbHatchObjectType {
+    return this._hatchObjectType
+  }
+  /**
+   * Sets the current state of the gradient object.
+   */
+  set hatchObjectType(value: AcDbHatchObjectType) {
+    this._hatchObjectType = value
+  }
+
+  /**
+   * Gets the angle, in radians, at which the current gradient definition is applied.
+   */
+  get gradientAngle() {
+    return this._gradientAngle
+  }
+
+  /**
+   * Sets the angle, in radians, at which the current gradient definition is applied.
+   */
+  set gradientAngle(value: number) {
+    this._gradientAngle = value
+  }
+
+  /**
+   * Gets the current interpolation value between the gradient definition's default and shifted
+   * values. The default is 0.0f.
+   */
+  get gradientShift() {
+    return this._gradientShift
+  }
+
+  /**
+   * Sets the current interpolation value between the gradient definition's default and shifted
+   * values. The default is 0.0f.
+   */
+  set gradientShift(value: number) {
+    this._gradientShift = value
+  }
+
+  /**
+   * Gets the type of the gradient pattern.
+   */
+  get gradientType() {
+    return this._gradientType
+  }
+
+  /**
+   * Sets the type of the gradient pattern.
+   */
+  set gradientType(value: AcDbGradientPatternType) {
+    this._gradientType = value
+  }
+
+  /**
+   * Gets the name of the current gradient.
+   */
+  get gradientName() {
+    return this._gradientName
+  }
+
+  /**
+   * Sets the name of the current gradient.
+   */
+  set gradientName(value: string) {
+    this._gradientName = value
+  }
+
+  /**
+   * Gets whether the gradient hatch is transitioning from a start to a stop color (two-color).
+   */
+  get gradientOneColorMode() {
+    return this._gradientOneColorMode
+  }
+
+  /**
+   * Sets whether the gradient hatch is transitioning from a start to a stop color (two-color)
+   * or from a color to an adjusted luminance version of the same color (one-color). In the latter
+   * case, the full luminance version is the "tint" and the zero luminance version is the "shade."
+   */
+  set gradientOneColorMode(value: boolean) {
+    this._gradientOneColorMode = value
+  }
+
+  /**
+   * Gets the one-color tint shade (luminance) value.
+   */
+  get shadeTintValue() {
+    return this._shadeTintValue
+  }
+
+  /**
+   * Sets the one-color tint shade (luminance) value. If the gradient is using one-color mode,
+   * this function sets the luminance value applied to the first color.
+   */
+  set shadeTintValue(value: number) {
+    this._shadeTintValue = value
   }
 
   /**
@@ -588,6 +770,15 @@ export class AcDbHatch extends AcDbEntity {
       filer.writeInt16(79, line.dashLengths.length)
       line.dashLengths.forEach(length => filer.writeDouble(49, length))
     })
+    // Gradient fill parameters
+    if (this.isGradient) {
+      filer.writeInt16(450, this._hatchObjectType)
+      filer.writeInt16(451, 0)
+      filer.writeInt16(452, this._gradientOneColorMode ? 1 : 0)
+      filer.writeAngle(460, this._gradientAngle)
+      filer.writeDouble(461, this._gradientShift)
+      filer.writeString(470, this._gradientName)
+    }
     // TODO: Write the number of seed points
     filer.writeInt16(98, 0)
     return this

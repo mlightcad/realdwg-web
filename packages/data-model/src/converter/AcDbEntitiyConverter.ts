@@ -4,6 +4,7 @@ import {
   AttdefEntity,
   AttributeEntity,
   FaceEntity,
+  GradientHatchEntity,
   HatchSolidFill,
   SmoothType,
   VertexFlag
@@ -85,6 +86,7 @@ import {
   AcDbEntity,
   AcDbFace,
   AcDbHatch,
+  AcDbHatchObjectType,
   AcDbHatchPatternType,
   AcDbHatchStyle,
   AcDbLeader,
@@ -651,6 +653,19 @@ export class AcDbEntityConverter {
         }
       }
     })
+
+    // Handle gradient fill properties
+    // The meaning of gradientFlag is as follows.
+    // - 0: Solid hatch
+    // - 1: Gradient
+    if (hatch.gradientFlag) {
+      const gradientHatch = hatch as GradientHatchEntity
+      dbEntity.hatchObjectType = AcDbHatchObjectType.GradientObject
+      dbEntity.gradientAngle = gradientHatch.gradientRotation ?? 0
+      dbEntity.gradientShift = gradientHatch.gradientDefinition ?? 0
+      dbEntity.gradientOneColorMode = gradientHatch.gradientColorFlag == 1
+      dbEntity.shadeTintValue = gradientHatch.colorTint ?? 0
+    }
     return dbEntity
   }
 
