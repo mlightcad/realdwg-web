@@ -184,6 +184,10 @@ export class AcDbHatch extends AcDbEntity {
   private _gradientShift: number
   /**The one-color tint shade (luminance) value. */
   private _shadeTintValue: number
+  /** Optional start color for gradient fill, stored as packed 0xRRGGBB. */
+  private _gradientStartColor?: number
+  /** Optional end color for gradient fill, stored as packed 0xRRGGBB. */
+  private _gradientEndColor?: number
   /** The type of the gradient pattern. */
   private _gradientType: AcDbGradientPatternType
   /** The name of the current gradient. */
@@ -224,6 +228,8 @@ export class AcDbHatch extends AcDbEntity {
     this._gradientAngle = 0
     this._gradientShift = 0
     this._shadeTintValue = 0
+    this._gradientStartColor = undefined
+    this._gradientEndColor = undefined
     this._gradientType = AcDbGradientPatternType.PreDefinedGradient
     this._gradientName = ''
     this._gradientOneColorMode = false
@@ -434,6 +440,36 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Gets the optional first gradient color as a packed RGB value.
+   */
+  get gradientStartColor() {
+    return this._gradientStartColor
+  }
+
+  /**
+   * Sets the optional first gradient color as a packed RGB value.
+   */
+  set gradientStartColor(value: number | undefined) {
+    this._gradientStartColor =
+      value == null || !Number.isFinite(value) ? undefined : value & 0xffffff
+  }
+
+  /**
+   * Gets the optional second gradient color as a packed RGB value.
+   */
+  get gradientEndColor() {
+    return this._gradientEndColor
+  }
+
+  /**
+   * Sets the optional second gradient color as a packed RGB value.
+   */
+  set gradientEndColor(value: number | undefined) {
+    this._gradientEndColor =
+      value == null || !Number.isFinite(value) ? undefined : value & 0xffffff
+  }
+
+  /**
    * Append one loop to loops of this area. If it is the first loop added, it is the outter loop.
    * Otherwise, it is an inner loop.
    * @param loop Input the loop to append
@@ -601,7 +637,18 @@ export class AcDbHatch extends AcDbEntity {
     traits.fillType = {
       solidFill: this.isSolidFill,
       patternAngle: this.patternAngle,
-      definitionLines: this.definitionLines
+      definitionLines: this.definitionLines,
+      gradient: this.isGradient
+        ? {
+            name: this.gradientName,
+            angle: this.gradientAngle,
+            shift: this.gradientShift,
+            oneColorMode: this.gradientOneColorMode,
+            shadeTintValue: this.shadeTintValue,
+            startColor: this.gradientStartColor,
+            endColor: this.gradientEndColor
+          }
+        : undefined
     }
     traits.drawOrder = -1
     const areas = this.buildAreasFromLoops()
@@ -640,7 +687,9 @@ export class AcDbHatch extends AcDbEntity {
     const origin = new AcGePoint3d().applyMatrix4(matrix)
     const xVector = new AcGePoint3d(xAxis).sub(origin)
     if (xVector.length() > 0) {
-      this._patternAngle += Math.atan2(xVector.y, xVector.x)
+      const rotation = Math.atan2(xVector.y, xVector.x)
+      this._patternAngle += rotation
+      this._gradientAngle += rotation
       this._patternScale *= xVector.length()
     }
     return this

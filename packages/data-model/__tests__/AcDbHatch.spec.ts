@@ -10,7 +10,12 @@ import {
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
-import { AcDbHatch, AcDbHatchPatternType, AcDbHatchStyle } from '../src/entity'
+import {
+  AcDbHatch,
+  AcDbHatchObjectType,
+  AcDbHatchPatternType,
+  AcDbHatchStyle
+} from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -190,6 +195,38 @@ describe('AcDbHatch', () => {
     expect(multiRenderer.group).toHaveBeenCalledTimes(1)
     expect(multiDraw.kind).toBe('group')
     expect(multiDraw.entities).toHaveLength(2)
+  })
+
+  it('passes gradient hatch settings to graphics traits', () => {
+    const hatch = new AcDbHatch()
+    hatch.hatchObjectType = AcDbHatchObjectType.GradientObject
+    hatch.gradientName = 'SPHERICAL'
+    hatch.gradientAngle = Math.PI / 3
+    hatch.gradientShift = 0.2
+    hatch.gradientOneColorMode = true
+    hatch.shadeTintValue = 0.6
+    hatch.gradientStartColor = 0x112233
+    hatch.gradientEndColor = 0x445566
+    hatch.add(createRectLoop(0, 0, 3, 2))
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+    hatch.subWorldDraw(renderer as never)
+
+    expect(renderer.subEntityTraits.fillType).toMatchObject({
+      gradient: {
+        name: 'SPHERICAL',
+        angle: Math.PI / 3,
+        shift: 0.2,
+        oneColorMode: true,
+        shadeTintValue: 0.6,
+        startColor: 0x112233,
+        endColor: 0x445566
+      }
+    })
   })
 
   it('transformBy updates loops, elevation, pattern angle/scale and handles zero-length x-axis', () => {
