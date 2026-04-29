@@ -60,23 +60,16 @@ describe('AcDbLeader', () => {
     expect(leader.vertices[0].x).toBe(0)
   })
 
-  it('keeps current out-of-range behavior for setVertexAt and vertexAt', () => {
+  it('supports setVertexAt and vertexAt with range checking', () => {
     const leader = new AcDbLeader()
     leader.appendVertex(new AcGePoint3d(0, 0, 0))
 
-    expect(() => leader.setVertexAt(0, new AcGePoint3d(5, 5, 0))).toThrow(
-      'The vertex index is out of range!'
-    )
-    expect(() => leader.vertexAt(0)).toThrow(
-      'The vertex index is out of range!'
-    )
+    expect(leader.setVertexAt(0, new AcGePoint3d(5, 5, 0))).toBe(leader)
+    expect(leader.vertexAt(0)).toMatchObject({ x: 5, y: 5, z: 0 })
 
-    const raw = leader as unknown as { _vertices: Record<string, AcGePoint3d> }
-    raw._vertices['-1'] = new AcGePoint3d(1, 2, 3)
     expect(() => leader.setVertexAt(-1, new AcGePoint3d(9, 8, 7))).toThrow(
       'The vertex index is out of range!'
     )
-    expect(raw._vertices['-1']).toMatchObject({ x: 9, y: 8, z: 7 })
     expect(() => leader.vertexAt(-1)).toThrow(
       'The vertex index is out of range!'
     )
@@ -158,8 +151,12 @@ describe('AcDbLeader', () => {
     leader.dimensionStyle = 'Standard'
     leader.hasArrowHead = true
     leader.hasHookLine = true
+    leader.isHookLineSameDirection = true
     leader.isSplined = true
     leader.annoType = AcDbLeaderAnnotationType.BlockReference
+    leader.textHeight = 2.5
+    leader.textWidth = 8
+    leader.associatedAnnotation = 'ABC'
     leader.appendVertex(new AcGePoint3d(1, 2, 3))
     leader.appendVertex(new AcGePoint3d(4, 5, 6))
 
@@ -170,10 +167,14 @@ describe('AcDbLeader', () => {
     expect(dxf).toContain('100\nAcDbLeader\n')
     expect(dxf).toContain('\n3\nStandard\n')
     expect(dxf).toContain('\n71\n1\n')
-    expect(dxf).toContain('\n72\n2\n')
-    expect(dxf).toContain('\n73\n1\n')
+    expect(dxf).toContain('\n72\n1\n')
+    expect(dxf).toContain('\n73\n2\n')
     expect(dxf).toContain('\n74\n1\n')
+    expect(dxf).toContain('\n75\n1\n')
     expect(dxf).toContain('\n76\n2\n')
+    expect(dxf).toContain('\n40\n2.5\n')
+    expect(dxf).toContain('\n41\n8\n')
+    expect(dxf).toContain('\n340\nABC\n')
     expect(dxf).toContain('\n10\n1\n')
     expect(dxf).toContain('\n20\n2\n')
     expect(dxf).toContain('\n30\n3\n')

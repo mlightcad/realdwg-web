@@ -3,7 +3,9 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGeSpline3d
+  AcGeSpline3d,
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -71,8 +73,18 @@ export class AcDbLeader extends AcDbCurve {
   private _dimensionStyle: string
   /** Whether this leader has a hook line */
   private _hasHookLine: boolean
+  /** Whether the hook line has the same direction as the horizontal vector */
+  private _isHookLineSameDirection: boolean
   /** The annotation type for this leader */
   private _annoType: AcDbLeaderAnnotationType
+  private _textHeight: number
+  private _textWidth: number
+  private _byBlockColor?: number
+  private _associatedAnnotation: string
+  private _normal: AcGeVector3d
+  private _horizontalDirection: AcGeVector3d
+  private _offsetFromBlock?: AcGeVector3d
+  private _offsetFromAnnotation?: AcGeVector3d
 
   /**
    * Creates a new leader entity.
@@ -96,7 +108,13 @@ export class AcDbLeader extends AcDbCurve {
     this._vertices = []
     this._dimensionStyle = ''
     this._hasHookLine = false
+    this._isHookLineSameDirection = false
     this._annoType = AcDbLeaderAnnotationType.NoAnnotation
+    this._textHeight = 0
+    this._textWidth = 0
+    this._associatedAnnotation = ''
+    this._normal = new AcGeVector3d(0, 0, 1)
+    this._horizontalDirection = new AcGeVector3d(1, 0, 0)
   }
 
   /**
@@ -189,6 +207,13 @@ export class AcDbLeader extends AcDbCurve {
     this._hasHookLine = value
   }
 
+  get isHookLineSameDirection() {
+    return this._isHookLineSameDirection
+  }
+  set isHookLineSameDirection(value: boolean) {
+    this._isHookLineSameDirection = value
+  }
+
   /**
    * Gets the number of vertices in the leader's vertex list.
    *
@@ -266,6 +291,62 @@ export class AcDbLeader extends AcDbCurve {
     this._annoType = value
   }
 
+  get textHeight() {
+    return this._textHeight
+  }
+  set textHeight(value: number) {
+    this._textHeight = value
+  }
+
+  get textWidth() {
+    return this._textWidth
+  }
+  set textWidth(value: number) {
+    this._textWidth = value
+  }
+
+  get byBlockColor() {
+    return this._byBlockColor
+  }
+  set byBlockColor(value: number | undefined) {
+    this._byBlockColor = value
+  }
+
+  get associatedAnnotation() {
+    return this._associatedAnnotation
+  }
+  set associatedAnnotation(value: string) {
+    this._associatedAnnotation = value
+  }
+
+  get normal() {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
+  }
+
+  get horizontalDirection() {
+    return this._horizontalDirection
+  }
+  set horizontalDirection(value: AcGeVector3dLike) {
+    this._horizontalDirection.copy(value)
+  }
+
+  get offsetFromBlock() {
+    return this._offsetFromBlock?.clone()
+  }
+  set offsetFromBlock(value: AcGeVector3dLike | undefined) {
+    this._offsetFromBlock = value ? new AcGeVector3d(value) : undefined
+  }
+
+  get offsetFromAnnotation() {
+    return this._offsetFromAnnotation?.clone()
+  }
+  set offsetFromAnnotation(value: AcGeVector3dLike | undefined) {
+    this._offsetFromAnnotation = value ? new AcGeVector3d(value) : undefined
+  }
+
   /**
    * Appends vertex to the end of the vertex list for this leader. If vertex is not in the plane of the
    * leader, then it will be projected parallel the leader's normal onto the leader's plane and the
@@ -287,11 +368,12 @@ export class AcDbLeader extends AcDbCurve {
    */
   setVertexAt(index: number, point: AcGePoint3dLike) {
     if (index < 0 || index >= this._vertices.length) {
-      // TODO: Project the point onto the plane containing the leader
-      this._vertices[index].copy(point)
-      this._updated = true
+      throw new Error('The vertex index is out of range!')
     }
-    throw new Error('The vertex index is out of range!')
+    // TODO: Project the point onto the plane containing the leader
+    this._vertices[index].copy(point)
+    this._updated = true
+    return this
   }
 
   /**
@@ -300,9 +382,9 @@ export class AcDbLeader extends AcDbCurve {
    */
   vertexAt(index: number) {
     if (index < 0 || index >= this._vertices.length) {
-      this._vertices[index]
+      throw new Error('The vertex index is out of range!')
     }
-    throw new Error('The vertex index is out of range!')
+    return this._vertices[index].clone()
   }
 
   /**
@@ -332,6 +414,13 @@ export class AcDbLeader extends AcDbCurve {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._vertices.forEach(point => point.applyMatrix4(matrix))
+    this.transformVector(this._normal, matrix)
+    this.transformVector(this._horizontalDirection, matrix)
+    if (this._offsetFromBlock)
+      this.transformVector(this._offsetFromBlock, matrix)
+    if (this._offsetFromAnnotation) {
+      this.transformVector(this._offsetFromAnnotation, matrix)
+    }
     if (this._splineGeo) {
       this._splineGeo.transform(matrix)
       this._updated = false
@@ -380,13 +469,38 @@ export class AcDbLeader extends AcDbCurve {
     filer.writeSubclassMarker('AcDbLeader')
     filer.writeString(3, this.dimensionStyle)
     filer.writeInt16(71, this.hasArrowHead ? 1 : 0)
-    filer.writeInt16(72, this.annoType)
-    filer.writeInt16(73, this.hasHookLine ? 1 : 0)
-    filer.writeInt16(74, this.isSplined ? 1 : 0)
+    filer.writeInt16(72, this.isSplined ? 1 : 0)
+    filer.writeInt16(73, this.annoType)
+    filer.writeInt16(74, this.isHookLineSameDirection ? 1 : 0)
+    filer.writeInt16(75, this.hasHookLine ? 1 : 0)
     filer.writeInt16(76, this.numVertices)
+    if (this.textHeight !== 0) filer.writeDouble(40, this.textHeight)
+    if (this.textWidth !== 0) filer.writeDouble(41, this.textWidth)
+    if (this.byBlockColor != null) filer.writeInt16(77, this.byBlockColor)
+    if (this.associatedAnnotation) {
+      filer.writeHandle(340, this.associatedAnnotation)
+    }
     for (const point of this.vertices) {
       filer.writePoint3d(10, point)
     }
+    filer.writeVector3d(210, this.normal)
+    filer.writeVector3d(211, this.horizontalDirection)
+    if (this._offsetFromBlock) filer.writeVector3d(212, this._offsetFromBlock)
+    if (this._offsetFromAnnotation) {
+      filer.writeVector3d(213, this._offsetFromAnnotation)
+    }
     return this
+  }
+
+  private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {
+    const origin = new AcGePoint3d()
+    const endpoint = new AcGePoint3d(vector.x, vector.y, vector.z)
+    origin.applyMatrix4(matrix)
+    endpoint.applyMatrix4(matrix)
+    vector.set(
+      endpoint.x - origin.x,
+      endpoint.y - origin.y,
+      endpoint.z - origin.z
+    )
   }
 }

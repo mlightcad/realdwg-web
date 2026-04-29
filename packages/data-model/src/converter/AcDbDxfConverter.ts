@@ -212,7 +212,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         fontNames?.forEach(name => fonts.add(name))
       } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
         const mleader = entity as MultiLeaderEntity & Record<string, unknown>
-        const text = mleader.textContent?.text ?? ''
+        const text =
+          typeof mleader.textContent === 'string' ? mleader.textContent : ''
         ;[...text.matchAll(regex)].forEach(match => {
           fonts.add(match[1].toLowerCase())
         })

@@ -73,37 +73,53 @@ export enum AcDbMLeaderDirectionType {
 }
 
 export interface AcDbMLeaderBreakLike {
+  index?: number
   start: AcGePoint3dLike
   end: AcGePoint3dLike
 }
 
 export interface AcDbMLeaderBreak {
+  index?: number
   start: AcGePoint3d
   end: AcGePoint3d
 }
 
 export interface AcDbMLeaderLineLike {
   vertices?: AcGePoint3dLike[]
+  breakPointIndexes?: number[]
+  leaderLineIndex?: number
   breaks?: AcDbMLeaderBreakLike[]
 }
 
 export interface AcDbMLeaderLine {
   vertices: AcGePoint3d[]
+  breakPointIndexes: number[]
+  leaderLineIndex?: number
   breaks: AcDbMLeaderBreak[]
 }
 
 export interface AcDbMLeaderLeaderLike {
+  lastLeaderLinePoint?: AcGePoint3dLike
+  lastLeaderLinePointSet?: boolean
   landingPoint?: AcGePoint3dLike
   doglegVector?: AcGeVector3dLike
+  doglegVectorSet?: boolean
   doglegLength?: number
+  breaks?: AcDbMLeaderBreakLike[]
+  leaderBranchIndex?: number
   directionType?: AcDbMLeaderDirectionType
   leaderLines?: AcDbMLeaderLineLike[]
 }
 
 export interface AcDbMLeaderLeader {
+  lastLeaderLinePoint?: AcGePoint3d
+  lastLeaderLinePointSet?: boolean
   landingPoint?: AcGePoint3d
   doglegVector?: AcGeVector3d
+  doglegVectorSet?: boolean
   doglegLength?: number
+  breaks: AcDbMLeaderBreak[]
+  leaderBranchIndex?: number
   directionType?: AcDbMLeaderDirectionType
   leaderLines: AcDbMLeaderLine[]
 }
@@ -119,17 +135,37 @@ export interface AcDbMLeaderMTextContent {
 }
 
 export interface AcDbMLeaderBlockContentLike {
-  blockHandle: string
-  position: AcGePoint3dLike
+  blockContentId?: string
+  blockHandle?: string
+  normal?: AcGeVector3dLike
+  position?: AcGePoint3dLike
   scale?: AcGeVector3dLike
   rotation?: number
+  color?: number
+  transformationMatrix?: number[]
 }
 
 export interface AcDbMLeaderBlockContent {
-  blockHandle: string
-  position: AcGePoint3d
+  blockContentId?: string
+  blockHandle?: string
+  normal?: AcGeVector3d
+  position?: AcGePoint3d
   scale: AcGeVector3d
   rotation: number
+  color?: number
+  transformationMatrix: number[]
+}
+
+export interface AcDbMLeaderIndexedHandle {
+  index: number
+  handle?: string
+}
+
+export interface AcDbMLeaderBlockAttribute {
+  id?: string
+  index?: number
+  width?: number
+  text?: string
 }
 
 /**
@@ -167,6 +203,60 @@ export class AcDbMLeader extends AcDbEntity {
   private _textAttachmentDirection: AcDbMLeaderTextAttachmentDirection
   private _blockContent?: AcDbMLeaderBlockContent
 
+  version?: number
+  leaderStyleId?: string
+  propertyOverrideFlag?: number
+  leaderLineColor?: number
+  leaderLineTypeId?: string
+  leaderLineWeight?: number
+  landingEnabled?: boolean
+  arrowheadId?: string
+  arrowheadSize?: number
+  textStyleId?: string
+  textLeftAttachmentType?: number
+  textRightAttachmentType?: number
+  textAngleType?: number
+  textAlignmentType?: number
+  textColor?: number
+  textFrameEnabled?: boolean
+  landingGap?: number
+  textAttachment?: number
+  textFlowDirection?: number
+  blockContentId?: string
+  blockContentColor?: number
+  blockContentScale?: AcGeVector3d
+  blockContentRotation?: number
+  blockContentConnectionType?: number
+  annotativeScaleEnabled?: boolean
+  arrowheadOverrides: AcDbMLeaderIndexedHandle[]
+  blockAttributes: AcDbMLeaderBlockAttribute[]
+  textDirectionNegative?: boolean
+  textAlignInIPE?: number
+  bottomTextAttachmentDirection?: number
+  topTextAttachmentDirection?: number
+  contentScale?: number
+  contentBasePosition?: AcGePoint3d
+  textAnchor?: AcGePoint3d
+  textLineSpacingStyle?: number
+  textBackgroundColor?: number
+  textBackgroundScaleFactor?: number
+  textBackgroundTransparency?: number
+  textBackgroundColorOn?: boolean
+  textFillOn?: boolean
+  textColumnType?: number
+  textUseAutoHeight?: boolean
+  textColumnWidth?: number
+  textColumnGutterWidth?: number
+  textColumnFlowReversed?: boolean
+  textColumnHeight?: number
+  textUseWordBreak?: boolean
+  hasMText?: boolean
+  hasBlock?: boolean
+  planeOrigin?: AcGePoint3d
+  planeXAxisDirection?: AcGeVector3d
+  planeYAxisDirection?: AcGeVector3d
+  planeNormalReversed?: boolean
+
   constructor() {
     super()
     this._leaders = []
@@ -187,6 +277,8 @@ export class AcDbMLeader extends AcDbEntity {
     this._textLineSpacingFactor = 1
     this._textAttachmentDirection =
       AcDbMLeaderTextAttachmentDirection.Horizontal
+    this.arrowheadOverrides = []
+    this.blockAttributes = []
   }
 
   get leaders() {
@@ -251,6 +343,14 @@ export class AcDbMLeader extends AcDbEntity {
   }
   set mleaderStyleId(value: string) {
     this._mleaderStyleId = value
+  }
+
+  get leaderSections() {
+    return this.leaders
+  }
+
+  get blockContentData() {
+    return this.blockContent
   }
 
   get mtextContent() {
@@ -376,10 +476,14 @@ export class AcDbMLeader extends AcDbEntity {
   get blockContent() {
     return this._blockContent
       ? {
+          blockContentId: this._blockContent.blockContentId,
           blockHandle: this._blockContent.blockHandle,
-          position: this._blockContent.position.clone(),
+          normal: this._blockContent.normal?.clone(),
+          position: this._blockContent.position?.clone(),
           scale: this._blockContent.scale.clone(),
-          rotation: this._blockContent.rotation
+          rotation: this._blockContent.rotation,
+          color: this._blockContent.color,
+          transformationMatrix: [...this._blockContent.transformationMatrix]
         }
       : undefined
   }
@@ -392,11 +496,18 @@ export class AcDbMLeader extends AcDbEntity {
       return
     }
     this._blockContent = {
+      blockContentId: value.blockContentId ?? value.blockHandle,
       blockHandle: value.blockHandle,
-      position: this.createPoint(value.position),
+      normal: value.normal ? new AcGeVector3d(value.normal) : undefined,
+      position: value.position ? this.createPoint(value.position) : undefined,
       scale: new AcGeVector3d(value.scale ?? { x: 1, y: 1, z: 1 }),
-      rotation: value.rotation ?? 0
+      rotation: value.rotation ?? 0,
+      color: value.color,
+      transformationMatrix: value.transformationMatrix
+        ? [...value.transformationMatrix]
+        : []
     }
+    this.blockContentId = this._blockContent.blockContentId
     this._contentType = AcDbMLeaderContentType.BlockContent
   }
 
@@ -405,13 +516,25 @@ export class AcDbMLeader extends AcDbEntity {
    */
   addLeader(leader: AcDbMLeaderLeaderLike = {}) {
     const dbLeader: AcDbMLeaderLeader = {
+      lastLeaderLinePoint: leader.lastLeaderLinePoint
+        ? this.createPoint(leader.lastLeaderLinePoint)
+        : undefined,
+      lastLeaderLinePointSet: leader.lastLeaderLinePointSet,
       landingPoint: leader.landingPoint
         ? this.createPoint(leader.landingPoint)
         : undefined,
       doglegVector: leader.doglegVector
         ? new AcGeVector3d(leader.doglegVector)
         : undefined,
+      doglegVectorSet: leader.doglegVectorSet,
       doglegLength: leader.doglegLength,
+      breaks:
+        leader.breaks?.map(item => ({
+          index: item.index,
+          start: this.createPoint(item.start),
+          end: this.createPoint(item.end)
+        })) ?? [],
+      leaderBranchIndex: leader.leaderBranchIndex,
       directionType: leader.directionType,
       leaderLines: []
     }
@@ -521,10 +644,15 @@ export class AcDbMLeader extends AcDbEntity {
 
   transformBy(matrix: AcGeMatrix3d) {
     this._leaders.forEach(leader => {
+      leader.lastLeaderLinePoint?.applyMatrix4(matrix)
       leader.landingPoint?.applyMatrix4(matrix)
       if (leader.doglegVector) {
         this.transformVector(leader.doglegVector, matrix)
       }
+      leader.breaks.forEach(item => {
+        item.start.applyMatrix4(matrix)
+        item.end.applyMatrix4(matrix)
+      })
       leader.leaderLines.forEach(line => {
         line.vertices.forEach(point => point.applyMatrix4(matrix))
         line.breaks.forEach(item => {
@@ -534,11 +662,26 @@ export class AcDbMLeader extends AcDbEntity {
       })
     })
     this._landingPoint?.applyMatrix4(matrix)
+    this.contentBasePosition?.applyMatrix4(matrix)
     this.transformVector(this._doglegVector, matrix)
     this.transformVector(this._normal, matrix)
+    this.textAnchor?.applyMatrix4(matrix)
     this._mtextContent?.anchorPoint.applyMatrix4(matrix)
     this.transformVector(this._textDirection, matrix)
-    this._blockContent?.position.applyMatrix4(matrix)
+    this._blockContent?.position?.applyMatrix4(matrix)
+    if (this._blockContent?.normal) {
+      this.transformVector(this._blockContent.normal, matrix)
+    }
+    if (this.blockContentScale) {
+      this.transformVector(this.blockContentScale, matrix)
+    }
+    this.planeOrigin?.applyMatrix4(matrix)
+    if (this.planeXAxisDirection) {
+      this.transformVector(this.planeXAxisDirection, matrix)
+    }
+    if (this.planeYAxisDirection) {
+      this.transformVector(this.planeYAxisDirection, matrix)
+    }
     return this
   }
 
@@ -698,15 +841,19 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   subWorldDraw(
-    renderer: AcGiRenderer,
-    delay?: boolean
+    renderer: AcGiRenderer
   ): AcGiEntity | undefined {
     const entities: AcGiEntity[] = []
     if (this.leaderLineType !== AcDbMLeaderLineType.InvisibleLeader) {
       this._leaders.forEach(leader => {
         leader.leaderLines.forEach(line => {
-          if (line.vertices.length >= 2) {
-            entities.push(renderer.lines(line.vertices))
+          const points = this.getLeaderLineDrawPoints(leader, line)
+          if (points.length > 0) {
+            entities.push(renderer.lines(points))
+            const arrowPoints = this.getArrowheadPoints(points)
+            if (arrowPoints) {
+              entities.push(renderer.lines(arrowPoints))
+            }
           }
         })
         const doglegPoints = this.getDoglegPoints(leader)
@@ -723,7 +870,7 @@ export class AcDbMLeader extends AcDbEntity {
       const mtextData: AcGiMTextData = {
         text: this._mtextContent.text,
         height: this.textHeight,
-        width: this.textWidth,
+        width: this.getMTextRenderWidth(),
         position: this._mtextContent.anchorPoint,
         rotation: this.textRotation,
         directionVector: this.textDirection,
@@ -731,7 +878,9 @@ export class AcDbMLeader extends AcDbEntity {
         drawingDirection: this.textDrawingDirection,
         lineSpaceFactor: this.textLineSpacingFactor
       }
-      entities.push(renderer.mtext(mtextData, this.getTextStyle(), delay))
+      // MLeader draws multiple primitives as a group. Delayed MText rendering is
+      // only scheduled for top-level entities, so render nested MText eagerly.
+      entities.push(renderer.mtext(mtextData, this.getTextStyle(), false))
     }
 
     if (entities.length === 0) return undefined
@@ -765,8 +914,10 @@ export class AcDbMLeader extends AcDbEntity {
       filer.writeString(7, this.textStyleName)
     }
     if (this._blockContent) {
-      filer.writeHandle(341, this._blockContent.blockHandle)
-      filer.writePoint3d(15, this._blockContent.position)
+      filer.writeHandle(341, this._blockContent.blockContentId ?? '')
+      if (this._blockContent.position) {
+        filer.writePoint3d(15, this._blockContent.position)
+      }
       filer.writeVector3d(16, this._blockContent.scale)
       filer.writeAngle(52, this._blockContent.rotation)
     }
@@ -791,8 +942,13 @@ export class AcDbMLeader extends AcDbEntity {
   private createLeaderLine(line: AcDbMLeaderLineLike): AcDbMLeaderLine {
     return {
       vertices: line.vertices?.map(point => this.createPoint(point)) ?? [],
+      breakPointIndexes: line.breakPointIndexes
+        ? [...line.breakPointIndexes]
+        : [],
+      leaderLineIndex: line.leaderLineIndex,
       breaks:
         line.breaks?.map(item => ({
+          index: item.index,
           start: this.createPoint(item.start),
           end: this.createPoint(item.end)
         })) ?? []
@@ -801,13 +957,25 @@ export class AcDbMLeader extends AcDbEntity {
 
   private cloneLeader(leader: AcDbMLeaderLeader): AcDbMLeaderLeader {
     return {
+      lastLeaderLinePoint: leader.lastLeaderLinePoint?.clone(),
+      lastLeaderLinePointSet: leader.lastLeaderLinePointSet,
       landingPoint: leader.landingPoint?.clone(),
       doglegVector: leader.doglegVector?.clone(),
+      doglegVectorSet: leader.doglegVectorSet,
       doglegLength: leader.doglegLength,
+      breaks: leader.breaks.map(item => ({
+        index: item.index,
+        start: item.start.clone(),
+        end: item.end.clone()
+      })),
+      leaderBranchIndex: leader.leaderBranchIndex,
       directionType: leader.directionType,
       leaderLines: leader.leaderLines.map(line => ({
         vertices: line.vertices.map(point => point.clone()),
+        breakPointIndexes: [...line.breakPointIndexes],
+        leaderLineIndex: line.leaderLineIndex,
         breaks: line.breaks.map(item => ({
+          index: item.index,
           start: item.start.clone(),
           end: item.end.clone()
         }))
@@ -836,23 +1004,51 @@ export class AcDbMLeader extends AcDbEntity {
   private collectGeometryPoints() {
     const points: AcGePoint3d[] = []
     this._leaders.forEach(leader => {
+      if (leader.lastLeaderLinePoint) points.push(leader.lastLeaderLinePoint)
       if (leader.landingPoint) points.push(leader.landingPoint)
+      leader.breaks.forEach(item => points.push(item.start, item.end))
       leader.leaderLines.forEach(line => {
         points.push(...line.vertices)
         line.breaks.forEach(item => points.push(item.start, item.end))
       })
       const doglegPoints = this.getDoglegPoints(leader)
       if (doglegPoints) points.push(...doglegPoints)
+      leader.leaderLines.forEach(line => {
+        const arrowPoints = this.getArrowheadPoints(
+          this.getLeaderLineDrawPoints(leader, line)
+        )
+        if (arrowPoints) points.push(...arrowPoints)
+      })
     })
     if (this._landingPoint) points.push(this._landingPoint)
+    if (this.contentBasePosition) points.push(this.contentBasePosition)
+    if (this.textAnchor) points.push(this.textAnchor)
     if (this._mtextContent) points.push(this._mtextContent.anchorPoint)
-    if (this._blockContent) points.push(this._blockContent.position)
+    if (this._blockContent?.position) points.push(this._blockContent.position)
+    if (this.planeOrigin) points.push(this.planeOrigin)
     return points
+  }
+
+  private getLeaderLineDrawPoints(
+    leader: AcDbMLeaderLeader,
+    line: AcDbMLeaderLine
+  ) {
+    if (line.vertices.length >= 2) return line.vertices
+    if (line.vertices.length === 0) return []
+
+    const end =
+      leader.lastLeaderLinePoint ??
+      leader.landingPoint ??
+      this._landingPoint ??
+      this.contentBasePosition
+    if (!end || line.vertices[0].equals(end)) return line.vertices
+    return [line.vertices[0], end]
   }
 
   private getDoglegPoints(leader: AcDbMLeaderLeader) {
     if (!this.doglegEnabled) return undefined
     const start =
+      leader.lastLeaderLinePoint ??
       leader.landingPoint ??
       this._landingPoint ??
       this.getLastLeaderLineVertex(leader)
@@ -874,6 +1070,55 @@ export class AcDbMLeader extends AcDbEntity {
       }
     }
     return undefined
+  }
+
+  private getArrowheadPoints(points: AcGePoint3d[]) {
+    if (!this.isArrowheadVisible() || points.length < 2) return undefined
+
+    const tip = points[0]
+    const next = points.find(point => !point.equals(tip))
+    if (!next) return undefined
+
+    const direction = new AcGeVector3d().subVectors(next, tip)
+    if (direction.lengthSq() === 0) return undefined
+
+    const size = this.getArrowheadSize()
+    const unit = direction.normalize()
+    const baseCenter = tip.clone().add(unit.clone().multiplyScalar(size))
+    const halfWidth = size / 6
+    const perpendicular = new AcGeVector3d(-unit.y, unit.x, 0)
+
+    const left = baseCenter
+      .clone()
+      .add(perpendicular.clone().multiplyScalar(halfWidth))
+    const right = baseCenter
+      .clone()
+      .add(perpendicular.clone().multiplyScalar(-halfWidth))
+    return [tip, left, right, tip]
+  }
+
+  private isArrowheadVisible() {
+    if (this.arrowheadId === '_NONE') return false
+    return this.getArrowheadSize() > 0
+  }
+
+  private getArrowheadSize() {
+    return this.arrowheadSize ?? this.contentScale ?? this.textHeight
+  }
+
+  private getMTextRenderWidth() {
+    if (this._textWidth > 0) return this._textWidth
+    if (!this._mtextContent) return this._textWidth
+
+    const plainText = this._mtextContent.text
+      .replace(/\\[PpNn]/g, '\n')
+      .replace(/\\[A-Za-z][^;]*;/g, '')
+      .replace(/[{}]/g, '')
+    const longestLineLength = Math.max(
+      ...plainText.split(/\r\n|\r|\n/g).map(line => line.length),
+      1
+    )
+    return Math.max(this._textHeight, longestLineLength * this._textHeight)
   }
 
   private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {
