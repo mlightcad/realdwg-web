@@ -17,6 +17,7 @@ import {
   AcDbEntity,
   AcDbFace,
   AcDbHatch,
+  AcDbHatchObjectType,
   AcDbHatchPatternType,
   AcDbHatchStyle,
   AcDbLeader,
@@ -77,6 +78,7 @@ import type {
   DwgEllipseEdge,
   DwgEllipseEntity,
   DwgEntity,
+  DwgGradientHatchEntity,
   DwgHatchEntity,
   DwgImageEntity,
   DwgInsertEntity,
@@ -560,6 +562,28 @@ export class AcDbEntityConverter {
         }
       }
     })
+    // Handle gradient fill properties
+    // The meaning of gradientFlag is as follows.
+    // - 0: Solid hatch
+    // - 1: Gradient
+    if (hatch.gradientFlag) {
+      const gradientHatch = hatch as DwgGradientHatchEntity
+      dbEntity.hatchObjectType = AcDbHatchObjectType.GradientObject
+      dbEntity.gradientName = gradientHatch.gradientName
+      dbEntity.gradientAngle = gradientHatch.gradientRotation ?? 0
+      dbEntity.gradientShift = gradientHatch.gradientDefinition ?? 0
+      dbEntity.gradientOneColorMode = gradientHatch.gradientColorFlag == 1
+      dbEntity.shadeTintValue = gradientHatch.colorTint ?? 0
+      if (gradientHatch.gradientColors) {
+        const length = gradientHatch.gradientColors.length
+        if (length > 1) {
+          dbEntity.gradientStartColor = gradientHatch.gradientColors[0].rgb
+          dbEntity.gradientEndColor = gradientHatch.gradientColors[1].rgb
+        } else if (length > 0) {
+          dbEntity.gradientStartColor = gradientHatch.gradientColors[0].rgb
+        }
+      }
+    }
     return dbEntity
   }
 
