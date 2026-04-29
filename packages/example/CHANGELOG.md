@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.26
+
+### Patch Changes
+
+- feat: add gradient hatch support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.26
+  - @mlightcad/libredwg-converter@3.5.26
+
 ## 0.1.25
 
 ### Patch Changes

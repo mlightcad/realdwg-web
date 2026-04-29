@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.26
+
+### Patch Changes
+
+- feat: add gradient hatch support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.26
+
 ## 3.5.25
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.26
+
+### Patch Changes
+
+- feat: add gradient hatch support
+
 ## 1.4.25
 
 ### Patch Changes

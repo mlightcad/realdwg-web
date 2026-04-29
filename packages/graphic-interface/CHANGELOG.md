@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.26
+
+### Patch Changes
+
+- feat: add gradient hatch support
+- Updated dependencies
+  - @mlightcad/common@1.4.26
+  - @mlightcad/geometry-engine@3.2.26
+
 ## 3.3.25
 
 ### Patch Changes

@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.26
+
+### Patch Changes
+
+- feat: add gradient hatch support
+- Updated dependencies
+  - @mlightcad/common@1.4.26
+  - @mlightcad/geometry-engine@3.2.26
+  - @mlightcad/graphic-interface@3.3.26
+
 ## 1.7.25
 
 ### Patch Changes
