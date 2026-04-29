@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.27
+
+### Patch Changes
+
+- fix: fix cad-viewer issue #243 and #183
+- Updated dependencies
+  - @mlightcad/data-model@1.7.27
+
 ## 3.5.26
 
 ### Patch Changes

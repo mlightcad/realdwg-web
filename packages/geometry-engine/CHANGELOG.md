@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.27
+
+### Patch Changes
+
+- fix: fix cad-viewer issue #243 and #183
+- Updated dependencies
+  - @mlightcad/common@1.4.27
+
 ## 3.2.26
 
 ### Patch Changes

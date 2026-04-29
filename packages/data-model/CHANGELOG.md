@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.27
+
+### Patch Changes
+
+- fix: fix cad-viewer issue #243 and #183
+- Updated dependencies
+  - @mlightcad/common@1.4.27
+  - @mlightcad/geometry-engine@3.2.27
+  - @mlightcad/graphic-interface@3.3.27
+
 ## 1.7.26
 
 ### Patch Changes
