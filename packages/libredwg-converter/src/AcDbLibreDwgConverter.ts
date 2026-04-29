@@ -148,6 +148,26 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         const text = entity as DwgTextEntity
         const fontNames = styleMap.get(text.styleName)
         fontNames?.forEach(name => fonts.add(name))
+      } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+        const mleader = entity as DwgEntity & Record<string, unknown>
+        const textContent = mleader.textContent as
+          | Record<string, unknown>
+          | undefined
+        const text =
+          typeof textContent?.text === 'string' ? textContent.text : ''
+        ;[...text.matchAll(regex)].forEach(match => {
+          fonts.add(match[1].toLowerCase())
+        })
+        const styleName =
+          typeof textContent?.styleName === 'string'
+            ? textContent.styleName
+            : typeof mleader.textStyleName === 'string'
+              ? mleader.textStyleName
+              : typeof mleader.styleName === 'string'
+                ? mleader.styleName
+                : undefined
+        const fontNames = styleName ? styleMap.get(styleName) : undefined
+        fontNames?.forEach(name => fonts.add(name))
       } else if (entity.type == 'INSERT') {
         const insert = entity as DwgInsertEntity
         const block = blockMap.get(insert.name)

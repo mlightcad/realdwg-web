@@ -5,6 +5,10 @@ import {
   AcDbAlignedDimension,
   AcDbArc,
   AcDbCircle,
+  AcDbLeader,
+  AcDbMLeader,
+  AcDbMLeaderContentType,
+  AcDbMLeaderLineType,
   AcDbPolyline,
   AcDbRotatedDimension
 } from '../src/entity'
@@ -139,5 +143,131 @@ describe('AcDbEntityConverter', () => {
     expect(dbArc.startPoint).toMatchObject({ x: -2, y: 2, z: 0 })
     expect(dbArc.endPoint).toMatchObject({ x: -1, y: 3, z: 0 })
     expect(dbCircle.center).toMatchObject({ x: -1, y: 2, z: 0 })
+  })
+
+  it('converts LEADER DXF fields into AcDbLeader state', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'LEADER',
+      styleName: 'Standard',
+      isArrowheadEnabled: true,
+      isSpline: true,
+      leaderCreationFlag: 0,
+      isHooklineSameDirection: true,
+      isHooklineExists: true,
+      textHeight: 2.5,
+      textWidth: 7,
+      vertices: [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 1, z: 0 }
+      ],
+      byBlockColor: 256,
+      associatedAnnotation: 'AA',
+      normal: { x: 0, y: 0, z: 1 },
+      horizontalDirection: { x: 1, y: 0, z: 0 },
+      offsetFromBlock: { x: 0.5, y: 0, z: 0 },
+      offsetFromAnnotation: { x: 1, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbLeader)
+    const leader = result as AcDbLeader
+    expect(leader.numVertices).toBe(2)
+    expect(leader.isSplined).toBe(true)
+    expect(leader.isHookLineSameDirection).toBe(true)
+    expect(leader.textHeight).toBe(2.5)
+    expect(leader.textWidth).toBe(7)
+    expect(leader.byBlockColor).toBe(256)
+    expect(leader.associatedAnnotation).toBe('AA')
+    expect(leader.offsetFromAnnotation).toMatchObject({ x: 1, y: 0, z: 0 })
+  })
+
+  it('converts dxf-json MULTILEADER text and leaderSections shape', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MULTILEADER',
+      version: 2,
+      leaderStyleId: 'STYLE',
+      leaderLineType: AcDbMLeaderLineType.StraightLeader,
+      leaderLineColor: 256,
+      doglegEnabled: true,
+      doglegLength: 2,
+      landingEnabled: true,
+      contentType: AcDbMLeaderContentType.MTextContent,
+      textContent: 'Note',
+      textAnchor: { x: 10, y: 5, z: 0 },
+      textHeight: 0,
+      arrowheadSize: 4,
+      contentBasePosition: { x: 10, y: 5, z: 0 },
+      textLineSpacingStyle: 1,
+      textFrameEnabled: true,
+      arrowheadOverrides: [{ index: 0, handle: 'A1' }],
+      blockAttributes: [{ id: 'ATT', index: 1, width: 4, text: 'VAL' }],
+      leaderSections: [
+        {
+          lastLeaderLinePoint: { x: 8, y: 5, z: 0 },
+          lastLeaderLinePointSet: true,
+          doglegVector: { x: 1, y: 0, z: 0 },
+          doglegVectorSet: true,
+          doglegLength: 2,
+          leaderBranchIndex: 3,
+          breaks: [
+            {
+              start: { x: 7, y: 4, z: 0 },
+              end: { x: 7.5, y: 4.5, z: 0 }
+            }
+          ],
+          leaderLines: [
+            {
+              leaderLineIndex: 9,
+              breakPointIndexes: [0],
+              vertices: [
+                { x: 0, y: 0, z: 0 },
+                { x: 8, y: 5, z: 0 }
+              ],
+              breaks: [
+                {
+                  index: 0,
+                  start: { x: 1, y: 1, z: 0 },
+                  end: { x: 2, y: 2, z: 0 }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbMLeader)
+    const mleader = result as AcDbMLeader
+    expect(mleader.contents).toBe('Note')
+    expect(mleader.textLocation).toMatchObject({ x: 10, y: 5, z: 0 })
+    expect(mleader.version).toBe(2)
+    expect(mleader.leaderStyleId).toBe('STYLE')
+    expect(mleader.leaderLineType).toBe(AcDbMLeaderLineType.StraightLeader)
+    expect(mleader.textHeight).toBe(4)
+    expect(mleader.landingEnabled).toBe(true)
+    expect(mleader.textFrameEnabled).toBe(true)
+    expect(mleader.textLineSpacingStyle).toBe(1)
+    expect(mleader.contentBasePosition).toMatchObject({ x: 10, y: 5, z: 0 })
+    expect(mleader.arrowheadOverrides).toEqual([{ index: 0, handle: 'A1' }])
+    expect(mleader.blockAttributes).toEqual([
+      { id: 'ATT', index: 1, width: 4, text: 'VAL' }
+    ])
+    expect(mleader.numberOfLeaders).toBe(1)
+    expect(mleader.leaders[0].lastLeaderLinePoint).toMatchObject({
+      x: 8,
+      y: 5,
+      z: 0
+    })
+    expect(mleader.leaders[0].lastLeaderLinePointSet).toBe(true)
+    expect(mleader.leaders[0].doglegVectorSet).toBe(true)
+    expect(mleader.leaders[0].leaderBranchIndex).toBe(3)
+    expect(mleader.leaders[0].breaks).toHaveLength(1)
+    expect(mleader.leaders[0].leaderLines[0].vertices).toHaveLength(2)
+    expect(mleader.leaders[0].leaderLines[0].leaderLineIndex).toBe(9)
+    expect(mleader.leaders[0].leaderLines[0].breakPointIndexes).toEqual([0])
+    expect(mleader.leaders[0].leaderLines[0].breaks[0].index).toBe(0)
   })
 })

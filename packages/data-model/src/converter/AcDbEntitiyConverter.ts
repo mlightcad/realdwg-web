@@ -29,6 +29,7 @@ import {
   LineEntity,
   LWPolylineEntity,
   MTextEntity,
+  MultiLeaderEntity,
   PointEntity,
   PolylineEntity,
   RayEntity,
@@ -93,6 +94,10 @@ import {
   AcDbLeaderAnnotationType,
   AcDbLine,
   AcDbLineSpacingStyle,
+  AcDbMLeader,
+  AcDbMLeaderContentType,
+  AcDbMLeaderLineType,
+  AcDbMLeaderTextAttachmentDirection,
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
@@ -117,6 +122,30 @@ import {
   AcDbWipeout,
   AcDbXline
 } from '../entity'
+
+type ParsedMLeaderBreak = {
+  index?: number
+  start: AcGePoint3dLike
+  end: AcGePoint3dLike
+}
+
+type ParsedMLeaderLine = {
+  vertices: AcGePoint3dLike[]
+  breakPointIndexes?: number[]
+  leaderLineIndex?: number
+  breaks?: ParsedMLeaderBreak[]
+}
+
+type ParsedMLeaderLeader = {
+  lastLeaderLinePoint?: AcGePoint3dLike
+  lastLeaderLinePointSet?: boolean
+  doglegVector?: AcGePoint3dLike
+  doglegVectorSet?: boolean
+  doglegLength?: number
+  breaks?: ParsedMLeaderBreak[]
+  leaderBranchIndex?: number
+  leaderLines?: ParsedMLeaderLine[]
+}
 
 /**
  * Converts DXF entities to AcDbEntity objects.
@@ -204,6 +233,8 @@ export class AcDbEntityConverter {
       return this.convertLWPolyline(entity as LWPolylineEntity)
     } else if (entity.type == 'MTEXT') {
       return this.convertMText(entity as MTextEntity)
+    } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+      return this.convertMLeader(entity as MultiLeaderEntity)
     } else if (entity.type == 'POLYLINE') {
       return this.convertPolyline(entity as PolylineEntity)
     } else if (entity.type == 'POINT') {
@@ -748,15 +779,314 @@ export class AcDbEntityConverter {
 
   private convertLeader(leader: LeaderEntity) {
     const dbEntity = new AcDbLeader()
-    leader.vertices.forEach(point => {
+    leader.vertices?.forEach(point => {
       dbEntity.appendVertex(point)
     })
     dbEntity.hasArrowHead = leader.isArrowheadEnabled
     dbEntity.hasHookLine = leader.isHooklineExists
+    dbEntity.isHookLineSameDirection = leader.isHooklineSameDirection
     dbEntity.isSplined = leader.isSpline
-    dbEntity.dimensionStyle = leader.styleName
+    dbEntity.dimensionStyle = leader.styleName ?? ''
     dbEntity.annoType =
       leader.leaderCreationFlag as unknown as AcDbLeaderAnnotationType
+    dbEntity.textHeight = leader.textHeight ?? 0
+    dbEntity.textWidth = leader.textWidth ?? 0
+    dbEntity.byBlockColor = leader.byBlockColor
+    dbEntity.associatedAnnotation = leader.associatedAnnotation ?? ''
+    if (leader.normal) dbEntity.normal = leader.normal
+    if (leader.horizontalDirection) {
+      dbEntity.horizontalDirection = leader.horizontalDirection
+    }
+    if (leader.offsetFromBlock)
+      dbEntity.offsetFromBlock = leader.offsetFromBlock
+    if (leader.offsetFromAnnotation) {
+      dbEntity.offsetFromAnnotation = leader.offsetFromAnnotation
+    }
+    return dbEntity
+  }
+
+  private convertMLeader(mleader: MultiLeaderEntity) {
+    const dbEntity = new AcDbMLeader()
+    const raw = mleader as MultiLeaderEntity & Record<string, unknown>
+
+    dbEntity.version = mleader.version
+    dbEntity.leaderStyleId = mleader.leaderStyleId
+    if (mleader.leaderStyleId) dbEntity.mleaderStyleId = mleader.leaderStyleId
+    dbEntity.propertyOverrideFlag = mleader.propertyOverrideFlag
+    dbEntity.leaderLineType = (mleader.leaderLineType ??
+      AcDbMLeaderLineType.StraightLeader) as AcDbMLeaderLineType
+    dbEntity.leaderLineColor = mleader.leaderLineColor
+    dbEntity.leaderLineTypeId = mleader.leaderLineTypeId
+    dbEntity.leaderLineWeight = mleader.leaderLineWeight
+    dbEntity.landingEnabled = mleader.landingEnabled
+    dbEntity.doglegEnabled = mleader.doglegEnabled ?? false
+    dbEntity.doglegLength = mleader.doglegLength ?? 0
+    dbEntity.arrowheadId = mleader.arrowheadId
+    dbEntity.arrowheadSize = mleader.arrowheadSize
+    dbEntity.textStyleId = mleader.textStyleId
+    dbEntity.textLeftAttachmentType = mleader.textLeftAttachmentType
+    dbEntity.textRightAttachmentType = mleader.textRightAttachmentType
+    dbEntity.textAngleType = mleader.textAngleType
+    dbEntity.textAlignmentType = mleader.textAlignmentType
+    dbEntity.textColor = mleader.textColor
+    dbEntity.textFrameEnabled = mleader.textFrameEnabled
+    dbEntity.landingGap = mleader.landingGap
+    dbEntity.textAttachment = mleader.textAttachment
+    dbEntity.textFlowDirection = mleader.textFlowDirection
+    dbEntity.blockContentId = mleader.blockContentId
+    dbEntity.blockContentColor = mleader.blockContentColor
+    dbEntity.blockContentRotation = mleader.blockContentRotation
+    dbEntity.blockContentConnectionType = mleader.blockContentConnectionType
+    dbEntity.annotativeScaleEnabled = mleader.annotativeScaleEnabled
+    dbEntity.arrowheadOverrides = mleader.arrowheadOverrides
+      ? mleader.arrowheadOverrides.map(item => ({ ...item }))
+      : []
+    dbEntity.blockAttributes = mleader.blockAttributes
+      ? mleader.blockAttributes.map(item => ({ ...item }))
+      : []
+    dbEntity.textDirectionNegative = mleader.textDirectionNegative
+    dbEntity.textAlignInIPE = mleader.textAlignInIPE
+    dbEntity.bottomTextAttachmentDirection =
+      mleader.bottomTextAttachmentDirection
+    dbEntity.topTextAttachmentDirection = mleader.topTextAttachmentDirection
+    dbEntity.contentScale = mleader.contentScale
+    dbEntity.textLineSpacingStyle = mleader.textLineSpacingStyle
+    dbEntity.textBackgroundColor = mleader.textBackgroundColor
+    dbEntity.textBackgroundScaleFactor = mleader.textBackgroundScaleFactor
+    dbEntity.textBackgroundTransparency = mleader.textBackgroundTransparency
+    dbEntity.textBackgroundColorOn = mleader.textBackgroundColorOn
+    dbEntity.textFillOn = mleader.textFillOn
+    dbEntity.textColumnType = mleader.textColumnType
+    dbEntity.textUseAutoHeight = mleader.textUseAutoHeight
+    dbEntity.textColumnWidth = mleader.textColumnWidth
+    dbEntity.textColumnGutterWidth = mleader.textColumnGutterWidth
+    dbEntity.textColumnFlowReversed = mleader.textColumnFlowReversed
+    dbEntity.textColumnHeight = mleader.textColumnHeight
+    dbEntity.textUseWordBreak = mleader.textUseWordBreak
+    dbEntity.hasMText = mleader.hasMText
+    dbEntity.hasBlock = mleader.hasBlock
+    dbEntity.planeNormalReversed = mleader.planeNormalReversed
+
+    if (mleader.blockContentScale) {
+      dbEntity.blockContentScale = new AcGeVector3d(mleader.blockContentScale)
+    }
+    if (mleader.contentBasePosition) {
+      dbEntity.contentBasePosition = new AcGePoint3d().copy(
+        mleader.contentBasePosition
+      )
+    }
+    if (mleader.textAnchor) {
+      dbEntity.textAnchor = new AcGePoint3d().copy(mleader.textAnchor)
+    }
+    if (mleader.planeOrigin) {
+      dbEntity.planeOrigin = new AcGePoint3d().copy(mleader.planeOrigin)
+    }
+    if (mleader.planeXAxisDirection) {
+      dbEntity.planeXAxisDirection = new AcGeVector3d(
+        mleader.planeXAxisDirection
+      )
+    }
+    if (mleader.planeYAxisDirection) {
+      dbEntity.planeYAxisDirection = new AcGeVector3d(
+        mleader.planeYAxisDirection
+      )
+    }
+
+    const rawTextContent = raw.textContent as unknown
+    const rawTextContentRecord =
+      rawTextContent && typeof rawTextContent === 'object'
+        ? (rawTextContent as Record<string, unknown>)
+        : undefined
+    const hasMTextContent =
+      (typeof rawTextContent === 'string' && rawTextContent.length > 0) ||
+      this.readString(rawTextContentRecord ?? {}, ['text', 'contents']) !=
+        null ||
+      this.readString(raw, ['text', 'contents', 'mtext']) != null
+
+    const contentType =
+      mleader.contentType ??
+      (hasMTextContent
+        ? AcDbMLeaderContentType.MTextContent
+        : mleader.blockContent
+          ? AcDbMLeaderContentType.BlockContent
+          : AcDbMLeaderContentType.NoneContent)
+    dbEntity.contentType = contentType as AcDbMLeaderContentType
+
+    const normal = this.readPoint(raw, ['normal', 'extrusionDirection'])
+    if (normal) dbEntity.normal = normal
+
+    const textStyleName =
+      this.readString(rawTextContentRecord ?? {}, [
+        'styleName',
+        'textStyleName',
+        'textStyle'
+      ]) ??
+      this.readString(raw, [
+        'textStyleName',
+        'textStyle',
+        'styleName',
+        'textStyleId'
+      ])
+    if (textStyleName) dbEntity.textStyleName = textStyleName
+
+    const textHeight =
+      this.readPositiveNumber(rawTextContentRecord ?? {}, [
+        'textHeight',
+        'height'
+      ]) ??
+      this.readPositiveNumber(raw, [
+        'textHeight',
+        'mtextHeight',
+        'textContentHeight'
+      ]) ??
+      this.readPositiveNumber(raw, ['arrowheadSize', 'contentScale'])
+    if (textHeight != null) dbEntity.textHeight = textHeight
+
+    const textWidth =
+      this.readPositiveNumber(rawTextContentRecord ?? {}, [
+        'textWidth',
+        'width'
+      ]) ??
+      this.readPositiveNumber(raw, [
+        'textWidth',
+        'mtextWidth',
+        'textContentWidth'
+      ])
+    if (textWidth != null) dbEntity.textWidth = textWidth
+    dbEntity.textLineSpacingFactor =
+      this.readNumber(rawTextContentRecord ?? {}, [
+        'lineSpacingFactor',
+        'textLineSpacingFactor'
+      ]) ??
+      this.readNumber(raw, ['textLineSpacingFactor']) ??
+      dbEntity.textLineSpacingFactor
+    const textRotation =
+      this.readNumber(rawTextContentRecord ?? {}, [
+        'textRotation',
+        'rotation'
+      ]) ??
+      this.readNumber(raw, [
+        'textRotation',
+        'mtextRotation',
+        'textContentRotation'
+      ])
+    if (textRotation != null) {
+      dbEntity.textRotation = AcGeMathUtil.degToRad(textRotation)
+    }
+
+    const textDirection = this.readPoint(raw, [
+      'textDirection',
+      'mtextDirection',
+      'textDirectionVector'
+    ])
+    if (textDirection) dbEntity.textDirection = textDirection
+
+    const textAttachmentPoint = this.readNumber(raw, [
+      'textAttachmentPoint',
+      'attachmentPoint'
+    ])
+    if (textAttachmentPoint != null) {
+      dbEntity.textAttachmentPoint =
+        textAttachmentPoint as unknown as AcGiMTextAttachmentPoint
+    }
+
+    const textAttachmentDirection = mleader.textAttachmentDirection
+    if (textAttachmentDirection != null) {
+      dbEntity.textAttachmentDirection =
+        textAttachmentDirection as unknown as AcDbMLeaderTextAttachmentDirection
+    }
+
+    const textDrawingDirection = this.readNumber(raw, [
+      'textDrawingDirection',
+      'drawingDirection'
+    ])
+    if (textDrawingDirection != null) {
+      dbEntity.textDrawingDirection =
+        textDrawingDirection as unknown as AcGiMTextFlowDirection
+    }
+
+    const text =
+      typeof rawTextContent === 'string'
+        ? rawTextContent
+        : (this.readString(rawTextContentRecord ?? {}, ['text', 'contents']) ??
+          this.readString(raw, ['text', 'contents', 'mtext']))
+    const anchorPoint =
+      this.readPoint(rawTextContentRecord ?? {}, [
+        'anchorPoint',
+        'textAnchor',
+        'textLocation',
+        'textPosition',
+        'textAnchorPoint'
+      ]) ??
+      this.readPoint(raw, [
+        'textAnchor',
+        'textLocation',
+        'textPosition',
+        'textAnchorPoint',
+        'contentBasePosition'
+      ])
+    if (text != null && anchorPoint) {
+      dbEntity.mtextContent = { text, anchorPoint }
+    }
+
+    if (mleader.blockContent) {
+      const blockRecord = mleader.blockContent as unknown as Record<
+        string,
+        unknown
+      >
+      dbEntity.blockContent = {
+        blockContentId: mleader.blockContent.blockContentId,
+        normal: this.readPoint(blockRecord, ['normal']),
+        position: mleader.blockContent.position,
+        scale: this.readPoint(blockRecord, ['scale']),
+        rotation: this.readNumber(blockRecord, ['rotation']),
+        color: this.readNumber(blockRecord, ['color']),
+        transformationMatrix: Array.isArray(
+          mleader.blockContent.transformationMatrix
+        )
+          ? mleader.blockContent.transformationMatrix
+          : []
+      }
+    } else if (mleader.blockContentId) {
+      dbEntity.blockContent = {
+        blockContentId: mleader.blockContentId,
+        scale: mleader.blockContentScale,
+        rotation: mleader.blockContentRotation,
+        color: mleader.blockContentColor,
+        transformationMatrix: []
+      }
+    }
+
+    this.readMLeaderLeaders(raw)?.forEach(leader => {
+      dbEntity.addLeader({
+        lastLeaderLinePoint: leader.lastLeaderLinePoint,
+        lastLeaderLinePointSet: leader.lastLeaderLinePointSet,
+        doglegVector: leader.doglegVector,
+        doglegVectorSet: leader.doglegVectorSet,
+        doglegLength: leader.doglegLength ?? mleader.doglegLength,
+        breaks: leader.breaks,
+        leaderBranchIndex: leader.leaderBranchIndex,
+        leaderLines: leader.leaderLines
+      })
+    })
+
+    if (dbEntity.numberOfLeaders === 0) {
+      this.readLeaderLineArray(raw)?.forEach(line => {
+        dbEntity.addLeader({
+          doglegLength: mleader.doglegLength
+        })
+        dbEntity.addLeaderLine(dbEntity.numberOfLeaders - 1, line)
+      })
+    }
+
+    if (dbEntity.numberOfLeaders === 0 && mleader.contentBasePosition) {
+      dbEntity.addLeader({
+        lastLeaderLinePoint: mleader.contentBasePosition,
+        lastLeaderLinePointSet: true,
+        doglegLength: mleader.doglegLength
+      })
+    }
+
     return dbEntity
   }
 
@@ -1020,5 +1350,180 @@ export class AcDbEntityConverter {
     if (entity.transparency != null) {
       dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
+  }
+
+  private readNumber(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+    }
+    return undefined
+  }
+
+  private readPositiveNumber(source: Record<string, unknown>, names: string[]) {
+    const value = this.readNumber(source, names)
+    return value != null && value > 0 ? value : undefined
+  }
+
+  private readString(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'string') return value
+    }
+    return undefined
+  }
+
+  private readBoolean(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (typeof value === 'boolean') return value
+      if (typeof value === 'number') return value !== 0
+    }
+    return undefined
+  }
+
+  private readPoint(source: Record<string, unknown>, names: string[]) {
+    for (const name of names) {
+      const value = source[name]
+      if (this.isPointLike(value)) return value
+      if (
+        Array.isArray(value) &&
+        typeof value[0] === 'number' &&
+        typeof value[1] === 'number'
+      ) {
+        return { x: value[0], y: value[1], z: value[2] ?? 0 }
+      }
+    }
+    return undefined
+  }
+
+  private readLeaderLineArray(source: Record<string, unknown>) {
+    const leaderLines = source.leaderLines
+    if (Array.isArray(leaderLines)) {
+      return leaderLines
+        .map(line => {
+          if (!line || typeof line !== 'object') return undefined
+          const vertices = (line as Record<string, unknown>).vertices
+          return Array.isArray(vertices)
+            ? vertices.filter(point => this.isPointLike(point))
+            : undefined
+        })
+        .filter((line): line is AcGePoint3dLike[] => !!line && line.length > 0)
+    }
+
+    const vertices = source.vertices
+    if (Array.isArray(vertices)) {
+      const line = vertices.filter(point => this.isPointLike(point))
+      return line.length > 0 ? [line] : undefined
+    }
+    return undefined
+  }
+
+  private readMLeaderLeaders(
+    source: Record<string, unknown>
+  ): ParsedMLeaderLeader[] | undefined {
+    const leaders = source.leaderSections
+    if (!Array.isArray(leaders)) return undefined
+
+    const dbLeaders: ParsedMLeaderLeader[] = []
+    leaders.forEach(leader => {
+      if (!leader || typeof leader !== 'object') return
+      const leaderRecord = leader as Record<string, unknown>
+      const leaderLines = leaderRecord.leaderLines
+      const lines: ParsedMLeaderLine[] | undefined = Array.isArray(leaderLines)
+        ? leaderLines.reduce<ParsedMLeaderLine[]>((result, line) => {
+            const dbLine = this.readMLeaderLine(line)
+            if (dbLine) result.push(dbLine)
+            return result
+          }, [])
+        : undefined
+
+      const dbLeader: ParsedMLeaderLeader = {}
+      const lastLeaderLinePoint = this.readPoint(leaderRecord, [
+        'lastLeaderLinePoint'
+      ])
+      const doglegVector = this.readPoint(leaderRecord, ['doglegVector'])
+      const doglegLength = this.readNumber(leaderRecord, ['doglegLength'])
+      const leaderBreaks = this.readMLeaderBreaks(leaderRecord.breaks)
+      const leaderBranchIndex = this.readNumber(leaderRecord, [
+        'leaderBranchIndex'
+      ])
+      if (lastLeaderLinePoint)
+        dbLeader.lastLeaderLinePoint = lastLeaderLinePoint
+      if (leaderRecord.lastLeaderLinePointSet != null) {
+        dbLeader.lastLeaderLinePointSet = this.readBoolean(leaderRecord, [
+          'lastLeaderLinePointSet'
+        ])
+      }
+      if (doglegVector) dbLeader.doglegVector = doglegVector
+      if (leaderRecord.doglegVectorSet != null) {
+        dbLeader.doglegVectorSet = this.readBoolean(leaderRecord, [
+          'doglegVectorSet'
+        ])
+      }
+      if (doglegLength != null) dbLeader.doglegLength = doglegLength
+      if (leaderBreaks) dbLeader.breaks = leaderBreaks
+      if (leaderBranchIndex != null) {
+        dbLeader.leaderBranchIndex = leaderBranchIndex
+      }
+      if (lines) dbLeader.leaderLines = lines
+      dbLeaders.push(dbLeader)
+    })
+    return dbLeaders
+  }
+
+  private readMLeaderLine(value: unknown): ParsedMLeaderLine | undefined {
+    if (!value || typeof value !== 'object') return undefined
+    const lineRecord = value as Record<string, unknown>
+    const vertices = lineRecord.vertices
+    const dbVertices = Array.isArray(vertices)
+      ? vertices.filter(point => this.isPointLike(point))
+      : []
+
+    const dbBreaks = this.readMLeaderBreaks(lineRecord.breaks)
+    const breakPointIndexes = Array.isArray(lineRecord.breakPointIndexes)
+      ? lineRecord.breakPointIndexes.filter(
+          (item): item is number => typeof item === 'number'
+        )
+      : undefined
+    const leaderLineIndex = this.readNumber(lineRecord, ['leaderLineIndex'])
+
+    return dbVertices.length > 0 || (dbBreaks && dbBreaks.length > 0)
+      ? {
+          vertices: dbVertices,
+          breakPointIndexes,
+          leaderLineIndex,
+          breaks: dbBreaks
+        }
+      : undefined
+  }
+
+  private readMLeaderBreaks(value: unknown): ParsedMLeaderBreak[] | undefined {
+    if (!Array.isArray(value)) return undefined
+
+    const breaks = value
+      .map((item): ParsedMLeaderBreak | undefined => {
+        if (!item || typeof item !== 'object') return undefined
+        const breakRecord = item as Record<string, unknown>
+        const start = this.readPoint(breakRecord, ['start'])
+        const end = this.readPoint(breakRecord, ['end'])
+        const index = this.readNumber(breakRecord, ['index'])
+        if (!start || !end) return undefined
+        const parsed: ParsedMLeaderBreak = { start, end }
+        if (index != null) parsed.index = index
+        return parsed
+      })
+      .filter((item): item is ParsedMLeaderBreak => !!item)
+
+    return breaks.length > 0 ? breaks : undefined
+  }
+
+  private isPointLike(value: unknown): value is AcGePoint3dLike {
+    return (
+      !!value &&
+      typeof value === 'object' &&
+      typeof (value as AcGePoint3dLike).x === 'number' &&
+      typeof (value as AcGePoint3dLike).y === 'number'
+    )
   }
 }
