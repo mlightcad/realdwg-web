@@ -6,8 +6,9 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
-import { AcDbDatabase } from '../src/database'
-import { AcDbTable } from '../src/entity'
+import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
+import { AcDbMText, AcDbTable } from '../src/entity'
+import { AcDbRenderingCache } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createGiEntity = () => {
@@ -54,6 +55,10 @@ const setWorkingDb = () => {
 }
 
 describe('AcDbTable', () => {
+  beforeEach(() => {
+    AcDbRenderingCache.instance.clear()
+  })
+
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbTable('TEST', 1, 1))
   })
@@ -212,6 +217,93 @@ describe('AcDbTable', () => {
     expect(renderer.lineSegments).toHaveBeenCalledTimes(1)
     const grouped = renderer.group.mock.results[0]?.value
     expect(grouped.applyMatrix).toHaveBeenCalledTimes(1)
+  })
+
+  it('rebuilds populated table cells before falling back to an anonymous block', () => {
+    const db = setWorkingDb()
+    const renderer = createRenderer()
+    const block = new AcDbBlockTableRecord()
+    block.name = '*T_TABLE_TEST'
+    db.tables.blockTable.add(block)
+
+    const mtext = new AcDbMText()
+    mtext.contents = 'BLOCK_TABLE_TEXT'
+    mtext.height = 4.5
+    block.appendEntity(mtext)
+
+    const table = new AcDbTable('*T_TABLE_TEST', 1, 1)
+    db.tables.blockTable.modelSpace.appendEntity(table)
+    table.setUniformRowHeight(9)
+    table.setUniformColumnWidth(20)
+    table.setCell(0, {
+      text: 'CELL_TEXT_WITHOUT_HEIGHT',
+      attachmentPoint: AcGiMTextAttachmentPoint.MiddleCenter,
+      cellType: 1,
+      textHeight: undefined as unknown as number
+    })
+
+    table.subWorldDraw(renderer as unknown as AcGiRenderer<AcGiEntity>)
+
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
+    const mtextCall = renderer.mtext.mock.calls[0] as unknown[]
+    expect((mtextCall[0] as { text: string }).text).toBe(
+      'CELL_TEXT_WITHOUT_HEIGHT'
+    )
+    expect((mtextCall[0] as { height: number }).height).toBe(4.5)
+    expect(renderer.lineSegments).toHaveBeenCalledTimes(1)
+  })
+
+  it('renders an anonymous table block when cell content is unavailable', () => {
+    const db = setWorkingDb()
+    const renderer = createRenderer()
+    const block = new AcDbBlockTableRecord()
+    block.name = '*T_TABLE_TEST'
+    db.tables.blockTable.add(block)
+
+    const mtext = new AcDbMText()
+    mtext.contents = 'BLOCK_TABLE_TEXT'
+    mtext.height = 4.5
+    block.appendEntity(mtext)
+
+    const table = new AcDbTable('*T_TABLE_TEST', 1, 1)
+    db.tables.blockTable.modelSpace.appendEntity(table)
+    table.setUniformRowHeight(9)
+    table.setUniformColumnWidth(20)
+
+    table.subWorldDraw(renderer as unknown as AcGiRenderer<AcGiEntity>)
+
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
+    const mtextCall = renderer.mtext.mock.calls[0] as unknown[]
+    expect((mtextCall[0] as { text: string }).text).toBe('BLOCK_TABLE_TEXT')
+    const groupedChildren = renderer.group.mock.calls[0][0] as Array<{
+      objectId: string
+      layerName: string
+    }>
+    expect(groupedChildren[0].objectId).toBe(table.objectId)
+    expect(groupedChildren[0].layerName).toBe(table.layer)
+    expect(renderer.lineSegments).not.toHaveBeenCalled()
+  })
+
+  it('uses a visible fallback text height when rebuilding cells without one', () => {
+    const db = setWorkingDb()
+    const renderer = createRenderer()
+    const table = new AcDbTable('TABLE_WITHOUT_BLOCK', 1, 1)
+    db.tables.blockTable.modelSpace.appendEntity(table)
+    table.setUniformRowHeight(9)
+    table.setUniformColumnWidth(20)
+    table.setCell(0, {
+      text: 'VISIBLE_FALLBACK_TEXT',
+      attachmentPoint: AcGiMTextAttachmentPoint.MiddleCenter,
+      cellType: 1,
+      textHeight: undefined as unknown as number
+    })
+
+    table.subWorldDraw(renderer as unknown as AcGiRenderer<AcGiEntity>)
+
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
+    const mtextCall = renderer.mtext.mock.calls[0] as unknown[]
+    expect((mtextCall[0] as { height: number }).height).toBe(4.5)
+    expect(renderer.lineSegments).toHaveBeenCalledTimes(1)
   })
 
   it('uses text style fallback order and throws if no style can be resolved', () => {
