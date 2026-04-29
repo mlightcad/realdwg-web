@@ -105,8 +105,8 @@ importers:
         specifier: workspace:*
         version: link:../common
       '@mlightcad/dxf-json':
-        specifier: ^1.1.4
-        version: 1.1.4
+        specifier: ^1.1.5
+        version: 1.1.5
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
@@ -1377,8 +1377,8 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@mlightcad/dxf-json@1.1.4':
-    resolution: {integrity: sha512-1Vo0g5La4JEHEyA3ayZx/5fHMIGYbcc6FM/4plNP9nF7803IdcvAzXrNHN/ddnv41mRqPy8awF0TvJBqRTe1xg==}
+  '@mlightcad/dxf-json@1.1.5':
+    resolution: {integrity: sha512-v8UTFkodHuF0BtUqMvtZOXKvipiDq38z1YdMIro6K+UrvORzRAwfxvhu8y85JzJ5SqVguTx7MtC1ggyrV0WReA==}
 
   '@mlightcad/libdxfrw-web@0.0.9':
     resolution: {integrity: sha512-6fqGbjKWwI93cq8vwpXiFdAzWfdJjcIlLuAYwUvgTcEjx5jPvbd+tkzY7mX2/a8iMm/b/auGVzkgf1wxezHYIw==}
@@ -6268,7 +6268,7 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mlightcad/dxf-json@1.1.4':
+  '@mlightcad/dxf-json@1.1.5':
     dependencies:
       '@fxts/core': 1.26.0
 

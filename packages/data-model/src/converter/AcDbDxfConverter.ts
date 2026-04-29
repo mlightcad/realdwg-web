@@ -370,6 +370,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       }
     }
 
+    // Use batch append to improve performance
+    blockTableRecord.appendEntity(dbEntities)
+
     attributes.forEach(attribute => {
       const owner = blockTableRecord.getIdAt(
         attribute.ownerId
@@ -378,9 +381,6 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         owner.appendAttributes(attribute)
       }
     })
-
-    // Use batch append to improve performance
-    blockTableRecord.appendEntity(dbEntities)
   }
 
   /**

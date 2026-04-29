@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
@@ -13,6 +14,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
+import type { AcDbBlockTableRecord } from '../database'
 import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBlockReference } from './AcDbBlockReference'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -503,6 +505,16 @@ export class AcDbTable extends AcDbBlockReference {
    * @returns The rendered graphics entity representing the table
    */
   subWorldDraw(renderer: AcGiRenderer): AcGiEntity {
+    const blockTableRecord = this.blockTableRecord
+    if (
+      !this.hasRenderableCellContent() &&
+      blockTableRecord &&
+      blockTableRecord.newIterator().count > 0
+    ) {
+      const block = this.drawAnonymousTableBlock(renderer, blockTableRecord)
+      if (block) return block
+    }
+
     let allRowHeights = 0,
       allColumnWidths = 0
     const indices = new Uint16Array(this.numColumns * this.numRows * 8)
@@ -587,7 +599,7 @@ export class AcDbTable extends AcDbBlockReference {
             )
             const mtextData: AcGiMTextData = {
               text: cell.text,
-              height: cell.textHeight,
+              height: this.getCellTextHeight(cell, height),
               width: width,
               position: tempVector
                 .set(allColumnWidths, -allRowHeights, 0)
@@ -609,6 +621,50 @@ export class AcDbTable extends AcDbBlockReference {
     quaternion.setFromAxisAngle(AcGeVector3d.Z_AXIS, this.rotation)
     _tmpMatrix.compose(this.position, quaternion, this.scaleFactors)
     group.applyMatrix(_tmpMatrix)
+    return group
+  }
+
+  private hasRenderableCellContent() {
+    return this._cells.some(cell => {
+      return !!cell && (!!cell.text || !!cell.blockTableRecordId)
+    })
+  }
+
+  private drawAnonymousTableBlock(
+    renderer: AcGiRenderer,
+    blockTableRecord: AcDbBlockTableRecord
+  ) {
+    const results: AcGiEntity[] = []
+    const entities = blockTableRecord.newIterator()
+    for (const entity of entities) {
+      let object: AcGiEntity | undefined
+      if (entity.color.isByBlock && this.rgbColor) {
+        _tmpColor.copy(entity.color)
+        entity.color.setRGBValue(this.rgbColor)
+        object = entity.worldDraw(renderer)
+        entity.color.copy(_tmpColor)
+      } else {
+        object = entity.worldDraw(renderer)
+      }
+
+      if (object) {
+        object.objectId = this.objectId
+        object.ownerId = this.ownerId
+        object.layerName = this.layer
+        object.visible = this.visibility && entity.visibility
+        results.push(object)
+      }
+    }
+
+    const group = renderer.group(results)
+    group.applyMatrix(this.blockTransform)
+
+    const normal = this.normal
+    if (normal && (normal.x !== 0 || normal.y !== 0 || normal.z !== 1)) {
+      _tmpMatrix.setFromExtrusionDirection(normal)
+      group.applyMatrix(_tmpMatrix)
+    }
+
     return group
   }
 
@@ -716,6 +772,20 @@ export class AcDbTable extends AcDbBlockReference {
         break
     }
     return offset
+  }
+
+  /**
+   * Resolves a usable text height for table cells.
+   *
+   * Some DXF tables omit per-cell text height because their anonymous table block
+   * carries the final MTEXT geometry. When that block is unavailable, fall back to
+   * a conservative half-row height so the table text still has visible geometry.
+   */
+  private getCellTextHeight(cell: AcDbTableCell, rowHeight: number) {
+    if (cell.textHeight && cell.textHeight > 0) {
+      return cell.textHeight
+    }
+    return Math.max(rowHeight / 2, 1)
   }
 
   /**
@@ -948,3 +1018,4 @@ export class AcDbTable extends AcDbBlockReference {
 }
 
 const _tmpMatrix = /*@__PURE__*/ new AcGeMatrix3d()
+const _tmpColor = /*@__PURE__*/ new AcCmColor()
