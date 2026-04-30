@@ -1,10 +1,7 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices } from '../src/base'
-import {
-  AcDbBlockTableRecord,
-  AcDbDatabase
-} from '../src/database'
+import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import { AcDbMLeader } from '../src/entity'
 import { AcDbRenderingCache } from '../src/misc'
 import { AcDbMLeaderStyle } from '../src/object'
@@ -116,5 +113,4 @@ describe('AcDbMLeader arrowhead rendering', () => {
     expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(renderer.area).not.toHaveBeenCalled()
   })
-
 })

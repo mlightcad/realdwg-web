@@ -1,7 +1,4 @@
-import {
-  AcGeVector3d,
-  AcGeVector3dLike
-} from '@mlightcad/geometry-engine'
+import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
@@ -901,5 +898,3 @@ export class AcDbMLeaderStyle extends AcDbObject {
     return this
   }
 }
-
-

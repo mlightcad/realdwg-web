@@ -1581,9 +1581,7 @@ export class AcDbMLeader extends AcDbEntity {
    * @param renderer Graphics renderer used to create draw entities.
    * @returns A single entity, an entity group, or undefined when nothing is drawable.
    */
-  subWorldDraw(
-    renderer: AcGiRenderer
-  ): AcGiEntity | undefined {
+  subWorldDraw(renderer: AcGiRenderer): AcGiEntity | undefined {
     const entities: AcGiEntity[] = []
     if (this.leaderLineType !== AcDbMLeaderLineType.InvisibleLeader) {
       this._leaders.forEach(leader => {
@@ -1602,7 +1600,10 @@ export class AcDbMLeader extends AcDbEntity {
     }
 
     const mtextContent = this.getRenderableMTextContent()
-    if (this.contentType === AcDbMLeaderContentType.MTextContent && mtextContent) {
+    if (
+      this.contentType === AcDbMLeaderContentType.MTextContent &&
+      mtextContent
+    ) {
       const textHeight = this.getResolvedTextHeight()
       const mtextData: AcGiMTextData = {
         text: mtextContent.text,
@@ -2151,5 +2152,3 @@ export class AcDbMLeader extends AcDbEntity {
     return style.textStyle
   }
 }
-
-

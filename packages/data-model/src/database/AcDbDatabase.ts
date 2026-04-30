@@ -23,6 +23,7 @@ import {
 } from '../misc'
 import { AcDbDictionary } from '../object/AcDbDictionary'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
+import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
 import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcDbBlockTable } from './AcDbBlockTable'
@@ -333,6 +334,7 @@ export class AcDbDatabase extends AcDbObject {
     readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
     readonly layout: AcDbLayoutDictionary
     readonly mleaderStyle: AcDbDictionary<AcDbMLeaderStyle>
+    readonly mlineStyle: AcDbDictionary<AcDbMlineStyle>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
   }
   /** Current space (model space or paper space) */
@@ -406,6 +408,7 @@ export class AcDbDatabase extends AcDbObject {
       imageDefinition: new AcDbDictionary(this),
       layout: new AcDbLayoutDictionary(this),
       mleaderStyle: new AcDbDictionary(this),
+      mlineStyle: new AcDbDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
   }
@@ -1534,6 +1537,11 @@ export class AcDbDatabase extends AcDbObject {
     } else {
       dropRootEntry('ACAD_MLEADERSTYLE')
     }
+    if (this.objects.mlineStyle.numEntries > 0) {
+      ensureRootEntry('ACAD_MLINESTYLE', this.objects.mlineStyle)
+    } else {
+      dropRootEntry('ACAD_MLINESTYLE')
+    }
     if (this.objects.imageDefinition.numEntries > 0) {
       ensureRootEntry('ISM_RASTER_IMAGE_DICT', this.objects.imageDefinition)
     } else {
@@ -1550,6 +1558,9 @@ export class AcDbDatabase extends AcDbObject {
 
     if (this.objects.mleaderStyle.numEntries > 0) {
       writeDictionary(this.objects.mleaderStyle)
+    }
+    if (this.objects.mlineStyle.numEntries > 0) {
+      writeDictionary(this.objects.mlineStyle)
     }
 
     if (this.objects.imageDefinition.numEntries > 0) {
@@ -1573,6 +1584,10 @@ export class AcDbDatabase extends AcDbObject {
     for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
       filer.writeStart('MLEADERSTYLE')
       mleaderStyle.dxfOut(filer)
+    }
+    for (const [_, mlineStyle] of this.objects.mlineStyle.entries()) {
+      filer.writeStart('MLINESTYLE')
+      mlineStyle.dxfOut(filer)
     }
 
     for (const [_, xrecord] of this.objects.xrecord.entries()) {
@@ -1657,6 +1672,7 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.layout.removeAll()
     this._objects.imageDefinition.removeAll()
     this._objects.mleaderStyle.removeAll()
+    this._objects.mlineStyle.removeAll()
     this._objects.xrecord.removeAll()
     this._currentSpace = undefined
     this._extents.makeEmpty()

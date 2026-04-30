@@ -12,6 +12,7 @@ import {
   LayoutDXFObject,
   LTypeTableEntry,
   MLeaderStyleDXFObject,
+  MLineStyleDXFObject,
   MTextEntity,
   MultiLeaderEntity,
   ParsedDxf,
@@ -553,6 +554,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
           style as MLeaderStyleDXFObject
         )
         mleaderStyleDict.setAt(dbStyle.objectId, dbStyle)
+      })
+    }
+    if ('MLINESTYLE' in objects) {
+      const mlineStyleDict = db.objects.mlineStyle
+      objects['MLINESTYLE'].forEach(style => {
+        const dbStyle = objectConverter.convertMLineStyle(
+          style as MLineStyleDXFObject
+        )
+        mlineStyleDict.setAt(dbStyle.styleName || dbStyle.objectId, dbStyle)
       })
     }
   }

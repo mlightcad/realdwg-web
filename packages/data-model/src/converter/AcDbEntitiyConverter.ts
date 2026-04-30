@@ -28,6 +28,7 @@ import {
   LeaderEntity,
   LineEntity,
   LWPolylineEntity,
+  MLineEntity,
   MTextEntity,
   MultiLeaderEntity,
   PointEntity,
@@ -98,6 +99,8 @@ import {
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
   AcDbMLeaderTextAttachmentDirection,
+  AcDbMLine,
+  AcDbMLineJustification,
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
@@ -233,6 +236,8 @@ export class AcDbEntityConverter {
       return this.convertLWPolyline(entity as LWPolylineEntity)
     } else if (entity.type == 'MTEXT') {
       return this.convertMText(entity as MTextEntity)
+    } else if (entity.type == 'MLINE') {
+      return this.convertMLine(entity as MLineEntity)
     } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
       return this.convertMLeader(entity as MultiLeaderEntity)
     } else if (entity.type == 'POLYLINE') {
@@ -802,6 +807,62 @@ export class AcDbEntityConverter {
     if (leader.offsetFromAnnotation) {
       dbEntity.offsetFromAnnotation = leader.offsetFromAnnotation
     }
+    return dbEntity
+  }
+
+  private convertMLine(mline: MLineEntity) {
+    const dbEntity = new AcDbMLine()
+    const raw = mline as MLineEntity & Record<string, unknown>
+
+    dbEntity.styleName = mline.name
+    dbEntity.styleObjectHandle = mline.styleObjectHandle
+    dbEntity.scale = mline.scale
+    dbEntity.justification =
+      mline.justification as unknown as AcDbMLineJustification
+    dbEntity.flags = mline.flags
+    dbEntity.styleCount = mline.styleCount
+    dbEntity.startPosition = mline.startPosition
+    dbEntity.normal = mline.extrusionDirection ?? AcGeVector3d.Z_AXIS
+
+    if (Array.isArray(mline.segments) && mline.segments.length > 0) {
+      dbEntity.segments = mline.segments.map(segment => ({
+        position: segment.position,
+        direction: segment.direction,
+        miterDirection: segment.miterDirection,
+        elements:
+          segment.elements?.map(element => ({
+            parameterCount: element.parameterCount,
+            parameters: element.parameters ?? [],
+            fillCount: element.fillCount,
+            fillParameters: element.fillParameters ?? []
+          })) ?? []
+      }))
+    } else {
+      const vertices = Array.isArray(raw.vertices)
+        ? raw.vertices.filter(point => this.isPointLike(point))
+        : []
+      const segmentDirections = Array.isArray(raw.segmentDirections)
+        ? raw.segmentDirections.filter(point => this.isPointLike(point))
+        : []
+      const miterDirections = Array.isArray(raw.miterDirections)
+        ? raw.miterDirections.filter(point => this.isPointLike(point))
+        : []
+
+      const count = Math.min(
+        vertices.length,
+        segmentDirections.length,
+        miterDirections.length
+      )
+      if (count > 0) {
+        dbEntity.segments = Array.from({ length: count }, (_, index) => ({
+          position: vertices[index],
+          direction: segmentDirections[index],
+          miterDirection: miterDirections[index],
+          elements: []
+        }))
+      }
+    }
+
     return dbEntity
   }
 
