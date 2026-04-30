@@ -1,8 +1,10 @@
 import {
+  AcGeArea2d,
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  AcGePolyline2d,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -16,7 +18,8 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
-import { DEFAULT_TEXT_STYLE } from '../misc'
+import { AcDbRenderingCache, DEFAULT_TEXT_STYLE } from '../misc'
+import { AcDbMLeaderStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -72,18 +75,27 @@ export enum AcDbMLeaderDirectionType {
   Bottom = 4
 }
 
+/**
+ * Represents a leader break segment input using point-like values.
+ */
 export interface AcDbMLeaderBreakLike {
   index?: number
   start: AcGePoint3dLike
   end: AcGePoint3dLike
 }
 
+/**
+ * Represents a normalized leader break segment stored with concrete points.
+ */
 export interface AcDbMLeaderBreak {
   index?: number
   start: AcGePoint3d
   end: AcGePoint3d
 }
 
+/**
+ * Represents a leader-line input payload before normalization.
+ */
 export interface AcDbMLeaderLineLike {
   vertices?: AcGePoint3dLike[]
   breakPointIndexes?: number[]
@@ -91,6 +103,9 @@ export interface AcDbMLeaderLineLike {
   breaks?: AcDbMLeaderBreakLike[]
 }
 
+/**
+ * Represents one normalized leader line.
+ */
 export interface AcDbMLeaderLine {
   vertices: AcGePoint3d[]
   breakPointIndexes: number[]
@@ -98,6 +113,9 @@ export interface AcDbMLeaderLine {
   breaks: AcDbMLeaderBreak[]
 }
 
+/**
+ * Represents a leader-branch input payload.
+ */
 export interface AcDbMLeaderLeaderLike {
   lastLeaderLinePoint?: AcGePoint3dLike
   lastLeaderLinePointSet?: boolean
@@ -111,6 +129,9 @@ export interface AcDbMLeaderLeaderLike {
   leaderLines?: AcDbMLeaderLineLike[]
 }
 
+/**
+ * Represents one normalized leader branch stored by the entity.
+ */
 export interface AcDbMLeaderLeader {
   lastLeaderLinePoint?: AcGePoint3d
   lastLeaderLinePointSet?: boolean
@@ -124,16 +145,25 @@ export interface AcDbMLeaderLeader {
   leaderLines: AcDbMLeaderLine[]
 }
 
+/**
+ * Represents MText content input data for a multileader.
+ */
 export interface AcDbMLeaderMTextContentLike {
   text: string
   anchorPoint: AcGePoint3dLike
 }
 
+/**
+ * Represents normalized MText content stored by a multileader.
+ */
 export interface AcDbMLeaderMTextContent {
   text: string
   anchorPoint: AcGePoint3d
 }
 
+/**
+ * Represents block content input data for a multileader.
+ */
 export interface AcDbMLeaderBlockContentLike {
   blockContentId?: string
   blockHandle?: string
@@ -145,6 +175,9 @@ export interface AcDbMLeaderBlockContentLike {
   transformationMatrix?: number[]
 }
 
+/**
+ * Represents normalized block content stored by a multileader.
+ */
 export interface AcDbMLeaderBlockContent {
   blockContentId?: string
   blockHandle?: string
@@ -156,11 +189,17 @@ export interface AcDbMLeaderBlockContent {
   transformationMatrix: number[]
 }
 
+/**
+ * Represents a handle tied to a specific index in multileader data.
+ */
 export interface AcDbMLeaderIndexedHandle {
   index: number
   handle?: string
 }
 
+/**
+ * Represents one block attribute override entry.
+ */
 export interface AcDbMLeaderBlockAttribute {
   id?: string
   index?: number
@@ -178,6 +217,9 @@ export class AcDbMLeader extends AcDbEntity {
   /** The entity type name. */
   static override typeName: string = 'MLeader'
 
+  /**
+   * Gets the DXF type name used when exporting this entity.
+   */
   override get dxfTypeName() {
     return 'MULTILEADER'
   }
@@ -202,61 +244,62 @@ export class AcDbMLeader extends AcDbEntity {
   private _textLineSpacingFactor: number
   private _textAttachmentDirection: AcDbMLeaderTextAttachmentDirection
   private _blockContent?: AcDbMLeaderBlockContent
-
-  version?: number
-  leaderStyleId?: string
-  propertyOverrideFlag?: number
-  leaderLineColor?: number
-  leaderLineTypeId?: string
-  leaderLineWeight?: number
-  landingEnabled?: boolean
-  arrowheadId?: string
-  arrowheadSize?: number
-  textStyleId?: string
-  textLeftAttachmentType?: number
-  textRightAttachmentType?: number
-  textAngleType?: number
-  textAlignmentType?: number
-  textColor?: number
-  textFrameEnabled?: boolean
-  landingGap?: number
-  textAttachment?: number
-  textFlowDirection?: number
-  blockContentId?: string
-  blockContentColor?: number
-  blockContentScale?: AcGeVector3d
-  blockContentRotation?: number
-  blockContentConnectionType?: number
-  annotativeScaleEnabled?: boolean
-  arrowheadOverrides: AcDbMLeaderIndexedHandle[]
-  blockAttributes: AcDbMLeaderBlockAttribute[]
-  textDirectionNegative?: boolean
-  textAlignInIPE?: number
-  bottomTextAttachmentDirection?: number
-  topTextAttachmentDirection?: number
-  contentScale?: number
-  contentBasePosition?: AcGePoint3d
-  textAnchor?: AcGePoint3d
-  textLineSpacingStyle?: number
-  textBackgroundColor?: number
-  textBackgroundScaleFactor?: number
-  textBackgroundTransparency?: number
-  textBackgroundColorOn?: boolean
-  textFillOn?: boolean
-  textColumnType?: number
-  textUseAutoHeight?: boolean
-  textColumnWidth?: number
-  textColumnGutterWidth?: number
-  textColumnFlowReversed?: boolean
-  textColumnHeight?: number
-  textUseWordBreak?: boolean
-  hasMText?: boolean
-  hasBlock?: boolean
-  planeOrigin?: AcGePoint3d
-  planeXAxisDirection?: AcGeVector3d
-  planeYAxisDirection?: AcGeVector3d
-  planeNormalReversed?: boolean
-
+  private _version?: number
+  private _leaderStyleId?: string
+  private _propertyOverrideFlag?: number
+  private _leaderLineColor?: number
+  private _leaderLineTypeId?: string
+  private _leaderLineWeight?: number
+  private _landingEnabled?: boolean
+  private _arrowheadId?: string
+  private _arrowheadSize?: number
+  private _textStyleId?: string
+  private _textLeftAttachmentType?: number
+  private _textRightAttachmentType?: number
+  private _textAngleType?: number
+  private _textAlignmentType?: number
+  private _textColor?: number
+  private _textFrameEnabled?: boolean
+  private _landingGap?: number
+  private _textAttachment?: number
+  private _textFlowDirection?: number
+  private _blockContentId?: string
+  private _blockContentColor?: number
+  private _blockContentScale?: AcGeVector3d
+  private _blockContentRotation?: number
+  private _blockContentConnectionType?: number
+  private _annotativeScaleEnabled?: boolean
+  private _arrowheadOverrides: AcDbMLeaderIndexedHandle[]
+  private _blockAttributes: AcDbMLeaderBlockAttribute[]
+  private _textDirectionNegative?: boolean
+  private _textAlignInIPE?: number
+  private _bottomTextAttachmentDirection?: number
+  private _topTextAttachmentDirection?: number
+  private _contentScale?: number
+  private _contentBasePosition?: AcGePoint3d
+  private _textAnchor?: AcGePoint3d
+  private _textLineSpacingStyle?: number
+  private _textBackgroundColor?: number
+  private _textBackgroundScaleFactor?: number
+  private _textBackgroundTransparency?: number
+  private _textBackgroundColorOn?: boolean
+  private _textFillOn?: boolean
+  private _textColumnType?: number
+  private _textUseAutoHeight?: boolean
+  private _textColumnWidth?: number
+  private _textColumnGutterWidth?: number
+  private _textColumnFlowReversed?: boolean
+  private _textColumnHeight?: number
+  private _textUseWordBreak?: boolean
+  private _hasMText?: boolean
+  private _hasBlock?: boolean
+  private _planeOrigin?: AcGePoint3d
+  private _planeXAxisDirection?: AcGeVector3d
+  private _planeYAxisDirection?: AcGeVector3d
+  private _planeNormalReversed?: boolean
+  /**
+   * Creates an empty multileader entity with default style-related state.
+   */
   constructor() {
     super()
     this._leaders = []
@@ -277,17 +320,29 @@ export class AcDbMLeader extends AcDbEntity {
     this._textLineSpacingFactor = 1
     this._textAttachmentDirection =
       AcDbMLeaderTextAttachmentDirection.Horizontal
-    this.arrowheadOverrides = []
-    this.blockAttributes = []
+    this._arrowheadOverrides = []
+    this._blockAttributes = []
   }
+
+  /**
+   * Gets a deep-cloned collection of all leader branches.
+   */
 
   get leaders() {
     return this._leaders.map(leader => this.cloneLeader(leader))
   }
 
+  /**
+   * Gets the current number of leader branches.
+   */
+
   get numberOfLeaders() {
     return this._leaders.length
   }
+
+  /**
+   * Gets the leader line type.
+   */
 
   get leaderLineType() {
     return this._leaderLineType
@@ -296,12 +351,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._leaderLineType = value
   }
 
+  /**
+   * Gets the content type.
+   */
+
   get contentType() {
     return this._contentType
   }
   set contentType(value: AcDbMLeaderContentType) {
     this._contentType = value
   }
+
+  /**
+   * Gets the dogleg enabled.
+   */
 
   get doglegEnabled() {
     return this._doglegEnabled
@@ -310,12 +373,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._doglegEnabled = value
   }
 
+  /**
+   * Gets the dogleg length.
+   */
+
   get doglegLength() {
     return this._doglegLength
   }
   set doglegLength(value: number) {
     this._doglegLength = value
   }
+
+  /**
+   * Gets the dogleg vector.
+   */
 
   get doglegVector() {
     return this._doglegVector
@@ -324,12 +395,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._doglegVector.copy(value)
   }
 
+  /**
+   * Gets the landing point.
+   */
+
   get landingPoint() {
     return this._landingPoint
   }
   set landingPoint(value: AcGePoint3dLike | undefined) {
     this._landingPoint = value ? this.createPoint(value) : undefined
   }
+
+  /**
+   * Gets the normal.
+   */
 
   get normal() {
     return this._normal
@@ -338,6 +417,10 @@ export class AcDbMLeader extends AcDbEntity {
     this._normal.copy(value)
   }
 
+  /**
+   * Gets the mleader style id.
+   */
+
   get mleaderStyleId() {
     return this._mleaderStyleId
   }
@@ -345,13 +428,566 @@ export class AcDbMLeader extends AcDbEntity {
     this._mleaderStyleId = value
   }
 
+  /**
+   * Gets or sets the serialized MLeader version code.
+   *
+   * This value mirrors DXF/internal version metadata and is used to keep
+   * compatibility with files saved from different AutoCAD generations.
+   */
+  get version() {
+    return this._version
+  }
+  set version(value: number | undefined) {
+    this._version = value
+  }
+
+  /**
+   * Gets or sets the MLeader style handle override stored on the entity.
+   *
+   * When provided, this value is typically used as a fallback in addition to
+   * `mleaderStyleId` during style resolution.
+   */
+  get leaderStyleId() {
+    return this._leaderStyleId
+  }
+  set leaderStyleId(value: string | undefined) {
+    this._leaderStyleId = value
+  }
+
+  /**
+   * Gets or sets the property-override bit flag.
+   *
+   * The flag indicates which visual/behavioral properties are overridden at the
+   * entity level instead of inherited from the referenced MLeader style.
+   */
+  get propertyOverrideFlag() {
+    return this._propertyOverrideFlag
+  }
+  set propertyOverrideFlag(value: number | undefined) {
+    this._propertyOverrideFlag = value
+  }
+
+  /**
+   * Gets or sets the explicit leader line color override.
+   */
+  get leaderLineColor() {
+    return this._leaderLineColor
+  }
+  set leaderLineColor(value: number | undefined) {
+    this._leaderLineColor = value
+  }
+
+  /**
+   * Gets or sets the leader line type handle override.
+   */
+  get leaderLineTypeId() {
+    return this._leaderLineTypeId
+  }
+  set leaderLineTypeId(value: string | undefined) {
+    this._leaderLineTypeId = value
+  }
+
+  /**
+   * Gets or sets the lineweight override for leader segments.
+   */
+  get leaderLineWeight() {
+    return this._leaderLineWeight
+  }
+  set leaderLineWeight(value: number | undefined) {
+    this._leaderLineWeight = value
+  }
+
+  /**
+   * Gets or sets whether leader landings are enabled.
+   */
+  get landingEnabled() {
+    return this._landingEnabled
+  }
+  set landingEnabled(value: boolean | undefined) {
+    this._landingEnabled = value
+  }
+
+  /**
+   * Gets or sets the arrowhead block handle/name override.
+   */
+  get arrowheadId() {
+    return this._arrowheadId
+  }
+  set arrowheadId(value: string | undefined) {
+    this._arrowheadId = value
+  }
+
+  /**
+   * Gets or sets the arrowhead size override in drawing units.
+   */
+  get arrowheadSize() {
+    return this._arrowheadSize
+  }
+  set arrowheadSize(value: number | undefined) {
+    this._arrowheadSize = value
+  }
+
+  /**
+   * Gets or sets the text style handle override for MText content.
+   */
+  get textStyleId() {
+    return this._textStyleId
+  }
+  set textStyleId(value: string | undefined) {
+    this._textStyleId = value
+  }
+
+  /**
+   * Gets or sets left-side text attachment behavior code.
+   */
+  get textLeftAttachmentType() {
+    return this._textLeftAttachmentType
+  }
+  set textLeftAttachmentType(value: number | undefined) {
+    this._textLeftAttachmentType = value
+  }
+
+  /**
+   * Gets or sets right-side text attachment behavior code.
+   */
+  get textRightAttachmentType() {
+    return this._textRightAttachmentType
+  }
+  set textRightAttachmentType(value: number | undefined) {
+    this._textRightAttachmentType = value
+  }
+
+  /**
+   * Gets or sets the text angle type code controlling rotation strategy.
+   */
+  get textAngleType() {
+    return this._textAngleType
+  }
+  set textAngleType(value: number | undefined) {
+    this._textAngleType = value
+  }
+
+  /**
+   * Gets or sets the text alignment type code.
+   */
+  get textAlignmentType() {
+    return this._textAlignmentType
+  }
+  set textAlignmentType(value: number | undefined) {
+    this._textAlignmentType = value
+  }
+
+  /**
+   * Gets or sets the MText color override.
+   */
+  get textColor() {
+    return this._textColor
+  }
+  set textColor(value: number | undefined) {
+    this._textColor = value
+  }
+
+  /**
+   * Gets or sets whether a text frame (border) is enabled.
+   */
+  get textFrameEnabled() {
+    return this._textFrameEnabled
+  }
+  set textFrameEnabled(value: boolean | undefined) {
+    this._textFrameEnabled = value
+  }
+
+  /**
+   * Gets or sets the gap distance between landing and annotation content.
+   */
+  get landingGap() {
+    return this._landingGap
+  }
+  set landingGap(value: number | undefined) {
+    this._landingGap = value
+  }
+
+  /**
+   * Gets or sets the legacy text attachment value used in some DXF variants.
+   */
+  get textAttachment() {
+    return this._textAttachment
+  }
+  set textAttachment(value: number | undefined) {
+    this._textAttachment = value
+  }
+
+  /**
+   * Gets or sets the text flow direction override code.
+   */
+  get textFlowDirection() {
+    return this._textFlowDirection
+  }
+  set textFlowDirection(value: number | undefined) {
+    this._textFlowDirection = value
+  }
+
+  /**
+   * Gets or sets the referenced block content id/handle for block-based content.
+   */
+  get blockContentId() {
+    return this._blockContentId
+  }
+  set blockContentId(value: string | undefined) {
+    this._blockContentId = value
+  }
+
+  /**
+   * Gets or sets the block content color override.
+   */
+  get blockContentColor() {
+    return this._blockContentColor
+  }
+  set blockContentColor(value: number | undefined) {
+    this._blockContentColor = value
+  }
+
+  /**
+   * Gets or sets the block content scale vector override.
+   */
+  get blockContentScale() {
+    return this._blockContentScale
+  }
+  set blockContentScale(value: AcGeVector3d | undefined) {
+    this._blockContentScale = value
+  }
+
+  /**
+   * Gets or sets the block content rotation override in radians.
+   */
+  get blockContentRotation() {
+    return this._blockContentRotation
+  }
+  set blockContentRotation(value: number | undefined) {
+    this._blockContentRotation = value
+  }
+
+  /**
+   * Gets or sets the block content connection type code.
+   */
+  get blockContentConnectionType() {
+    return this._blockContentConnectionType
+  }
+  set blockContentConnectionType(value: number | undefined) {
+    this._blockContentConnectionType = value
+  }
+
+  /**
+   * Gets or sets whether annotative scaling is enabled for this entity.
+   */
+  get annotativeScaleEnabled() {
+    return this._annotativeScaleEnabled
+  }
+  set annotativeScaleEnabled(value: boolean | undefined) {
+    this._annotativeScaleEnabled = value
+  }
+
+  /**
+   * Gets or sets per-index arrowhead overrides.
+   *
+   * Each entry maps a branch/line index to a specific arrowhead handle.
+   */
+  get arrowheadOverrides() {
+    return this._arrowheadOverrides
+  }
+  set arrowheadOverrides(value: AcDbMLeaderIndexedHandle[]) {
+    this._arrowheadOverrides = value
+  }
+
+  /**
+   * Gets or sets block attribute override values used by block content.
+   */
+  get blockAttributes() {
+    return this._blockAttributes
+  }
+  set blockAttributes(value: AcDbMLeaderBlockAttribute[]) {
+    this._blockAttributes = value
+  }
+
+  /**
+   * Gets or sets whether text direction is treated as negative.
+   */
+  get textDirectionNegative() {
+    return this._textDirectionNegative
+  }
+  set textDirectionNegative(value: boolean | undefined) {
+    this._textDirectionNegative = value
+  }
+
+  /**
+   * Gets or sets the in-place editor text alignment code.
+   */
+  get textAlignInIPE() {
+    return this._textAlignInIPE
+  }
+  set textAlignInIPE(value: number | undefined) {
+    this._textAlignInIPE = value
+  }
+
+  /**
+   * Gets or sets bottom attachment direction code for vertical text behavior.
+   */
+  get bottomTextAttachmentDirection() {
+    return this._bottomTextAttachmentDirection
+  }
+  set bottomTextAttachmentDirection(value: number | undefined) {
+    this._bottomTextAttachmentDirection = value
+  }
+
+  /**
+   * Gets or sets top attachment direction code for vertical text behavior.
+   */
+  get topTextAttachmentDirection() {
+    return this._topTextAttachmentDirection
+  }
+  set topTextAttachmentDirection(value: number | undefined) {
+    this._topTextAttachmentDirection = value
+  }
+
+  /**
+   * Gets or sets the overall content scale override.
+   */
+  get contentScale() {
+    return this._contentScale
+  }
+  set contentScale(value: number | undefined) {
+    this._contentScale = value
+  }
+
+  /**
+   * Gets or sets the base insertion position of annotation content.
+   */
+  get contentBasePosition() {
+    return this._contentBasePosition
+  }
+  set contentBasePosition(value: AcGePoint3d | undefined) {
+    this._contentBasePosition = value
+  }
+
+  /**
+   * Gets or sets the explicit text anchor position.
+   */
+  get textAnchor() {
+    return this._textAnchor
+  }
+  set textAnchor(value: AcGePoint3d | undefined) {
+    this._textAnchor = value
+  }
+
+  /**
+   * Gets or sets the text line spacing style code for column/text layout.
+   */
+  get textLineSpacingStyle() {
+    return this._textLineSpacingStyle
+  }
+  set textLineSpacingStyle(value: number | undefined) {
+    this._textLineSpacingStyle = value
+  }
+
+  /**
+   * Gets or sets text background color override.
+   */
+  get textBackgroundColor() {
+    return this._textBackgroundColor
+  }
+  set textBackgroundColor(value: number | undefined) {
+    this._textBackgroundColor = value
+  }
+
+  /**
+   * Gets or sets background-mask scale factor around text.
+   */
+  get textBackgroundScaleFactor() {
+    return this._textBackgroundScaleFactor
+  }
+  set textBackgroundScaleFactor(value: number | undefined) {
+    this._textBackgroundScaleFactor = value
+  }
+
+  /**
+   * Gets or sets text background transparency value.
+   */
+  get textBackgroundTransparency() {
+    return this._textBackgroundTransparency
+  }
+  set textBackgroundTransparency(value: number | undefined) {
+    this._textBackgroundTransparency = value
+  }
+
+  /**
+   * Gets or sets whether explicit background color masking is enabled.
+   */
+  get textBackgroundColorOn() {
+    return this._textBackgroundColorOn
+  }
+  set textBackgroundColorOn(value: boolean | undefined) {
+    this._textBackgroundColorOn = value
+  }
+
+  /**
+   * Gets or sets whether text fill/mask is enabled.
+   */
+  get textFillOn() {
+    return this._textFillOn
+  }
+  set textFillOn(value: boolean | undefined) {
+    this._textFillOn = value
+  }
+
+  /**
+   * Gets or sets the text column layout type code.
+   */
+  get textColumnType() {
+    return this._textColumnType
+  }
+  set textColumnType(value: number | undefined) {
+    this._textColumnType = value
+  }
+
+  /**
+   * Gets or sets whether text column height is auto-managed.
+   */
+  get textUseAutoHeight() {
+    return this._textUseAutoHeight
+  }
+  set textUseAutoHeight(value: boolean | undefined) {
+    this._textUseAutoHeight = value
+  }
+
+  /**
+   * Gets or sets the fixed width for text columns.
+   */
+  get textColumnWidth() {
+    return this._textColumnWidth
+  }
+  set textColumnWidth(value: number | undefined) {
+    this._textColumnWidth = value
+  }
+
+  /**
+   * Gets or sets the gutter width between text columns.
+   */
+  get textColumnGutterWidth() {
+    return this._textColumnGutterWidth
+  }
+  set textColumnGutterWidth(value: number | undefined) {
+    this._textColumnGutterWidth = value
+  }
+
+  /**
+   * Gets or sets whether text columns flow in reverse order.
+   */
+  get textColumnFlowReversed() {
+    return this._textColumnFlowReversed
+  }
+  set textColumnFlowReversed(value: boolean | undefined) {
+    this._textColumnFlowReversed = value
+  }
+
+  /**
+   * Gets or sets the explicit text column height.
+   */
+  get textColumnHeight() {
+    return this._textColumnHeight
+  }
+  set textColumnHeight(value: number | undefined) {
+    this._textColumnHeight = value
+  }
+
+  /**
+   * Gets or sets whether word breaking is enabled in column layout.
+   */
+  get textUseWordBreak() {
+    return this._textUseWordBreak
+  }
+  set textUseWordBreak(value: boolean | undefined) {
+    this._textUseWordBreak = value
+  }
+
+  /**
+   * Gets or sets whether MText content exists in the serialized payload.
+   */
+  get hasMText() {
+    return this._hasMText
+  }
+  set hasMText(value: boolean | undefined) {
+    this._hasMText = value
+  }
+
+  /**
+   * Gets or sets whether block content exists in the serialized payload.
+   */
+  get hasBlock() {
+    return this._hasBlock
+  }
+  set hasBlock(value: boolean | undefined) {
+    this._hasBlock = value
+  }
+
+  /**
+   * Gets or sets the origin of the MLeader plane definition.
+   */
+  get planeOrigin() {
+    return this._planeOrigin
+  }
+  set planeOrigin(value: AcGePoint3d | undefined) {
+    this._planeOrigin = value
+  }
+
+  /**
+   * Gets or sets the X-axis direction vector of the MLeader plane.
+   */
+  get planeXAxisDirection() {
+    return this._planeXAxisDirection
+  }
+  set planeXAxisDirection(value: AcGeVector3d | undefined) {
+    this._planeXAxisDirection = value
+  }
+
+  /**
+   * Gets or sets the Y-axis direction vector of the MLeader plane.
+   */
+  get planeYAxisDirection() {
+    return this._planeYAxisDirection
+  }
+  set planeYAxisDirection(value: AcGeVector3d | undefined) {
+    this._planeYAxisDirection = value
+  }
+
+  /**
+   * Gets or sets whether the MLeader plane normal is reversed.
+   */
+  get planeNormalReversed() {
+    return this._planeNormalReversed
+  }
+  set planeNormalReversed(value: boolean | undefined) {
+    this._planeNormalReversed = value
+  }
+
+  /**
+   * Gets the alias of `leaders`.
+   */
+
   get leaderSections() {
     return this.leaders
   }
 
+  /**
+   * Gets the alias of `blockContent`.
+   */
+
   get blockContentData() {
     return this.blockContent
   }
+
+  /**
+   * Gets the MText content payload if present.
+   */
 
   get mtextContent() {
     return this._mtextContent
@@ -376,6 +1012,10 @@ export class AcDbMLeader extends AcDbEntity {
     this._contentType = AcDbMLeaderContentType.MTextContent
   }
 
+  /**
+   * Gets the displayed MText string content.
+   */
+
   get contents() {
     return this._mtextContent?.text ?? ''
   }
@@ -390,6 +1030,10 @@ export class AcDbMLeader extends AcDbEntity {
     }
     this._contentType = AcDbMLeaderContentType.MTextContent
   }
+
+  /**
+   * Gets the MText anchor point.
+   */
 
   get textLocation() {
     return this._mtextContent?.anchorPoint
@@ -410,12 +1054,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._contentType = AcDbMLeaderContentType.MTextContent
   }
 
+  /**
+   * Gets the text height.
+   */
+
   get textHeight() {
     return this._textHeight
   }
   set textHeight(value: number) {
     this._textHeight = value
   }
+
+  /**
+   * Gets the text width.
+   */
 
   get textWidth() {
     return this._textWidth
@@ -424,12 +1076,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._textWidth = value
   }
 
+  /**
+   * Gets the text rotation.
+   */
+
   get textRotation() {
     return this._textRotation
   }
   set textRotation(value: number) {
     this._textRotation = value
   }
+
+  /**
+   * Gets the text direction.
+   */
 
   get textDirection() {
     return this._textDirection
@@ -438,12 +1098,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._textDirection.copy(value)
   }
 
+  /**
+   * Gets the text style name.
+   */
+
   get textStyleName() {
     return this._textStyleName
   }
   set textStyleName(value: string) {
     this._textStyleName = value
   }
+
+  /**
+   * Gets the text attachment point.
+   */
 
   get textAttachmentPoint() {
     return this._textAttachmentPoint
@@ -452,12 +1120,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._textAttachmentPoint = value
   }
 
+  /**
+   * Gets the text drawing direction.
+   */
+
   get textDrawingDirection() {
     return this._textDrawingDirection
   }
   set textDrawingDirection(value: AcGiMTextFlowDirection) {
     this._textDrawingDirection = value
   }
+
+  /**
+   * Gets the text line spacing factor.
+   */
 
   get textLineSpacingFactor() {
     return this._textLineSpacingFactor
@@ -466,12 +1142,20 @@ export class AcDbMLeader extends AcDbEntity {
     this._textLineSpacingFactor = value
   }
 
+  /**
+   * Gets the text attachment direction.
+   */
+
   get textAttachmentDirection() {
     return this._textAttachmentDirection
   }
   set textAttachmentDirection(value: AcDbMLeaderTextAttachmentDirection) {
     this._textAttachmentDirection = value
   }
+
+  /**
+   * Gets the block content.
+   */
 
   get blockContent() {
     return this._blockContent
@@ -592,12 +1276,28 @@ export class AcDbMLeader extends AcDbEntity {
     return this
   }
 
+  /**
+   * Gets cloned vertices from the specified leader line.
+   *
+   * @param leaderIndex Index of the leader branch.
+   * @param leaderLineIndex Index of the leader line in the branch.
+   * @returns A cloned vertex list so callers cannot mutate internal state.
+   */
   getLeaderLineVertices(leaderIndex: number, leaderLineIndex: number) {
     return this.getMutableLeaderLine(leaderIndex, leaderLineIndex).vertices.map(
       point => point.clone()
     )
   }
 
+  /**
+   * Adds a break segment to a specific leader line.
+   *
+   * @param leaderIndex Index of the leader branch.
+   * @param leaderLineIndex Index of the leader line.
+   * @param start Break start point.
+   * @param end Break end point.
+   * @returns The current entity instance for chaining.
+   */
   addBreak(
     leaderIndex: number,
     leaderLineIndex: number,
@@ -611,6 +1311,13 @@ export class AcDbMLeader extends AcDbEntity {
     return this
   }
 
+  /**
+   * Sets the landing point for one leader branch.
+   *
+   * @param leaderIndex Index of the leader branch.
+   * @param point New landing point, or `undefined` to clear it.
+   * @returns The current entity instance for chaining.
+   */
   setLandingPoint(leaderIndex: number, point: AcGePoint3dLike | undefined) {
     this.checkLeaderIndex(leaderIndex)
     this._leaders[leaderIndex].landingPoint = point
@@ -619,17 +1326,35 @@ export class AcDbMLeader extends AcDbEntity {
     return this
   }
 
+  /**
+   * Sets the dogleg direction for one leader branch.
+   *
+   * @param leaderIndex Index of the leader branch.
+   * @param vector New dogleg direction vector.
+   * @returns The current entity instance for chaining.
+   */
   setDoglegDirection(leaderIndex: number, vector: AcGeVector3dLike) {
     this.checkLeaderIndex(leaderIndex)
     this._leaders[leaderIndex].doglegVector = new AcGeVector3d(vector)
     return this
   }
 
+  /**
+   * Sets the dogleg length for one leader branch.
+   *
+   * @param leaderIndex Index of the leader branch.
+   * @param length New dogleg length, or `undefined` to clear the override.
+   * @returns The current entity instance for chaining.
+   */
   setDoglegLength(leaderIndex: number, length: number | undefined) {
     this.checkLeaderIndex(leaderIndex)
     this._leaders[leaderIndex].doglegLength = length
     return this
   }
+
+  /**
+   * Gets the axis-aligned extents computed from all geometry points.
+   */
 
   get geometricExtents() {
     const points = this.collectGeometryPoints()
@@ -638,10 +1363,21 @@ export class AcDbMLeader extends AcDbEntity {
       : new AcGeBox3d()
   }
 
+  /**
+   * Gets grip points used for interactive editing.
+   *
+   * @returns Cloned grip points derived from renderable geometry.
+   */
   subGetGripPoints() {
     return this.collectGeometryPoints().map(point => point.clone())
   }
 
+  /**
+   * Applies a transformation matrix to this entity.
+   *
+   * @param matrix Transformation matrix applied to all geometry and vectors.
+   * @returns The current entity instance for chaining.
+   */
   transformBy(matrix: AcGeMatrix3d) {
     this._leaders.forEach(leader => {
       leader.lastLeaderLinePoint?.applyMatrix4(matrix)
@@ -839,7 +1575,12 @@ export class AcDbMLeader extends AcDbEntity {
       ]
     }
   }
-
+  /**
+   * Builds renderable primitives for this multileader entity.
+   *
+   * @param renderer Graphics renderer used to create draw entities.
+   * @returns A single entity, an entity group, or undefined when nothing is drawable.
+   */
   subWorldDraw(
     renderer: AcGiRenderer
   ): AcGiEntity | undefined {
@@ -849,11 +1590,8 @@ export class AcDbMLeader extends AcDbEntity {
         leader.leaderLines.forEach(line => {
           const points = this.getLeaderLineDrawPoints(leader, line)
           if (points.length > 0) {
-            entities.push(renderer.lines(points))
-            const arrowPoints = this.getArrowheadPoints(points)
-            if (arrowPoints) {
-              entities.push(renderer.lines(arrowPoints))
-            }
+            const leaderEntity = this.drawLeaderLine(renderer, points)
+            if (leaderEntity) entities.push(leaderEntity)
           }
         })
         const doglegPoints = this.getDoglegPoints(leader)
@@ -863,15 +1601,14 @@ export class AcDbMLeader extends AcDbEntity {
       })
     }
 
-    if (
-      this.contentType === AcDbMLeaderContentType.MTextContent &&
-      this._mtextContent
-    ) {
+    const mtextContent = this.getRenderableMTextContent()
+    if (this.contentType === AcDbMLeaderContentType.MTextContent && mtextContent) {
+      const textHeight = this.getResolvedTextHeight()
       const mtextData: AcGiMTextData = {
-        text: this._mtextContent.text,
-        height: this.textHeight,
-        width: this.getMTextRenderWidth(),
-        position: this._mtextContent.anchorPoint,
+        text: mtextContent.text,
+        height: textHeight,
+        width: this.getMTextRenderWidth(mtextContent.text, textHeight),
+        position: mtextContent.anchorPoint,
         rotation: this.textRotation,
         directionVector: this.textDirection,
         attachmentPoint: this.textAttachmentPoint,
@@ -888,10 +1625,10 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
-   * Writes a compact MULTILEADER representation for DXF export.
+   * Writes this multileader entity to DXF group codes.
    *
-   * The data model keeps the full leader graph for consumers even though DXF's
-   * native MULTILEADER encoding is much more verbose than most entities.
+   * @param filer DXF filer that receives serialized values.
+   * @returns The current entity instance for chaining.
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
@@ -935,10 +1672,22 @@ export class AcDbMLeader extends AcDbEntity {
     return this
   }
 
+  /**
+   * Creates a concrete point from point-like input.
+   *
+   * @param point Source point-like value.
+   * @returns A newly created point instance.
+   */
   private createPoint(point: AcGePoint3dLike) {
     return new AcGePoint3d().copy(point)
   }
 
+  /**
+   * Normalizes one leader-line payload into internal storage format.
+   *
+   * @param line Source leader-line payload.
+   * @returns A normalized leader line.
+   */
   private createLeaderLine(line: AcDbMLeaderLineLike): AcDbMLeaderLine {
     return {
       vertices: line.vertices?.map(point => this.createPoint(point)) ?? [],
@@ -955,6 +1704,12 @@ export class AcDbMLeader extends AcDbEntity {
     }
   }
 
+  /**
+   * Creates a deep clone of a leader branch.
+   *
+   * @param leader Leader branch to clone.
+   * @returns A deep-cloned leader branch.
+   */
   private cloneLeader(leader: AcDbMLeaderLeader): AcDbMLeaderLeader {
     return {
       lastLeaderLinePoint: leader.lastLeaderLinePoint?.clone(),
@@ -983,12 +1738,24 @@ export class AcDbMLeader extends AcDbEntity {
     }
   }
 
+  /**
+   * Validates that a leader index is in range.
+   *
+   * @param leaderIndex Leader branch index to validate.
+   */
   private checkLeaderIndex(leaderIndex: number) {
     if (leaderIndex < 0 || leaderIndex >= this._leaders.length) {
       throw new Error('The leader index is out of range!')
     }
   }
 
+  /**
+   * Gets a mutable leader line by branch and line index.
+   *
+   * @param leaderIndex Leader branch index.
+   * @param leaderLineIndex Leader-line index in the branch.
+   * @returns The mutable leader line reference.
+   */
   private getMutableLeaderLine(
     leaderIndex: number,
     leaderLineIndex: number
@@ -1001,6 +1768,11 @@ export class AcDbMLeader extends AcDbEntity {
     return line
   }
 
+  /**
+   * Collects all geometry points contributing to draw/extents calculations.
+   *
+   * @returns Geometry point collection.
+   */
   private collectGeometryPoints() {
     const points: AcGePoint3d[] = []
     this._leaders.forEach(leader => {
@@ -1029,6 +1801,13 @@ export class AcDbMLeader extends AcDbEntity {
     return points
   }
 
+  /**
+   * Resolves the final draw points for a leader line.
+   *
+   * @param leader Owning leader branch.
+   * @param line Leader line to resolve.
+   * @returns The resolved draw-point sequence.
+   */
   private getLeaderLineDrawPoints(
     leader: AcDbMLeaderLeader,
     line: AcDbMLeaderLine
@@ -1045,6 +1824,12 @@ export class AcDbMLeader extends AcDbEntity {
     return [line.vertices[0], end]
   }
 
+  /**
+   * Computes the dogleg segment points for a leader branch.
+   *
+   * @param leader Leader branch to evaluate.
+   * @returns Dogleg segment points, or `undefined` if not applicable.
+   */
   private getDoglegPoints(leader: AcDbMLeaderLeader) {
     if (!this.doglegEnabled) return undefined
     const start =
@@ -1062,6 +1847,12 @@ export class AcDbMLeader extends AcDbEntity {
     return [start, end]
   }
 
+  /**
+   * Gets the last available vertex from all lines in one leader branch.
+   *
+   * @param leader Leader branch to inspect.
+   * @returns The last vertex, or `undefined` when no vertices exist.
+   */
   private getLastLeaderLineVertex(leader: AcDbMLeaderLeader) {
     for (let i = leader.leaderLines.length - 1; i >= 0; i--) {
       const line = leader.leaderLines[i]
@@ -1072,18 +1863,20 @@ export class AcDbMLeader extends AcDbEntity {
     return undefined
   }
 
+  /**
+   * Builds arrowhead polyline points from leader-line points.
+   *
+   * @param points Leader-line points where the first point is treated as tip.
+   * @returns Arrowhead points, or `undefined` when no arrowhead is drawable.
+   */
   private getArrowheadPoints(points: AcGePoint3d[]) {
     if (!this.isArrowheadVisible() || points.length < 2) return undefined
 
-    const tip = points[0]
-    const next = points.find(point => !point.equals(tip))
-    if (!next) return undefined
+    const frame = this.getArrowheadFrame(points)
+    if (!frame) return undefined
 
-    const direction = new AcGeVector3d().subVectors(next, tip)
-    if (direction.lengthSq() === 0) return undefined
-
-    const size = this.getArrowheadSize()
-    const unit = direction.normalize()
+    const size = this.getResolvedArrowheadSize()
+    const { tip, unit } = frame
     const baseCenter = tip.clone().add(unit.clone().multiplyScalar(size))
     const halfWidth = size / 6
     const perpendicular = new AcGeVector3d(-unit.y, unit.x, 0)
@@ -1097,20 +1890,187 @@ export class AcDbMLeader extends AcDbEntity {
     return [tip, left, right, tip]
   }
 
+  /**
+   * Checks whether an arrowhead should be rendered.
+   *
+   * @returns `true` if arrowhead configuration is visible.
+   */
   private isArrowheadVisible() {
-    if (this.arrowheadId === '_NONE') return false
-    return this.getArrowheadSize() > 0
+    const arrowId = this.getResolvedArrowheadId()
+    if (arrowId?.toUpperCase() === '_NONE') return false
+    return this.getResolvedArrowheadSize() > 0
   }
 
-  private getArrowheadSize() {
-    return this.arrowheadSize ?? this.contentScale ?? this.textHeight
+  /**
+   * Draws one leader line and applies arrow style from MLEADER/MLEADERSTYLE.
+   */
+  private drawLeaderLine(renderer: AcGiRenderer, points: AcGePoint3d[]) {
+    const entities: AcGiEntity[] = [renderer.lines(points)]
+    const arrow = this.drawArrowhead(renderer, points)
+    if (arrow) entities.push(arrow)
+    return entities.length === 1 ? entities[0] : renderer.group(entities)
   }
 
-  private getMTextRenderWidth() {
+  /**
+   * Draws one arrowhead primitive from leader-line points.
+   */
+  private drawArrowhead(renderer: AcGiRenderer, points: AcGePoint3d[]) {
+    if (!this.isArrowheadVisible()) return undefined
+
+    const blockArrow = this.drawArrowheadBlock(renderer, points)
+    if (blockArrow) return blockArrow
+
+    const arrowPoints = this.getArrowheadPoints(points)
+    if (!arrowPoints) return undefined
+
+    const area = new AcGeArea2d()
+    area.add(new AcGePolyline2d(arrowPoints, true))
+    const traits = renderer.subEntityTraits
+    const originalFillType = traits.fillType
+    traits.fillType = {
+      solidFill: true,
+      patternAngle: 0,
+      definitionLines: []
+    }
+    const entity = renderer.area(area)
+    traits.fillType = originalFillType
+    return entity
+  }
+
+  /**
+   * Draws arrowhead by rendering entities from referenced arrow block record.
+   */
+  private drawArrowheadBlock(renderer: AcGiRenderer, points: AcGePoint3d[]) {
+    const blockTableRecord = this.getResolvedArrowheadBlockTableRecord()
+    if (!blockTableRecord) return undefined
+
+    const frame = this.getArrowheadFrame(points)
+    if (!frame) return undefined
+
+    const { tip, unit } = frame
+    const size = this.getResolvedArrowheadSize()
+    const angle = Math.atan2(unit.y, unit.x)
+    const basePoint = blockTableRecord.origin ?? AcGePoint3d.ORIGIN
+
+    const mBase = new AcGeMatrix3d().makeTranslation(
+      -basePoint.x,
+      -basePoint.y,
+      -basePoint.z
+    )
+    const mScale = new AcGeMatrix3d().makeScale(size, size, size)
+    const mRot = new AcGeMatrix3d().makeRotationZ(angle)
+    const mInsert = new AcGeMatrix3d().makeTranslation(tip.x, tip.y, tip.z)
+    const transform = new AcGeMatrix3d()
+      .multiplyMatrices(mInsert, mRot)
+      .multiply(mScale)
+      .multiply(mBase)
+
+    return AcDbRenderingCache.instance.draw(
+      renderer,
+      blockTableRecord,
+      this.rgbColor,
+      [],
+      true,
+      transform,
+      new AcGeVector3d(this.normal)
+    )
+  }
+
+  /**
+   * Resolves tip point and direction for arrowhead placement.
+   */
+  private getArrowheadFrame(points: AcGePoint3d[]) {
+    if (points.length < 2) return undefined
+
+    const tip = points[0]
+    const next = points.find(point => !point.equals(tip))
+    if (!next) return undefined
+
+    const direction = new AcGeVector3d().subVectors(next, tip)
+    if (direction.lengthSq() === 0) return undefined
+
+    return {
+      tip,
+      unit: direction.normalize()
+    }
+  }
+
+  /**
+   * Resolves the effective arrowhead id.
+   *
+   * @returns Arrowhead id used for rendering.
+   */
+  private getResolvedArrowheadId() {
+    const styleArrowId = this.getMLeaderStyle()?.arrowSymbolId
+    return this.arrowheadId ?? styleArrowId
+  }
+
+  /**
+   * Resolves arrowhead block record by Arrowhead ID handle.
+   */
+  private getResolvedArrowheadBlockTableRecord() {
+    const arrowId = this.getResolvedArrowheadId()
+    if (!arrowId) return undefined
+    return this.database.tables.blockTable.getIdAt(arrowId)
+  }
+
+  /**
+   * Resolves the effective arrowhead size.
+   *
+   * @returns Arrowhead size used for rendering.
+   */
+  private getResolvedArrowheadSize() {
+    const style = this.getMLeaderStyle()
+    const styleArrowSize = style?.arrowSize ?? style?.scale
+    return (
+      this.arrowheadSize ??
+      this.contentScale ??
+      styleArrowSize ??
+      this.getResolvedTextHeight()
+    )
+  }
+
+  /**
+   * Resolves effective text height by style and override-flag rules.
+   */
+  private getResolvedTextHeight() {
+    const styleTextHeight = this.getMLeaderStyle()?.textHeight
+    if (this.textHeight > 0) return this.textHeight
+    if (styleTextHeight != null && styleTextHeight > 0) return styleTextHeight
+    return 2.5
+  }
+
+  /**
+   * Resolves renderable MText content using entity content first, with style fallback.
+   */
+  private getRenderableMTextContent() {
+    if (this._mtextContent) {
+      return {
+        text: this._mtextContent.text,
+        anchorPoint: this._mtextContent.anchorPoint
+      }
+    }
+
+    const defaultText = this.getMLeaderStyle()?.defaultMTextContents
+    const anchorPoint =
+      this.textAnchor ?? this.contentBasePosition ?? this._landingPoint
+    if (!defaultText || !anchorPoint) return undefined
+    return {
+      text: defaultText,
+      anchorPoint
+    }
+  }
+
+  /**
+   * Computes render width for current MText content.
+   *
+   * @returns Explicit width or an estimated width based on plain text length.
+   */
+  private getMTextRenderWidth(text: string, textHeight: number) {
     if (this._textWidth > 0) return this._textWidth
-    if (!this._mtextContent) return this._textWidth
+    if (!text) return this._textWidth
 
-    const plainText = this._mtextContent.text
+    const plainText = text
       .replace(/\\[PpNn]/g, '\n')
       .replace(/\\[A-Za-z][^;]*;/g, '')
       .replace(/[{}]/g, '')
@@ -1118,9 +2078,15 @@ export class AcDbMLeader extends AcDbEntity {
       ...plainText.split(/\r\n|\r|\n/g).map(line => line.length),
       1
     )
-    return Math.max(this._textHeight, longestLineLength * this._textHeight)
+    return Math.max(textHeight, longestLineLength * textHeight)
   }
 
+  /**
+   * Transforms a direction vector with an affine matrix.
+   *
+   * @param vector Vector to mutate.
+   * @param matrix Transformation matrix.
+   */
   private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {
     const origin = new AcGePoint3d()
     const endpoint = new AcGePoint3d(vector.x, vector.y, vector.z)
@@ -1133,10 +2099,49 @@ export class AcDbMLeader extends AcDbEntity {
     )
   }
 
+  /**
+   * Resolves the referenced MLeader style object.
+   */
+  private getMLeaderStyle(): AcDbMLeaderStyle | undefined {
+    const dictionary = this.database.objects.mleaderStyle
+    const styleId = this.mleaderStyleId || this.leaderStyleId
+    if (styleId) {
+      const style = dictionary.getIdAt(styleId)
+      if (style) return style
+    }
+    return dictionary.newIterator().toArray()[0]
+  }
+
+  /**
+   * Resolves text style name considering entity values, ids and style fallback.
+   */
+  private getResolvedTextStyleName() {
+    const textStyleTable = this.database.tables.textStyleTable
+    const styleIdFromStyle = this.getMLeaderStyle()?.textStyleId
+    const styleNameFromStyleId = styleIdFromStyle
+      ? textStyleTable.getIdAt(styleIdFromStyle)?.name
+      : undefined
+
+    if (this.textStyleName) return this.textStyleName
+
+    const directStyle = this.textStyleId
+      ? textStyleTable.getIdAt(this.textStyleId)
+      : undefined
+    if (directStyle?.name) return directStyle.name
+
+    return styleNameFromStyleId
+  }
+
+  /**
+   * Resolves the text style used by renderer-side MText drawing.
+   *
+   * @returns A valid text style object.
+   */
   private getTextStyle(): AcGiTextStyle {
     const textStyleTable = this.database.tables.textStyleTable
+    const textStyleName = this.getResolvedTextStyleName()
     const style =
-      textStyleTable.getAt(this.textStyleName) ??
+      (textStyleName ? textStyleTable.getAt(textStyleName) : undefined) ??
       textStyleTable.getAt(this.database.textstyle) ??
       textStyleTable.getAt(DEFAULT_TEXT_STYLE)
 
@@ -1146,3 +2151,5 @@ export class AcDbMLeader extends AcDbEntity {
     return style.textStyle
   }
 }
+
+

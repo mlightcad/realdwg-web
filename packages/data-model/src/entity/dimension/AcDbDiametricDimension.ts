@@ -4,15 +4,9 @@ import {
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
-import {
-  AcGiEntity,
-  AcGiLineArrowStyle,
-  AcGiRenderer
-} from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../../base'
 import { AcDbEntityProperties } from '../AcDbEntityProperties'
-import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -229,93 +223,6 @@ export class AcDbDiametricDimension extends AcDbDimension {
   get geometricExtents() {
     // TODO: Finish it
     return new AcGeBox3d()
-  }
-
-  /**
-   * Draws the dimension lines with appropriate arrow styles.
-   *
-   * This method handles the rendering of dimension lines based on the number of
-   * line segments. It applies different arrow styles to the first and last lines
-   * when appropriate, and sorts the lines for proper visual representation.
-   *
-   * @param renderer - The graphics renderer used to draw the dimension lines
-   * @param lines - Array of line entities that make up the dimension
-   * @returns Array of rendered graphics entities
-   * @protected
-   */
-  protected drawLines(renderer: AcGiRenderer, lines: AcDbLine[]) {
-    const results: AcGiEntity[] = []
-    const count = lines.length
-    if (count == 1) {
-      results.push(
-        this.drawLine(renderer, lines[0], {
-          firstArrow: this.firstArrowStyle
-        })
-      )
-    } else if (count == 3) {
-      this.sortLines(lines)
-      results.push(
-        this.drawLine(renderer, lines[0], {
-          firstArrow: this.firstArrowStyle
-        })
-      )
-      results.push(this.drawLine(renderer, lines[1]))
-      results.push(
-        this.drawLine(renderer, lines[2], {
-          firstArrow: this.firstArrowStyle
-        })
-      )
-    } else {
-      lines.forEach(line => {
-        results.push(this.drawLine(renderer, line))
-      })
-    }
-    return results
-  }
-
-  /**
-   * Draws a single line with optional arrow styling.
-   *
-   * @param renderer - The graphics renderer used to draw the line
-   * @param line - The line entity to draw
-   * @param lineArrowStyle - Optional arrow style configuration for the line
-   * @returns The rendered graphics entity
-   */
-  private drawLine(
-    renderer: AcGiRenderer,
-    line: AcDbLine,
-    lineArrowStyle?: AcGiLineArrowStyle
-  ) {
-    if (lineArrowStyle) {
-      const points = [line.startPoint, line.endPoint]
-      return renderer.lines(points)
-    } else {
-      return line.worldDraw(renderer)!
-    }
-  }
-
-  /**
-   * Sorts the dimension lines for proper visual representation.
-   *
-   * This method sorts the line segments based on their start and end points to ensure
-   * they are drawn in the correct order for proper dimension visualization.
-   *
-   * @param lines - Array of line entities to sort
-   */
-  private sortLines(lines: AcDbLine[]) {
-    // Function to compare positions of points
-    const comparePoints = (a: AcGePoint3d, b: AcGePoint3d): number => {
-      if (a.x !== b.x) return a.x - b.x
-      if (a.y !== b.y) return a.y - b.y
-      return a.z - b.z
-    }
-
-    // Sort segments based on the start points first, then end points
-    lines.sort((segA, segB) => {
-      const startCompare = comparePoints(segA.startPoint, segB.startPoint)
-      if (startCompare !== 0) return startCompare
-      return comparePoints(segA.endPoint, segB.endPoint)
-    })
   }
 
   /**
