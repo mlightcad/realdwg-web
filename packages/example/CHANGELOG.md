@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.28
+
+### Patch Changes
+
+- feat: add mline and mleader supports
+- Updated dependencies
+  - @mlightcad/data-model@1.7.28
+  - @mlightcad/libredwg-converter@3.5.28
+
 ## 0.1.27
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.28
+
+### Patch Changes
+
+- feat: add mline and mleader supports
+- Updated dependencies
+  - @mlightcad/common@1.4.28
+
 ## 3.2.27
 
 ### Patch Changes

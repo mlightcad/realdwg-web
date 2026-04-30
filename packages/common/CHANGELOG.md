@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.28
+
+### Patch Changes
+
+- feat: add mline and mleader supports
+
 ## 1.4.27
 
 ### Patch Changes

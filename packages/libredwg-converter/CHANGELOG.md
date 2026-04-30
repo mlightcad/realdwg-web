@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.28
+
+### Patch Changes
+
+- feat: add mline and mleader supports
+- Updated dependencies
+  - @mlightcad/data-model@1.7.28
+
 ## 3.5.27
 
 ### Patch Changes
