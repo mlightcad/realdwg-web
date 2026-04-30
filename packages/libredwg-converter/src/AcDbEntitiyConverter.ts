@@ -27,6 +27,8 @@ import {
   AcDbMLeader,
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
+  AcDbMLine,
+  AcDbMLineJustification,
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPoint,
@@ -89,6 +91,7 @@ import type {
   DwgLineEdge,
   DwgLineEntity,
   DwgLWPolylineEntity,
+  DwgMLineEntity,
   DwgMTextEntity,
   DwgOrdinateDimensionEntity,
   DwgPointEntity,
@@ -198,6 +201,8 @@ export class AcDbEntityConverter {
       return this.convertLine(entity as DwgLineEntity)
     } else if (entity.type == 'LWPOLYLINE') {
       return this.convertLWPolyline(entity as DwgLWPolylineEntity)
+    } else if (entity.type == 'MLINE') {
+      return this.convertMLine(entity as DwgMLineEntity)
     } else if (entity.type == 'MTEXT') {
       return this.convertMText(entity as DwgMTextEntity)
     } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
@@ -724,6 +729,33 @@ export class AcDbEntityConverter {
     dbEntity.dimensionStyle = leader.styleName
     dbEntity.annoType =
       leader.leaderCreationFlag as unknown as AcDbLeaderAnnotationType
+    return dbEntity
+  }
+
+  private convertMLine(mline: DwgMLineEntity) {
+    const dbEntity = new AcDbMLine()
+
+    dbEntity.styleName = mline.mlineStyle || 'STANDARD'
+    dbEntity.scale = mline.scale
+    dbEntity.flags = mline.flags
+    dbEntity.justification =
+      mline.justification as unknown as AcDbMLineJustification
+    dbEntity.startPosition = mline.startPoint
+    dbEntity.normal = mline.extrusionDirection ?? AcGeVector3d.Z_AXIS
+    dbEntity.styleCount = mline.numberOfLines ?? 0
+
+    dbEntity.segments = (mline.vertices ?? []).map(vertex => ({
+      position: vertex.vertex,
+      direction: vertex.vertexDirection,
+      miterDirection: vertex.miterDirection,
+      elements: (vertex.lines ?? []).map(line => ({
+        parameterCount: line.numberOfSegmentParams,
+        parameters: line.segmentParams ?? [],
+        fillCount: line.numberOfAreaFillParams,
+        fillParameters: line.areaFillParams ?? []
+      }))
+    }))
+
     return dbEntity
   }
 

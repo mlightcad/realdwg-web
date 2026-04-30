@@ -3,6 +3,7 @@ import {
   ImageDefDXFObject,
   LayoutDXFObject,
   MLeaderStyleDXFObject,
+  MLineStyleDXFObject,
   ParsedDxf
 } from '@mlightcad/dxf-json'
 
@@ -11,6 +12,7 @@ import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
 import {
   AcDbLayout,
   AcDbMLeaderStyle,
+  AcDbMlineStyle,
   AcDbPlotPaperUnits,
   AcDbPlotRotation,
   AcDbPlotShadePlotResLevel,
@@ -238,11 +240,13 @@ export class AcDbObjectConverter {
       dbObject.landingEnabled = style.landingEnabled
     }
     if (style.landingGap != null) dbObject.landingGap = style.landingGap
-    if (style.doglegEnabled != null) dbObject.doglegEnabled = style.doglegEnabled
+    if (style.doglegEnabled != null)
+      dbObject.doglegEnabled = style.doglegEnabled
     if (style.doglegLength != null) dbObject.doglegLength = style.doglegLength
     if (style.description != null) dbObject.description = style.description
     dbObject.arrowheadId = style.arrowheadId
-    if (style.arrowheadSize != null) dbObject.arrowheadSize = style.arrowheadSize
+    if (style.arrowheadSize != null)
+      dbObject.arrowheadSize = style.arrowheadSize
     if (style.defaultMTextContents != null) {
       dbObject.defaultMTextContents = style.defaultMTextContents
     }
@@ -250,7 +254,8 @@ export class AcDbObjectConverter {
     if (style.textLeftAttachmentType != null) {
       dbObject.textLeftAttachmentType = style.textLeftAttachmentType
     }
-    if (style.textAngleType != null) dbObject.textAngleType = style.textAngleType
+    if (style.textAngleType != null)
+      dbObject.textAngleType = style.textAngleType
     if (style.textAlignmentType != null) {
       dbObject.textAlignmentType = style.textAlignmentType
     }
@@ -299,12 +304,44 @@ export class AcDbObjectConverter {
       dbObject.textAttachmentDirection = style.textAttachmentDirection
     }
     if (style.bottomTextAttachmentDirection != null) {
-      dbObject.bottomTextAttachmentDirection = style.bottomTextAttachmentDirection
+      dbObject.bottomTextAttachmentDirection =
+        style.bottomTextAttachmentDirection
     }
     if (style.topTextAttachmentDirection != null) {
       dbObject.topTextAttachmentDirection = style.topTextAttachmentDirection
     }
     dbObject.unknown2 = style.unknown2
+    this.processCommonAttrs(style, dbObject)
+    return dbObject
+  }
+
+  /**
+   * Converts a DXF mline style object to an AcDbMlineStyle.
+   */
+  convertMLineStyle(style: MLineStyleDXFObject) {
+    const dbObject = new AcDbMlineStyle()
+    if (style.styleName != null) dbObject.styleName = style.styleName
+    if (style.flags != null) dbObject.flags = style.flags
+    if (style.description != null) dbObject.description = style.description
+    if (style.fillColor != null) dbObject.fillColor = style.fillColor
+    if (style.startAngle != null) dbObject.startAngle = style.startAngle
+    if (style.endAngle != null) dbObject.endAngle = style.endAngle
+
+    const elementCount = Math.max(
+      style.elementCount ?? 0,
+      style.elementOffsets?.length ?? 0,
+      style.elementColors?.length ?? 0,
+      style.elementLineTypes?.length ?? 0
+    )
+
+    if (elementCount > 0) {
+      dbObject.elements = Array.from({ length: elementCount }, (_, index) => ({
+        offset: style.elementOffsets?.[index] ?? 0,
+        color: style.elementColors?.[index] ?? 256,
+        lineType: style.elementLineTypes?.[index] ?? 'BYLAYER'
+      }))
+    }
+
     this.processCommonAttrs(style, dbObject)
     return dbObject
   }
