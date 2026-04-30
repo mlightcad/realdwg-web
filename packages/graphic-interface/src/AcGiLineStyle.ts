@@ -49,20 +49,6 @@ export interface AcGiArrowStyle {
 }
 
 /**
- * Interface to define arrow style of arrows at the start point and end point of one line
- */
-export interface AcGiLineArrowStyle {
-  /**
-   * Arrow style at the first point of the line. If it is undefined, no arrow style applied for this point.
-   */
-  firstArrow?: AcGiArrowStyle
-  /**
-   * Arrow style at the second point of the line. If it is undefined, no arrow style applied for this point.
-   */
-  secondArrow?: AcGiArrowStyle
-}
-
-/**
  * Line type
  */
 export interface AcGiBaseLineStyle {
@@ -103,9 +89,4 @@ export interface AcGiLineStyle extends AcGiBaseLineStyle {
    * - `UserSpecified`: The style is explicitly defined on the entity itself.
    */
   type: AcGiStyleType
-  /**
-   * Arrow style of arrows at the start point and end point of one line.
-   * If it is undefined, no arrow style applied at the start and end points.
-   */
-  arrows?: AcGiLineArrowStyle
 }

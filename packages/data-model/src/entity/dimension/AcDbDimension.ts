@@ -11,7 +11,6 @@ import {
 import {
   AcGiArrowStyle,
   AcGiArrowType,
-  AcGiLineArrowStyle,
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
@@ -28,7 +27,6 @@ import {
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
 } from '../AcDbEntityProperties'
-import { AcDbLine } from '../AcDbLine'
 
 /**
  * Defines the line spacing style for dimension text.
@@ -716,17 +714,6 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   protected get arrowLineCount() {
     return 1
-  }
-
-  /**
-   * Get line arrow style of the specified line according to its type (extension line or dimension
-   * line). Return undefined if no line arrow style applied.
-   * @param line Input line to get its line style
-   * @returns Return the line style of the specified line. Return undefined if no line arrow style applied.
-   */
-  // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
-  protected getLineArrowStyle(line: AcDbLine): AcGiLineArrowStyle | undefined {
-    return undefined
   }
 
   /**

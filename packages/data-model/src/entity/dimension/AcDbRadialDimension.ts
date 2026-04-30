@@ -4,11 +4,9 @@ import {
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
-import { AcGiLineArrowStyle } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../../base'
 import { AcDbEntityProperties } from '../AcDbEntityProperties'
-import { AcDbLine } from '../AcDbLine'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -327,15 +325,6 @@ export class AcDbRadialDimension extends AcDbDimension {
   get geometricExtents() {
     // TODO: Finish it
     return new AcGeBox3d()
-  }
-
-  /**
-   * @inheritdoc
-   */
-  protected getLineArrowStyle(_line: AcDbLine): AcGiLineArrowStyle | undefined {
-    return {
-      secondArrow: this.secondArrowStyle
-    }
   }
 
   /**

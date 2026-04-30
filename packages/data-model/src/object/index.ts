@@ -1,4 +1,5 @@
 export * from './layout'
 export * from './AcDbDictionary'
+export * from './AcDbMLeaderStyle'
 export * from './AcDbRasterImageDef'
 export * from './AcDbXrecord'

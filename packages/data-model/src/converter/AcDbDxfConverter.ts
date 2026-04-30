@@ -1,11 +1,17 @@
 import { AcCmColor } from '@mlightcad/common'
 import {
   BlockRecordTableEntry,
+  CommonDxfEntity,
+  CommonDxfTableEntry,
   DimStylesTableEntry,
+  DxfBlock,
   DxfTable,
+  ImageDefDXFObject,
   InsertEntity,
   LayerTableEntry,
+  LayoutDXFObject,
   LTypeTableEntry,
+  MLeaderStyleDXFObject,
   MTextEntity,
   MultiLeaderEntity,
   ParsedDxf,
@@ -13,11 +19,6 @@ import {
   TextEntity,
   VPortTableEntry
 } from '@mlightcad/dxf-json'
-import { DxfBlock } from '@mlightcad/dxf-json'
-import { CommonDxfEntity } from '@mlightcad/dxf-json'
-import { ImageDefDXFObject } from '@mlightcad/dxf-json'
-import { LayoutDXFObject } from '@mlightcad/dxf-json'
-import { CommonDxfTableEntry } from '@mlightcad/dxf-json'
 import {
   AcGiDefaultLightingType,
   AcGiOrthographicType,
@@ -543,6 +544,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
           imageDef as ImageDefDXFObject
         )
         imageDefDict.setAt(dbImageDef.objectId, dbImageDef)
+      })
+    }
+    if ('MLEADERSTYLE' in objects) {
+      const mleaderStyleDict = db.objects.mleaderStyle
+      objects['MLEADERSTYLE'].forEach(style => {
+        const dbStyle = objectConverter.convertMLeaderStyle(
+          style as MLeaderStyleDXFObject
+        )
+        mleaderStyleDict.setAt(dbStyle.objectId, dbStyle)
       })
     }
   }
