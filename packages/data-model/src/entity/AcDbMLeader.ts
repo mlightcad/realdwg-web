@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -10,15 +11,22 @@ import {
 } from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
+  AcGiLineWeight,
   AcGiMTextAttachmentPoint,
   AcGiMTextData,
   AcGiMTextFlowDirection,
   AcGiRenderer,
+  AcGiStyleType,
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
-import { AcDbRenderingCache, DEFAULT_TEXT_STYLE } from '../misc'
+import {
+  AcDbRenderingCache,
+  decodeMLeaderStyleRawColor,
+  DEFAULT_MLEADER_STYLE,
+  DEFAULT_TEXT_STYLE
+} from '../misc'
 import { AcDbMLeaderStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -74,6 +82,14 @@ export enum AcDbMLeaderDirectionType {
   /** Leader points below the content. */
   Bottom = 4
 }
+
+const MLEADER_OVERRIDE_LEADER_LINE_TYPE = 1 << 0
+const MLEADER_OVERRIDE_LEADER_LINE_COLOR = 1 << 1
+const MLEADER_OVERRIDE_LEADER_LINE_TYPE_ID = 1 << 2
+const MLEADER_OVERRIDE_LEADER_LINE_WEIGHT = 1 << 3
+const MLEADER_OVERRIDE_DOGLEG_ENABLED = 1 << 6
+const MLEADER_OVERRIDE_DOGLEG_LENGTH = 1 << 7
+const MLEADER_OVERRIDE_TEXT_COLOR = 1 << 15
 
 /**
  * Represents a leader break segment input using point-like values.
@@ -299,6 +315,10 @@ export class AcDbMLeader extends AcDbEntity {
   private _planeNormalReversed?: boolean
   /**
    * Creates an empty multileader entity with default style-related state.
+   *
+   * @remarks
+   * Initializes geometry, text, and block-related members to defaults that
+   * are compatible with common MLEADER behavior.
    */
   constructor() {
     super()
@@ -1197,6 +1217,9 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Adds a leader branch and returns its index.
+   *
+   * @param leader Optional leader payload used to initialize branch data.
+   * @returns Index of the newly added leader branch.
    */
   addLeader(leader: AcDbMLeaderLeaderLike = {}) {
     const dbLeader: AcDbMLeaderLeader = {
@@ -1231,6 +1254,9 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Removes a leader branch.
+   *
+   * @param leaderIndex Zero-based index of the leader branch to remove.
+   * @returns The current entity instance for chaining.
    */
   removeLeader(leaderIndex: number) {
     this.checkLeaderIndex(leaderIndex)
@@ -1240,6 +1266,10 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Adds a leader line to a leader branch and returns the line index.
+   *
+   * @param leaderIndex Index of the target leader branch.
+   * @param vertices Optional initial vertices for the leader line.
+   * @returns Index of the newly added leader line.
    */
   addLeaderLine(leaderIndex: number, vertices: AcGePoint3dLike[] = []): number {
     this.checkLeaderIndex(leaderIndex)
@@ -1251,6 +1281,11 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Appends a vertex to one leader line.
+   *
+   * @param leaderIndex Index of the target leader branch.
+   * @param leaderLineIndex Index of the target leader line.
+   * @param point Vertex to append.
+   * @returns The current entity instance for chaining.
    */
   appendVertex(
     leaderIndex: number,
@@ -1265,6 +1300,11 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Replaces the vertices of one leader line.
+   *
+   * @param leaderIndex Index of the target leader branch.
+   * @param leaderLineIndex Index of the target leader line.
+   * @param vertices New vertex sequence.
+   * @returns The current entity instance for chaining.
    */
   setLeaderLineVertices(
     leaderIndex: number,
@@ -1575,6 +1615,21 @@ export class AcDbMLeader extends AcDbEntity {
       ]
     }
   }
+
+  /**
+   * @inheritdoc
+   *
+   * @returns The current entity instance with effective properties resolved.
+   */
+  override resolveEffectiveProperties() {
+    super.resolveEffectiveProperties()
+    if (this._mleaderStyleId) return
+
+    const style = this.getDefaultMLeaderStyle()
+    if (style) {
+      this._mleaderStyleId = style.objectId
+    }
+  }
   /**
    * Builds renderable primitives for this multileader entity.
    *
@@ -1583,7 +1638,26 @@ export class AcDbMLeader extends AcDbEntity {
    */
   subWorldDraw(renderer: AcGiRenderer): AcGiEntity | undefined {
     const entities: AcGiEntity[] = []
-    if (this.leaderLineType !== AcDbMLeaderLineType.InvisibleLeader) {
+    const traits = renderer.subEntityTraits
+    const originalColor = traits.color
+    const originalRgbColor = traits.rgbColor
+    const originalLineType = traits.lineType
+    const originalLineWeight = traits.lineWeight
+    const leaderLineColor = this.getResolvedLeaderLineColor()
+    const leaderLineStyle = this.getResolvedLeaderLineStyle()
+    const leaderLineWeight = this.getResolvedLeaderLineWeight()
+    const textColor = this.getResolvedTextColor()
+
+    if (
+      this.getResolvedLeaderLineType() !== AcDbMLeaderLineType.InvisibleLeader
+    ) {
+      this.applyColorTraits(
+        traits,
+        leaderLineColor,
+        originalColor,
+        originalRgbColor
+      )
+      this.applyLineTraits(traits, leaderLineStyle, leaderLineWeight)
       this._leaders.forEach(leader => {
         leader.leaderLines.forEach(line => {
           const points = this.getLeaderLineDrawPoints(leader, line)
@@ -1604,6 +1678,7 @@ export class AcDbMLeader extends AcDbEntity {
       this.contentType === AcDbMLeaderContentType.MTextContent &&
       mtextContent
     ) {
+      this.applyColorTraits(traits, textColor, originalColor, originalRgbColor)
       const textHeight = this.getResolvedTextHeight()
       const mtextData: AcGiMTextData = {
         text: mtextContent.text,
@@ -1621,6 +1696,10 @@ export class AcDbMLeader extends AcDbEntity {
       entities.push(renderer.mtext(mtextData, this.getTextStyle(), false))
     }
 
+    traits.color = originalColor
+    traits.rgbColor = originalRgbColor
+    traits.lineType = originalLineType
+    traits.lineWeight = originalLineWeight
     if (entities.length === 0) return undefined
     return entities.length === 1 ? entities[0] : renderer.group(entities)
   }
@@ -1743,6 +1822,8 @@ export class AcDbMLeader extends AcDbEntity {
    * Validates that a leader index is in range.
    *
    * @param leaderIndex Leader branch index to validate.
+   * @throws {Error} Thrown when `leaderIndex` is outside valid range.
+   * @returns `void`.
    */
   private checkLeaderIndex(leaderIndex: number) {
     if (leaderIndex < 0 || leaderIndex >= this._leaders.length) {
@@ -1832,36 +1913,19 @@ export class AcDbMLeader extends AcDbEntity {
    * @returns Dogleg segment points, or `undefined` if not applicable.
    */
   private getDoglegPoints(leader: AcDbMLeaderLeader) {
-    if (!this.doglegEnabled) return undefined
+    if (!this.getResolvedDoglegEnabled()) return undefined
     const start =
-      leader.lastLeaderLinePoint ??
-      leader.landingPoint ??
-      this._landingPoint ??
-      this.getLastLeaderLineVertex(leader)
+      leader.lastLeaderLinePoint ?? leader.landingPoint ?? this._landingPoint
     const vector = leader.doglegVector ?? this._doglegVector
-    const length = leader.doglegLength ?? this._doglegLength
-    if (!start || length === 0 || vector.lengthSq() === 0) return undefined
+    const length = leader.doglegLength ?? this.getResolvedDoglegLength()
+    if (!start || length == null || length === 0 || vector.lengthSq() === 0) {
+      return undefined
+    }
 
     const end = start
       .clone()
       .add(vector.clone().normalize().multiplyScalar(length))
     return [start, end]
-  }
-
-  /**
-   * Gets the last available vertex from all lines in one leader branch.
-   *
-   * @param leader Leader branch to inspect.
-   * @returns The last vertex, or `undefined` when no vertices exist.
-   */
-  private getLastLeaderLineVertex(leader: AcDbMLeaderLeader) {
-    for (let i = leader.leaderLines.length - 1; i >= 0; i--) {
-      const line = leader.leaderLines[i]
-      if (line.vertices.length > 0) {
-        return line.vertices[line.vertices.length - 1]
-      }
-    }
-    return undefined
   }
 
   /**
@@ -1904,16 +1968,95 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Draws one leader line and applies arrow style from MLEADER/MLEADERSTYLE.
+   *
+   * @param renderer Graphics renderer used to create primitives.
+   * @param points Leader-line draw points.
+   * @returns One entity or an entity group representing the full leader line.
    */
   private drawLeaderLine(renderer: AcGiRenderer, points: AcGePoint3d[]) {
-    const entities: AcGiEntity[] = [renderer.lines(points)]
+    const entities: AcGiEntity[] = []
+    const linePoints = this.getLeaderLinePointsForDraw(points)
+    if (linePoints.length >= 2) {
+      entities.push(renderer.lines(linePoints))
+    }
     const arrow = this.drawArrowhead(renderer, points)
     if (arrow) entities.push(arrow)
+    if (entities.length === 0) return undefined
     return entities.length === 1 ? entities[0] : renderer.group(entities)
   }
 
   /**
+   * Resolves leader-line points used for stroke drawing after arrow overlap trim.
+   *
+   * @param points Original leader polyline points.
+   * @returns Trimmed points used to draw the leader stroke.
+   */
+  private getLeaderLinePointsForDraw(points: AcGePoint3d[]) {
+    const trimDistance = this.getArrowheadLeaderLineTrimDistance()
+    if (trimDistance <= 0) return points
+    return this.trimPolylineStart(points, trimDistance)
+  }
+
+  /**
+   * Resolves how much of leader start should be trimmed to avoid arrow overlap.
+   *
+   * @returns Trim distance in drawing units.
+   */
+  private getArrowheadLeaderLineTrimDistance() {
+    if (!this.isArrowheadVisible()) return 0
+
+    const blockTableRecord = this.getResolvedArrowheadBlockTableRecord()
+    if (!blockTableRecord) return 0
+
+    const size = this.getResolvedArrowheadSize()
+    if (size <= 0) return 0
+
+    const basePoint = blockTableRecord.origin ?? AcGePoint3d.ORIGIN
+    let maxX = basePoint.x
+    for (const entity of blockTableRecord.newIterator()) {
+      const extents = entity.geometricExtents
+      if (extents.isEmpty()) continue
+      if (extents.max.x > maxX) maxX = extents.max.x
+    }
+    return Math.max(0, (maxX - basePoint.x) * size)
+  }
+
+  /**
+   * Trims the start of a polyline by a given distance.
+   *
+   * @param points Polyline points.
+   * @param trimDistance Distance to trim from the start.
+   * @returns Trimmed polyline points.
+   */
+  private trimPolylineStart(points: AcGePoint3d[], trimDistance: number) {
+    if (points.length < 2 || trimDistance <= 0) return points
+
+    let remaining = trimDistance
+    for (let i = 0; i < points.length - 1; i++) {
+      const start = points[i]
+      const end = points[i + 1]
+      const segment = end.distanceTo(start)
+      if (segment <= 0) continue
+
+      if (remaining < segment) {
+        const direction = new AcGeVector3d().subVectors(end, start)
+        const newStart = start
+          .clone()
+          .add(direction.multiplyScalar(remaining / segment))
+        return [newStart, ...points.slice(i + 1)]
+      }
+
+      remaining -= segment
+    }
+    return [points[points.length - 1]]
+  }
+
+  /**
    * Draws one arrowhead primitive from leader-line points.
+   *
+   * @param renderer Graphics renderer used to create primitives.
+   * @param points Leader-line points where the first point is treated as tip.
+   * @returns Arrowhead entity, or `undefined` when no arrowhead is drawable.
    */
   private drawArrowhead(renderer: AcGiRenderer, points: AcGePoint3d[]) {
     if (!this.isArrowheadVisible()) return undefined
@@ -1940,6 +2083,10 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Draws arrowhead by rendering entities from referenced arrow block record.
+   *
+   * @param renderer Graphics renderer used to create primitives.
+   * @param points Leader-line points where the first point is treated as tip.
+   * @returns Rendered block-based arrowhead entity, or `undefined`.
    */
   private drawArrowheadBlock(renderer: AcGiRenderer, points: AcGePoint3d[]) {
     const blockTableRecord = this.getResolvedArrowheadBlockTableRecord()
@@ -1979,6 +2126,9 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Resolves tip point and direction for arrowhead placement.
+   *
+   * @param points Leader-line points where the first point is treated as tip.
+   * @returns Tip and normalized direction, or `undefined` when unavailable.
    */
   private getArrowheadFrame(points: AcGePoint3d[]) {
     if (points.length < 2) return undefined
@@ -2008,6 +2158,8 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Resolves arrowhead block record by Arrowhead ID handle.
+   *
+   * @returns Arrowhead block table record, or `undefined` when not found.
    */
   private getResolvedArrowheadBlockTableRecord() {
     const arrowId = this.getResolvedArrowheadId()
@@ -2033,6 +2185,8 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Resolves effective text height by style and override-flag rules.
+   *
+   * @returns Effective text height used for rendering.
    */
   private getResolvedTextHeight() {
     const styleTextHeight = this.getMLeaderStyle()?.textHeight
@@ -2043,6 +2197,8 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Resolves renderable MText content using entity content first, with style fallback.
+   *
+   * @returns Renderable text payload, or `undefined` when unavailable.
    */
   private getRenderableMTextContent() {
     if (this._mtextContent) {
@@ -2065,6 +2221,8 @@ export class AcDbMLeader extends AcDbEntity {
   /**
    * Computes render width for current MText content.
    *
+   * @param text Source MText content string.
+   * @param textHeight Effective text height used for fallback estimation.
    * @returns Explicit width or an estimated width based on plain text length.
    */
   private getMTextRenderWidth(text: string, textHeight: number) {
@@ -2087,6 +2245,7 @@ export class AcDbMLeader extends AcDbEntity {
    *
    * @param vector Vector to mutate.
    * @param matrix Transformation matrix.
+   * @returns `void`.
    */
   private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {
     const origin = new AcGePoint3d()
@@ -2102,6 +2261,8 @@ export class AcDbMLeader extends AcDbEntity {
 
   /**
    * Resolves the referenced MLeader style object.
+   *
+   * @returns Resolved style object or `undefined` when not available.
    */
   private getMLeaderStyle(): AcDbMLeaderStyle | undefined {
     const dictionary = this.database.objects.mleaderStyle
@@ -2110,11 +2271,68 @@ export class AcDbMLeader extends AcDbEntity {
       const style = dictionary.getIdAt(styleId)
       if (style) return style
     }
-    return dictionary.newIterator().toArray()[0]
+
+    return this.getDefaultMLeaderStyle()
+  }
+
+  /**
+   * Resolves the default MLEADER style from CMLEADERSTYLE, with first-entry fallback.
+   *
+   * @returns Default style object or `undefined` when style dictionary is empty.
+   */
+  private getDefaultMLeaderStyle() {
+    const bySysVar = this.resolveMLeaderStyleByName(
+      this.getDefaultMLeaderStyleName()
+    )
+    if (bySysVar) return bySysVar
+
+    return this.database.objects.mleaderStyle.newIterator().toArray()[0]
+  }
+
+  /**
+   * Resolves one MLEADER style by style name (dictionary key) or object ID.
+   *
+   * @param styleName Style name or object id candidate.
+   * @returns Matching style object, or `undefined` when not found.
+   */
+  private resolveMLeaderStyleByName(styleName: string | undefined) {
+    const rawName = styleName?.trim()
+    if (!rawName) return undefined
+
+    const dictionary = this.database.objects.mleaderStyle
+    const directByName = dictionary.getAt(rawName)
+    if (directByName) return directByName
+
+    const directById = dictionary.getIdAt(rawName)
+    if (directById) return directById
+
+    const normalizedStyleName = rawName.toUpperCase()
+    for (const [name, style] of dictionary.entries()) {
+      if (name.toUpperCase() === normalizedStyleName) {
+        return style
+      }
+    }
+
+    return undefined
+  }
+
+  /**
+   * Resolves current CMLEADERSTYLE value with a stable default fallback.
+   *
+   * @returns Preferred default style name.
+   */
+  private getDefaultMLeaderStyleName() {
+    try {
+      return this.database.cmleaderstyle || DEFAULT_MLEADER_STYLE
+    } catch {
+      return DEFAULT_MLEADER_STYLE
+    }
   }
 
   /**
    * Resolves text style name considering entity values, ids and style fallback.
+   *
+   * @returns Resolved text style name, or `undefined` when unresolved.
    */
   private getResolvedTextStyleName() {
     const textStyleTable = this.database.tables.textStyleTable
@@ -2150,5 +2368,243 @@ export class AcDbMLeader extends AcDbEntity {
       throw new Error('No valid text style found in text style table.')
     }
     return style.textStyle
+  }
+
+  /**
+   * Resolves effective leader-line color by override-flag and style rules.
+   *
+   * @returns Effective leader-line color.
+   */
+  private getResolvedLeaderLineColor() {
+    return this.getResolvedComponentColor(
+      this.leaderLineColor,
+      this.getMLeaderStyle()?.leaderLineColor,
+      MLEADER_OVERRIDE_LEADER_LINE_COLOR
+    )
+  }
+
+  /**
+   * Resolves effective leader-line geometry type.
+   *
+   * @returns Effective leader-line type.
+   */
+  private getResolvedLeaderLineType() {
+    const styleLineType = this.getMLeaderStyle()?.leaderLineType
+    return this.getResolvedStyleDrivenValue(
+      this.leaderLineType,
+      styleLineType,
+      MLEADER_OVERRIDE_LEADER_LINE_TYPE
+    ) as AcDbMLeaderLineType
+  }
+
+  /**
+   * Resolves effective leader-line linetype id/handle.
+   *
+   * @returns Effective linetype id, or `undefined` when not available.
+   */
+  private getResolvedLeaderLineTypeId() {
+    return this.getResolvedStyleDrivenValue(
+      this.leaderLineTypeId,
+      this.getMLeaderStyle()?.leaderLineTypeId,
+      MLEADER_OVERRIDE_LEADER_LINE_TYPE_ID
+    )
+  }
+
+  /**
+   * Resolves renderer linetype style for leader lines.
+   *
+   * @returns User-specified renderer linetype style, or `undefined`.
+   */
+  private getResolvedLeaderLineStyle() {
+    const lineTypeId = this.getResolvedLeaderLineTypeId()
+    if (!lineTypeId) return undefined
+
+    const lineTypeRecord =
+      this.database.tables.linetypeTable.getIdAt(lineTypeId)
+    if (!lineTypeRecord) return undefined
+
+    return {
+      type: 'UserSpecified' as AcGiStyleType,
+      ...lineTypeRecord.linetype
+    }
+  }
+
+  /**
+   * Resolves effective leader-line weight by override-flag and style rules.
+   *
+   * @returns Effective line weight, or `undefined`.
+   */
+  private getResolvedLeaderLineWeight() {
+    const styleLineWeight = this.getMLeaderStyle()?.leaderLineWeight
+    const lineWeight = this.getResolvedStyleDrivenValue(
+      this.leaderLineWeight,
+      styleLineWeight,
+      MLEADER_OVERRIDE_LEADER_LINE_WEIGHT
+    )
+    if (lineWeight == null) return undefined
+    return lineWeight as AcGiLineWeight
+  }
+
+  /**
+   * Resolves whether dogleg drawing is effectively enabled.
+   *
+   * @returns Effective dogleg-enabled state.
+   */
+  private getResolvedDoglegEnabled() {
+    const styleEnabled = this.getMLeaderStyle()?.doglegEnabled
+    return this.getResolvedStyleDrivenValue(
+      this.doglegEnabled,
+      styleEnabled,
+      MLEADER_OVERRIDE_DOGLEG_ENABLED
+    )
+  }
+
+  /**
+   * Resolves effective dogleg length by override-flag and style rules.
+   *
+   * @returns Effective dogleg length.
+   */
+  private getResolvedDoglegLength() {
+    const styleLength = this.getMLeaderStyle()?.doglegLength
+    return this.getResolvedStyleDrivenValue(
+      this.doglegLength,
+      styleLength,
+      MLEADER_OVERRIDE_DOGLEG_LENGTH
+    )
+  }
+
+  /**
+   * Resolves effective text color by override-flag and style rules.
+   *
+   * @returns Effective text color.
+   */
+  private getResolvedTextColor() {
+    return this.getResolvedComponentColor(
+      this.textColor,
+      this.getMLeaderStyle()?.textColor,
+      MLEADER_OVERRIDE_TEXT_COLOR
+    )
+  }
+
+  /**
+   * Resolves effective component color from entity raw value and style fallback.
+   *
+   * @param rawEntityColor Raw DXF color value stored on the entity.
+   * @param styleColor Style-level fallback color.
+   * @param overrideFlagMask Property-override flag mask for this component.
+   * @returns Effective color used for rendering and trait application.
+   */
+  private getResolvedComponentColor(
+    rawEntityColor: number | undefined,
+    styleColor: AcCmColor | undefined,
+    overrideFlagMask: number
+  ) {
+    const entityColor =
+      rawEntityColor != null
+        ? decodeMLeaderStyleRawColor(rawEntityColor)
+        : undefined
+    if (!entityColor) return styleColor
+
+    const overrideEnabled = this.isPropertyOverrideEnabled(overrideFlagMask)
+    if (overrideEnabled === true) return entityColor
+    if (overrideEnabled === false) return styleColor ?? entityColor
+
+    // Some DXF producers always write entity color fields as ByBlock/ByLayer even
+    // when no override flag is enabled. Prefer style color in that ambiguous case.
+    if (!entityColor.isByBlock && !entityColor.isByLayer) {
+      return entityColor
+    }
+    return styleColor ?? entityColor
+  }
+
+  /**
+   * Resolves effective value using override-flag and style fallback rules.
+   *
+   * @typeParam T Value type.
+   * @param entityValue Value stored on the entity.
+   * @param styleValue Value provided by style.
+   * @param overrideFlagMask Property-override flag mask for this component.
+   * @returns Effective resolved value.
+   */
+  private getResolvedStyleDrivenValue<T>(
+    entityValue: T | undefined,
+    styleValue: T | undefined,
+    overrideFlagMask: number
+  ) {
+    const overrideEnabled = this.isPropertyOverrideEnabled(overrideFlagMask)
+    if (overrideEnabled === true) return entityValue ?? styleValue
+    if (overrideEnabled === false) return styleValue ?? entityValue
+    return styleValue ?? entityValue
+  }
+
+  /**
+   * Checks whether a specific property-override bit is enabled.
+   *
+   * @param flagMask Bit mask for the property being queried.
+   * @returns `true` if enabled, `false` if disabled, or `undefined` when flag is absent.
+   */
+  private isPropertyOverrideEnabled(flagMask: number) {
+    if (this.propertyOverrideFlag == null) return undefined
+    return (this.propertyOverrideFlag & flagMask) !== 0
+  }
+
+  /**
+   * Applies color traits while preserving original values for reset.
+   *
+   * @param traits Renderer traits object to mutate.
+   * @param color Effective component color to apply.
+   * @param originalColor Original trait color value.
+   * @param originalRgbColor Original trait RGB value.
+   * @returns `void`.
+   */
+  private applyColorTraits(
+    traits: AcGiRenderer['subEntityTraits'],
+    color: AcCmColor | undefined,
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number
+  ) {
+    traits.color = originalColor
+    traits.rgbColor = originalRgbColor
+    if (!color) return
+
+    traits.color = color
+    traits.rgbColor = this.resolveColorToRgb(color)
+  }
+
+  /**
+   * Applies line style traits when resolved values are available.
+   *
+   * @param traits Renderer traits object to mutate.
+   * @param lineType Resolved linetype style.
+   * @param lineWeight Resolved line weight.
+   * @returns `void`.
+   */
+  private applyLineTraits(
+    traits: AcGiRenderer['subEntityTraits'],
+    lineType: AcGiRenderer['subEntityTraits']['lineType'] | undefined,
+    lineWeight: AcGiLineWeight | undefined
+  ) {
+    if (lineType) {
+      traits.lineType = lineType
+    }
+    if (lineWeight != null) {
+      traits.lineWeight = lineWeight
+    }
+  }
+
+  /**
+   * Converts an `AcCmColor` to resolved RGB for rendering.
+   *
+   * @param color Source color definition.
+   * @returns Resolved RGB integer color.
+   */
+  private resolveColorToRgb(color: AcCmColor) {
+    if (color.isByLayer) {
+      const layerColor = this.getLayerColor()
+      if (layerColor?.RGB != null) return layerColor.RGB
+      return this.rgbColor
+    }
+    if (color.isByBlock) return this.rgbColor
+    return color.RGB ?? this.rgbColor
   }
 }

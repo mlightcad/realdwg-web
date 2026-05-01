@@ -33,6 +33,12 @@ export const AcDbSystemVariables = {
   CELWEIGHT: 'CELWEIGHT',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
+  /** Current multiline style name used when creating new MLINE entities. */
+  CMLSTYLE: 'CMLSTYLE',
+  /** Current multiline scale used when creating new MLINE entities. */
+  CMLSCALE: 'CMLSCALE',
+  /** Current multileader style name used when creating new MLEADER entities. */
+  CMLEADERSTYLE: 'CMLEADERSTYLE',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
   /**

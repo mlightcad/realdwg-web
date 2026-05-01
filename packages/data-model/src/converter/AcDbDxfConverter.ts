@@ -51,7 +51,12 @@ import {
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
 import { AcDbAttribute, AcDbBlockReference, AcDbEntity } from '../entity'
-import { ByLayer, DEFAULT_TEXT_STYLE } from '../misc'
+import {
+  ByLayer,
+  DEFAULT_MLEADER_STYLE,
+  DEFAULT_MLINE_STYLE,
+  DEFAULT_TEXT_STYLE
+} from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -467,6 +472,20 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
     db.celtype = header['$CELTYPE'] || ByLayer
     db.celtscale = header['$CELTSCALE'] || 1
+    const cmlStyle =
+      this.normalizeHeaderStringValue(header['$CMLSTYLE']) ||
+      this.normalizeHeaderStringValue(header['CMLSTYLE']) ||
+      DEFAULT_MLINE_STYLE
+    db.cmlstyle = cmlStyle
+    const cmlScale = header['$CMLSCALE'] ?? header['CMLSCALE']
+    if (typeof cmlScale === 'number' && Number.isFinite(cmlScale)) {
+      db.cmlscale = cmlScale
+    }
+    const cmleaderStyle =
+      this.normalizeHeaderStringValue(header['$CMLEADERSTYLE']) ||
+      this.normalizeHeaderStringValue(header['CMLEADERSTYLE']) ||
+      DEFAULT_MLEADER_STYLE
+    db.cmleaderstyle = cmleaderStyle
     db.ltscale = header['$LTSCALE'] || 1
     if (header['$EXTMAX']) db.extmax = header['$EXTMAX']
     if (header['$EXTMIN']) db.extmin = header['$EXTMIN']
@@ -970,5 +989,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     }
 
     return order.flatMap(type => groups[type])
+  }
+
+  private normalizeHeaderStringValue(value: unknown) {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : undefined
   }
 }
