@@ -1,3 +1,5 @@
+import { AcCmColor } from '@mlightcad/common'
+
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
 
@@ -10,9 +12,9 @@ export interface AcDbMlineStyleElement {
    */
   offset: number
   /**
-   * ACI color index for this element.
+   * Color definition for this element.
    */
-  color: number
+  color: AcCmColor
   /**
    * Linetype name for this element.
    */
@@ -26,7 +28,7 @@ export class AcDbMlineStyle extends AcDbObject {
   private _styleName: string
   private _flags: number
   private _description: string
-  private _fillColor: number
+  private _fillColor: AcCmColor
   private _startAngle: number
   private _endAngle: number
   private _elements: AcDbMlineStyleElement[]
@@ -36,7 +38,7 @@ export class AcDbMlineStyle extends AcDbObject {
     this._styleName = 'STANDARD'
     this._flags = 0
     this._description = ''
-    this._fillColor = 256
+    this._fillColor = new AcCmColor()
     this._startAngle = 90
     this._endAngle = 90
     this._elements = []
@@ -66,8 +68,8 @@ export class AcDbMlineStyle extends AcDbObject {
   get fillColor() {
     return this._fillColor
   }
-  set fillColor(value: number) {
-    this._fillColor = value
+  set fillColor(value: AcCmColor) {
+    this._fillColor.copy(value)
   }
 
   /**
@@ -95,12 +97,16 @@ export class AcDbMlineStyle extends AcDbObject {
   }
 
   get elements() {
-    return this._elements.map(element => ({ ...element }))
+    return this._elements.map(element => ({
+      offset: element.offset,
+      color: element.color.clone(),
+      lineType: element.lineType
+    }))
   }
   set elements(value: AcDbMlineStyleElement[]) {
     this._elements = value.map(element => ({
       offset: element.offset,
-      color: element.color,
+      color: element.color.clone(),
       lineType: element.lineType
     }))
   }
@@ -108,7 +114,7 @@ export class AcDbMlineStyle extends AcDbObject {
   addElement(element: AcDbMlineStyleElement) {
     this._elements.push({
       offset: element.offset,
-      color: element.color,
+      color: element.color.clone(),
       lineType: element.lineType
     })
   }
@@ -126,13 +132,13 @@ export class AcDbMlineStyle extends AcDbObject {
     filer.writeString(2, this.styleName)
     filer.writeInt16(70, this.flags)
     filer.writeString(3, this.description)
-    filer.writeInt16(62, this.fillColor)
+    filer.writeCmColor(this.fillColor)
     filer.writeDouble(51, this.startAngle)
     filer.writeDouble(52, this.endAngle)
     filer.writeInt16(71, this.elementCount)
     this._elements.forEach(element => {
       filer.writeDouble(49, element.offset)
-      filer.writeInt16(62, element.color)
+      filer.writeCmColor(element.color)
       filer.writeString(6, element.lineType)
     })
     return this

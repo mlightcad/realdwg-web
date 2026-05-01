@@ -1,7 +1,7 @@
-import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
+  AcGeCircArc3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -12,6 +12,12 @@ import {
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
+import {
+  ByBlock,
+  ByLayer,
+  DEFAULT_LINE_TYPE,
+  DEFAULT_MLINE_STYLE
+} from '../misc'
 import { AcDbMlineStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -63,7 +69,35 @@ enum AcDbMLineStyleFlags {
   /**
    * Enables fill rendering between the outer and inner style elements.
    */
-  FillOn = 1
+  FillOn = 1,
+  /**
+   * Enables drawing miter connector lines at polyline joints.
+   */
+  DisplayMiters = 2,
+  /**
+   * Enables square-line start cap.
+   */
+  StartSquareCap = 16,
+  /**
+   * Enables inner-arc start cap pairs.
+   */
+  StartInnerArcs = 32,
+  /**
+   * Enables outer-arc start cap.
+   */
+  StartRoundCap = 64,
+  /**
+   * Enables square-line end cap.
+   */
+  EndSquareCap = 256,
+  /**
+   * Enables inner-arc end cap pairs.
+   */
+  EndInnerArcs = 512,
+  /**
+   * Enables outer-arc end cap.
+   */
+  EndRoundCap = 1024
 }
 
 /**
@@ -187,7 +221,7 @@ export class AcDbMLine extends AcDbEntity {
    */
   constructor() {
     super()
-    this._styleName = 'STANDARD'
+    this._styleName = ''
     this._styleObjectHandle = ''
     this._scale = 1
     this._justification = AcDbMLineJustification.Zero
@@ -204,7 +238,7 @@ export class AcDbMLine extends AcDbEntity {
    * @returns Current style name.
    */
   get styleName() {
-    return this._styleName
+    return this._styleName || this.getDefaultStyleName()
   }
   /**
    * Sets the style name used to resolve the MLINE style object.
@@ -551,6 +585,7 @@ export class AcDbMLine extends AcDbEntity {
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
     const originalRgbColor = traits.rgbColor
+    const originalLineType = traits.lineType
     const originalFillType = traits.fillType
     const originalDrawOrder = traits.drawOrder
 
@@ -577,15 +612,26 @@ export class AcDbMLine extends AcDbEntity {
       for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
         traits.color = originalColor
         traits.rgbColor = originalRgbColor
+        traits.lineType = originalLineType
         this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
         const points = this.getElementPath(elementIndex, mlineStyle)
         if (points.length >= 2) {
           entities.push(renderer.lines(points))
         }
       }
+      this.appendStyleDrivenJointAndCapEntities(
+        renderer,
+        entities,
+        mlineStyle,
+        elementCount,
+        originalColor,
+        originalRgbColor,
+        originalLineType
+      )
     }
     traits.color = originalColor
     traits.rgbColor = originalRgbColor
+    traits.lineType = originalLineType
     traits.fillType = originalFillType
     traits.drawOrder = originalDrawOrder
 
@@ -602,7 +648,7 @@ export class AcDbMLine extends AcDbEntity {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbMline')
-    filer.writeString(2, this._styleName)
+    filer.writeString(2, this.styleName)
     filer.writeHandle(340, this._styleObjectHandle)
     filer.writeDouble(40, this._scale)
     filer.writeInt16(70, this._justification)
@@ -768,24 +814,25 @@ export class AcDbMLine extends AcDbEntity {
   private getElementPath(elementIndex: number, mlineStyle?: AcDbMlineStyle) {
     const points: AcGePoint3d[] = []
     const first = this._segments[0]
-    const startOffset = this.getElementMiterOffset(
-      first,
+    points.push(
+      this.getElementBoundaryPoint('start', first, elementIndex, mlineStyle)
+    )
+    this._segments.forEach(segment => {
+      points.push(
+        this.offsetPoint(
+          segment.position,
+          segment.miterDirection,
+          this.getElementMiterOffset(segment, elementIndex, mlineStyle)
+        )
+      )
+    })
+
+    points[points.length - 1] = this.getElementBoundaryPoint(
+      'end',
+      this._segments[this._segments.length - 1],
       elementIndex,
       mlineStyle
     )
-    points.push(
-      this.offsetPoint(this._startPosition, first.miterDirection, startOffset)
-    )
-    this._segments.forEach(segment => {
-      const offset = this.getElementMiterOffset(
-        segment,
-        elementIndex,
-        mlineStyle
-      )
-      points.push(
-        this.offsetPoint(segment.position, segment.miterDirection, offset)
-      )
-    })
     return this.closePathIfNeeded(points)
   }
 
@@ -805,8 +852,160 @@ export class AcDbMLine extends AcDbEntity {
   ) {
     const element = segment.elements[elementIndex]
     if (element?.parameters?.length) return element.parameters[0]
-    const styleElement = mlineStyle?.elements[elementIndex]
-    return styleElement?.offset ?? 0
+    return this.getStyleElementOffset(elementIndex, mlineStyle)
+  }
+
+  /**
+   * Resolves one element boundary point at the start/end of open MLINE paths.
+   *
+   * @param side `start` or `end`.
+   * @param segment Segment data used to resolve miter offset.
+   * @param elementIndex Style element index.
+   * @param mlineStyle Resolved style object, if available.
+   * @returns Boundary point after cap-angle cut adjustment.
+   */
+  private getElementBoundaryPoint(
+    side: 'start' | 'end',
+    segment: AcDbMLineSegment,
+    elementIndex: number,
+    mlineStyle?: AcDbMlineStyle
+  ) {
+    const offset = this.getElementMiterOffset(segment, elementIndex, mlineStyle)
+    const basePoint = side === 'start' ? this._startPosition : segment.position
+    const point = this.offsetPoint(basePoint, segment.miterDirection, offset)
+
+    if (!this.shouldApplyCapCutAtSide(side, mlineStyle)) {
+      return point
+    }
+
+    const capAngle =
+      side === 'start' ? mlineStyle?.startAngle : mlineStyle?.endAngle
+    const cutDistance = this.computeCapCutDistance(offset, capAngle, side)
+    if (cutDistance === 0) return point
+
+    const direction =
+      side === 'start'
+        ? this.getStartSegmentDirection()
+        : this.getEndSegmentDirection()
+    if (direction.lengthSq() === 0) return point
+
+    return point.add(direction.multiplyScalar(cutDistance))
+  }
+
+  /**
+   * Indicates whether cap-angle cut should be applied at the given side.
+   *
+   * @param side `start` or `end`.
+   * @param mlineStyle Resolved style object, if available.
+   * @returns `true` when side has cap components and is not suppressed.
+   */
+  private shouldApplyCapCutAtSide(
+    side: 'start' | 'end',
+    mlineStyle?: AcDbMlineStyle
+  ) {
+    if (!mlineStyle || this.closed) return false
+    if (side === 'start') {
+      if (this.suppressStartCaps) return false
+      return (
+        (mlineStyle.flags &
+          (AcDbMLineStyleFlags.StartSquareCap |
+            AcDbMLineStyleFlags.StartInnerArcs |
+            AcDbMLineStyleFlags.StartRoundCap)) !==
+        0
+      )
+    }
+
+    if (this.suppressEndCaps) return false
+    return (
+      (mlineStyle.flags &
+        (AcDbMLineStyleFlags.EndSquareCap |
+          AcDbMLineStyleFlags.EndInnerArcs |
+          AcDbMLineStyleFlags.EndRoundCap)) !==
+      0
+    )
+  }
+
+  /**
+   * Computes longitudinal cut distance based on cap angle and style-element offset.
+   *
+   * @param offset Element offset along miter direction.
+   * @param angleDegrees Cap angle in degree units.
+   * @param side `start` or `end`.
+   * @returns Signed distance to move along segment direction.
+   */
+  private computeCapCutDistance(
+    offset: number,
+    angleDegrees: number | undefined,
+    side: 'start' | 'end'
+  ) {
+    const angle = this.normalizeCapAngle(angleDegrees)
+    const tan = Math.tan(angle)
+    if (Math.abs(tan) < 1e-6) return 0
+    const distance = offset / tan
+    return side === 'start' ? distance : distance
+  }
+
+  /**
+   * Normalizes cap angle from DXF degree units to radians.
+   *
+   * @param angleDegrees Cap angle in degree units.
+   * @returns Safe radian value in `(0, PI)` with 90-degree fallback.
+   */
+  private normalizeCapAngle(angleDegrees: number | undefined) {
+    if (angleDegrees == null || !Number.isFinite(angleDegrees)) {
+      return Math.PI / 2
+    }
+
+    let degrees = angleDegrees % 180
+    if (degrees < 0) degrees += 180
+    if (degrees < 1 || degrees > 179) {
+      degrees = 90
+    }
+    return (degrees * Math.PI) / 180
+  }
+
+  /**
+   * Resolves forward direction at MLINE start.
+   *
+   * @returns Unit vector along the first segment.
+   */
+  private getStartSegmentDirection() {
+    const first = this._segments[0]
+    const direction = new AcGeVector3d()
+    if (first) {
+      // Prefer actual geometry direction. The serialized first segment direction can be noisy
+      // in some files and may not match the true start-edge direction.
+      direction.subVectors(first.position, this._startPosition)
+      if (direction.lengthSq() === 0) {
+        direction.copy(first.direction)
+      }
+    }
+    if (direction.lengthSq() > 0) direction.normalize()
+    return direction
+  }
+
+  /**
+   * Resolves forward direction at MLINE end.
+   *
+   * @returns Unit vector along the last visible segment.
+   */
+  private getEndSegmentDirection() {
+    const last = this._segments[this._segments.length - 1]
+    if (!last) return new AcGeVector3d()
+
+    const direction = new AcGeVector3d()
+    const previousPoint =
+      this._segments.length > 1
+        ? this._segments[this._segments.length - 2].position
+        : this._startPosition
+    // Prefer actual geometry direction. Some DXF producers write a final segment direction
+    // that does not represent the visible last edge, which flips end caps.
+    direction.subVectors(last.position, previousPoint)
+    if (direction.lengthSq() === 0) {
+      direction.copy(last.direction)
+    }
+    if (direction.lengthSq() > 0) direction.normalize()
+    return direction
   }
 
   /**
@@ -923,7 +1122,56 @@ export class AcDbMLine extends AcDbEntity {
         return element.parameters[0]
       }
     }
-    return mlineStyle?.elements[elementIndex]?.offset ?? 0
+    return this.getStyleElementOffset(elementIndex, mlineStyle)
+  }
+
+  /**
+   * Resolves style-defined element offset to world offset under current
+   * justification and entity scale.
+   *
+   * @param elementIndex Style element index.
+   * @param mlineStyle Resolved style object, if available.
+   * @returns Final offset distance used for miter displacement.
+   */
+  private getStyleElementOffset(
+    elementIndex: number,
+    mlineStyle?: AcDbMlineStyle
+  ) {
+    const styleElement = mlineStyle?.elements[elementIndex]
+    if (!styleElement) return 0
+    const shift = this.getStyleJustificationShift(mlineStyle)
+    return (styleElement.offset + shift) * this._scale
+  }
+
+  /**
+   * Calculates justification shift in style-offset space.
+   *
+   * - `Zero`: shift = 0
+   * - `Top`: highest style offset is moved to 0
+   * - `Bottom`: lowest style offset is moved to 0
+   *
+   * @param mlineStyle Resolved style object, if available.
+   * @returns Offset shift before scaling.
+   */
+  private getStyleJustificationShift(mlineStyle?: AcDbMlineStyle) {
+    const elements = mlineStyle?.elements ?? []
+    if (elements.length <= 0) return 0
+
+    let minOffset = Number.POSITIVE_INFINITY
+    let maxOffset = Number.NEGATIVE_INFINITY
+    for (const element of elements) {
+      const offset = element.offset
+      if (offset < minOffset) minOffset = offset
+      if (offset > maxOffset) maxOffset = offset
+    }
+
+    if (this._justification === AcDbMLineJustification.Top) {
+      return -maxOffset
+    }
+    if (this._justification === AcDbMLineJustification.Bottom) {
+      return -minOffset
+    }
+    return 0
   }
 
   /**
@@ -987,6 +1235,388 @@ export class AcDbMLine extends AcDbEntity {
   }
 
   /**
+   * Appends style-driven joint/cap entities after element path rendering.
+   *
+   * @param renderer Active graphics renderer.
+   * @param entities Output entity list to append into.
+   * @param mlineStyle Resolved style object, if available.
+   * @param elementCount Renderable style element count.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   */
+  private appendStyleDrivenJointAndCapEntities(
+    renderer: AcGiRenderer,
+    entities: AcGiEntity[],
+    mlineStyle: AcDbMlineStyle | undefined,
+    elementCount: number,
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType']
+  ) {
+    if (!mlineStyle || elementCount < 2) return
+
+    entities.push(
+      ...this.drawMiterJointEntities(
+        renderer,
+        mlineStyle,
+        elementCount,
+        originalColor,
+        originalRgbColor,
+        originalLineType
+      )
+    )
+    entities.push(
+      ...this.drawCapEntities(
+        renderer,
+        mlineStyle,
+        elementCount,
+        originalColor,
+        originalRgbColor,
+        originalLineType
+      )
+    )
+  }
+
+  /**
+   * Draws miter connector lines at interior joints when style enables it.
+   *
+   * @param renderer Active graphics renderer.
+   * @param mlineStyle Resolved style object.
+   * @param elementCount Renderable style element count.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   * @returns Drawn joint entities.
+   */
+  private drawMiterJointEntities(
+    renderer: AcGiRenderer,
+    mlineStyle: AcDbMlineStyle,
+    elementCount: number,
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType']
+  ) {
+    if (
+      this.closed ||
+      this._segments.length < 2 ||
+      (mlineStyle.flags & AcDbMLineStyleFlags.DisplayMiters) === 0
+    ) {
+      return []
+    }
+
+    const entities: AcGiEntity[] = []
+    const traits = renderer.subEntityTraits
+
+    for (
+      let segmentIndex = 0;
+      segmentIndex < this._segments.length - 1;
+      segmentIndex++
+    ) {
+      const segment = this._segments[segmentIndex]
+      const points = Array.from({ length: elementCount }, (_, elementIndex) => {
+        const offset = this.getElementMiterOffset(
+          segment,
+          elementIndex,
+          mlineStyle
+        )
+        return {
+          elementIndex,
+          offset,
+          point: this.offsetPoint(
+            segment.position,
+            segment.miterDirection,
+            offset
+          )
+        }
+      }).sort((a, b) => b.offset - a.offset)
+
+      for (let i = 0; i < points.length - 1; i++) {
+        this.applyElementDrawTraits(
+          traits,
+          originalColor,
+          originalRgbColor,
+          originalLineType,
+          mlineStyle,
+          points[i].elementIndex
+        )
+        entities.push(renderer.lines([points[i].point, points[i + 1].point]))
+      }
+    }
+
+    return entities
+  }
+
+  /**
+   * Draws start/end cap entities according to MLINESTYLE cap flags.
+   *
+   * @param renderer Active graphics renderer.
+   * @param mlineStyle Resolved style object.
+   * @param elementCount Renderable style element count.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   * @returns Drawn cap entities.
+   */
+  private drawCapEntities(
+    renderer: AcGiRenderer,
+    mlineStyle: AcDbMlineStyle,
+    elementCount: number,
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType']
+  ) {
+    if (this.closed || this._segments.length <= 0) return []
+
+    const entities: AcGiEntity[] = []
+    entities.push(
+      ...this.drawCapEntitiesForSide(
+        renderer,
+        'start',
+        mlineStyle,
+        elementCount,
+        originalColor,
+        originalRgbColor,
+        originalLineType
+      )
+    )
+    entities.push(
+      ...this.drawCapEntitiesForSide(
+        renderer,
+        'end',
+        mlineStyle,
+        elementCount,
+        originalColor,
+        originalRgbColor,
+        originalLineType
+      )
+    )
+    return entities
+  }
+
+  /**
+   * Draws one-side cap entities (line/outer-arc/inner-arcs).
+   *
+   * @param renderer Active graphics renderer.
+   * @param side `start` or `end`.
+   * @param mlineStyle Resolved style object.
+   * @param elementCount Renderable style element count.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   * @returns Drawn one-side cap entities.
+   */
+  private drawCapEntitiesForSide(
+    renderer: AcGiRenderer,
+    side: 'start' | 'end',
+    mlineStyle: AcDbMlineStyle,
+    elementCount: number,
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType']
+  ) {
+    if (side === 'start' && this.suppressStartCaps) return []
+    if (side === 'end' && this.suppressEndCaps) return []
+
+    const flags = mlineStyle.flags
+    const isStart = side === 'start'
+    const hasSquare = isStart
+      ? (flags & AcDbMLineStyleFlags.StartSquareCap) !== 0
+      : (flags & AcDbMLineStyleFlags.EndSquareCap) !== 0
+    const hasOuterArc = isStart
+      ? (flags & AcDbMLineStyleFlags.StartRoundCap) !== 0
+      : (flags & AcDbMLineStyleFlags.EndRoundCap) !== 0
+    const hasInnerArcs = isStart
+      ? (flags & AcDbMLineStyleFlags.StartInnerArcs) !== 0
+      : (flags & AcDbMLineStyleFlags.EndInnerArcs) !== 0
+    if (!hasSquare && !hasOuterArc && !hasInnerArcs) return []
+
+    const points = this.getCapElementPoints(side, elementCount, mlineStyle)
+    if (points.length < 2) return []
+
+    const entities: AcGiEntity[] = []
+    const traits = renderer.subEntityTraits
+
+    if (hasSquare) {
+      for (let i = 0; i < points.length - 1; i++) {
+        this.applyElementDrawTraits(
+          traits,
+          originalColor,
+          originalRgbColor,
+          originalLineType,
+          mlineStyle,
+          points[i].elementIndex
+        )
+        entities.push(renderer.lines([points[i].point, points[i + 1].point]))
+      }
+    }
+
+    const capDirection = isStart
+      ? this.getStartSegmentDirection().multiplyScalar(-1)
+      : this.getEndSegmentDirection().clone()
+
+    if (hasOuterArc) {
+      const outer = this.drawCapArcBetweenElements(
+        renderer,
+        side,
+        points[0],
+        points[points.length - 1],
+        capDirection,
+        traits,
+        originalColor,
+        originalRgbColor,
+        originalLineType,
+        mlineStyle
+      )
+      if (outer) entities.push(outer)
+    }
+
+    if (hasInnerArcs) {
+      for (let i = 1; i < Math.floor(points.length / 2); i++) {
+        const left = points[i]
+        const right = points[points.length - 1 - i]
+        if (!left || !right || left === right) continue
+        const inner = this.drawCapArcBetweenElements(
+          renderer,
+          side,
+          left,
+          right,
+          capDirection,
+          traits,
+          originalColor,
+          originalRgbColor,
+          originalLineType,
+          mlineStyle
+        )
+        if (inner) entities.push(inner)
+      }
+    }
+
+    return entities
+  }
+
+  /**
+   * Creates sorted element boundary points for one cap side.
+   *
+   * @param side `start` or `end`.
+   * @param elementCount Renderable style element count.
+   * @param mlineStyle Resolved style object.
+   * @returns Cap points sorted by descending element offset.
+   */
+  private getCapElementPoints(
+    side: 'start' | 'end',
+    elementCount: number,
+    mlineStyle: AcDbMlineStyle
+  ) {
+    const segment =
+      side === 'start'
+        ? this._segments[0]
+        : this._segments[this._segments.length - 1]
+    if (!segment) return []
+
+    return Array.from({ length: elementCount }, (_, elementIndex) => ({
+      elementIndex,
+      offset: this.getElementMiterOffset(segment, elementIndex, mlineStyle),
+      point: this.getElementBoundaryPoint(
+        side,
+        segment,
+        elementIndex,
+        mlineStyle
+      )
+    })).sort((a, b) => b.offset - a.offset)
+  }
+
+  /**
+   * Draws one cap arc between two cap element points.
+   *
+   * @param renderer Active graphics renderer.
+   * @param startPointPair Start element point.
+   * @param endPointPair End element point.
+   * @param capDirection Outward cap direction.
+   * @param traits Mutable renderer traits.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   * @param mlineStyle Resolved style object.
+   * @returns Arc entity, or `undefined` when arc cannot be constructed.
+   */
+  private drawCapArcBetweenElements(
+    renderer: AcGiRenderer,
+    side: 'start' | 'end',
+    startPointPair: { elementIndex: number; point: AcGePoint3d },
+    endPointPair: { elementIndex: number; point: AcGePoint3d },
+    capDirection: AcGeVector3d,
+    traits: AcGiRenderer['subEntityTraits'],
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType'],
+    mlineStyle: AcDbMlineStyle
+  ) {
+    // For 180-degree cap arcs, start/end point order determines whether
+    // the renderer takes the left or right semicircle. End caps need reverse order.
+    const arcStartPoint =
+      side === 'end' ? endPointPair.point : startPointPair.point
+    const arcEndPoint =
+      side === 'end' ? startPointPair.point : endPointPair.point
+    const chord = arcStartPoint.distanceTo(arcEndPoint)
+    if (chord <= 1e-9 || capDirection.lengthSq() === 0) return undefined
+
+    const midpoint = arcStartPoint
+      .clone()
+      .add(
+        new AcGeVector3d()
+          .subVectors(arcEndPoint, arcStartPoint)
+          .multiplyScalar(0.5)
+      )
+    const pointOnArc = midpoint.add(
+      capDirection
+        .clone()
+        .normalize()
+        .multiplyScalar(chord / 2)
+    )
+    const arc = AcGeCircArc3d.createByThreePoints(
+      arcStartPoint,
+      arcEndPoint,
+      pointOnArc
+    )
+    if (!arc) return undefined
+
+    this.applyElementDrawTraits(
+      traits,
+      originalColor,
+      originalRgbColor,
+      originalLineType,
+      mlineStyle,
+      side === 'end' ? endPointPair.elementIndex : startPointPair.elementIndex
+    )
+    return renderer.circularArc(arc)
+  }
+
+  /**
+   * Applies per-element traits while restoring baseline traits first.
+   *
+   * @param traits Mutable renderer traits.
+   * @param originalColor Original trait color.
+   * @param originalRgbColor Original trait RGB.
+   * @param originalLineType Original trait linetype.
+   * @param mlineStyle Resolved style object.
+   * @param elementIndex Style element index.
+   */
+  private applyElementDrawTraits(
+    traits: AcGiRenderer['subEntityTraits'],
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalRgbColor: number,
+    originalLineType: AcGiRenderer['subEntityTraits']['lineType'],
+    mlineStyle: AcDbMlineStyle,
+    elementIndex: number
+  ) {
+    traits.color = originalColor
+    traits.rgbColor = originalRgbColor
+    traits.lineType = originalLineType
+    this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
+  }
+
+  /**
    * Transforms a vector by matrix rotation/scale only.
    * Translation is canceled by transforming an origin-endpoint pair.
    *
@@ -1026,7 +1656,11 @@ export class AcDbMLine extends AcDbEntity {
     const normalizedStyleName = this.styleName?.toUpperCase()
     if (normalizedStyleName) {
       for (const [name, style] of dictionary.entries()) {
-        if (name.toUpperCase() === normalizedStyleName) {
+        const styleName = (style.styleName || name).toUpperCase()
+        if (
+          name.toUpperCase() === normalizedStyleName ||
+          styleName === normalizedStyleName
+        ) {
           return style
         }
       }
@@ -1035,8 +1669,8 @@ export class AcDbMLine extends AcDbEntity {
   }
 
   /**
-   * Applies color traits from one style element to the renderer traits object.
-   * BYBLOCK (`0`) and BYLAYER (`256`) are ignored.
+   * Applies style-element color and linetype traits to renderer traits.
+   * BYBLOCK and BYLAYER colors are ignored.
    *
    * @param mlineStyle Resolved style object.
    * @param elementIndex Style element index.
@@ -1049,20 +1683,21 @@ export class AcDbMLine extends AcDbEntity {
   ) {
     const styleElement = mlineStyle?.elements[elementIndex]
     if (!styleElement) return
-    const colorIndex = styleElement.color
-    if (colorIndex === 0 || colorIndex === 256) return
 
-    const color = new AcCmColor()
-    color.colorIndex = colorIndex
-    traits.color = color
-    if (color.RGB != null) {
-      traits.rgbColor = color.RGB
+    const lineType = this.resolveStyleElementLineType(styleElement.lineType)
+    if (lineType) {
+      traits.lineType = lineType
     }
+
+    if (styleElement.color.isByBlock || styleElement.color.isByLayer) return
+
+    traits.color = styleElement.color.clone()
+    traits.rgbColor = styleElement.color.RGB ?? this.rgbColor
   }
 
   /**
    * Applies fill color traits from style definition to the renderer traits object.
-   * BYBLOCK (`0`) and BYLAYER (`256`) are ignored.
+   * BYBLOCK and BYLAYER colors are ignored.
    *
    * @param mlineStyle Resolved style object.
    * @param traits Mutable renderer trait set.
@@ -1071,14 +1706,82 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle | undefined,
     traits: AcGiRenderer['subEntityTraits']
   ) {
-    const colorIndex = mlineStyle?.fillColor ?? 256
-    if (colorIndex === 0 || colorIndex === 256) return
+    const fillColor = mlineStyle?.fillColor
+    if (!fillColor || fillColor.isByBlock || fillColor.isByLayer) return
 
-    const color = new AcCmColor()
-    color.colorIndex = colorIndex
-    traits.color = color
-    if (color.RGB != null) {
-      traits.rgbColor = color.RGB
+    traits.color = fillColor.clone()
+    traits.rgbColor = fillColor.RGB ?? this.rgbColor
+  }
+
+  /**
+   * Resolves a style-element linetype token to concrete renderer linetype traits.
+   *
+   * @param rawLineType Style element linetype token.
+   * @returns Resolved linetype traits, or `undefined` when no override is needed.
+   */
+  private resolveStyleElementLineType(rawLineType: string | undefined) {
+    const lineTypeName = rawLineType?.trim()
+    if (!lineTypeName) return undefined
+
+    const normalized = lineTypeName.toUpperCase()
+    const byLayer = ByLayer.toUpperCase()
+    const byBlock = ByBlock.toUpperCase()
+
+    let type: 'ByLayer' | 'ByBlock' | 'UserSpecified' = 'UserSpecified'
+    let resolvedName = lineTypeName
+
+    if (normalized === byLayer) {
+      type = 'ByLayer'
+      const layerLineType = this.database.tables.layerTable.getAt(
+        this.layer
+      )?.linetype
+      resolvedName =
+        layerLineType &&
+        layerLineType.toUpperCase() !== byLayer &&
+        layerLineType.toUpperCase() !== byBlock
+          ? layerLineType
+          : DEFAULT_LINE_TYPE
+    } else if (normalized === byBlock) {
+      type = 'ByBlock'
+      resolvedName = DEFAULT_LINE_TYPE
+    }
+
+    const lineTypeRecord =
+      this.database.tables.linetypeTable.getAt(resolvedName)
+    if (lineTypeRecord) {
+      return {
+        type,
+        ...lineTypeRecord.linetype
+      }
+    }
+
+    return {
+      type,
+      name: resolvedName,
+      standardFlag: 0,
+      description: '',
+      totalPatternLength: 0
+    }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  override resolveEffectiveProperties() {
+    super.resolveEffectiveProperties()
+    if (!this._styleName) {
+      this._styleName = this.getDefaultStyleName()
+    }
+  }
+
+  /**
+   * Resolves the default style name for newly created MLINE entities.
+   */
+  private getDefaultStyleName() {
+    try {
+      return this.database.cmlstyle || DEFAULT_MLINE_STYLE
+    } catch {
+      return DEFAULT_MLINE_STYLE
     }
   }
 }

@@ -17,6 +17,8 @@ import {
   AcDbUnitsValue,
   ByBlock,
   ByLayer,
+  DEFAULT_MLEADER_STYLE,
+  DEFAULT_MLINE_STYLE,
   DEFAULT_LINE_TYPE,
   DEFAULT_TEXT_STYLE,
   MLIGHTCAD_APPID
@@ -310,6 +312,12 @@ export class AcDbDatabase extends AcDbObject {
   private _celweight: AcGiLineWeight
   /** Current layer for the database */
   private _clayer: string
+  /** Current multiline style for newly created MLINE entities */
+  private _cmlstyle: string
+  /** Current multiline scale for newly created MLINE entities */
+  private _cmlscale: number
+  /** Current multileader style for newly created MLEADER entities */
+  private _cmleaderstyle: string
   /** Current text style name for the database */
   private _textstyle: string
   /** The extents of current Model Space */
@@ -383,6 +391,9 @@ export class AcDbDatabase extends AcDbObject {
     this._celtype = ByLayer
     this._celweight = AcGiLineWeight.ByLayer
     this._clayer = '0'
+    this._cmlstyle = DEFAULT_MLINE_STYLE
+    this._cmlscale = 1
+    this._cmleaderstyle = DEFAULT_MLEADER_STYLE
     this._textstyle = DEFAULT_TEXT_STYLE
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
@@ -818,6 +829,57 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * The multiline style name used for newly created MLINE entities.
+   */
+  get cmlstyle(): string {
+    return this._cmlstyle
+  }
+  set cmlstyle(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.CMLSTYLE,
+      this._cmlstyle,
+      value ?? DEFAULT_MLINE_STYLE,
+      nextValue => {
+        this._cmlstyle = nextValue
+      }
+    )
+  }
+
+  /**
+   * The multiline scale used for newly created MLINE entities.
+   */
+  get cmlscale(): number {
+    return this._cmlscale
+  }
+  set cmlscale(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.CMLSCALE,
+      this._cmlscale,
+      value ?? 1,
+      nextValue => {
+        this._cmlscale = nextValue
+      }
+    )
+  }
+
+  /**
+   * The multileader style name used for newly created MLEADER entities.
+   */
+  get cmleaderstyle(): string {
+    return this._cmleaderstyle
+  }
+  set cmleaderstyle(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.CMLEADERSTYLE,
+      this._cmleaderstyle,
+      value ?? DEFAULT_MLEADER_STYLE,
+      nextValue => {
+        this._cmleaderstyle = nextValue
+      }
+    )
+  }
+
+  /**
    * The text style name for new text objects.
    */
   get textstyle(): string {
@@ -1246,6 +1308,25 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Ensures style dictionaries contain defaults required by one entity type.
+   *
+   * This is primarily used during entity append so newly created entities can
+   * immediately resolve their style references.
+   *
+   * @internal
+   */
+  ensureEntityStyleDefaults(entity: AcDbEntity) {
+    if (entity.dxfTypeName === 'MLINE') {
+      this.ensureMLineStyle(this._cmlstyle || DEFAULT_MLINE_STYLE)
+      return
+    }
+
+    if (entity.dxfTypeName === 'MULTILEADER') {
+      this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
+    }
+  }
+
+  /**
    * Ensures required default database data exists.
    *
    * This is used after opening a file (or before exporting) to fill in any
@@ -1332,6 +1413,9 @@ export class AcDbDatabase extends AcDbObject {
       this.tables.viewportTable.add(viewport)
     }
 
+    this.ensureMLineStyle(this._cmlstyle || DEFAULT_MLINE_STYLE)
+    this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
+
     const modelSpace = this.tables.blockTable.modelSpace
     if (!this.objects.layout.getAt('Model')) {
       const layout = new AcDbLayout()
@@ -1351,6 +1435,81 @@ export class AcDbDatabase extends AcDbObject {
     if (!this.tables.appIdTable.has(MLIGHTCAD_APPID)) {
       this.tables.appIdTable.add(new AcDbRegAppTableRecord(MLIGHTCAD_APPID))
     }
+  }
+
+  /**
+   * Ensures one MLINE style exists for the provided style name.
+   */
+  private ensureMLineStyle(styleName: string) {
+    const dictionary = this.objects.mlineStyle
+    const normalizedName = styleName.trim()
+    if (!normalizedName) return
+
+    if (dictionary.getAt(normalizedName)) {
+      return
+    }
+
+    for (const [name, style] of dictionary.entries()) {
+      if (
+        name.toUpperCase() === normalizedName.toUpperCase() ||
+        style.styleName.toUpperCase() === normalizedName.toUpperCase()
+      ) {
+        return
+      }
+    }
+
+    const style = new AcDbMlineStyle()
+    style.styleName = normalizedName
+    style.elements = [
+      {
+        offset: 0.5,
+        color: new AcCmColor().setByLayer(),
+        lineType: ByLayer
+      },
+      {
+        offset: -0.5,
+        color: new AcCmColor().setByLayer(),
+        lineType: ByLayer
+      }
+    ]
+    dictionary.setAt(normalizedName, style)
+  }
+
+  /**
+   * Ensures one MLEADER style exists for the provided style name.
+   */
+  private ensureMLeaderStyle(styleName: string) {
+    const dictionary = this.objects.mleaderStyle
+    const normalizedName = styleName.trim()
+    if (!normalizedName) return
+
+    if (dictionary.getAt(normalizedName)) {
+      return
+    }
+
+    for (const [name] of dictionary.entries()) {
+      if (name.toUpperCase() === normalizedName.toUpperCase()) {
+        return
+      }
+    }
+
+    const style = new AcDbMLeaderStyle()
+    // Match AutoCAD "Standard" defaults observed in exported DXF.
+    style.unknown1 = 2
+    style.maxLeaderSegmentsPoints = 2
+    style.leaderLineColor = new AcCmColor().setByBlock()
+    style.textColor = new AcCmColor().setByBlock()
+    style.blockColor = new AcCmColor().setByBlock()
+    style.alignSpace = 4
+    style.breakSize = 3.75
+    style.enableBlockRotation = true
+    style.unknown2 = false
+    const byBlockLinetype = this.tables.linetypeTable.getAt(ByBlock)
+    style.leaderLineTypeId = byBlockLinetype?.objectId
+    const standardTextStyle =
+      this.tables.textStyleTable.getAt(DEFAULT_TEXT_STYLE)
+    style.textStyleId = standardTextStyle?.objectId
+    dictionary.setAt(normalizedName, style)
   }
 
   /**
@@ -1378,6 +1537,12 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(8, this.clayer)
     filer.writeString(9, '$CELTYPE')
     filer.writeString(6, this.celtype)
+    filer.writeString(9, '$CMLSTYLE')
+    filer.writeString(2, this.cmlstyle)
+    filer.writeString(9, '$CMLSCALE')
+    filer.writeDouble(40, this.cmlscale)
+    filer.writeString(9, '$CMLEADERSTYLE')
+    filer.writeString(2, this.cmleaderstyle)
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
     filer.writeString(9, '$ANGBASE')

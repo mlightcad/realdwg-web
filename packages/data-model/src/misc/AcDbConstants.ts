@@ -14,6 +14,22 @@ export const DEFAULT_LINE_TYPE = 'Continuous'
 export const DEFAULT_TEXT_STYLE = 'Standard'
 
 /**
+ * Default multiline style name used when no specific MLINE style is specified.
+ *
+ * This constant represents the default current style used by the CMLSTYLE
+ * system variable for newly created MLINE entities.
+ */
+export const DEFAULT_MLINE_STYLE = 'Standard'
+
+/**
+ * Default multileader style name used when no specific MLEADER style is specified.
+ *
+ * This constant represents the default current style used by the CMLEADERSTYLE
+ * system variable for newly created MLEADER entities.
+ */
+export const DEFAULT_MLEADER_STYLE = 'Standard'
+
+/**
  * Special line type value that indicates the entity should use
  * the line type of its layer.
  *

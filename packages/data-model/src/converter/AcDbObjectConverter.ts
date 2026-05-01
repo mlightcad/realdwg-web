@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   CommonDXFObject,
   ImageDefDXFObject,
@@ -9,6 +10,7 @@ import {
 
 import { AcDbObject } from '../base'
 import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
+import { decodeMLeaderStyleRawColor } from '../misc'
 import {
   AcDbLayout,
   AcDbMLeaderStyle,
@@ -230,7 +232,9 @@ export class AcDbObjectConverter {
       dbObject.leaderLineType = style.leaderLineType
     }
     if (style.leaderLineColor != null) {
-      dbObject.leaderLineColor = style.leaderLineColor
+      dbObject.leaderLineColor = decodeMLeaderStyleRawColor(
+        style.leaderLineColor
+      )
     }
     dbObject.leaderLineTypeId = style.leaderLineTypeId
     if (style.leaderLineWeight != null) {
@@ -262,7 +266,9 @@ export class AcDbObjectConverter {
     if (style.textRightAttachmentType != null) {
       dbObject.textRightAttachmentType = style.textRightAttachmentType
     }
-    if (style.textColor != null) dbObject.textColor = style.textColor
+    if (style.textColor != null) {
+      dbObject.textColor = decodeMLeaderStyleRawColor(style.textColor)
+    }
     if (style.textHeight != null) dbObject.textHeight = style.textHeight
     if (style.textFrameEnabled != null) {
       dbObject.textFrameEnabled = style.textFrameEnabled
@@ -273,7 +279,9 @@ export class AcDbObjectConverter {
     if (style.alignSpace != null) dbObject.alignSpace = style.alignSpace
     dbObject.blockContentId = style.blockContentId
     if (style.blockContentColor != null) {
-      dbObject.blockContentColor = style.blockContentColor
+      dbObject.blockContentColor = decodeMLeaderStyleRawColor(
+        style.blockContentColor
+      )
     }
     if (style.blockContentScale) {
       dbObject.blockContentScale = {
@@ -323,22 +331,34 @@ export class AcDbObjectConverter {
     if (style.styleName != null) dbObject.styleName = style.styleName
     if (style.flags != null) dbObject.flags = style.flags
     if (style.description != null) dbObject.description = style.description
-    if (style.fillColor != null) dbObject.fillColor = style.fillColor
+    if (style.fillColor != null) {
+      dbObject.fillColor = new AcCmColor().setRGBValue(style.fillColor)
+    } else if (style.fillColorIndex != null) {
+      const fillColor = new AcCmColor()
+      fillColor.colorIndex = style.fillColorIndex
+      dbObject.fillColor = fillColor
+    }
     if (style.startAngle != null) dbObject.startAngle = style.startAngle
     if (style.endAngle != null) dbObject.endAngle = style.endAngle
 
     const elementCount = Math.max(
       style.elementCount ?? 0,
-      style.elementOffsets?.length ?? 0,
-      style.elementColors?.length ?? 0,
-      style.elementLineTypes?.length ?? 0
+      style.elements?.length ?? 0
     )
 
     if (elementCount > 0) {
       dbObject.elements = Array.from({ length: elementCount }, (_, index) => ({
-        offset: style.elementOffsets?.[index] ?? 0,
-        color: style.elementColors?.[index] ?? 256,
-        lineType: style.elementLineTypes?.[index] ?? 'BYLAYER'
+        offset: style.elements?.[index]?.offset ?? 0,
+        color: (() => {
+          const color = new AcCmColor()
+          if (style.elements?.[index]?.color != null) {
+            color.setRGBValue(style.elements[index]!.color)
+          } else {
+            color.colorIndex = style.elements?.[index]?.colorIndex ?? 256
+          }
+          return color
+        })(),
+        lineType: style.elements?.[index]?.lineType ?? 'BYLAYER'
       }))
     }
 

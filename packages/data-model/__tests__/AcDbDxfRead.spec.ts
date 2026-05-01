@@ -85,6 +85,18 @@ function replaceHeaderDouble(dxf: string, name: string, value: number) {
   )
 }
 
+function replaceHeaderString(
+  dxf: string,
+  name: string,
+  code: string,
+  value: string
+) {
+  return dxf.replace(
+    new RegExp(`9\\n\\${name}\\n${code}\\n[^\\n]*\\n`),
+    `9\n${name}\n${code}\n${value}\n`
+  )
+}
+
 function getBlockEntities(block: AcDbBlockTableRecord) {
   return block.newIterator().toArray()
 }
@@ -244,7 +256,7 @@ describe('DXF read and parse regressions', () => {
     expect(modelLine).toBeUndefined()
   })
 
-  it('reads header values such as LTSCALE, CELTSCALE, and CELTYPE from DXF', async () => {
+  it('reads header values such as LTSCALE, CELTSCALE, CELTYPE, CMLSTYLE, CMLSCALE, and CMLEADERSTYLE from DXF', async () => {
     const sourceDb = setWorkingDatabase(new AcDbDatabase())
     sourceDb.createDefaultData()
 
@@ -252,12 +264,21 @@ describe('DXF read and parse regressions', () => {
     dxf = replaceHeaderDouble(dxf, '$LTSCALE', 2.5)
     dxf = addHeaderVariable(dxf, '$CLAYER', '$CELTYPE', '6', 'BYLAYER')
     dxf = addHeaderVariable(dxf, '$LTSCALE', '$CELTSCALE', '40', '0.25')
+    dxf = replaceHeaderString(dxf, '$CMLSTYLE', '2', 'FILL')
+    dxf = replaceHeaderDouble(dxf, '$CMLSCALE', 20)
+    dxf = replaceHeaderString(dxf, '$CMLEADERSTYLE', '2', 'ANNOTATION')
+    expect(dxf).toContain('9\n$CMLSTYLE\n2\nFILL\n')
+    expect(dxf).toContain('9\n$CMLSCALE\n40\n20\n')
+    expect(dxf).toContain('9\n$CMLEADERSTYLE\n2\nANNOTATION\n')
 
     const targetDb = await readDxf(dxf)
 
     expect(targetDb.ltscale).toBe(2.5)
     expect(targetDb.celtscale).toBe(0.25)
     expect(targetDb.celtype).toBe('ByLayer')
+    expect(targetDb.cmlstyle).toBe('FILL')
+    expect(targetDb.cmlscale).toBe(20)
+    expect(targetDb.cmleaderstyle).toBe('ANNOTATION')
     expect(targetDb.textstyle).toBe('Standard')
   })
 })

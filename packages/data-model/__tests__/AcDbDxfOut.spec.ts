@@ -3,10 +3,13 @@ import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
 import { AcDbAttribute } from '../src/entity/AcDbAttribute'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbLine } from '../src/entity/AcDbLine'
+import { AcDbMLeader } from '../src/entity/AcDbMLeader'
+import { AcDbMLine } from '../src/entity/AcDbMLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
 import { AcDbRotatedDimension } from '../src/entity'
 import { AcDbTable } from '../src/entity/AcDbTable'
 import { AcDbText } from '../src/entity/AcDbText'
+import { AcDbMLeaderStyle } from '../src/object'
 import { AcDbLayout } from '../src/object/layout/AcDbLayout'
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
@@ -103,6 +106,9 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(dxf).toContain('9\n$ACADVER\n1\nAC1014\n')
     expect(dxf).toContain('9\n$CLAYER\n8\n0\n')
     expect(dxf).toContain('9\n$CELTYPE\n6\nByLayer\n')
+    expect(dxf).toContain('9\n$CMLSTYLE\n2\nStandard\n')
+    expect(dxf).toContain('9\n$CMLSCALE\n40\n1\n')
+    expect(dxf).toContain('9\n$CMLEADERSTYLE\n2\nStandard\n')
     expect(dxf).toContain('0\nTABLE\n2\nLAYER\n')
     expect(dxf).toContain('0\nLAYER\n')
     expect(dxf).toContain('2\n0\n')
@@ -275,6 +281,50 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.modelSpace.appendEntity(line)
 
     expect(line.lineType).toBe('Continuous')
+  })
+
+  it('uses the database CMLSTYLE for new mline entities without an explicit style', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    db.cmlstyle = 'FILL'
+
+    const mline = new AcDbMLine()
+    mline.startPosition = new AcGePoint3d(0, 0, 0)
+    mline.segments = [
+      {
+        position: { x: 10, y: 0, z: 0 },
+        direction: { x: 1, y: 0, z: 0 },
+        miterDirection: { x: 0, y: 1, z: 0 },
+        elements: []
+      }
+    ]
+    db.tables.blockTable.modelSpace.appendEntity(mline)
+
+    expect(mline.styleName).toBe('FILL')
+    expect(db.dxfOut(undefined, 6)).toContain('\n2\nFILL\n')
+  })
+
+  it('uses the database CMLEADERSTYLE for new mleader entities without an explicit style', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+
+    const baseStyle = new AcDbMLeaderStyle()
+    db.objects.mleaderStyle.setAt('BASE', baseStyle)
+    const activeStyle = new AcDbMLeaderStyle()
+    db.objects.mleaderStyle.setAt('ACTIVE', activeStyle)
+
+    db.cmleaderstyle = 'ACTIVE'
+
+    const mleader = new AcDbMLeader()
+    const leaderIndex = mleader.addLeader()
+    mleader.addLeaderLine(leaderIndex, [
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(5, 0, 0)
+    ])
+    db.tables.blockTable.modelSpace.appendEntity(mleader)
+
+    expect(mleader.mleaderStyleId).toBe(activeStyle.objectId)
+    expect(db.dxfOut(undefined, 6)).toContain('9\n$CMLEADERSTYLE\n2\nACTIVE\n')
   })
 
   it('writes additional paper space layouts as BLOCK_RECORD, BLOCK, and LAYOUT objects', () => {

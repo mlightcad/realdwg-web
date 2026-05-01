@@ -1,7 +1,9 @@
+import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
+import { encodeMLeaderStyleRawColor } from '../misc'
 
 /**
  * Represents the nongraphical MLEADERSTYLE object.
@@ -19,7 +21,7 @@ export class AcDbMLeaderStyle extends AcDbObject {
   private _firstSegmentAngleConstraint: number
   private _secondSegmentAngleConstraint: number
   private _leaderLineType: number
-  private _leaderLineColor: number
+  private _leaderLineColor: AcCmColor
   private _leaderLineTypeId?: string
   private _leaderLineWeight: number
   private _enableLanding: boolean
@@ -35,13 +37,13 @@ export class AcDbMLeaderStyle extends AcDbObject {
   private _textAngleType: number
   private _textAlignmentType: number
   private _textRightAttachmentType: number
-  private _textColor: number
+  private _textColor: AcCmColor
   private _textHeight: number
   private _enableFrameText: boolean
   private _textAlignAlwaysLeft: boolean
   private _alignSpace: number
   private _blockId?: string
-  private _blockColor: number
+  private _blockColor: AcCmColor
   private _blockScale: AcGeVector3d
   private _enableBlockScale: boolean
   private _blockRotation: number
@@ -69,7 +71,7 @@ export class AcDbMLeaderStyle extends AcDbObject {
     this._firstSegmentAngleConstraint = 0
     this._secondSegmentAngleConstraint = 0
     this._leaderLineType = 1
-    this._leaderLineColor = 256
+    this._leaderLineColor = new AcCmColor(AcCmColorMethod.ByLayer)
     this._leaderLineWeight = -2
     this._enableLanding = true
     this._landingGap = 2
@@ -82,12 +84,12 @@ export class AcDbMLeaderStyle extends AcDbObject {
     this._textAngleType = 1
     this._textAlignmentType = 0
     this._textRightAttachmentType = 1
-    this._textColor = 256
+    this._textColor = new AcCmColor(AcCmColorMethod.ByLayer)
     this._textHeight = 4
     this._enableFrameText = false
     this._textAlignAlwaysLeft = false
     this._alignSpace = 0
-    this._blockColor = 0
+    this._blockColor = new AcCmColor(AcCmColorMethod.ByBlock)
     this._blockScale = new AcGeVector3d(1, 1, 1)
     this._enableBlockScale = true
     this._blockRotation = 0
@@ -220,8 +222,8 @@ export class AcDbMLeaderStyle extends AcDbObject {
   get leaderLineColor() {
     return this._leaderLineColor
   }
-  set leaderLineColor(value: number) {
-    this._leaderLineColor = value
+  set leaderLineColor(value: AcCmColor) {
+    this._leaderLineColor.copy(value)
   }
 
   /**
@@ -473,8 +475,8 @@ export class AcDbMLeaderStyle extends AcDbObject {
   get textColor() {
     return this._textColor
   }
-  set textColor(value: number) {
-    this._textColor = value
+  set textColor(value: AcCmColor) {
+    this._textColor.copy(value)
   }
 
   /**
@@ -561,8 +563,8 @@ export class AcDbMLeaderStyle extends AcDbObject {
   get blockColor() {
     return this._blockColor
   }
-  set blockColor(value: number) {
-    this._blockColor = value
+  set blockColor(value: AcCmColor) {
+    this._blockColor.copy(value)
   }
 
   /**
@@ -572,7 +574,7 @@ export class AcDbMLeaderStyle extends AcDbObject {
   get blockContentColor() {
     return this.blockColor
   }
-  set blockContentColor(value: number) {
+  set blockContentColor(value: AcCmColor) {
     this.blockColor = value
   }
 
@@ -857,7 +859,7 @@ export class AcDbMLeaderStyle extends AcDbObject {
     filer.writeDouble(40, this.firstSegmentAngleConstraint)
     filer.writeDouble(41, this.secondSegmentAngleConstraint)
     filer.writeInt16(173, this.leaderLineType)
-    filer.writeInt32(91, this.leaderLineColor)
+    filer.writeInt32(91, encodeMLeaderStyleRawColor(this.leaderLineColor))
     filer.writeHandle(340, this.leaderLineTypeId)
     filer.writeInt32(92, this.leaderLineWeight)
     filer.writeBoolean(290, this.enableLanding)
@@ -873,13 +875,13 @@ export class AcDbMLeaderStyle extends AcDbObject {
     filer.writeInt16(175, this.textAngleType)
     filer.writeInt16(176, this.textAlignmentType)
     filer.writeInt16(178, this.textRightAttachmentType)
-    filer.writeInt32(93, this.textColor)
+    filer.writeInt32(93, encodeMLeaderStyleRawColor(this.textColor))
     filer.writeDouble(45, this.textHeight)
     filer.writeBoolean(292, this.enableFrameText)
     filer.writeBoolean(297, this.textAlignAlwaysLeft)
     filer.writeDouble(46, this.alignSpace)
     filer.writeHandle(343, this.blockId)
-    filer.writeInt32(94, this.blockColor)
+    filer.writeInt32(94, encodeMLeaderStyleRawColor(this.blockColor))
     filer.writeDouble(47, this._blockScale.x)
     filer.writeDouble(49, this._blockScale.y)
     filer.writeDouble(140, this._blockScale.z)

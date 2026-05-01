@@ -266,6 +266,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
     const commitEntity = (item: AcDbEntity) => {
       item.database = this.database
       item.ownerId = this.objectId
+      this.database.ensureEntityStyleDefaults(item)
       this.database.commitObjectHandle(item, id => this._entities.has(id))
       item.resolveEffectiveProperties()
       this._entities.set(item.objectId, item)

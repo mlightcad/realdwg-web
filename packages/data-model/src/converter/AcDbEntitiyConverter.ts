@@ -812,9 +812,8 @@ export class AcDbEntityConverter {
 
   private convertMLine(mline: MLineEntity) {
     const dbEntity = new AcDbMLine()
-    const raw = mline as MLineEntity & Record<string, unknown>
 
-    dbEntity.styleName = mline.name
+    dbEntity.styleName = mline.name || 'STANDARD'
     dbEntity.styleObjectHandle = mline.styleObjectHandle
     dbEntity.scale = mline.scale
     dbEntity.justification =
@@ -824,44 +823,18 @@ export class AcDbEntityConverter {
     dbEntity.startPosition = mline.startPosition
     dbEntity.normal = mline.extrusionDirection ?? AcGeVector3d.Z_AXIS
 
-    if (Array.isArray(mline.segments) && mline.segments.length > 0) {
-      dbEntity.segments = mline.segments.map(segment => ({
-        position: segment.position,
-        direction: segment.direction,
-        miterDirection: segment.miterDirection,
-        elements:
-          segment.elements?.map(element => ({
-            parameterCount: element.parameterCount,
-            parameters: element.parameters ?? [],
-            fillCount: element.fillCount,
-            fillParameters: element.fillParameters ?? []
-          })) ?? []
-      }))
-    } else {
-      const vertices = Array.isArray(raw.vertices)
-        ? raw.vertices.filter(point => this.isPointLike(point))
-        : []
-      const segmentDirections = Array.isArray(raw.segmentDirections)
-        ? raw.segmentDirections.filter(point => this.isPointLike(point))
-        : []
-      const miterDirections = Array.isArray(raw.miterDirections)
-        ? raw.miterDirections.filter(point => this.isPointLike(point))
-        : []
-
-      const count = Math.min(
-        vertices.length,
-        segmentDirections.length,
-        miterDirections.length
-      )
-      if (count > 0) {
-        dbEntity.segments = Array.from({ length: count }, (_, index) => ({
-          position: vertices[index],
-          direction: segmentDirections[index],
-          miterDirection: miterDirections[index],
-          elements: []
-        }))
-      }
-    }
+    dbEntity.segments = (mline.segments ?? []).map(segment => ({
+      position: segment.position,
+      direction: segment.direction,
+      miterDirection: segment.miterDirection,
+      elements:
+        segment.elements?.map(element => ({
+          parameterCount: element.parameterCount,
+          parameters: element.parameters ?? [],
+          fillCount: element.fillCount,
+          fillParameters: element.fillParameters ?? []
+        })) ?? []
+    }))
 
     return dbEntity
   }
