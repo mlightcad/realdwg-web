@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.30
+
+### Patch Changes
+
+- feat: add PAT parsing, predefined libraries, and SVG preview support
+- Updated dependencies
+  - @mlightcad/common@1.4.30
+  - @mlightcad/geometry-engine@3.2.30
+
 ## 3.3.29
 
 ### Patch Changes

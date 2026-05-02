@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.30
+
+### Patch Changes
+
+- feat: add PAT parsing, predefined libraries, and SVG preview support
+
 ## 1.4.29
 
 ### Patch Changes

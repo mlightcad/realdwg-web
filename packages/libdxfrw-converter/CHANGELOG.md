@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.30
+
+### Patch Changes
+
+- feat: add PAT parsing, predefined libraries, and SVG preview support
+- Updated dependencies
+  - @mlightcad/data-model@1.7.30
+
 ## 3.5.29
 
 ### Patch Changes
