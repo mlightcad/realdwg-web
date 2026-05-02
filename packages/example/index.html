@@ -5,6 +5,7 @@
   <title>realdwg-web + data-model (TS)</title>
 </head>
 <body>
+  <h2>DWG / DXF Parse Demo</h2>
   <div>
     <input type="file" id="fileInput" accept=".dwg,.dxf" />
     <select id="modeSelect">
@@ -16,6 +17,21 @@
   </div>
   <div id="status"></div>
   <pre id="output"></pre>
+
+  <hr />
+
+  <h2>PAT Parse Demo</h2>
+  <div>
+    <select id="patSourceSelect">
+      <option value="predefined-acad" selected>Predefined: acad.pat</option>
+      <option value="predefined-acadiso">Predefined: acadiso.pat</option>
+      <option value="file">From local PAT file</option>
+    </select>
+    <input type="file" id="patFileInput" accept=".pat,.txt" />
+    <button id="parsePatButton" type="button">Parse PAT</button>
+  </div>
+  <div id="patStatus"></div>
+  <div id="patTableOutput"></div>
 
   <script type="module" src="/src/main.ts"></script>
 </body>
