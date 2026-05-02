@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.29
+
+### Patch Changes
+
+- feat: refine mline rendering
+- Updated dependencies
+  - @mlightcad/common@1.4.29
+  - @mlightcad/geometry-engine@3.2.29
+  - @mlightcad/graphic-interface@3.3.29
+
 ## 1.7.28
 
 ### Patch Changes

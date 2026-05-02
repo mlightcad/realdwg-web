@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.29
+
+### Patch Changes
+
+- feat: refine mline rendering
+- Updated dependencies
+  - @mlightcad/data-model@1.7.29
+
 ## 3.5.28
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.29
+
+### Patch Changes
+
+- feat: refine mline rendering
+- Updated dependencies
+  - @mlightcad/data-model@1.7.29
+  - @mlightcad/libredwg-converter@3.5.29
+
 ## 0.1.28
 
 ### Patch Changes

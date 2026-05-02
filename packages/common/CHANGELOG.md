@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.29
+
+### Patch Changes
+
+- feat: refine mline rendering
+
 ## 1.4.28
 
 ### Patch Changes

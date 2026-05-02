@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.29
+
+### Patch Changes
+
+- feat: refine mline rendering
+- Updated dependencies
+  - @mlightcad/common@1.4.29
+
 ## 3.2.28
 
 ### Patch Changes
