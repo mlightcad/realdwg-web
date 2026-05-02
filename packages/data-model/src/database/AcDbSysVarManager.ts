@@ -1,4 +1,9 @@
-import { AcCmColor, AcCmColorMethod, AcCmEventManager } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmColorMethod,
+  AcCmEventManager,
+  AcCmTransparency
+} from '@mlightcad/common'
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
@@ -20,6 +25,7 @@ export type AcDbSysVarTypeName =
   | 'number'
   | 'boolean'
   | 'point'
+  | 'transparency'
   | 'unknown'
 
 /**
@@ -31,6 +37,7 @@ export type AcDbSysVarType =
   | boolean
   | AcGePointLike
   | AcCmColor
+  | AcCmTransparency
 
 /**
  * Definition for a system variable in our registry.
@@ -184,6 +191,121 @@ export class AcDbSysVarManager {
       isDbVar: false,
       defaultValue: true
     })
+    /**
+     * Controls whether newly created hatches and fills are associative.
+     * - 0: Not associative
+     * - 1: Associative
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPASSOC,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 1
+    })
+    /**
+     * Sets the default angle, in radians, for new hatch patterns in this session.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPANG,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
+    /**
+     * Sets the default background color for new hatch patterns in the current drawing.
+     * Use 'None' or '.' for no background color.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPBACKGROUNDCOLOR,
+      type: 'color',
+      isDbVar: true,
+      defaultValue: new AcCmColor(AcCmColorMethod.None)
+    })
+    /**
+     * Sets the default color for new hatches in the current drawing.
+     * Use '.' to use the current entity color.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPCOLOR,
+      type: 'color',
+      isDbVar: true,
+      defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
+    })
+    /**
+     * Controls whether hatch patterns are doubled for user-defined patterns.
+     * - 0: Off
+     * - 1: On
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPDOUBLE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
+    /**
+     * Controls how islands within new hatch boundaries are treated.
+     * - 0: Normal
+     * - 1: Outer
+     * - 2: Ignore
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPISLANDDETECTION,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 1
+    })
+    /**
+     * Specifies a default layer for new hatches and fills in the current drawing.
+     * Use '.' to use the current layer.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPLAYER,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: '.'
+    })
+    /**
+     * Sets the default hatch pattern name in this session. AutoCAD uses ANSI31
+     * for imperial drawings and ANGLE for metric drawings; this database defaults
+     * to metric units.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPNAME,
+      type: 'string',
+      isDbVar: false,
+      defaultValue: 'ANGLE'
+    })
+    /**
+     * Sets the default scale factor for new hatch patterns in this session.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPSCALE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 1
+    })
+    /**
+     * Controls whether one hatch object or separate hatch objects are created
+     * when operating on several closed boundaries.
+     * - 0: Single hatch object
+     * - 1: Separate hatch objects
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPSEPARATE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
+    /**
+     * Sets the default transparency for new hatches and fills in the current drawing.
+     * Use '.' to use the current transparency.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPTRANSPARENCY,
+      type: 'transparency',
+      isDbVar: true,
+      defaultValue: new AcCmTransparency()
+    })
     this.registerVar({
       name: AcDbSystemVariables.LWDISPLAY,
       type: 'boolean',
@@ -331,9 +453,15 @@ export class AcDbSysVarManager {
         } else if (descriptor.type === 'boolean') {
           value = this.parseBoolean(value as string)
         } else if (descriptor.type === 'color') {
-          const tmp = AcCmColor.fromString(value as string)
+          const tmp = this.parseColorSysVar(name, value as string, db)
           if (tmp == null) {
             throw new Error('Invalid color value!')
+          }
+          value = tmp
+        } else if (descriptor.type === 'transparency') {
+          const tmp = this.parseTransparency(value as string)
+          if (tmp == null || tmp.isInvalid) {
+            throw new Error('Invalid transparency value!')
           }
           value = tmp
         }
@@ -394,6 +522,49 @@ export class AcDbSysVarManager {
     return false
   }
 
+  private parseColorSysVar(name: string, value: string, db: AcDbDatabase) {
+    const normalized = value.trim().toLowerCase()
+    if (
+      name === AcDbSystemVariables.HPCOLOR.toLowerCase() &&
+      (normalized === '.' || normalized === 'use current')
+    ) {
+      return db.cecolor.clone()
+    }
+
+    if (
+      name === AcDbSystemVariables.HPBACKGROUNDCOLOR.toLowerCase() &&
+      (normalized === '' || normalized === '.' || normalized === 'none')
+    ) {
+      return new AcCmColor(AcCmColorMethod.None)
+    }
+
+    return AcCmColor.fromString(value)
+  }
+
+  private parseTransparency(value: string) {
+    const normalized = value.trim().toLowerCase()
+    if (
+      normalized === '' ||
+      normalized === '.' ||
+      normalized === 'use current' ||
+      normalized === 'bylayer'
+    ) {
+      return new AcCmTransparency()
+    }
+    if (normalized === 'byblock') {
+      return AcCmTransparency.fromString(value)
+    }
+
+    const percentage = Number(value)
+    if (Number.isInteger(percentage) && percentage >= 0 && percentage <= 90) {
+      const transparency = new AcCmTransparency()
+      transparency.percentage = percentage
+      return transparency
+    }
+
+    return AcCmTransparency.fromString(value)
+  }
+
   /**
    * Check if sysvar value changed.
    */
@@ -402,6 +573,13 @@ export class AcDbSysVarManager {
     newValue: AcDbSysVarType | undefined
   ) {
     if (oldValue instanceof AcCmColor && newValue instanceof AcCmColor) {
+      return !oldValue.equals(newValue)
+    }
+
+    if (
+      oldValue instanceof AcCmTransparency &&
+      newValue instanceof AcCmTransparency
+    ) {
       return !oldValue.equals(newValue)
     }
 

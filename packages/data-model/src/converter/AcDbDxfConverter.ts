@@ -486,6 +486,23 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       this.normalizeHeaderStringValue(header['CMLEADERSTYLE']) ||
       DEFAULT_MLEADER_STYLE
     db.cmleaderstyle = cmleaderStyle
+    // db.hpcolor = this.parseHpColor(
+    //   this.normalizeHeaderStringValue(header['$HPCOLOR']) ||
+    //     this.normalizeHeaderStringValue(header['HPCOLOR']),
+    //   db.cecolor
+    // )
+    // db.hpbackgroundcolor = this.parseHpBackgroundColor(
+    //   this.normalizeHeaderStringValue(header['$HPBACKGROUNDCOLOR']) ||
+    //     this.normalizeHeaderStringValue(header['HPBACKGROUNDCOLOR'])
+    // )
+    db.hplayer =
+      this.normalizeHeaderStringValue(header['$HPLAYER']) ||
+      this.normalizeHeaderStringValue(header['HPLAYER']) ||
+      '.'
+    // db.hptransparency = this.parseHpTransparency(
+    //   this.normalizeHeaderStringValue(header['$HPTRANSPARENCY']) ||
+    //     this.normalizeHeaderStringValue(header['HPTRANSPARENCY'])
+    // )
     db.ltscale = header['$LTSCALE'] || 1
     if (header['$EXTMAX']) db.extmax = header['$EXTMAX']
     if (header['$EXTMIN']) db.extmin = header['$EXTMIN']

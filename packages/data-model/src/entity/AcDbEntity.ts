@@ -58,6 +58,8 @@ export abstract class AcDbEntity extends AcDbObject {
   private _visibility: boolean = true
   /** The transparency level of this entity (0-1) */
   private _transparency: AcCmTransparency = new AcCmTransparency()
+  /** Whether transparency was explicitly assigned on this entity. */
+  private _transparencySet: boolean = false
 
   /**
    * Gets the type name of this entity.
@@ -358,6 +360,28 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   set transparency(value: AcCmTransparency) {
     this._transparency = value.clone()
+    this._transparencySet = true
+  }
+
+  /**
+   * Returns whether a layer value has been explicitly assigned on this entity.
+   */
+  protected hasExplicitLayer() {
+    return this._layer != null
+  }
+
+  /**
+   * Returns whether a color value has been explicitly assigned on this entity.
+   */
+  protected hasExplicitColor() {
+    return this._color != null
+  }
+
+  /**
+   * Returns whether transparency has been explicitly assigned on this entity.
+   */
+  protected hasExplicitTransparency() {
+    return this._transparencySet
   }
 
   /**

@@ -1,5 +1,10 @@
 /* eslint-disable simple-import-sort/imports */
-import { AcCmColor, AcCmEventManager } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmColorMethod,
+  AcCmEventManager,
+  AcCmTransparency
+} from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
@@ -318,6 +323,14 @@ export class AcDbDatabase extends AcDbObject {
   private _cmlscale: number
   /** Current multileader style for newly created MLEADER entities */
   private _cmleaderstyle: string
+  /** Default background color for newly created hatch patterns */
+  private _hpbackgroundcolor: AcCmColor
+  /** Default color for newly created hatches */
+  private _hpcolor: AcCmColor
+  /** Default layer for newly created hatches and fills */
+  private _hplayer: string
+  /** Default transparency for newly created hatches and fills */
+  private _hptransparency: AcCmTransparency
   /** Current text style name for the database */
   private _textstyle: string
   /** The extents of current Model Space */
@@ -394,6 +407,10 @@ export class AcDbDatabase extends AcDbObject {
     this._cmlstyle = DEFAULT_MLINE_STYLE
     this._cmlscale = 1
     this._cmleaderstyle = DEFAULT_MLEADER_STYLE
+    this._hpbackgroundcolor = new AcCmColor(AcCmColorMethod.None)
+    this._hpcolor = this._cecolor.clone()
+    this._hplayer = '.'
+    this._hptransparency = new AcCmTransparency()
     this._textstyle = DEFAULT_TEXT_STYLE
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
@@ -880,6 +897,74 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * The default hatch background color string.
+   */
+  get hpbackgroundcolor(): AcCmColor {
+    return this._hpbackgroundcolor
+  }
+  set hpbackgroundcolor(value: AcCmColor) {
+    this.updateSysVar(
+      AcDbSystemVariables.HPBACKGROUNDCOLOR,
+      this._hpbackgroundcolor,
+      value ?? new AcCmColor(AcCmColorMethod.None),
+      nextValue => {
+        this._hpbackgroundcolor = nextValue.clone()
+      }
+    )
+  }
+
+  /**
+   * The default color string used for newly created hatches.
+   */
+  get hpcolor(): AcCmColor {
+    return this._hpcolor
+  }
+  set hpcolor(value: AcCmColor) {
+    this.updateSysVar(
+      AcDbSystemVariables.HPCOLOR,
+      this._hpcolor,
+      value ?? this._cecolor,
+      nextValue => {
+        this._hpcolor = nextValue.clone()
+      }
+    )
+  }
+
+  /**
+   * The default layer used for newly created hatches and fills.
+   */
+  get hplayer(): string {
+    return this._hplayer
+  }
+  set hplayer(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.HPLAYER,
+      this._hplayer,
+      value ?? '.',
+      nextValue => {
+        this._hplayer = nextValue
+      }
+    )
+  }
+
+  /**
+   * The default transparency string used for newly created hatches and fills.
+   */
+  get hptransparency(): AcCmTransparency {
+    return this._hptransparency
+  }
+  set hptransparency(value: AcCmTransparency) {
+    this.updateSysVar(
+      AcDbSystemVariables.HPTRANSPARENCY,
+      this._hptransparency,
+      value ?? new AcCmTransparency(),
+      nextValue => {
+        this._hptransparency = nextValue.clone()
+      }
+    )
+  }
+
+  /**
    * The text style name for new text objects.
    */
   get textstyle(): string {
@@ -1323,6 +1408,14 @@ export class AcDbDatabase extends AcDbObject {
 
     if (entity.dxfTypeName === 'MULTILEADER') {
       this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
+      return
+    }
+
+    if (entity.dxfTypeName === 'HATCH') {
+      const hatch = entity as AcDbEntity & {
+        applyPatternDefaultsFromSysVars?: (db: AcDbDatabase) => void
+      }
+      hatch.applyPatternDefaultsFromSysVars?.(this)
     }
   }
 
@@ -1543,6 +1636,14 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeDouble(40, this.cmlscale)
     filer.writeString(9, '$CMLEADERSTYLE')
     filer.writeString(2, this.cmleaderstyle)
+    filer.writeString(9, '$HPCOLOR')
+    filer.writeString(2, this.formatHpColor(this.hpcolor, '.'))
+    filer.writeString(9, '$HPBACKGROUNDCOLOR')
+    filer.writeString(2, this.formatHpColor(this.hpbackgroundcolor, 'None'))
+    filer.writeString(9, '$HPLAYER')
+    filer.writeString(8, this.hplayer)
+    filer.writeString(9, '$HPTRANSPARENCY')
+    filer.writeString(1, this.formatHpTransparency(this.hptransparency))
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
     filer.writeString(9, '$ANGBASE')
@@ -1869,6 +1970,13 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     if (
+      currentValue instanceof AcCmTransparency &&
+      nextValue instanceof AcCmTransparency
+    ) {
+      return !currentValue.equals(nextValue)
+    }
+
+    if (
       currentValue instanceof AcDbDwgVersion &&
       nextValue instanceof AcDbDwgVersion
     ) {
@@ -1876,6 +1984,30 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     return !Object.is(currentValue, nextValue)
+  }
+
+  private formatHpColor(value: AcCmColor, noneFallback: string) {
+    if (value.colorMethod === AcCmColorMethod.None) {
+      return noneFallback
+    }
+
+    if (noneFallback === '.' && value.equals(this.cecolor)) {
+      return '.'
+    }
+
+    return value.toString()
+  }
+
+  private formatHpTransparency(value: AcCmTransparency) {
+    if (value.isByLayer) {
+      return '.'
+    }
+
+    if (value.isByAlpha && value.percentage != null) {
+      return String(value.percentage)
+    }
+
+    return value.toString()
   }
 
   /**
