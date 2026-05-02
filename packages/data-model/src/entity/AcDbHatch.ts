@@ -683,7 +683,11 @@ export class AcDbHatch extends AcDbEntity {
       return this._patternName
     }
 
-    const db = this.database
+    const db = this.tryGetDatabase()
+    if (!db) {
+      return this._patternName
+    }
+
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPNAME,
       db
@@ -700,7 +704,11 @@ export class AcDbHatch extends AcDbEntity {
       return this._patternAngle
     }
 
-    const db = this.database
+    const db = this.tryGetDatabase()
+    if (!db) {
+      return this._patternAngle
+    }
+
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPANG,
       db
@@ -715,7 +723,11 @@ export class AcDbHatch extends AcDbEntity {
       return this._patternScale
     }
 
-    const db = this.database
+    const db = this.tryGetDatabase()
+    if (!db) {
+      return this._patternScale
+    }
+
     return this.normalizePatternScale(
       AcDbSysVarManager.instance().getVar(AcDbSystemVariables.HPSCALE, db)
     )
@@ -726,7 +738,11 @@ export class AcDbHatch extends AcDbEntity {
       return this._associative
     }
 
-    const db = this.database
+    const db = this.tryGetDatabase()
+    if (!db) {
+      return this._associative
+    }
+
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPASSOC,
       db
@@ -796,6 +812,14 @@ export class AcDbHatch extends AcDbEntity {
     }
 
     return undefined
+  }
+
+  private tryGetDatabase() {
+    try {
+      return this.database
+    } catch {
+      return undefined
+    }
   }
 
   /**

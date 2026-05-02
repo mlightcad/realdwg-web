@@ -557,7 +557,29 @@ export class AcDbSysVarManager {
     if (typeof value !== 'string' && !(value instanceof String)) {
       return undefined
     }
-    return AcCmTransparency.fromString(String(value))
+
+    const text = String(value)
+    const normalized = text.trim().toLowerCase()
+    if (
+      normalized === '' ||
+      normalized === '.' ||
+      normalized === 'use current' ||
+      normalized === 'bylayer'
+    ) {
+      return new AcCmTransparency()
+    }
+    if (normalized === 'byblock') {
+      return AcCmTransparency.fromString(text)
+    }
+
+    const percentage = Number(text)
+    if (Number.isInteger(percentage) && percentage >= 0 && percentage <= 90) {
+      const transparency = new AcCmTransparency()
+      transparency.percentage = percentage
+      return transparency
+    }
+
+    return AcCmTransparency.fromString(text)
   }
 
   /**
