@@ -4,7 +4,12 @@ import {
   AcDbDxfConverter,
   AcDbFileType,
   acdbHostApplicationServices,
-  AcDbOpenDatabaseOptions
+  AcDbOpenDatabaseOptions,
+  AcDbPatDocument,
+  AcDbPatParser,
+  AcDbPatSvgRenderer,
+  AcDbPredefinedAcadIsoPat,
+  AcDbPredefinedAcadPat
 } from '@mlightcad/data-model'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
@@ -15,6 +20,17 @@ const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
 const exportButton = document.createElement('button')
 const linetypePreviewPanel = document.createElement('section')
+const patSourceSelect = document.getElementById(
+  'patSourceSelect'
+) as HTMLSelectElement
+const patFileInput = document.getElementById('patFileInput') as HTMLInputElement
+const parsePatButton = document.getElementById(
+  'parsePatButton'
+) as HTMLButtonElement
+const patStatus = document.getElementById('patStatus') as HTMLDivElement
+const patTableOutput = document.getElementById(
+  'patTableOutput'
+) as HTMLDivElement
 
 exportButton.type = 'button'
 exportButton.textContent = 'Export DXF'
@@ -33,6 +49,8 @@ let lastFile: File | null = null
 let lastBuffer: ArrayBuffer | null = null
 let lastParsedDatabase: AcDbDatabase | null = null
 let lastDownloadUrl: string | null = null
+const patSvgRenderer = new AcDbPatSvgRenderer()
+const patParser = new AcDbPatParser()
 
 const registerConverters = (useWorker: boolean) => {
   // Register DXF converter
@@ -208,6 +226,150 @@ const renderLinetypePreviews = (database: AcDbDatabase | null) => {
 
   linetypePreviewPanel.appendChild(list)
   linetypePreviewPanel.style.display = 'block'
+}
+
+const setPatStatus = (message: string) => {
+  patStatus.textContent = message
+}
+
+const clearPatPreview = () => {
+  patTableOutput.innerHTML = ''
+}
+
+type PatSource = 'predefined-acad' | 'predefined-acadiso' | 'file'
+
+const getPredefinedPatDocument = (
+  source: PatSource
+): AcDbPatDocument | null => {
+  if (source === 'predefined-acad') return AcDbPredefinedAcadPat
+  if (source === 'predefined-acadiso') return AcDbPredefinedAcadIsoPat
+  return null
+}
+
+const renderPatTable = (patDocument: AcDbPatDocument) => {
+  patTableOutput.innerHTML = ''
+  if (patDocument.patterns.length === 0) return
+
+  const table = document.createElement('table')
+  table.style.width = '100%'
+  table.style.borderCollapse = 'collapse'
+  table.style.tableLayout = 'fixed'
+  table.style.marginTop = '8px'
+
+  const thead = document.createElement('thead')
+  const headerRow = document.createElement('tr')
+  const jsonHeader = document.createElement('th')
+  jsonHeader.textContent = 'Pattern JSON'
+  jsonHeader.style.textAlign = 'left'
+  jsonHeader.style.padding = '8px'
+  jsonHeader.style.border = '1px solid #dadada'
+  jsonHeader.style.background = '#f3f4f6'
+
+  const svgHeader = document.createElement('th')
+  svgHeader.textContent = 'PAT Preview'
+  svgHeader.style.textAlign = 'left'
+  svgHeader.style.padding = '8px'
+  svgHeader.style.border = '1px solid #dadada'
+  svgHeader.style.background = '#f3f4f6'
+
+  headerRow.appendChild(jsonHeader)
+  headerRow.appendChild(svgHeader)
+  thead.appendChild(headerRow)
+  table.appendChild(thead)
+
+  const tbody = document.createElement('tbody')
+  patDocument.patterns.forEach(pattern => {
+    const row = document.createElement('tr')
+
+    const jsonCell = document.createElement('td')
+    jsonCell.style.verticalAlign = 'top'
+    jsonCell.style.border = '1px solid #dadada'
+    jsonCell.style.padding = '8px'
+
+    const jsonTitle = document.createElement('div')
+    jsonTitle.style.fontFamily = 'monospace'
+    jsonTitle.style.fontWeight = 'bold'
+    jsonTitle.style.marginBottom = '6px'
+    jsonTitle.textContent = pattern.description
+      ? `${pattern.name} - ${pattern.description}`
+      : pattern.name
+
+    const jsonPre = document.createElement('pre')
+    jsonPre.style.margin = '0'
+    jsonPre.style.whiteSpace = 'pre-wrap'
+    jsonPre.style.wordBreak = 'break-word'
+    jsonPre.style.fontSize = '12px'
+    jsonPre.textContent = JSON.stringify(pattern, null, 2)
+
+    jsonCell.appendChild(jsonTitle)
+    jsonCell.appendChild(jsonPre)
+
+    const previewCell = document.createElement('td')
+    previewCell.style.verticalAlign = 'top'
+    previewCell.style.border = '1px solid #dadada'
+    previewCell.style.padding = '8px'
+    previewCell.style.width = '380px'
+    previewCell.innerHTML = patSvgRenderer.renderPattern(pattern, {
+      width: 360,
+      height: 220,
+      stroke: '#1f2937',
+      strokeWidth: 1.25,
+      background: '#f8fafc'
+    })
+
+    row.appendChild(jsonCell)
+    row.appendChild(previewCell)
+    tbody.appendChild(row)
+  })
+
+  table.appendChild(tbody)
+  patTableOutput.appendChild(table)
+}
+
+const parsePatText = (text: string) => {
+  const parsed = patParser.parse(text)
+  loadPatDocument(parsed, 'Local PAT file')
+}
+
+const loadPatDocument = (patDocument: AcDbPatDocument, sourceLabel: string) => {
+  renderPatTable(patDocument)
+
+  const summaryParts = [
+    `Source: ${sourceLabel}`,
+    `Patterns: ${patDocument.patterns.length}`
+  ]
+  if (patDocument.issues.length > 0) {
+    summaryParts.push(`Issues: ${patDocument.issues.length}`)
+  }
+  setPatStatus(summaryParts.join(' | '))
+}
+
+const updatePatSourceUi = () => {
+  const source = patSourceSelect.value as PatSource
+  const isFileSource = source === 'file'
+  patFileInput.disabled = !isFileSource
+  parsePatButton.disabled = !isFileSource
+}
+
+const applyPatSource = () => {
+  const source = patSourceSelect.value as PatSource
+  updatePatSourceUi()
+
+  if (source === 'file') {
+    clearPatPreview()
+    setPatStatus('Select a PAT file and click "Parse PAT".')
+    return
+  }
+
+  const predefined = getPredefinedPatDocument(source)
+  if (!predefined) {
+    clearPatPreview()
+    setPatStatus('No predefined PAT document is available for current source.')
+    return
+  }
+
+  const sourceLabel = source === 'predefined-acad' ? 'acad.pat' : 'acadiso.pat'
+  loadPatDocument(predefined, sourceLabel)
 }
 
 const updateModeOptions = (fileType: AcDbFileType) => {
@@ -390,3 +552,55 @@ exportButton.addEventListener('click', () => {
     updateExportButton()
   }
 })
+
+patFileInput.addEventListener('change', async () => {
+  if ((patSourceSelect.value as PatSource) !== 'file') return
+  const file = patFileInput.files?.[0]
+  if (!file) return
+
+  parsePatButton.disabled = true
+  setPatStatus('Loading PAT file...')
+  clearPatPreview()
+
+  try {
+    const text = await file.text()
+    parsePatText(text)
+  } catch (error) {
+    console.error(error)
+    setPatStatus(`PAT load failed: ${(error as Error).message}`)
+  } finally {
+    parsePatButton.disabled = false
+  }
+})
+
+parsePatButton.addEventListener('click', async () => {
+  if ((patSourceSelect.value as PatSource) !== 'file') {
+    setPatStatus(
+      'Switch source to "From local PAT file" to parse uploaded files.'
+    )
+    return
+  }
+  const file = patFileInput.files?.[0]
+  if (!file) {
+    setPatStatus('Please select a PAT file first.')
+    return
+  }
+
+  parsePatButton.disabled = true
+  setPatStatus('Parsing PAT...')
+  try {
+    const text = await file.text()
+    parsePatText(text)
+  } catch (error) {
+    console.error(error)
+    setPatStatus(`PAT parse failed: ${(error as Error).message}`)
+  } finally {
+    parsePatButton.disabled = false
+  }
+})
+
+patSourceSelect.addEventListener('change', () => {
+  applyPatSource()
+})
+
+applyPatSource()
