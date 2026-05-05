@@ -88,8 +88,15 @@ export class AcDbText extends AcDbEntity {
   private _thickness: number
   /** The height of the text */
   private _height: number
-  /** The insertion point of the text */
+  /** The insertion point of the text (DXF group 10). */
   private _position: AcGePoint3d
+  /**
+   * The alignment point of the text (DXF group 11).
+   *
+   * Used when {@link horizontalMode} is not LEFT or {@link verticalMode} is
+   * not BASELINE. Mirrors `AcDbText::alignmentPoint` in ObjectARX.
+   */
+  private _alignmentPoint: AcGePoint3d
   /** The rotation angle of the text */
   private _rotation: number
   /** The oblique angle of the text */
@@ -123,6 +130,7 @@ export class AcDbText extends AcDbEntity {
     this._height = 0
     this._thickness = 1
     this._position = new AcGePoint3d()
+    this._alignmentPoint = new AcGePoint3d()
     this._rotation = 0
     this._oblique = 0
     this._horizontalMode = AcDbTextHorizontalMode.LEFT
@@ -251,6 +259,34 @@ export class AcDbText extends AcDbEntity {
    */
   set position(value: AcGePoint3d) {
     this._position.copy(value)
+  }
+
+  /**
+   * Gets the alignment point of the text in WCS coordinates.
+   *
+   * The alignment point is the placement anchor used when
+   * {@link horizontalMode} is not {@link AcDbTextHorizontalMode.LEFT} or
+   * {@link verticalMode} is not {@link AcDbTextVerticalMode.BASELINE}. For
+   * a Middle/Center text, for example, this is the centroid of the text's
+   * bounding box. Mirrors `AcDbText::alignmentPoint` in ObjectARX and maps
+   * to DXF group code 11.
+   *
+   * When the horizontal/vertical modes are at their defaults, the alignment
+   * point is unused and typically equals {@link position}.
+   *
+   * @returns The alignment point as a 3D point
+   */
+  get alignmentPoint() {
+    return this._alignmentPoint
+  }
+
+  /**
+   * Sets the alignment point of the text in WCS coordinates.
+   *
+   * @param value - The new alignment point
+   */
+  set alignmentPoint(value: AcGePoint3d) {
+    this._alignmentPoint.copy(value)
   }
 
   /**
@@ -692,20 +728,120 @@ export class AcDbText extends AcDbEntity {
     renderer: AcGiRenderer,
     delay?: boolean
   ): AcGiEntity | undefined {
+    // For non-default alignments the DXF stores the placement anchor in
+    // group 11 (`alignmentPoint`) — `position` (group 10) is only the
+    // left-baseline insertion point and is misleading for CENTER/RIGHT
+    // or MIDDLE/TOP/BOTTOM modes. Pick the right reference + the matching
+    // attachment point so the renderer can compute the offset itself
+    // from the real bbox of the laid-out glyphs.
+    let attachmentPoint = this.resolveAttachmentPoint()
+    let position: AcGePoint3d
+    if (attachmentPoint === AcGiMTextAttachmentPoint.BaselineLeft) {
+      // Default LEFT + BASELINE: `position` (group 10) is the anchor.
+      position = this._position
+    } else {
+      // Non-default alignment: anchor is in `alignmentPoint` (group 11).
+      // If group 11 was not propagated by the converter (still zero) or
+      // is the same as `position`, fall back to LEFT/BASELINE so the
+      // entity renders at a sensible spot instead of jumping to the
+      // world origin (0, 0).
+      const ap = this._alignmentPoint
+      const apIsUnset =
+        (ap.x === 0 && ap.y === 0 && ap.z === 0) ||
+        (ap.x === this._position.x &&
+          ap.y === this._position.y &&
+          ap.z === this._position.z)
+      if (apIsUnset) {
+        attachmentPoint = AcGiMTextAttachmentPoint.BaselineLeft
+        position = this._position
+      } else {
+        position = ap
+      }
+    }
     const mtextData: AcGiMTextData = {
       text: this.textString,
       height: this.height,
       width: Infinity,
       widthFactor: this.widthFactor,
-      position: this.position,
+      position,
       // Please use 'rotation' and do not set value of 'directionVector' because it will overrides
       // rotation value.
       rotation: this.rotation,
       // MText draw text from top to bottom.
       drawingDirection: AcGiMTextFlowDirection.BOTTOM_TO_TOP,
-      attachmentPoint: AcGiMTextAttachmentPoint.BottomLeft
+      attachmentPoint
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
+  }
+
+  /**
+   * Maps the (horizontal, vertical) DXF alignment modes of this TEXT/ATTRIB
+   * to the matching {@link AcGiMTextAttachmentPoint}.
+   *
+   * The DXF spec uses two orthogonal axes (group 72 + group 73), with the
+   * special-case `halign=MIDDLE (4)` collapsing both to a single centroid
+   * placement. The renderer accepts the standard 3×3 + Baseline matrix
+   * (TopLeft … BaselineRight). This function translates between the two.
+   *
+   * For default LEFT + BASELINE we return `BaselineLeft` and the caller
+   * uses `position` (group 10) as the anchor. For every other case we
+   * return the matching attachment and the caller passes
+   * `alignmentPoint` (group 11) — the DXF placement anchor — to the
+   * renderer.
+   */
+  private resolveAttachmentPoint(): AcGiMTextAttachmentPoint {
+    const h = this._horizontalMode
+    const v = this._verticalModel
+
+    // halign=MIDDLE (4) is a special "centroid" mode that overrides
+    // valign — the placement anchor is the bbox center regardless of
+    // what valign claims.
+    if (h === AcDbTextHorizontalMode.MIDDLE) {
+      return AcGiMTextAttachmentPoint.MiddleCenter
+    }
+
+    // halign=ALIGNED (3) and halign=FIT (5) are two-point text — the
+    // libredwg/dxf converter has already pre-computed `position` so it
+    // sits at the left baseline of a string whose `widthFactor` was
+    // scaled to fit between the two points. The renderer's default
+    // BaselineLeft anchor is the right choice.
+    if (
+      h === AcDbTextHorizontalMode.ALIGNED ||
+      h === AcDbTextHorizontalMode.FIT
+    ) {
+      return AcGiMTextAttachmentPoint.BaselineLeft
+    }
+
+    // Standard 3×3 mapping. Note BASELINE (0) maps to Baseline*, BOTTOM
+    // (1) maps to Bottom* — different semantics in the DXF spec, even if
+    // the visual difference is just the descender height.
+    switch (v) {
+      case AcDbTextVerticalMode.TOP:
+        if (h === AcDbTextHorizontalMode.CENTER)
+          return AcGiMTextAttachmentPoint.TopCenter
+        if (h === AcDbTextHorizontalMode.RIGHT)
+          return AcGiMTextAttachmentPoint.TopRight
+        return AcGiMTextAttachmentPoint.TopLeft
+      case AcDbTextVerticalMode.MIDDLE:
+        if (h === AcDbTextHorizontalMode.CENTER)
+          return AcGiMTextAttachmentPoint.MiddleCenter
+        if (h === AcDbTextHorizontalMode.RIGHT)
+          return AcGiMTextAttachmentPoint.MiddleRight
+        return AcGiMTextAttachmentPoint.MiddleLeft
+      case AcDbTextVerticalMode.BOTTOM:
+        if (h === AcDbTextHorizontalMode.CENTER)
+          return AcGiMTextAttachmentPoint.BottomCenter
+        if (h === AcDbTextHorizontalMode.RIGHT)
+          return AcGiMTextAttachmentPoint.BottomRight
+        return AcGiMTextAttachmentPoint.BottomLeft
+      case AcDbTextVerticalMode.BASELINE:
+      default:
+        if (h === AcDbTextHorizontalMode.CENTER)
+          return AcGiMTextAttachmentPoint.BaselineCenter
+        if (h === AcDbTextHorizontalMode.RIGHT)
+          return AcGiMTextAttachmentPoint.BaselineRight
+        return AcGiMTextAttachmentPoint.BaselineLeft
+    }
   }
 
   /**
@@ -727,7 +863,11 @@ export class AcDbText extends AcDbEntity {
     filer.writeString(7, this.styleName)
     filer.writeInt16(72, this.horizontalMode)
     filer.writeInt16(73, this.verticalMode)
-    filer.writePoint3d(11, this.position)
+    // Group 11 holds the alignment point used when horizontal/vertical modes
+    // are non-default. For LEFT + BASELINE, AutoCAD writes the position again
+    // (or zero), so we mirror by emitting `alignmentPoint`, which defaults to
+    // a copy of `position` for entities created in code.
+    filer.writePoint3d(11, this.alignmentPoint)
     return this
   }
 }

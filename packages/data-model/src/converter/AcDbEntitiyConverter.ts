@@ -311,6 +311,19 @@ export class AcDbEntityConverter {
     dbAttrib.textString = attrib.text
     dbAttrib.height = attrib.textHeight
     dbAttrib.position.copy(attrib.startPoint)
+    // Propagate DXF group 11 (alignment point) used when halign/valign are
+    // non-default. Falls back to startPoint when missing or zero so the
+    // alignment anchor never collapses to the world origin — see notes in
+    // `libredwg-converter` for the same defensive handling.
+    const ap = attrib.alignmentPoint
+    const isApZero =
+      !ap ||
+      (ap.x === 0 && ap.y === 0 && ((ap as { z?: number }).z ?? 0) === 0)
+    if (ap && !isApZero) {
+      dbAttrib.alignmentPoint.copy(ap)
+    } else {
+      dbAttrib.alignmentPoint.copy(attrib.startPoint)
+    }
     dbAttrib.rotation = attrib.rotation
     dbAttrib.oblique = attrib.obliqueAngle ?? 0
     dbAttrib.thickness = attrib.thickness
@@ -753,6 +766,19 @@ export class AcDbEntityConverter {
     dbEntity.styleName = text.styleName
     dbEntity.height = text.textHeight
     dbEntity.position.copy(text.startPoint)
+    // dxf-json calls DXF group 11 `endPoint` on TEXT; this is the alignment
+    // point used when halign/valign deviate from Left/Baseline. Fall back to
+    // startPoint when missing or zero — same defensive handling as in
+    // `convertAttributeCommon`.
+    const ep = text.endPoint
+    const isEpZero =
+      !ep ||
+      (ep.x === 0 && ep.y === 0 && ((ep as { z?: number }).z ?? 0) === 0)
+    if (ep && !isEpZero) {
+      dbEntity.alignmentPoint.copy(ep)
+    } else {
+      dbEntity.alignmentPoint.copy(text.startPoint)
+    }
     dbEntity.rotation = AcGeMathUtil.degToRad(text.rotation || 0)
     dbEntity.oblique = text.obliqueAngle ?? 0
     dbEntity.thickness = text.thickness
