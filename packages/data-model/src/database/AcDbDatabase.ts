@@ -316,7 +316,7 @@ export class AcDbDatabase extends AcDbObject {
   /** Current entity line weight value */
   private _celweight: AcGiLineWeight
   /** Current entity transparency level */
-  private _cetransparency: string
+  private _cetransparency: AcCmTransparency
   /** Current layer for the database */
   private _clayer: string
   /** Current multiline style for newly created MLINE entities */
@@ -405,7 +405,7 @@ export class AcDbDatabase extends AcDbObject {
     this._cecolor = new AcCmColor()
     this._celtype = ByLayer
     this._celweight = AcGiLineWeight.ByLayer
-    this._cetransparency = 'ByLayer'
+    this._cetransparency = new AcCmTransparency()
     this._clayer = '0'
     this._cmlstyle = DEFAULT_MLINE_STYLE
     this._cmlscale = 1
@@ -834,18 +834,18 @@ export class AcDbDatabase extends AcDbObject {
   /**
    * The transparency level of new objects as they are created.
    *
-   * Can be 'ByLayer', 'ByBlock', or a value from 0 to 90 (percentage).
+   * Can be ByLayer, ByBlock, or a value from 0 to 90 (percentage).
    */
-  get cetransparency(): string {
+  get cetransparency(): AcCmTransparency {
     return this._cetransparency
   }
-  set cetransparency(value: string) {
+  set cetransparency(value: AcCmTransparency) {
     this.updateSysVar(
       AcDbSystemVariables.CETRANSPARENCY,
       this._cetransparency,
-      value ?? 'ByLayer',
+      value ?? new AcCmTransparency(),
       nextValue => {
-        this._cetransparency = nextValue
+        this._cetransparency = nextValue.clone()
       }
     )
   }
@@ -1652,22 +1652,30 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(8, this.clayer)
     filer.writeString(9, '$CELTYPE')
     filer.writeString(6, this.celtype)
-    filer.writeString(9, '$CETRANSPARENCY')
-    filer.writeString(1, this.cetransparency)
+    if (!this.cetransparency.isInvalid) {
+      filer.writeString(9, '$CETRANSPARENCY')
+      filer.writeTransparency(this.cetransparency)
+    }
     filer.writeString(9, '$CMLSTYLE')
     filer.writeString(2, this.cmlstyle)
     filer.writeString(9, '$CMLSCALE')
     filer.writeDouble(40, this.cmlscale)
     filer.writeString(9, '$CMLEADERSTYLE')
     filer.writeString(2, this.cmleaderstyle)
-    filer.writeString(9, '$HPCOLOR')
-    filer.writeString(2, this.formatHpColor(this.hpcolor, '.'))
-    filer.writeString(9, '$HPBACKGROUNDCOLOR')
-    filer.writeString(2, this.formatHpColor(this.hpbackgroundcolor, 'None'))
+    if (this.hpcolor.colorMethod !== AcCmColorMethod.None) {
+      filer.writeString(9, '$HPCOLOR')
+      filer.writeCmColor(this.hpcolor, 2)
+    }
+    if (this.hpbackgroundcolor.colorMethod !== AcCmColorMethod.None) {
+      filer.writeString(9, '$HPBACKGROUNDCOLOR')
+      filer.writeCmColor(this.hpbackgroundcolor, 2)
+    }
     filer.writeString(9, '$HPLAYER')
     filer.writeString(8, this.hplayer)
-    filer.writeString(9, '$HPTRANSPARENCY')
-    filer.writeString(1, this.formatHpTransparency(this.hptransparency))
+    if (!this.hptransparency.isInvalid) {
+      filer.writeString(9, '$HPTRANSPARENCY')
+      filer.writeTransparency(this.hptransparency)
+    }
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
     filer.writeString(9, '$ANGBASE')
@@ -2008,30 +2016,6 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     return !Object.is(currentValue, nextValue)
-  }
-
-  private formatHpColor(value: AcCmColor, noneFallback: string) {
-    if (value.colorMethod === AcCmColorMethod.None) {
-      return noneFallback
-    }
-
-    if (noneFallback === '.' && value.equals(this.cecolor)) {
-      return '.'
-    }
-
-    return value.toString()
-  }
-
-  private formatHpTransparency(value: AcCmTransparency) {
-    if (value.isByLayer) {
-      return '.'
-    }
-
-    if (value.isByAlpha && value.percentage != null) {
-      return String(value.percentage)
-    }
-
-    return value.toString()
   }
 
   /**

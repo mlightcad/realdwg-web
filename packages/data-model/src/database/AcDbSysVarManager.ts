@@ -131,9 +131,9 @@ export class AcDbSysVarManager {
     })
     this.registerVar({
       name: AcDbSystemVariables.CETRANSPARENCY,
-      type: 'string',
+      type: 'transparency',
       isDbVar: true,
-      defaultValue: 'ByLayer'
+      defaultValue: new AcCmTransparency()
     })
     this.registerVar({
       name: AcDbSystemVariables.CLAYER,
@@ -177,7 +177,7 @@ export class AcDbSysVarManager {
       name: AcDbSystemVariables.COLORTHEME,
       type: 'number',
       isDbVar: false,
-      defaultValue: '0'
+      defaultValue: 0
     })
     /**
      * - 0: All Dynamic Input features, including dynamic prompts, off
@@ -235,7 +235,7 @@ export class AcDbSysVarManager {
       name: AcDbSystemVariables.HPCOLOR,
       type: 'color',
       isDbVar: true,
-      defaultValue: new AcCmColor(AcCmColorMethod.None)
+      defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
     })
     /**
      * Controls whether hatch patterns are doubled for user-defined patterns.
@@ -446,7 +446,13 @@ export class AcDbSysVarManager {
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
       const oldVal = this.getVar(name, db)
-      if (
+      if (descriptor.type === 'transparency') {
+        const tmp = this.parseTransparency(value)
+        if (tmp == null || tmp.isInvalid) {
+          throw new Error('Invalid transparency value!')
+        }
+        value = tmp
+      } else if (
         descriptor.type !== 'string' &&
         (typeof value === 'string' || value instanceof String)
       ) {
@@ -462,12 +468,6 @@ export class AcDbSysVarManager {
           const tmp = this.parseColorSysVar(name, value as string, db)
           if (tmp == null) {
             throw new Error('Invalid color value!')
-          }
-          value = tmp
-        } else if (descriptor.type === 'transparency') {
-          const tmp = this.parseTransparency(value as string)
-          if (tmp == null || tmp.isInvalid) {
-            throw new Error('Invalid transparency value!')
           }
           value = tmp
         }
@@ -547,28 +547,17 @@ export class AcDbSysVarManager {
     return AcCmColor.fromString(value)
   }
 
-  private parseTransparency(value: string) {
-    const normalized = value.trim().toLowerCase()
-    if (
-      normalized === '' ||
-      normalized === '.' ||
-      normalized === 'use current' ||
-      normalized === 'bylayer'
-    ) {
-      return new AcCmTransparency()
+  private parseTransparency(value: AcDbSysVarType) {
+    if (value instanceof AcCmTransparency) {
+      return value
     }
-    if (normalized === 'byblock') {
-      return AcCmTransparency.fromString(value)
+    if (typeof value === 'number') {
+      return AcCmTransparency.deserialize(value)
     }
-
-    const percentage = Number(value)
-    if (Number.isInteger(percentage) && percentage >= 0 && percentage <= 90) {
-      const transparency = new AcCmTransparency()
-      transparency.percentage = percentage
-      return transparency
+    if (typeof value !== 'string' && !(value instanceof String)) {
+      return undefined
     }
-
-    return AcCmTransparency.fromString(value)
+    return AcCmTransparency.fromString(String(value))
   }
 
   /**

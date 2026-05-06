@@ -1,4 +1,8 @@
-import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmTransparency,
+  AcCmTransparencyMethod
+} from '@mlightcad/common'
 import {
   AcGePoint2dLike,
   AcGePoint3dLike,
@@ -212,7 +216,12 @@ export class AcDbDxfFiler {
   }
 
   writeTransparency(transparency?: AcCmTransparency, code: number = 440) {
-    if (!transparency) return this
+    if (
+      !transparency ||
+      transparency.method === AcCmTransparencyMethod.ErrorValue
+    ) {
+      return this
+    }
     return this.writeInt32(code, transparency.serialize())
   }
 
