@@ -58,6 +58,8 @@ export abstract class AcDbEntity extends AcDbObject {
   private _visibility: boolean = true
   /** The transparency level of this entity (0-1) */
   private _transparency: AcCmTransparency = new AcCmTransparency()
+  /** Whether transparency was explicitly assigned on this entity. */
+  private _transparencySet: boolean = false
 
   /**
    * Gets the type name of this entity.
@@ -133,13 +135,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get color() {
-    if (this._color == null) {
-      this._color = new AcCmColor()
-      if (this.database.cecolor) {
-        this._color.copy(this.database.cecolor)
-      }
-    }
-    return this._color
+    return this.getEntityColor()
   }
 
   /**
@@ -153,8 +149,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   set color(value: AcCmColor) {
-    if (this._color == null) this._color = new AcCmColor()
-    this._color.copy(value)
+    this.setEntityColor(value)
   }
 
   /**
@@ -358,6 +353,56 @@ export abstract class AcDbEntity extends AcDbObject {
    */
   set transparency(value: AcCmTransparency) {
     this._transparency = value.clone()
+    this._transparencySet = true
+  }
+
+  /**
+   * Returns whether a layer value has been explicitly assigned on this entity.
+   */
+  protected hasExplicitLayer() {
+    return this._layer != null
+  }
+
+  /**
+   * Returns whether a color value has been explicitly assigned on this entity.
+   */
+  protected hasExplicitColor() {
+    return this._color != null
+  }
+
+  /**
+   * Returns the stored entity color, initializing it from CECOLOR if needed.
+   */
+  protected getEntityColor() {
+    if (this._color == null) {
+      this._color = new AcCmColor()
+      if (this.database.cecolor) {
+        this._color.copy(this.database.cecolor)
+      }
+    }
+    return this._color
+  }
+
+  /**
+   * Assigns the stored entity color.
+   */
+  protected setEntityColor(value: AcCmColor) {
+    if (this._color == null) this._color = new AcCmColor()
+    this._color.copy(value)
+  }
+
+  /**
+   * Returns whether unresolved entity color should be initialized from CECOLOR.
+   */
+  protected shouldResolveColorFromCecolor() {
+    return true
+  }
+
+  /**
+   * Returns whether transparency has been explicitly assigned on this entity.
+   */
+  protected hasExplicitTransparency() {
+    return this._transparencySet
   }
 
   /**
@@ -424,7 +469,7 @@ export abstract class AcDbEntity extends AcDbObject {
       this._layer = this.database.clayer ?? '0'
     }
 
-    if (this._color == null) {
+    if (this._color == null && this.shouldResolveColorFromCecolor()) {
       this._color = new AcCmColor()
       if (this.database.cecolor) {
         this._color.copy(this.database.cecolor)
@@ -676,7 +721,7 @@ export abstract class AcDbEntity extends AcDbObject {
           accessor: {
             get: (): AcCmColor => this.color,
             set: (newVal: AcCmColor): void => {
-              this.color.copy(newVal)
+              this.color = newVal
             }
           }
         },

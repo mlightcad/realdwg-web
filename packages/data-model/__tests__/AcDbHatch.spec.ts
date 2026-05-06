@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeCircArc2d,
   AcGeEllipseArc2d,
@@ -9,7 +10,11 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
-import { AcDbDatabase } from '../src/database'
+import {
+  AcDbDatabase,
+  AcDbSysVarManager,
+  AcDbSystemVariables
+} from '../src/database'
 import {
   AcDbHatch,
   AcDbHatchObjectType,
@@ -38,6 +43,7 @@ const createRectLoop = (x: number, y: number, w: number, h: number) =>
 
 describe('AcDbHatch', () => {
   it('exposes type names and public getters/setters', () => {
+    createWorkingDb()
     const hatch = new AcDbHatch()
 
     expect(AcDbHatch.typeName).toBe('Hatch')
@@ -77,6 +83,200 @@ describe('AcDbHatch', () => {
 
     hatch.patternName = 'solid'
     expect(hatch.isSolidFill).toBe(true)
+  })
+
+  it('expands predefined pattern names into scaled definition lines', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+
+    hatch.patternName = 'ansi31'
+    expect(hatch.patternName).toBe('ansi31')
+    expect(hatch.isSolidFill).toBe(false)
+    expect(hatch.definitionLines).toHaveLength(1)
+    expect(hatch.definitionLines[0].angle).toBeCloseTo(Math.PI / 4)
+    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175)
+
+    hatch.patternScale = 2
+    expect(hatch.definitionLines).toHaveLength(1)
+    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 2)
+  })
+
+  it('applies hatch system variables when a new hatch is added to a database', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousHpName = manager.getVar(AcDbSystemVariables.HPNAME, db)
+    const previousHpAng = manager.getVar(AcDbSystemVariables.HPANG, db)
+    const previousHpScale = manager.getVar(AcDbSystemVariables.HPSCALE, db)
+    const previousHpAssoc = manager.getVar(AcDbSystemVariables.HPASSOC, db)
+    const previousHpColor = manager.getVar(AcDbSystemVariables.HPCOLOR, db)
+    const previousHpBackgroundColor = manager.getVar(
+      AcDbSystemVariables.HPBACKGROUNDCOLOR,
+      db
+    )
+    const previousHpLayer = manager.getVar(AcDbSystemVariables.HPLAYER, db)
+    const previousHpTransparency = manager.getVar(
+      AcDbSystemVariables.HPTRANSPARENCY,
+      db
+    )
+    const previousHpIslandDetection = manager.getVar(
+      AcDbSystemVariables.HPISLANDDETECTION,
+      db
+    )
+    const previousHpDouble = manager.getVar(AcDbSystemVariables.HPDOUBLE, db)
+
+    try {
+      manager.setVar(AcDbSystemVariables.HPNAME, 'ANSI31', db)
+      manager.setVar(AcDbSystemVariables.HPANG, Math.PI / 6, db)
+      manager.setVar(AcDbSystemVariables.HPSCALE, 2, db)
+      manager.setVar(AcDbSystemVariables.HPASSOC, 0, db)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
+      manager.setVar(AcDbSystemVariables.HPBACKGROUNDCOLOR, 'RGB:40,50,60', db)
+      manager.setVar(AcDbSystemVariables.HPLAYER, 'HATCH_LAYER', db)
+      manager.setVar(AcDbSystemVariables.HPTRANSPARENCY, '25', db)
+      manager.setVar(AcDbSystemVariables.HPISLANDDETECTION, 2, db)
+      manager.setVar(AcDbSystemVariables.HPDOUBLE, 1, db)
+
+      const hatch = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+      expect(hatch.layer).toBe('HATCH_LAYER')
+      expect(hatch.color.RGB).toBe(0x0a141e)
+      expect(hatch.transparency.percentage).toBe(25)
+      expect(hatch.backgroundColor).toBeInstanceOf(AcCmColor)
+      expect(hatch.backgroundColor?.RGB).toBe(0x28323c)
+      expect(hatch.patternName).toBe('ANSI31')
+      expect(hatch.patternAngle).toBeCloseTo(Math.PI / 6)
+      expect(hatch.patternScale).toBe(2)
+      expect(hatch.associative).toBe(false)
+      expect(hatch.hatchStyle).toBe(AcDbHatchStyle.Ignore)
+      expect(hatch.patternDouble).toBe(true)
+      expect(hatch.definitionLines).toHaveLength(1)
+      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 2)
+    } finally {
+      manager.setVar(AcDbSystemVariables.HPNAME, previousHpName as string, db)
+      manager.setVar(AcDbSystemVariables.HPANG, previousHpAng as number, db)
+      manager.setVar(AcDbSystemVariables.HPSCALE, previousHpScale as number, db)
+      manager.setVar(AcDbSystemVariables.HPASSOC, previousHpAssoc as number, db)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, previousHpColor as string, db)
+      manager.setVar(
+        AcDbSystemVariables.HPBACKGROUNDCOLOR,
+        previousHpBackgroundColor as string,
+        db
+      )
+      manager.setVar(AcDbSystemVariables.HPLAYER, previousHpLayer as string, db)
+      manager.setVar(
+        AcDbSystemVariables.HPTRANSPARENCY,
+        previousHpTransparency as string,
+        db
+      )
+      manager.setVar(
+        AcDbSystemVariables.HPISLANDDETECTION,
+        previousHpIslandDetection as number,
+        db
+      )
+      manager.setVar(
+        AcDbSystemVariables.HPDOUBLE,
+        previousHpDouble as number,
+        db
+      )
+    }
+  })
+
+  it('resolves color from HPCOLOR before CECOLOR until color is explicitly set', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousHpColor = manager.getVar(AcDbSystemVariables.HPCOLOR, db)
+
+    try {
+      db.cecolor = new AcCmColor().setRGBValue(0x112233)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
+
+      const hatch = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+      expect(hatch.color.RGB).toBe(0x0a141e)
+      expect(hatch.resolvedColor.RGB).toBe(0x0a141e)
+
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:40,50,60', db)
+      expect(hatch.color.RGB).toBe(0x28323c)
+
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'None', db)
+      expect(hatch.color.RGB).toBe(0x112233)
+
+      db.cecolor = new AcCmColor().setRGBValue(0x445566)
+      expect(hatch.color.RGB).toBe(0x445566)
+
+      hatch.color = new AcCmColor().setRGBValue(0x778899)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:1,2,3', db)
+      db.cecolor = new AcCmColor().setRGBValue(0xaabbcc)
+
+      expect(hatch.color.RGB).toBe(0x778899)
+      expect(hatch.resolvedColor.RGB).toBe(0x778899)
+    } finally {
+      manager.setVar(
+        AcDbSystemVariables.HPCOLOR,
+        previousHpColor as AcCmColor,
+        db
+      )
+    }
+  })
+
+  it('uses hatch system variables while rendering hatches without explicit pattern metadata', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousHpName = manager.getVar(AcDbSystemVariables.HPNAME, db)
+    const previousHpAng = manager.getVar(AcDbSystemVariables.HPANG, db)
+    const previousHpScale = manager.getVar(AcDbSystemVariables.HPSCALE, db)
+
+    try {
+      manager.setVar(AcDbSystemVariables.HPNAME, 'ANSI31', db)
+      manager.setVar(AcDbSystemVariables.HPANG, Math.PI / 8, db)
+      manager.setVar(AcDbSystemVariables.HPSCALE, 3, db)
+
+      const hatch = new AcDbHatch()
+      hatch.add(createRectLoop(0, 0, 1, 1))
+      const renderer = {
+        subEntityTraits: {} as Record<string, unknown>,
+        area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+        group: jest.fn()
+      }
+
+      hatch.subWorldDraw(renderer as never)
+
+      expect(renderer.subEntityTraits.fillType).toMatchObject({
+        solidFill: false,
+        patternAngle: Math.PI / 8,
+        definitionLines: hatch.definitionLines
+      })
+      expect(hatch.definitionLines).toHaveLength(1)
+      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 3)
+    } finally {
+      manager.setVar(AcDbSystemVariables.HPNAME, previousHpName as string, db)
+      manager.setVar(AcDbSystemVariables.HPANG, previousHpAng as number, db)
+      manager.setVar(AcDbSystemVariables.HPSCALE, previousHpScale as number, db)
+    }
+  })
+
+  it('keeps imported explicit definition lines when pattern metadata is assigned', () => {
+    const hatch = new AcDbHatch()
+    hatch.definitionLines.push({
+      angle: 0.25,
+      base: { x: 1, y: 2 },
+      offset: { x: 3, y: 4 },
+      dashLengths: [5, -6]
+    })
+
+    hatch.patternName = 'ANSI31'
+    hatch.patternScale = 3
+
+    expect(hatch.definitionLines).toEqual([
+      {
+        angle: 0.25,
+        base: { x: 1, y: 2 },
+        offset: { x: 3, y: 4 },
+        dashLengths: [5, -6]
+      }
+    ])
   })
 
   it('supports add(), geometricExtents and properties accessors', () => {

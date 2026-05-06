@@ -12,6 +12,8 @@ describe('AcCmTransparency', () => {
 
     const encoded = t.serialize()
     const restored = AcCmTransparency.deserialize(encoded)
+    expect(restored.method).toBe(AcCmTransparencyMethod.ByAlpha)
+    expect(restored.percentage).toBe(100)
     expect(restored.alpha).toBe(t.alpha)
     expect(restored.toString()).toBe('0')
 
@@ -46,8 +48,14 @@ describe('AcCmTransparency', () => {
     const byBlock = AcCmTransparency.fromString('ByBlock')
     expect(byBlock.isByBlock).toBe(true)
 
-    const numeric = AcCmTransparency.fromString('128')
-    expect(numeric.alpha).toBe(128)
+    const percentage = AcCmTransparency.fromString('25')
+    expect(percentage.percentage).toBe(25)
+
+    const alpha = AcCmTransparency.fromString('128')
+    expect(alpha.alpha).toBe(128)
+
+    const useCurrent = AcCmTransparency.fromString('use current')
+    expect(useCurrent.isByLayer).toBe(true)
 
     const invalid = AcCmTransparency.fromString('bad-value')
     expect(invalid.isInvalid).toBe(true)

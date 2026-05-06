@@ -251,9 +251,10 @@ export class AcCmTransparency {
    * Creates an `AcCmTransparency` instance from a string representation.
    *
    * Accepted formats:
-   * - `"ByLayer"` (case-insensitive)
+   * - `""`, `"."`, `"use current"` or `"ByLayer"` (case-insensitive)
    * - `"ByBlock"` (case-insensitive)
-   * - Numeric alpha value `"0"`–`"255"`
+   * - Transparency percentage `"0"`–`"90"`
+   * - Numeric alpha value `"91"`–`"255"` for compatibility
    *
    * Invalid or out-of-range values will produce an
    * `ErrorValue` transparency.
@@ -263,27 +264,43 @@ export class AcCmTransparency {
    *
    * @example
    * AcCmTransparency.fromString("ByLayer");
-   * AcCmTransparency.fromString("128");
+   * AcCmTransparency.fromString("25");
    * AcCmTransparency.fromString("ByBlock");
    */
   static fromString(value: string): AcCmTransparency {
     const v = value.trim()
+    const normalized = v.toLowerCase()
 
-    if (/^bylayer$/i.test(v)) {
+    if (
+      normalized === '' ||
+      normalized === '.' ||
+      normalized === 'use current' ||
+      normalized === 'bylayer'
+    ) {
       const t = new AcCmTransparency()
       t._method = AcCmTransparencyMethod.ByLayer
       return t
     }
 
-    if (/^byblock$/i.test(v)) {
+    if (normalized === 'byblock') {
       const t = new AcCmTransparency()
       t._method = AcCmTransparencyMethod.ByBlock
       return t
     }
 
-    const alpha = Number(v)
-    if (Number.isInteger(alpha) && alpha >= 0 && alpha <= 255) {
-      return new AcCmTransparency(alpha)
+    const numericValue = Number(v)
+    if (
+      Number.isInteger(numericValue) &&
+      numericValue >= 0 &&
+      numericValue <= 255
+    ) {
+      const t = new AcCmTransparency()
+      if (numericValue <= 90) {
+        t.percentage = numericValue
+      } else {
+        t.alpha = numericValue
+      }
+      return t
     }
 
     // Invalid input → ErrorValue
@@ -301,8 +318,10 @@ export class AcCmTransparency {
     const methodIndex = (value >>> 24) & 0xff
     const alpha = value & 0xff
     const method =
-      Object.values(AcCmTransparencyMethod)[methodIndex] ??
-      AcCmTransparencyMethod.ErrorValue
+      methodIndex >= AcCmTransparencyMethod.ByLayer &&
+      methodIndex <= AcCmTransparencyMethod.ErrorValue
+        ? methodIndex
+        : AcCmTransparencyMethod.ErrorValue
     const t = new AcCmTransparency()
     t._method = method as AcCmTransparencyMethod
     t._alpha = AcCmTransparency.clampAlpha(alpha)

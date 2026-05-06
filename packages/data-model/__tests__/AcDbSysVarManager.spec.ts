@@ -1,4 +1,4 @@
-import { AcCmColor } from '@mlightcad/common'
+import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbSystemVariables } from '../src/database/AcDbSystemVariables'
@@ -43,6 +43,43 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getVar(AcDbSystemVariables.CMLEADERSTYLE, db)).toBe(
       'ANNOTATION'
     )
+    manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
+    expect(manager.getVar(AcDbSystemVariables.HPCOLOR, db)?.toString()).toBe(
+      'RGB:10,20,30'
+    )
+    expect(
+      manager.getDescriptor(AcDbSystemVariables.CETRANSPARENCY)?.type
+    ).toBe('transparency')
+    manager.setVar(AcDbSystemVariables.CETRANSPARENCY, '25', db)
+    const ceTransparency = manager.getVar(
+      AcDbSystemVariables.CETRANSPARENCY,
+      db
+    )
+    expect(ceTransparency).toBeInstanceOf(AcCmTransparency)
+    expect((ceTransparency as AcCmTransparency).percentage).toBe(25)
+
+    const serializedTransparency = new AcCmTransparency()
+    serializedTransparency.percentage = 30
+    manager.setVar(
+      AcDbSystemVariables.CETRANSPARENCY,
+      serializedTransparency.serialize(),
+      db
+    )
+    expect(db.cetransparency.percentage).toBe(30)
+
+    const directTransparency = new AcCmTransparency()
+    directTransparency.percentage = 40
+    db.cetransparency = directTransparency
+    directTransparency.percentage = 45
+    expect(db.cetransparency.percentage).toBe(40)
+
+    manager.setVar(AcDbSystemVariables.HPTRANSPARENCY, '35', db)
+    const hpTransparency = manager.getVar(
+      AcDbSystemVariables.HPTRANSPARENCY,
+      db
+    )
+    expect(hpTransparency).toBeInstanceOf(AcCmTransparency)
+    expect((hpTransparency as AcCmTransparency).percentage).toBe(35)
 
     manager.setVar(AcDbSystemVariables.CELTYPE, 'BYLAYER', db)
     expect(manager.getVar(AcDbSystemVariables.CELTYPE, db)).toBe('ByLayer')
@@ -87,6 +124,34 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.CMLEADERSTYLE)).toBe(
       'Standard'
     )
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPASSOC)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPANG)).toBe(0)
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.HPBACKGROUNDCOLOR)?.toString()
+    ).toBe('None')
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.HPCOLOR)?.toString()
+    ).toBe('ByLayer')
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPDOUBLE)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPISLANDDETECTION)).toBe(
+      1
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPLAYER)).toBe('.')
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPNAME)).toBe('ANGLE')
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPSCALE)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPSEPARATE)).toBe(0)
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.CETRANSPARENCY)
+    ).toBeInstanceOf(AcCmTransparency)
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.CETRANSPARENCY)?.toString()
+    ).toBe('ByLayer')
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.HPTRANSPARENCY)
+    ).toBeInstanceOf(AcCmTransparency)
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.HPTRANSPARENCY)?.toString()
+    ).toBe('ByLayer')
     expect(manager.getDefaultValue(AcDbSystemVariables.CELTYPE)).toBe('ByLayer')
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(

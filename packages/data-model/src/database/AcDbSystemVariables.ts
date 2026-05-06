@@ -31,6 +31,8 @@ export const AcDbSystemVariables = {
   CELTSCALE: 'CELTSCALE',
   /** Current lineweight applied to newly created entities. */
   CELWEIGHT: 'CELWEIGHT',
+  /** Current transparency level for newly created entities. */
+  CETRANSPARENCY: 'CETRANSPARENCY',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
   /** Current multiline style name used when creating new MLINE entities. */
@@ -52,6 +54,28 @@ export const AcDbSystemVariables = {
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */
   EXTMIN: 'EXTMIN',
+  /** Controls whether newly created hatches are associative. */
+  HPASSOC: 'HPASSOC',
+  /** Default angle, in radians, for newly created hatch patterns. */
+  HPANG: 'HPANG',
+  /** Default background color for newly created hatch patterns. */
+  HPBACKGROUNDCOLOR: 'HPBACKGROUNDCOLOR',
+  /** Default color for newly created hatches. */
+  HPCOLOR: 'HPCOLOR',
+  /** Controls whether user-defined hatch patterns are doubled. */
+  HPDOUBLE: 'HPDOUBLE',
+  /** Controls how islands within newly created hatch boundaries are treated. */
+  HPISLANDDETECTION: 'HPISLANDDETECTION',
+  /** Default layer for newly created hatches and fills. */
+  HPLAYER: 'HPLAYER',
+  /** Default pattern name for newly created hatches in this session. */
+  HPNAME: 'HPNAME',
+  /** Default scale factor for newly created hatch patterns. */
+  HPSCALE: 'HPSCALE',
+  /** Controls whether one or separate hatch objects are created for multiple boundaries. */
+  HPSEPARATE: 'HPSEPARATE',
+  /** Default transparency for newly created hatches and fills. */
+  HPTRANSPARENCY: 'HPTRANSPARENCY',
   /** Insertion units used for automatic scaling of inserted content. */
   INSUNITS: 'INSUNITS',
   /** Global linetype scale multiplier for the drawing database. */

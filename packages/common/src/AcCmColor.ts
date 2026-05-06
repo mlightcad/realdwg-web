@@ -446,13 +446,16 @@ export class AcCmColor {
   /**
    * Returns a string representation of the color.
    *
+   * - "None" for None colors
    * - "ByLayer" for ByLayer colors
    * - "ByBlock" for ByBlock colors
    * - One number for color index
-   * - Three comma-separated numbers for RGB color
+   * - RGB format "RGB:R,G,B" for RGB colors
    */
   toString(): string {
     switch (this._colorMethod) {
+      case AcCmColorMethod.None:
+        return 'None'
       case AcCmColorMethod.ByLayer:
         return 'ByLayer'
       case AcCmColorMethod.ByBlock:
@@ -462,7 +465,7 @@ export class AcCmColor {
         return this._value !== undefined ? String(this._value) : ''
       case AcCmColorMethod.ByColor:
         if (!this._value) return ''
-        return `${this.red},${this.green},${this.blue}`
+        return `RGB:${this.red},${this.green},${this.blue}`
       default:
         return ''
     }
@@ -477,8 +480,12 @@ export class AcCmColor {
     const n = name.trim()
 
     // -------------------------------------------------
-    // 1. ByLayer / ByBlock
+    // 1. None / ByLayer / ByBlock
     // -------------------------------------------------
+    if (/^none$/i.test(n)) {
+      return new AcCmColor(AcCmColorMethod.None)
+    }
+
     if (/^bylayer$/i.test(n)) {
       return new AcCmColor(AcCmColorMethod.ByLayer)
     }

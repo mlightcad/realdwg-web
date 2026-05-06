@@ -85,4 +85,15 @@ describe('AcDbDxfFiler', () => {
     filer.database = undefined
     expect(filer.database).toBeUndefined()
   })
+
+  it('writes transparency with the default group code and skips invalid values', () => {
+    const filer = new AcDbDxfFiler()
+
+    filer.writeTransparency(new AcCmTransparency(128))
+    expect(filer.toString()).toBe('440\n33554560\n')
+
+    const invalidFiler = new AcDbDxfFiler()
+    invalidFiler.writeTransparency(AcCmTransparency.fromString('invalid'))
+    expect(invalidFiler.toString()).not.toContain('440')
+  })
 })
