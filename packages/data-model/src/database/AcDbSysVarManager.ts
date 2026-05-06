@@ -130,6 +130,12 @@ export class AcDbSysVarManager {
       defaultValue: AcGiLineWeight.ByLayer
     })
     this.registerVar({
+      name: AcDbSystemVariables.CETRANSPARENCY,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: 'ByLayer'
+    })
+    this.registerVar({
       name: AcDbSystemVariables.CLAYER,
       type: 'string',
       isDbVar: true,

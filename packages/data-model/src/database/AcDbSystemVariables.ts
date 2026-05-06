@@ -31,6 +31,8 @@ export const AcDbSystemVariables = {
   CELTSCALE: 'CELTSCALE',
   /** Current lineweight applied to newly created entities. */
   CELWEIGHT: 'CELWEIGHT',
+  /** Current transparency level for newly created entities. */
+  CETRANSPARENCY: 'CETRANSPARENCY',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
   /** Current multiline style name used when creating new MLINE entities. */
