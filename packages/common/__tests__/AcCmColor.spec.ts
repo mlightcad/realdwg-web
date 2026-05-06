@@ -108,6 +108,24 @@ describe('AcCmColor', () => {
     expect(color.isByBlock).toBe(true)
   })
 
+  it('supports None color method with toString and fromString', () => {
+    const noneColor = new AcCmColor(AcCmColorMethod.None)
+    expect(noneColor.colorMethod).toBe(AcCmColorMethod.None)
+    expect(noneColor.toString()).toBe('None')
+
+    const parsedNone = AcCmColor.fromString('None')
+    expect(parsedNone?.colorMethod).toBe(AcCmColorMethod.None)
+    expect(parsedNone?.toString()).toBe('None')
+
+    const parsedNoneUpperCase = AcCmColor.fromString('NONE')
+    expect(parsedNoneUpperCase?.colorMethod).toBe(AcCmColorMethod.None)
+    expect(parsedNoneUpperCase?.toString()).toBe('None')
+
+    const clonedNone = noneColor.clone()
+    expect(clonedNone.colorMethod).toBe(AcCmColorMethod.None)
+    expect(clonedNone.equals(noneColor)).toBe(true)
+  })
+
   it('supports colorName getter/setter, clone/copy/equals, and toString', () => {
     const warn = jest.spyOn(console, 'warn').mockImplementation(() => {})
     const color = new AcCmColor(AcCmColorMethod.ByACI, 1)
@@ -115,7 +133,7 @@ describe('AcCmColor', () => {
 
     color.colorName = 'red'
     expect(color.hexColor).toBe('0xFF0000')
-    expect(color.toString()).toBe('255,0,0')
+    expect(color.toString()).toBe('RGB:255,0,0')
 
     color.colorIndex = 30
     expect(color.toString()).toBe('30')
@@ -136,6 +154,7 @@ describe('AcCmColor', () => {
   })
 
   it('parses colors from string for supported formats', () => {
+    expect(AcCmColor.fromString('None')?.colorMethod).toBe(AcCmColorMethod.None)
     expect(AcCmColor.fromString('ByLayer')?.isByLayer).toBe(true)
     expect(AcCmColor.fromString('ByBlock')?.isByBlock).toBe(true)
     expect(AcCmColor.fromString('RGB:255,0,0')?.hexColor).toBe('0xFF0000')

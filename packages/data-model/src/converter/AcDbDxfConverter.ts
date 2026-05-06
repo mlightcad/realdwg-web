@@ -471,6 +471,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     db.angDir = header['$ANGDIR'] || 0
     if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
     db.celtype = header['$CELTYPE'] || ByLayer
+    db.cetransparency = header['$CETRANSPARENCY'] || 'ByLayer'
     db.celtscale = header['$CELTSCALE'] || 1
     const cmlStyle =
       this.normalizeHeaderStringValue(header['$CMLSTYLE']) ||

@@ -44,7 +44,7 @@ describe('AcDbSysVarManager', () => {
       'ANNOTATION'
     )
     manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
-    expect(manager.getVar(AcDbSystemVariables.HPCOLOR, db)).toBe('RGB:10,20,30')
+    expect(manager.getVar(AcDbSystemVariables.HPCOLOR, db)?.toString()).toBe('RGB:10,20,30')
     manager.setVar(AcDbSystemVariables.HPTRANSPARENCY, '35', db)
     expect(manager.getVar(AcDbSystemVariables.HPTRANSPARENCY, db)).toBe('35')
 
@@ -93,10 +93,10 @@ describe('AcDbSysVarManager', () => {
     )
     expect(manager.getDefaultValue(AcDbSystemVariables.HPASSOC)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.HPANG)).toBe(0)
-    expect(manager.getDefaultValue(AcDbSystemVariables.HPBACKGROUNDCOLOR)).toBe(
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPBACKGROUNDCOLOR)?.toString()).toBe(
       'None'
     )
-    expect(manager.getDefaultValue(AcDbSystemVariables.HPCOLOR)).toBe('.')
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPCOLOR)?.toString()).toBe('ByLayer')
     expect(manager.getDefaultValue(AcDbSystemVariables.HPDOUBLE)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.HPISLANDDETECTION)).toBe(
       1

@@ -235,7 +235,7 @@ export class AcDbSysVarManager {
       name: AcDbSystemVariables.HPCOLOR,
       type: 'color',
       isDbVar: true,
-      defaultValue: new AcCmColor(AcCmColorMethod.ByLayer)
+      defaultValue: new AcCmColor(AcCmColorMethod.None)
     })
     /**
      * Controls whether hatch patterns are doubled for user-defined patterns.

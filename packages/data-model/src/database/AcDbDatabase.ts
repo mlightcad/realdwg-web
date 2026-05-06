@@ -315,6 +315,8 @@ export class AcDbDatabase extends AcDbObject {
   private _celtype: string
   /** Current entity line weight value */
   private _celweight: AcGiLineWeight
+  /** Current entity transparency level */
+  private _cetransparency: string
   /** Current layer for the database */
   private _clayer: string
   /** Current multiline style for newly created MLINE entities */
@@ -403,6 +405,7 @@ export class AcDbDatabase extends AcDbObject {
     this._cecolor = new AcCmColor()
     this._celtype = ByLayer
     this._celweight = AcGiLineWeight.ByLayer
+    this._cetransparency = 'ByLayer'
     this._clayer = '0'
     this._cmlstyle = DEFAULT_MLINE_STYLE
     this._cmlscale = 1
@@ -824,6 +827,25 @@ export class AcDbDatabase extends AcDbObject {
       value ?? AcGiLineWeight.ByLayer,
       nextValue => {
         this._celweight = nextValue
+      }
+    )
+  }
+
+  /**
+   * The transparency level of new objects as they are created.
+   *
+   * Can be 'ByLayer', 'ByBlock', or a value from 0 to 90 (percentage).
+   */
+  get cetransparency(): string {
+    return this._cetransparency
+  }
+  set cetransparency(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.CETRANSPARENCY,
+      this._cetransparency,
+      value ?? 'ByLayer',
+      nextValue => {
+        this._cetransparency = nextValue
       }
     )
   }
@@ -1630,6 +1652,8 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(8, this.clayer)
     filer.writeString(9, '$CELTYPE')
     filer.writeString(6, this.celtype)
+    filer.writeString(9, '$CETRANSPARENCY')
+    filer.writeString(1, this.cetransparency)
     filer.writeString(9, '$CMLSTYLE')
     filer.writeString(2, this.cmlstyle)
     filer.writeString(9, '$CMLSCALE')

@@ -43,6 +43,7 @@ const createRectLoop = (x: number, y: number, w: number, h: number) =>
 
 describe('AcDbHatch', () => {
   it('exposes type names and public getters/setters', () => {
+    createWorkingDb()
     const hatch = new AcDbHatch()
 
     expect(AcDbHatch.typeName).toBe('Hatch')
@@ -85,6 +86,7 @@ describe('AcDbHatch', () => {
   })
 
   it('expands predefined pattern names into scaled definition lines', () => {
+    createWorkingDb()
     const hatch = new AcDbHatch()
 
     hatch.patternName = 'ansi31'
@@ -175,6 +177,45 @@ describe('AcDbHatch', () => {
       manager.setVar(
         AcDbSystemVariables.HPDOUBLE,
         previousHpDouble as number,
+        db
+      )
+    }
+  })
+
+  it('resolves color from HPCOLOR before CECOLOR until color is explicitly set', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousHpColor = manager.getVar(AcDbSystemVariables.HPCOLOR, db)
+
+    try {
+      db.cecolor = new AcCmColor().setRGBValue(0x112233)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
+
+      const hatch = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+      expect(hatch.color.RGB).toBe(0x0a141e)
+      expect(hatch.resolvedColor.RGB).toBe(0x0a141e)
+
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:40,50,60', db)
+      expect(hatch.color.RGB).toBe(0x28323c)
+
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'None', db)
+      expect(hatch.color.RGB).toBe(0x112233)
+
+      db.cecolor = new AcCmColor().setRGBValue(0x445566)
+      expect(hatch.color.RGB).toBe(0x445566)
+
+      hatch.color = new AcCmColor().setRGBValue(0x778899)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:1,2,3', db)
+      db.cecolor = new AcCmColor().setRGBValue(0xaabbcc)
+
+      expect(hatch.color.RGB).toBe(0x778899)
+      expect(hatch.resolvedColor.RGB).toBe(0x778899)
+    } finally {
+      manager.setVar(
+        AcDbSystemVariables.HPCOLOR,
+        previousHpColor as AcCmColor,
         db
       )
     }

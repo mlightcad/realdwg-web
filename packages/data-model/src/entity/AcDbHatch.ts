@@ -1,4 +1,4 @@
-import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
+import { AcCmColor, AcCmColorMethod, AcCmTransparency } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -310,6 +310,39 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Gets the effective hatch color.
+   *
+   * When the hatch does not have an explicit entity color, hatch color follows
+   * HPCOLOR first and falls back to CECOLOR when HPCOLOR is unset.
+   */
+  override get color() {
+    if (this.hasExplicitColor()) {
+      return this.getEntityColor()
+    }
+
+    const db = this.database
+    const hpColor = AcDbSysVarManager.instance().getVar(
+      AcDbSystemVariables.HPCOLOR,
+      db
+    )
+    if (
+      hpColor instanceof AcCmColor &&
+      hpColor.colorMethod !== AcCmColorMethod.None
+    ) {
+      return hpColor.clone()
+    }
+
+    return db.cecolor.clone()
+  }
+
+  /**
+   * Sets an explicit hatch entity color.
+   */
+  override set color(value: AcCmColor) {
+    this.setEntityColor(value)
+  }
+
+  /**
    * Gets the definition lines for the hatch pattern.
    *
    * @returns Array of hatch pattern lines
@@ -584,16 +617,6 @@ export class AcDbHatch extends AcDbEntity {
       }
     }
 
-    if (!this.hasExplicitColor()) {
-      const color = manager.getVar(AcDbSystemVariables.HPCOLOR, db)
-      if (this.shouldUseSysVarOverride(color)) {
-        const parsedColor = AcCmColor.fromString(color as string)
-        if (parsedColor) {
-          this.color = parsedColor
-        }
-      }
-    }
-
     if (!this.hasExplicitTransparency()) {
       const transparency = this.parseHpTransparency(
         manager.getVar(AcDbSystemVariables.HPTRANSPARENCY, db)
@@ -660,11 +683,7 @@ export class AcDbHatch extends AcDbEntity {
       return this._patternName
     }
 
-    const db = this.tryGetDatabase()
-    if (!db) {
-      return this._patternName
-    }
-
+    const db = this.database
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPNAME,
       db
@@ -672,16 +691,16 @@ export class AcDbHatch extends AcDbEntity {
     return typeof value === 'string' ? value : this._patternName
   }
 
+  protected override shouldResolveColorFromCecolor() {
+    return false
+  }
+
   private getEffectivePatternAngle() {
     if (this._patternAngleSet) {
       return this._patternAngle
     }
 
-    const db = this.tryGetDatabase()
-    if (!db) {
-      return this._patternAngle
-    }
-
+    const db = this.database
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPANG,
       db
@@ -696,11 +715,7 @@ export class AcDbHatch extends AcDbEntity {
       return this._patternScale
     }
 
-    const db = this.tryGetDatabase()
-    if (!db) {
-      return this._patternScale
-    }
-
+    const db = this.database
     return this.normalizePatternScale(
       AcDbSysVarManager.instance().getVar(AcDbSystemVariables.HPSCALE, db)
     )
@@ -711,11 +726,7 @@ export class AcDbHatch extends AcDbEntity {
       return this._associative
     }
 
-    const db = this.tryGetDatabase()
-    if (!db) {
-      return this._associative
-    }
-
+    const db = this.database
     const value = AcDbSysVarManager.instance().getVar(
       AcDbSystemVariables.HPASSOC,
       db
@@ -748,6 +759,12 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   private parseHpBackgroundColor(value: unknown) {
+    if (value instanceof AcCmColor) {
+      return value.colorMethod === AcCmColorMethod.None
+        ? undefined
+        : value.clone()
+    }
+
     if (typeof value !== 'string') return undefined
     const normalized = value.trim().toLowerCase()
     if (!normalized || normalized === '.' || normalized === 'none') {
@@ -758,6 +775,10 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   private parseHpTransparency(value: unknown) {
+    if (value instanceof AcCmTransparency) {
+      return value.clone()
+    }
+
     if (!this.shouldUseSysVarOverride(value)) {
       return undefined
     }
@@ -775,14 +796,6 @@ export class AcDbHatch extends AcDbEntity {
     }
 
     return undefined
-  }
-
-  private tryGetDatabase() {
-    try {
-      return this.database
-    } catch {
-      return undefined
-    }
   }
 
   /**
