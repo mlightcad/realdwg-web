@@ -24,7 +24,11 @@ import { AcDbDxfFiler } from '../base'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
-import { HATCH_PATTERN_SOLID, HATCH_PATTERN_USER } from '../misc/AcDbConstants'
+import {
+  DEFAULT_GRADIENT_HATCH_NAME,
+  HATCH_PATTERN_SOLID,
+  HATCH_PATTERN_USER
+} from '../misc/AcDbConstants'
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -531,6 +535,9 @@ export class AcDbHatch extends AcDbEntity {
    * Gets the name of the current gradient.
    */
   get gradientName() {
+    if (this.isGradient && this._gradientName.trim() === '') {
+      return DEFAULT_GRADIENT_HATCH_NAME
+    }
     return this._gradientName
   }
 
@@ -538,7 +545,7 @@ export class AcDbHatch extends AcDbEntity {
    * Sets the name of the current gradient.
    */
   set gradientName(value: string) {
-    this._gradientName = value
+    this._gradientName = value ?? ''
   }
 
   /**
@@ -1272,7 +1279,7 @@ export class AcDbHatch extends AcDbEntity {
       filer.writeInt16(452, this._gradientOneColorMode ? 1 : 0)
       filer.writeAngle(460, this._gradientAngle)
       filer.writeDouble(461, this._gradientShift)
-      filer.writeString(470, this._gradientName)
+      filer.writeString(470, this.gradientName)
     }
     // TODO: Write the number of seed points
     filer.writeInt16(98, 0)
