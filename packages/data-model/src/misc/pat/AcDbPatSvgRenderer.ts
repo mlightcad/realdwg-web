@@ -1,3 +1,4 @@
+import { HATCH_PATTERN_SOLID } from '../AcDbConstants'
 import type {
   AcDbPatLine,
   AcDbPatPattern,
@@ -50,6 +51,35 @@ export class AcDbPatSvgRenderer {
    */
   private static clamp(value: number, min: number, max: number) {
     return Math.min(max, Math.max(min, value))
+  }
+
+  /**
+   * Checks whether a pattern is the reserved AutoCAD solid-fill pattern.
+   *
+   * `SOLID` has no PAT line descriptors; its preview is an area fill instead
+   * of generated hatch linework.
+   *
+   * @param pattern - Pattern to inspect.
+   * @returns `true` when the pattern name resolves to `SOLID`.
+   */
+  private static isSolidPattern(pattern: AcDbPatPattern) {
+    return pattern.name.trim().toUpperCase() === HATCH_PATTERN_SOLID
+  }
+
+  /**
+   * Renders an SVG background rectangle.
+   *
+   * @param width - SVG viewport width in pixels.
+   * @param height - SVG viewport height in pixels.
+   * @param background - CSS fill for the preview background.
+   * @returns SVG `<rect>` markup.
+   */
+  private static renderBackground(
+    width: number,
+    height: number,
+    background: string
+  ) {
+    return `<rect x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" fill="${background}" />`
   }
 
   /**
@@ -262,6 +292,16 @@ export class AcDbPatSvgRenderer {
     const stroke = options.stroke ?? '#1f2937'
     const strokeWidth = options.strokeWidth ?? 1.3
     const background = options.background ?? '#ffffff'
+    const viewBox = `${-width / 2} ${-height / 2} ${width} ${height}`
+
+    if (AcDbPatSvgRenderer.isSolidPattern(pattern)) {
+      return [
+        `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">`,
+        AcDbPatSvgRenderer.renderBackground(width, height, background),
+        `<rect x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" fill="${stroke}" />`,
+        '</svg>'
+      ].join('')
+    }
 
     const scaleUnit = AcDbPatSvgRenderer.estimateUnitScale(pattern)
     const baseScale = Math.min(width, height) * 0.18
@@ -285,10 +325,9 @@ export class AcDbPatSvgRenderer {
       .map(line => AcDbPatSvgRenderer.renderFamily(line, maxRadius))
       .join('')
 
-    const viewBox = `${-width / 2} ${-height / 2} ${width} ${height}`
     return [
       `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">`,
-      `<rect x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" fill="${background}" />`,
+      AcDbPatSvgRenderer.renderBackground(width, height, background),
       `<g stroke="${stroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-linecap="round">`,
       content,
       '</g>',

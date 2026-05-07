@@ -9,6 +9,7 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import {
   ByLayer,
+  DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE
@@ -279,7 +280,7 @@ export class AcDbSysVarManager {
       name: AcDbSystemVariables.HPNAME,
       type: 'string',
       isDbVar: false,
-      defaultValue: 'ANGLE'
+      defaultValue: DEFAULT_HATCH_PATTERN_METRIC
     })
     /**
      * Sets the default scale factor for new hatch patterns in this session.
@@ -557,29 +558,7 @@ export class AcDbSysVarManager {
     if (typeof value !== 'string' && !(value instanceof String)) {
       return undefined
     }
-
-    const text = String(value)
-    const normalized = text.trim().toLowerCase()
-    if (
-      normalized === '' ||
-      normalized === '.' ||
-      normalized === 'use current' ||
-      normalized === 'bylayer'
-    ) {
-      return new AcCmTransparency()
-    }
-    if (normalized === 'byblock') {
-      return AcCmTransparency.fromString(text)
-    }
-
-    const percentage = Number(text)
-    if (Number.isInteger(percentage) && percentage >= 0 && percentage <= 90) {
-      const transparency = new AcCmTransparency()
-      transparency.percentage = percentage
-      return transparency
-    }
-
-    return AcCmTransparency.fromString(text)
+    return AcCmTransparency.fromString(String(value))
   }
 
   /**

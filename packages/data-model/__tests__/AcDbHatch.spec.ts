@@ -21,6 +21,10 @@ import {
   AcDbHatchPatternType,
   AcDbHatchStyle
 } from '../src/entity'
+import {
+  DEFAULT_HATCH_PATTERN_IMPERIAL,
+  HATCH_PATTERN_SOLID
+} from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -59,7 +63,7 @@ describe('AcDbHatch', () => {
     expect(hatch.isSolidFill).toBe(false)
 
     hatch.patternType = AcDbHatchPatternType.Custom
-    hatch.patternName = 'ANSI31'
+    hatch.patternName = DEFAULT_HATCH_PATTERN_IMPERIAL
     hatch.patternAngle = Math.PI / 3
     hatch.patternScale = 2.5
     hatch.hatchStyle = AcDbHatchStyle.Outer
@@ -73,7 +77,7 @@ describe('AcDbHatch', () => {
     })
 
     expect(hatch.patternType).toBe(AcDbHatchPatternType.Custom)
-    expect(hatch.patternName).toBe('ANSI31')
+    expect(hatch.patternName).toBe(DEFAULT_HATCH_PATTERN_IMPERIAL)
     expect(hatch.patternAngle).toBeCloseTo(Math.PI / 3)
     expect(hatch.patternScale).toBeCloseTo(2.5)
     expect(hatch.hatchStyle).toBe(AcDbHatchStyle.Outer)
@@ -83,6 +87,9 @@ describe('AcDbHatch', () => {
 
     hatch.patternName = 'solid'
     expect(hatch.isSolidFill).toBe(true)
+
+    hatch.patternName = DEFAULT_HATCH_PATTERN_IMPERIAL
+    expect(hatch.isSolidFill).toBe(false)
   })
 
   it('expands predefined pattern names into scaled definition lines', () => {
@@ -125,7 +132,11 @@ describe('AcDbHatch', () => {
     const previousHpDouble = manager.getVar(AcDbSystemVariables.HPDOUBLE, db)
 
     try {
-      manager.setVar(AcDbSystemVariables.HPNAME, 'ANSI31', db)
+      manager.setVar(
+        AcDbSystemVariables.HPNAME,
+        DEFAULT_HATCH_PATTERN_IMPERIAL,
+        db
+      )
       manager.setVar(AcDbSystemVariables.HPANG, Math.PI / 6, db)
       manager.setVar(AcDbSystemVariables.HPSCALE, 2, db)
       manager.setVar(AcDbSystemVariables.HPASSOC, 0, db)
@@ -144,7 +155,7 @@ describe('AcDbHatch', () => {
       expect(hatch.transparency.percentage).toBe(25)
       expect(hatch.backgroundColor).toBeInstanceOf(AcCmColor)
       expect(hatch.backgroundColor?.RGB).toBe(0x28323c)
-      expect(hatch.patternName).toBe('ANSI31')
+      expect(hatch.patternName).toBe(DEFAULT_HATCH_PATTERN_IMPERIAL)
       expect(hatch.patternAngle).toBeCloseTo(Math.PI / 6)
       expect(hatch.patternScale).toBe(2)
       expect(hatch.associative).toBe(false)
@@ -229,7 +240,11 @@ describe('AcDbHatch', () => {
     const previousHpScale = manager.getVar(AcDbSystemVariables.HPSCALE, db)
 
     try {
-      manager.setVar(AcDbSystemVariables.HPNAME, 'ANSI31', db)
+      manager.setVar(
+        AcDbSystemVariables.HPNAME,
+        DEFAULT_HATCH_PATTERN_IMPERIAL,
+        db
+      )
       manager.setVar(AcDbSystemVariables.HPANG, Math.PI / 8, db)
       manager.setVar(AcDbSystemVariables.HPSCALE, 3, db)
 
@@ -266,7 +281,7 @@ describe('AcDbHatch', () => {
       dashLengths: [5, -6]
     })
 
-    hatch.patternName = 'ANSI31'
+    hatch.patternName = DEFAULT_HATCH_PATTERN_IMPERIAL
     hatch.patternScale = 3
 
     expect(hatch.definitionLines).toEqual([
@@ -356,7 +371,7 @@ describe('AcDbHatch', () => {
     ).toBe(false)
 
     const singleHatch = new AcDbHatch()
-    singleHatch.patternName = 'SOLID'
+    singleHatch.patternName = HATCH_PATTERN_SOLID
     singleHatch.definitionLines.push({
       angle: Math.PI / 4,
       base: { x: 0, y: 0 },

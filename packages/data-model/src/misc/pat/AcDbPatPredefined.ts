@@ -8,17 +8,7 @@ export const AcDbPredefinedAcadPat: AcDbPatDocument = {
     {
       name: 'SOLID',
       description: '',
-      lines: [
-        {
-          angle: 45,
-          originX: 0,
-          originY: 0,
-          deltaX: 0,
-          deltaY: 0.125,
-          dashes: [],
-          sourceLine: 21
-        }
-      ]
+      lines: []
     },
     {
       name: 'ANGLE',
@@ -2843,17 +2833,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     {
       name: 'SOLID',
       description: 'ʵ�����',
-      lines: [
-        {
-          angle: 45,
-          originX: 0,
-          originY: 0,
-          deltaX: 0,
-          deltaY: 0.125,
-          dashes: [],
-          sourceLine: 18
-        }
-      ]
+      lines: []
     },
     {
       name: 'ANGLE',
