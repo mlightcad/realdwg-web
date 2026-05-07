@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.31
+
+### Patch Changes
+
+- feat: add hatch related system variables and fix SOLID hatch handling & preview rendering
+- Updated dependencies
+  - @mlightcad/common@1.4.31
+  - @mlightcad/geometry-engine@3.2.31
+
 ## 3.3.30
 
 ### Patch Changes

@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.31
+
+### Patch Changes
+
+- feat: add hatch related system variables and fix SOLID hatch handling & preview rendering
+- Updated dependencies
+  - @mlightcad/data-model@1.7.31
+  - @mlightcad/libredwg-converter@3.5.31
+
 ## 0.1.30
 
 ### Patch Changes

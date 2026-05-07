@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.31
+
+### Patch Changes
+
+- feat: add hatch related system variables and fix SOLID hatch handling & preview rendering
+
 ## 1.4.30
 
 ### Patch Changes
