@@ -30,6 +30,26 @@ export const DEFAULT_MLINE_STYLE = 'Standard'
 export const DEFAULT_MLEADER_STYLE = 'Standard'
 
 /**
+ * Default hatch pattern name used by AutoCAD for imperial drawings.
+ */
+export const DEFAULT_HATCH_PATTERN_IMPERIAL = 'ANSI31'
+
+/**
+ * Default hatch pattern name used by AutoCAD for metric drawings.
+ */
+export const DEFAULT_HATCH_PATTERN_METRIC = 'ANGLE'
+
+/**
+ * Reserved hatch pattern name used for solid fills.
+ */
+export const HATCH_PATTERN_SOLID = 'SOLID'
+
+/**
+ * Default hatch pattern name used for user-defined hatch patterns in DXF output.
+ */
+export const HATCH_PATTERN_USER = 'USER'
+
+/**
  * Special line type value that indicates the entity should use
  * the line type of its layer.
  *

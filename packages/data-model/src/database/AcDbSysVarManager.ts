@@ -9,6 +9,7 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import {
   ByLayer,
+  DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE
@@ -279,7 +280,7 @@ export class AcDbSysVarManager {
       name: AcDbSystemVariables.HPNAME,
       type: 'string',
       isDbVar: false,
-      defaultValue: 'ANGLE'
+      defaultValue: DEFAULT_HATCH_PATTERN_METRIC
     })
     /**
      * Sets the default scale factor for new hatch patterns in this session.
