@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.32
+
+### Patch Changes
+
+- feat: add SVG rendering support for hatch gradient previews and correct anchor for non-default TEXT/ATTRIB alignment
+- Updated dependencies
+  - @mlightcad/data-model@1.7.32
+
 ## 3.5.31
 
 ### Patch Changes

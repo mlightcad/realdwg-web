@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.32
+
+### Patch Changes
+
+- feat: add SVG rendering support for hatch gradient previews and correct anchor for non-default TEXT/ATTRIB alignment
+- Updated dependencies
+  - @mlightcad/common@1.4.32
+  - @mlightcad/geometry-engine@3.2.32
+  - @mlightcad/graphic-interface@3.3.32
+
 ## 1.7.31
 
 ### Patch Changes

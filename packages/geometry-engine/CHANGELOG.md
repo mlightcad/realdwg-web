@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.32
+
+### Patch Changes
+
+- feat: add SVG rendering support for hatch gradient previews and correct anchor for non-default TEXT/ATTRIB alignment
+- Updated dependencies
+  - @mlightcad/common@1.4.32
+
 ## 3.2.31
 
 ### Patch Changes

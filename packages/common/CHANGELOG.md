@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.32
+
+### Patch Changes
+
+- feat: add SVG rendering support for hatch gradient previews and correct anchor for non-default TEXT/ATTRIB alignment
+
 ## 1.4.31
 
 ### Patch Changes
