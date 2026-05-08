@@ -1,3 +1,6 @@
+import { AcGeMathUtil } from '@mlightcad/geometry-engine'
+
+import type { AcDbGradientName } from '../../entity/AcDbHatch'
 import { HATCH_PATTERN_SOLID } from '../AcDbConstants'
 import type {
   AcDbPatLine,
@@ -20,6 +23,75 @@ interface AcDbPatSvgSegment {
   y2: number
 }
 
+export type AcDbPatGradientColor = number | string
+
+/**
+ * Optional preview options when rendering an AutoCAD hatch gradient to SVG.
+ */
+export interface AcDbPatGradientPreviewOptions {
+  /**
+   * SVG viewport width in pixels.
+   */
+  width?: number
+
+  /**
+   * SVG viewport height in pixels.
+   */
+  height?: number
+
+  /**
+   * First gradient color.
+   *
+   * A number is treated as packed RGB (`0xRRGGBB`). A string is emitted as a
+   * CSS color value.
+   */
+  startColor?: AcDbPatGradientColor
+
+  /**
+   * Second gradient color.
+   *
+   * A number is treated as packed RGB (`0xRRGGBB`). A string is emitted as a
+   * CSS color value.
+   */
+  endColor?: AcDbPatGradientColor
+
+  /**
+   * Background fill color shown behind the gradient rectangle.
+   */
+  background?: string
+
+  /**
+   * Gradient angle in radians, matching {@link AcDbHatch.gradientAngle}.
+   */
+  angle?: number
+
+  /**
+   * Relative shift applied to the gradient focus or midpoint.
+   */
+  shift?: number
+
+  /**
+   * Whether the gradient uses one base color plus a shade/tint variant.
+   */
+  oneColorMode?: boolean
+
+  /**
+   * Shade/tint value used in one-color mode. `0` maps to black, `0.5` keeps the
+   * base color, and `1` maps to white.
+   */
+  shadeTintValue?: number
+}
+
+interface AcDbPatSvgGradientColors {
+  start: string
+  end: string
+}
+
+interface AcDbPatSvgGradientStop {
+  offset: number
+  color: string
+}
+
 /**
  * Renders an {@link AcDbPatPattern} into a standalone SVG preview string.
  *
@@ -30,27 +102,138 @@ interface AcDbPatSvgSegment {
 export class AcDbPatSvgRenderer {
   /** Numerical tolerance used to avoid division-by-zero and near-zero noise. */
   private static readonly EPSILON = 1e-9
+  private static gradientIdCounter = 0
 
   /**
-   * Converts an angle from degrees to radians.
+   * Builds an SVG-local ID that avoids collisions when multiple previews are
+   * injected into the same document.
    *
-   * @param degrees - Angle in degrees.
-   * @returns The same angle expressed in radians.
+   * @param name - Gradient pattern name.
+   * @returns Unique gradient ID.
    */
-  private static toRadians(degrees: number) {
-    return (degrees * Math.PI) / 180
+  private static nextGradientId(name: string) {
+    AcDbPatSvgRenderer.gradientIdCounter += 1
+    return `acdb-pat-gradient-${name.toLowerCase()}-${AcDbPatSvgRenderer.gradientIdCounter}`
   }
 
   /**
-   * Clamps a value into an inclusive range.
+   * Converts a packed RGB value to a CSS hex color.
    *
-   * @param value - Source value.
-   * @param min - Lower bound (inclusive).
-   * @param max - Upper bound (inclusive).
-   * @returns `value` projected into `[min, max]`.
+   * @param rgb - Packed RGB value.
+   * @returns CSS hex color.
    */
-  private static clamp(value: number, min: number, max: number) {
-    return Math.min(max, Math.max(min, value))
+  private static packedRgbToCss(rgb: number) {
+    return `#${(rgb & 0xffffff).toString(16).padStart(6, '0')}`
+  }
+
+  /**
+   * Converts either packed RGB or CSS color input to a CSS color string.
+   *
+   * @param color - Source color.
+   * @param fallback - Color used when source is undefined.
+   * @returns CSS color.
+   */
+  private static gradientColorToCss(
+    color: AcDbPatGradientColor | undefined,
+    fallback: string
+  ) {
+    return typeof color === 'number'
+      ? AcDbPatSvgRenderer.packedRgbToCss(color)
+      : (color ?? fallback)
+  }
+
+  /**
+   * Computes the shade/tint variant used by one-color gradient hatches.
+   *
+   * @param rgb - Packed base RGB value.
+   * @param shadeTintValue - Interpolation from black (`0`) through base
+   * (`0.5`) to white (`1`).
+   * @returns Packed RGB shade/tint value.
+   */
+  private static applyShadeTint(rgb: number, shadeTintValue: number) {
+    const value = AcGeMathUtil.clamp(shadeTintValue, 0, 1)
+    const target = value < 0.5 ? 0x000000 : 0xffffff
+    const amount = value < 0.5 ? 1 - value * 2 : value * 2 - 1
+    const r = (rgb >> 16) & 0xff
+    const g = (rgb >> 8) & 0xff
+    const b = rgb & 0xff
+    const targetR = (target >> 16) & 0xff
+    const targetG = (target >> 8) & 0xff
+    const targetB = target & 0xff
+
+    return (
+      Math.round(r + (targetR - r) * amount) * 0x10000 +
+      Math.round(g + (targetG - g) * amount) * 0x100 +
+      Math.round(b + (targetB - b) * amount)
+    )
+  }
+
+  /**
+   * Resolves the two CSS colors used by gradient stops.
+   *
+   * @param options - Gradient preview options.
+   * @returns CSS start and end colors.
+   */
+  private static resolveGradientColors(
+    options: AcDbPatGradientPreviewOptions
+  ): AcDbPatSvgGradientColors {
+    const fallbackStart = '#2563eb'
+    const fallbackEnd = '#f8fafc'
+    const start = AcDbPatSvgRenderer.gradientColorToCss(
+      options.startColor,
+      fallbackStart
+    )
+
+    if (options.oneColorMode && options.endColor == null) {
+      if (typeof options.startColor === 'number') {
+        const tinted = AcDbPatSvgRenderer.applyShadeTint(
+          options.startColor,
+          options.shadeTintValue ?? 0.5
+        )
+        return {
+          start,
+          end: AcDbPatSvgRenderer.packedRgbToCss(tinted)
+        }
+      }
+
+      return {
+        start,
+        end: (options.shadeTintValue ?? 0.5) < 0.5 ? '#000000' : '#ffffff'
+      }
+    }
+
+    return {
+      start,
+      end: AcDbPatSvgRenderer.gradientColorToCss(options.endColor, fallbackEnd)
+    }
+  }
+
+  /**
+   * Converts normalized stop data to SVG `<stop>` elements.
+   *
+   * @param stops - Gradient stops.
+   * @returns SVG stop markup.
+   */
+  private static renderGradientStops(stops: AcDbPatSvgGradientStop[]) {
+    return stops
+      .map(stop => {
+        const offset = AcGeMathUtil.clamp(stop.offset, 0, 1) * 100
+        return `<stop offset="${offset.toFixed(2)}%" stop-color="${stop.color}" />`
+      })
+      .join('')
+  }
+
+  /**
+   * Gets the SVG coordinate direction for a gradient angle.
+   *
+   * @param angle - Angle in radians, measured in CAD coordinates.
+   * @returns Unit vector in SVG coordinates.
+   */
+  private static getGradientVector(angle: number) {
+    return {
+      x: Math.cos(angle),
+      y: -Math.sin(angle)
+    }
   }
 
   /**
@@ -185,12 +368,8 @@ export class AcDbPatSvgRenderer {
         const length = Math.abs(dashValue)
         const nextCursor = cursor + length
         if (dashValue > 0 || dashValue === 0) {
-          const drawStart = AcDbPatSvgRenderer.clamp(
-            cursor,
-            startAlong,
-            endAlong
-          )
-          const drawEnd = AcDbPatSvgRenderer.clamp(
+          const drawStart = AcGeMathUtil.clamp(cursor, startAlong, endAlong)
+          const drawEnd = AcGeMathUtil.clamp(
             nextCursor,
             startAlong,
             endAlong
@@ -234,7 +413,7 @@ export class AcDbPatSvgRenderer {
    * @returns SVG `<path>` markup containing all generated segments.
    */
   private static renderFamily(line: AcDbPatLine, maxRadius: number) {
-    const angle = AcDbPatSvgRenderer.toRadians(line.angle)
+    const angle = AcGeMathUtil.degToRad(line.angle)
     const dirX = Math.cos(angle)
     const dirY = Math.sin(angle)
     const normalX = -dirY
@@ -272,6 +451,166 @@ export class AcDbPatSvgRenderer {
     }
 
     return `<path d="${paths.join(' ')}" fill="none" />`
+  }
+
+  /**
+   * Renders an SVG `<linearGradient>` definition.
+   *
+   * @param id - Gradient ID.
+   * @param angle - Gradient angle in radians.
+   * @param shift - Relative shift applied along the gradient axis.
+   * @param extent - Coordinate extent covering the viewport.
+   * @param stops - Color stops.
+   * @returns SVG gradient definition.
+   */
+  private static renderLinearGradientDef(
+    id: string,
+    angle: number,
+    shift: number,
+    extent: number,
+    stops: AcDbPatSvgGradientStop[]
+  ) {
+    const dir = AcDbPatSvgRenderer.getGradientVector(angle)
+    const shiftDistance = AcGeMathUtil.clamp(shift, -1, 1) * extent * 0.5
+    const offsetX = dir.x * shiftDistance
+    const offsetY = dir.y * shiftDistance
+
+    return [
+      `<linearGradient id="${id}" gradientUnits="userSpaceOnUse"`,
+      ` x1="${(-dir.x * extent + offsetX).toFixed(2)}"`,
+      ` y1="${(-dir.y * extent + offsetY).toFixed(2)}"`,
+      ` x2="${(dir.x * extent + offsetX).toFixed(2)}"`,
+      ` y2="${(dir.y * extent + offsetY).toFixed(2)}">`,
+      AcDbPatSvgRenderer.renderGradientStops(stops),
+      '</linearGradient>'
+    ].join('')
+  }
+
+  /**
+   * Renders an SVG `<radialGradient>` definition.
+   *
+   * @param id - Gradient ID.
+   * @param cx - Center X coordinate.
+   * @param cy - Center Y coordinate.
+   * @param radius - Gradient radius.
+   * @param stops - Color stops.
+   * @returns SVG gradient definition.
+   */
+  private static renderRadialGradientDef(
+    id: string,
+    cx: number,
+    cy: number,
+    radius: number,
+    stops: AcDbPatSvgGradientStop[]
+  ) {
+    return [
+      `<radialGradient id="${id}" gradientUnits="userSpaceOnUse"`,
+      ` cx="${cx.toFixed(2)}" cy="${cy.toFixed(2)}" r="${radius.toFixed(2)}"`,
+      ` fx="${cx.toFixed(2)}" fy="${cy.toFixed(2)}">`,
+      AcDbPatSvgRenderer.renderGradientStops(stops),
+      '</radialGradient>'
+    ].join('')
+  }
+
+  /**
+   * Builds the SVG definition for a hatch gradient pattern.
+   *
+   * SVG supports linear and radial gradients natively, so AutoCAD-specific
+   * shapes such as CYLINDER and CURVED are represented with mirrored stops or
+   * offset radial gradients.
+   *
+   * @param id - Gradient ID.
+   * @param name - AutoCAD gradient name.
+   * @param colors - Resolved gradient colors.
+   * @param angle - Gradient angle in radians.
+   * @param shift - Relative shift.
+   * @param width - SVG viewport width.
+   * @param height - SVG viewport height.
+   * @returns SVG gradient definition.
+   */
+  private static renderGradientDef(
+    id: string,
+    name: AcDbGradientName,
+    colors: AcDbPatSvgGradientColors,
+    angle: number,
+    shift: number,
+    width: number,
+    height: number
+  ) {
+    const gradientName = name.toUpperCase() as AcDbGradientName
+    const inverse = gradientName.startsWith('INV')
+    const baseName = gradientName.replace(/^INV/, '') as AcDbGradientName
+    const first = inverse ? colors.end : colors.start
+    const second = inverse ? colors.start : colors.end
+    const extent = Math.hypot(width, height) / 2
+    const dir = AcDbPatSvgRenderer.getGradientVector(angle)
+    const centerShift = AcGeMathUtil.clamp(shift, -1, 1)
+    const centerX = dir.x * centerShift * width * 0.25
+    const centerY = dir.y * centerShift * height * 0.25
+
+    switch (baseName) {
+      case 'CYLINDER': {
+        const middle = AcGeMathUtil.clamp(0.5 + centerShift * 0.45, 0.05, 0.95)
+        return AcDbPatSvgRenderer.renderLinearGradientDef(
+          id,
+          angle,
+          0,
+          extent,
+          [
+            { offset: 0, color: first },
+            { offset: middle, color: second },
+            { offset: 1, color: first }
+          ]
+        )
+      }
+      case 'SPHERICAL':
+        return AcDbPatSvgRenderer.renderRadialGradientDef(
+          id,
+          centerX,
+          centerY,
+          extent,
+          [
+            { offset: 0, color: second },
+            { offset: 1, color: first }
+          ]
+        )
+      case 'HEMISPHERICAL':
+        return AcDbPatSvgRenderer.renderRadialGradientDef(
+          id,
+          centerX + dir.x * width * 0.18,
+          centerY + dir.y * height * 0.18,
+          extent * 0.92,
+          [
+            { offset: 0, color: second },
+            { offset: 0.72, color: first },
+            { offset: 1, color: first }
+          ]
+        )
+      case 'CURVED':
+        return AcDbPatSvgRenderer.renderRadialGradientDef(
+          id,
+          -dir.x * width * 0.95 + centerX,
+          -dir.y * height * 0.95 + centerY,
+          extent * 1.65,
+          [
+            { offset: 0, color: first },
+            { offset: 0.55, color: first },
+            { offset: 1, color: second }
+          ]
+        )
+      case 'LINEAR':
+      default:
+        return AcDbPatSvgRenderer.renderLinearGradientDef(
+          id,
+          angle,
+          shift,
+          extent,
+          [
+            { offset: 0, color: first },
+            { offset: 1, color: second }
+          ]
+        )
+    }
   }
 
   /**
@@ -331,6 +670,52 @@ export class AcDbPatSvgRenderer {
       `<g stroke="${stroke}" stroke-width="${strokeWidth.toFixed(2)}" stroke-linecap="round">`,
       content,
       '</g>',
+      '</svg>'
+    ].join('')
+  }
+
+  /**
+   * Renders an AutoCAD hatch gradient preview as a complete SVG document
+   * string.
+   *
+   * The method uses native SVG linear/radial gradients where possible and
+   * approximates AutoCAD-only gradient shapes with mirrored stops or offset
+   * radial centers.
+   *
+   * @param name - AutoCAD gradient name.
+   * @param options - Optional preview style and size settings.
+   * @returns Standalone SVG markup that can be injected directly into DOM or
+   * saved as a `.svg` asset.
+   */
+  renderGradient(
+    name: AcDbGradientName,
+    options: AcDbPatGradientPreviewOptions = {}
+  ) {
+    const width = options.width ?? 260
+    const height = options.height ?? 160
+    const background = options.background ?? '#ffffff'
+    const angle = options.angle ?? 0
+    const shift = options.shift ?? 0
+    const viewBox = `${-width / 2} ${-height / 2} ${width} ${height}`
+    const id = AcDbPatSvgRenderer.nextGradientId(name)
+    const colors = AcDbPatSvgRenderer.resolveGradientColors(options)
+    const gradientDef = AcDbPatSvgRenderer.renderGradientDef(
+      id,
+      name,
+      colors,
+      angle,
+      shift,
+      width,
+      height
+    )
+
+    return [
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="${viewBox}" width="${width}" height="${height}">`,
+      AcDbPatSvgRenderer.renderBackground(width, height, background),
+      '<defs>',
+      gradientDef,
+      '</defs>',
+      `<rect x="${-width / 2}" y="${-height / 2}" width="${width}" height="${height}" fill="url(#${id})" />`,
       '</svg>'
     ].join('')
   }

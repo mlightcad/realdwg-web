@@ -50,6 +50,11 @@ export const HATCH_PATTERN_SOLID = 'SOLID'
 export const HATCH_PATTERN_USER = 'USER'
 
 /**
+ * Default gradient hatch name used when a gradient hatch has no explicit name.
+ */
+export const DEFAULT_GRADIENT_HATCH_NAME = 'LINEAR'
+
+/**
  * Special line type value that indicates the entity should use
  * the line type of its layer.
  *

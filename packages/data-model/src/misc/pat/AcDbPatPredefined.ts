@@ -2832,12 +2832,12 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
   patterns: [
     {
       name: 'SOLID',
-      description: 'ʵ�����',
+      description: '',
       lines: []
     },
     {
       name: 'ANGLE',
-      description: '�Ǹ�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -2861,7 +2861,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI31',
-      description: 'ANSI ����ש��ʯ',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -2876,7 +2876,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI32',
-      description: 'ANSI ��',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -2900,7 +2900,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI33',
-      description: 'ANSI ��ͭ����ͭ����ͭ',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -2924,7 +2924,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI34',
-      description: 'ANSI ���Ϻ���',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -2966,7 +2966,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI35',
-      description: 'ANSI �ͻ�ש���ͻ����',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -2990,7 +2990,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI36',
-      description: 'ANSI ����ʯ�����ҺͲ���',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -3005,7 +3005,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI37',
-      description: 'ANSI Ǧ��п��þ����/��/���Ե��',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -3029,7 +3029,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ANSI38',
-      description: 'ANSI ��',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -3053,7 +3053,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-B816',
-      description: '8x16 ��ש˳��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3077,7 +3077,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-B816C',
-      description: '8x16 ��ש˳�����û���ӷ�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3119,7 +3119,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-B88',
-      description: '8x8 ��ש˳��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3143,7 +3143,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-BRELM',
-      description: '��׼ש��Ӣʽ�������û���ӷ�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3221,7 +3221,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-BRSTD',
-      description: '��׼ש��˳��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3245,7 +3245,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-CONC',
-      description: '����ĵ��ʯͷͼ��',
+      description: '',
       lines: [
         {
           angle: 50,
@@ -3368,7 +3368,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-HBONE',
-      description: '��׼��ש���������ͼ�� @ 45 �Ƚ�',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -3392,7 +3392,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-PARQ1',
-      description: '2x12 ��ľ�ذ�: 12x12 ��ͼ��',
+      description: '',
       lines: [
         {
           angle: 90,
@@ -3524,7 +3524,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-RROOF',
-      description: '�ݶ�ľ��ͼ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3557,7 +3557,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-RSHKE',
-      description: '�ݶ�ʵľ��ͼ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3644,7 +3644,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'AR-SAND',
-      description: '����ĵ�ͼ��',
+      description: '',
       lines: [
         {
           angle: 37.5,
@@ -3686,7 +3686,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'BOX',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 90,
@@ -3764,7 +3764,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'BRASS',
-      description: '��ͭ����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3788,7 +3788,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'BRICK',
-      description: 'שʯ���͵ı���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3821,7 +3821,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'BRSTONE',
-      description: 'ש��ʯ',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3899,7 +3899,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'CLAY',
-      description: 'ճ������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3941,7 +3941,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'CORK',
-      description: '��ľ����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -3983,7 +3983,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'CROSS',
-      description: 'һϵ��ʮ����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4007,7 +4007,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'DASH',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4022,7 +4022,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'DOLMIT',
-      description: '�ؿ��Ҳ�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4046,7 +4046,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'DOTS',
-      description: 'һϵ�е�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4061,7 +4061,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'EARTH',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4121,7 +4121,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ESCHER',
-      description: 'Escher ͼ��',
+      description: '',
       lines: [
         {
           angle: 60,
@@ -4316,7 +4316,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'FLEX',
-      description: '���Բ���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4340,7 +4340,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GOST_GLASS',
-      description: '��������',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -4373,7 +4373,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GOST_WOOD',
-      description: 'ľ�Ĳ���',
+      description: '',
       lines: [
         {
           angle: 90,
@@ -4406,7 +4406,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GOST_GROUND',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -4439,7 +4439,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GRASS',
-      description: '�ݵ�',
+      description: '',
       lines: [
         {
           angle: 90,
@@ -4472,7 +4472,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GRATE',
-      description: '��դ����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4496,7 +4496,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'GRAVEL',
-      description: 'ɳ��ͼ��',
+      description: '',
       lines: [
         {
           angle: 228.0127875,
@@ -4871,7 +4871,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'HEX',
-      description: '������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4904,7 +4904,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'HONEY',
-      description: '�䳲ͼ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4937,7 +4937,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'HOUND',
-      description: 'Ȯ������ͼ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4961,7 +4961,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'INSUL',
-      description: '��Ե����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -4994,7 +4994,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO02W100',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5009,7 +5009,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO03W100',
-      description: '�����ո���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5024,7 +5024,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO04W100',
-      description: '����������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5039,7 +5039,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO05W100',
-      description: '������˫����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5054,7 +5054,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO06W100',
-      description: '������������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5078,7 +5078,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO07W100',
-      description: '����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5093,7 +5093,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO08W100',
-      description: '�������̻���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5108,7 +5108,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO09W100',
-      description: '������˫�̻���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5123,7 +5123,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO10W100',
-      description: '��������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5138,7 +5138,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO11W100',
-      description: '˫��������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5153,7 +5153,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO12W100',
-      description: '����˫����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5168,7 +5168,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO13W100',
-      description: '˫����˫����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5192,7 +5192,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO14W100',
-      description: '����������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5216,7 +5216,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ACAD_ISO15W100',
-      description: '˫����������',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5240,7 +5240,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_LC_20',
-      description: 'LC JIS A 0150(@20)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5264,7 +5264,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_LC_20A',
-      description: 'LC JIS A 0150(@20��?)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5288,7 +5288,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_LC_8',
-      description: 'LC JIS A 0150(@8)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5312,7 +5312,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_LC_8A',
-      description: 'LC JIS A 0150(@8��?)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5336,7 +5336,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_RC_10',
-      description: 'RC JIS A 0150(@10)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5369,7 +5369,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_RC_15',
-      description: 'RC JIS A 0150(@15)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5402,7 +5402,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_RC_18',
-      description: 'RC JIS A 0150(@18)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5435,7 +5435,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_RC_30',
-      description: 'RC JIS A 0150(@30)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5468,7 +5468,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_STN_1E',
-      description: 'STONE JIS A 0150(@1)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5492,7 +5492,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_STN_2.5',
-      description: 'STONE JIS A 0150(@2.5)',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5516,7 +5516,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'JIS_WOOD',
-      description: 'WOOD JIS A 0150',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5531,7 +5531,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'LINE',
-      description: 'ƽ��ˮƽ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5546,7 +5546,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'MUDST',
-      description: '��ɳ',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5561,7 +5561,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'NET',
-      description: 'ˮƽ/��ֱդ��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5585,7 +5585,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'NET3',
-      description: '��״ͼ�� 0-60-120',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5618,7 +5618,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'PLAST',
-      description: '���ϲ���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5651,7 +5651,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'PLASTI',
-      description: '���ϲ���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5693,7 +5693,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'SACNCR',
-      description: '������',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5717,7 +5717,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'SQUARE',
-      description: '�����С����',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5741,7 +5741,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'STARS',
-      description: '��â��',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5774,7 +5774,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'STEEL',
-      description: '�ֲ���',
+      description: '',
       lines: [
         {
           angle: 45,
@@ -5798,7 +5798,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'SWAMP',
-      description: '����ش�',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5858,7 +5858,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'TRANS',
-      description: '�ȴ��ݲ���',
+      description: '',
       lines: [
         {
           angle: 0,
@@ -5882,7 +5882,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'TRIANG',
-      description: '�ȱ�������',
+      description: '',
       lines: [
         {
           angle: 60,
@@ -5915,7 +5915,7 @@ export const AcDbPredefinedAcadIsoPat: AcDbPatDocument = {
     },
     {
       name: 'ZIGZAG',
-      description: '¥��Ч��',
+      description: '',
       lines: [
         {
           angle: 0,
