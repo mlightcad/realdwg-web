@@ -233,6 +233,10 @@ describe('AcDbText', () => {
     const text = new AcDbText()
     text.database = db
     text.position = new AcGePoint3d(1, 2, 3)
+    // Group 11 (alignmentPoint) is now an independent property — set it to
+    // a distinct point so the assertion below proves group 11 is sourced
+    // from `alignmentPoint`, not echoed from `position`.
+    text.alignmentPoint = new AcGePoint3d(7, 8, 9)
     text.thickness = 4
     text.height = 5
     text.textString = 'DXF_TEXT'
@@ -260,6 +264,6 @@ describe('AcDbText', () => {
     expect(dxf).toContain('7\nStandard\n')
     expect(dxf).toContain('72\n2\n')
     expect(dxf).toContain('73\n3\n')
-    expect(dxf).toContain('11\n1\n21\n2\n31\n3\n')
+    expect(dxf).toContain('11\n7\n21\n8\n31\n9\n')
   })
 })

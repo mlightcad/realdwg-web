@@ -689,6 +689,21 @@ export class AcDbEntityConverter {
     dbEntity.styleName = text.styleName
     dbEntity.height = text.textHeight
     dbEntity.position.copy(text.startPoint)
+    // Propagate DXF group 11 (alignment point) so non-default justifications
+    // place the text correctly. `endPoint` is libredwg's name for the
+    // alignment point on a TEXT entity. Fall back to startPoint when group
+    // 11 is missing or surfaces as the zero point — see comment in
+    // `convertAttributeCommon`.
+    const isEndPointZero =
+      !text.endPoint ||
+      (text.endPoint.x === 0 &&
+        text.endPoint.y === 0 &&
+        ((text.endPoint as { z?: number }).z ?? 0) === 0)
+    if (text.endPoint && !isEndPointZero) {
+      dbEntity.alignmentPoint.copy(text.endPoint)
+    } else {
+      dbEntity.alignmentPoint.copy(text.startPoint)
+    }
     dbEntity.rotation = text.rotation
     dbEntity.oblique = text.obliqueAngle ?? 0
     dbEntity.thickness = text.thickness
@@ -1078,6 +1093,26 @@ export class AcDbEntityConverter {
     dbAttrib.styleName = text.styleName
     dbAttrib.height = text.textHeight
     dbAttrib.position.copy(text.startPoint)
+    // Propagate the alignment point (DXF group 11). It is meaningful only
+    // when halign/valign deviate from Left/Baseline, but we always copy it
+    // so DXF round-trip preserves the original value. Prefer the dedicated
+    // field on the parent entity (3D for ATTRIB, 2D for ATTDEF); fall back
+    // to the embedded text's `endPoint` which carries the same information.
+    // libredwg sometimes surfaces a zero point for entities that simply
+    // omit group 11 in the source DWG — fall back to startPoint so the
+    // alignment anchor never collapses to the world origin and is always
+    // moved consistently with the position by `transformBy`.
+    const alignmentPoint = attrib.alignmentPoint ?? text.endPoint
+    const isAlignmentPointZero =
+      !alignmentPoint ||
+      (alignmentPoint.x === 0 &&
+        alignmentPoint.y === 0 &&
+        ((alignmentPoint as { z?: number }).z ?? 0) === 0)
+    if (alignmentPoint && !isAlignmentPointZero) {
+      dbAttrib.alignmentPoint.copy(alignmentPoint)
+    } else {
+      dbAttrib.alignmentPoint.copy(text.startPoint)
+    }
     dbAttrib.rotation = text.rotation
     dbAttrib.oblique = text.obliqueAngle ?? 0
     dbAttrib.thickness = text.thickness
