@@ -4,6 +4,7 @@ import {
   AcDbBlockReference,
   AcDbCircle,
   AcDbDatabase,
+  AcDbHatch,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
 
@@ -142,6 +143,66 @@ describe('libredwg AcDbEntityConverter', () => {
       // ObjectARX semantics.
       expect(tag.ownerId).toBe('INSERT_HANDLE')
       expect(area.ownerId).toBe('INSERT_HANDLE')
+    })
+  })
+
+  // The previous color-resolution path mutated the result of the entity
+  // `color` getter (`dbEntity.color.<prop> = …`). That works for entities
+  // whose getter returns the cached `_color` field, but breaks for
+  // AcDbHatch — its override returns a clone of the HPCOLOR / CECOLOR
+  // fallback when no color is explicitly set, so the mutations are
+  // dropped and the hatch ends up stuck on the sysvar default. The
+  // converter now builds a fresh AcCmColor and assigns it via the setter,
+  // so colour reaches the data-model regardless of the getter's caching
+  // strategy.
+  describe('hatch color preservation (regression #228)', () => {
+    it('persists explicit truecolor RGB on a HATCH entity', () => {
+      acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+      const converter = new AcDbEntityConverter()
+
+      const hatch = converter.convert({
+        type: 'HATCH',
+        handle: 'H1',
+        layer: 'WALLS',
+        ownerBlockRecordSoftId: 'MS',
+        color: 0x00ff00,
+        elevation: 0,
+        extrusionDirection: { x: 0, y: 0, z: 1 },
+        patternName: 'SOLID',
+        solidFill: 1,
+        gradientFlag: 0,
+        boundaryPaths: []
+      } as any) as AcDbHatch
+
+      expect(hatch).toBeInstanceOf(AcDbHatch)
+      // RGB must reach the data-model — not be lost on the clone.
+      expect(hatch.color.RGB).toBe(0x00ff00)
+      expect(hatch.color.isByColor).toBe(true)
+    })
+
+    it('persists ACI 7 (foreground) on a HATCH entity', () => {
+      acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+      const converter = new AcDbEntityConverter()
+
+      const hatch = converter.convert({
+        type: 'HATCH',
+        handle: 'H2',
+        layer: 'WALLS',
+        ownerBlockRecordSoftId: 'MS',
+        colorIndex: 7,
+        elevation: 0,
+        extrusionDirection: { x: 0, y: 0, z: 1 },
+        patternName: 'SOLID',
+        solidFill: 1,
+        gradientFlag: 0,
+        boundaryPaths: []
+      } as any) as AcDbHatch
+
+      expect(hatch).toBeInstanceOf(AcDbHatch)
+      // ACI 7 must surface as foreground so the renderer keeps the
+      // theme-aware behaviour (fuse-with-bg for solid hatches).
+      expect(hatch.color.colorIndex).toBe(7)
+      expect(hatch.color.isForeground).toBe(true)
     })
   })
 })
