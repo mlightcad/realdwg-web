@@ -506,11 +506,7 @@ export class AcDbTable extends AcDbBlockReference {
    */
   subWorldDraw(renderer: AcGiRenderer): AcGiEntity {
     const blockTableRecord = this.blockTableRecord
-    if (
-      !this.hasRenderableCellContent() &&
-      blockTableRecord &&
-      blockTableRecord.newIterator().count > 0
-    ) {
+    if (blockTableRecord && blockTableRecord.newIterator().count > 0) {
       const block = this.drawAnonymousTableBlock(renderer, blockTableRecord)
       if (block) return block
     }
@@ -622,12 +618,6 @@ export class AcDbTable extends AcDbBlockReference {
     _tmpMatrix.compose(this.position, quaternion, this.scaleFactors)
     group.applyMatrix(_tmpMatrix)
     return group
-  }
-
-  private hasRenderableCellContent() {
-    return this._cells.some(cell => {
-      return !!cell && (!!cell.text || !!cell.blockTableRecordId)
-    })
   }
 
   private drawAnonymousTableBlock(
