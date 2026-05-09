@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.33
+
+### Patch Changes
+
+- fix: prefer anonymous table blocks when rendering AcDbTable
+
 ## 1.4.32
 
 ### Patch Changes

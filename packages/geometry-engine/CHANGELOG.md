@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.33
+
+### Patch Changes
+
+- fix: prefer anonymous table blocks when rendering AcDbTable
+- Updated dependencies
+  - @mlightcad/common@1.4.33
+
 ## 3.2.32
 
 ### Patch Changes

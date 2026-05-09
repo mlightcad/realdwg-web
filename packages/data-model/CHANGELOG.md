@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.33
+
+### Patch Changes
+
+- fix: prefer anonymous table blocks when rendering AcDbTable
+- Updated dependencies
+  - @mlightcad/common@1.4.33
+  - @mlightcad/geometry-engine@3.2.33
+  - @mlightcad/graphic-interface@3.3.33
+
 ## 1.7.32
 
 ### Patch Changes

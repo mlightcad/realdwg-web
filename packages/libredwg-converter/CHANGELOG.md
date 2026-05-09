@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.33
+
+### Patch Changes
+
+- fix: prefer anonymous table blocks when rendering AcDbTable
+- Updated dependencies
+  - @mlightcad/data-model@1.7.33
+
 ## 3.5.32
 
 ### Patch Changes

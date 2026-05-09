@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.33
+
+### Patch Changes
+
+- fix: prefer anonymous table blocks when rendering AcDbTable
+- Updated dependencies
+  - @mlightcad/data-model@1.7.33
+  - @mlightcad/libredwg-converter@3.5.33
+
 ## 0.1.32
 
 ### Patch Changes
