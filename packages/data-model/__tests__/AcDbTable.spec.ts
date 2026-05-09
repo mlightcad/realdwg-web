@@ -219,7 +219,7 @@ describe('AcDbTable', () => {
     expect(grouped.applyMatrix).toHaveBeenCalledTimes(1)
   })
 
-  it('rebuilds populated table cells before falling back to an anonymous block', () => {
+  it('uses the anonymous table block when available even if cells are populated', () => {
     const db = setWorkingDb()
     const renderer = createRenderer()
     const block = new AcDbBlockTableRecord()
@@ -247,10 +247,10 @@ describe('AcDbTable', () => {
     expect(renderer.mtext).toHaveBeenCalledTimes(1)
     const mtextCall = renderer.mtext.mock.calls[0] as unknown[]
     expect((mtextCall[0] as { text: string }).text).toBe(
-      'CELL_TEXT_WITHOUT_HEIGHT'
+      'BLOCK_TABLE_TEXT'
     )
     expect((mtextCall[0] as { height: number }).height).toBe(4.5)
-    expect(renderer.lineSegments).toHaveBeenCalledTimes(1)
+    expect(renderer.lineSegments).not.toHaveBeenCalled()
   })
 
   it('renders an anonymous table block when cell content is unavailable', () => {
