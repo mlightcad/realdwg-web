@@ -1,4 +1,5 @@
 export * from './AcDbBatchProcessing'
 export * from './AcDbDxfConverter'
+export * from './AcDbEntityColorUtil'
 export * from './AcDbRegenerator'
 export * from './worker'

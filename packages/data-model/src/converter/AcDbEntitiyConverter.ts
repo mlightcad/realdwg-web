@@ -1,4 +1,5 @@
-import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
+import { AcCmTransparency } from '@mlightcad/common'
+import { buildAcDbColor } from './AcDbEntityColorUtil'
 import {
   ArcEntity,
   AttdefEntity,
@@ -1391,29 +1392,12 @@ export class AcDbEntityConverter {
     if (entity.lineTypeScale != null) {
       dbEntity.linetypeScale = entity.lineTypeScale
     }
-    // Build the entity color in a fresh AcCmColor and assign it via the
-    // setter. The previous pattern (`dbEntity.color.<prop> = …`) read the
-    // getter and mutated the result, which works for entities whose getter
-    // returns the cached `_color` field but breaks for entities like
-    // AcDbHatch that override the getter to return a clone of an HPCOLOR /
-    // CECOLOR fallback (PR #78). Mutations on a clone are dropped, leaving
-    // the entity stuck on the sysvar default and losing the DXF's RGB.
     if (
       entity.color != null ||
       entity.colorIndex != null ||
       entity.colorName
     ) {
-      const color = new AcCmColor()
-      if (entity.color != null) {
-        color.setRGBValue(entity.color)
-      }
-      if (entity.colorIndex != null) {
-        color.colorIndex = entity.colorIndex
-      }
-      if (entity.colorName) {
-        color.colorName = entity.colorName
-      }
-      dbEntity.color = color
+      dbEntity.color = buildAcDbColor(entity)
     }
     if (entity.isVisible != null) {
       // DXF group code 60 uses 0 => visible, 1 => invisible.
