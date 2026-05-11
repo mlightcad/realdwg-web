@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.34
+
+### Patch Changes
+
+- fix: build entity color via assignment to support AcDbHatch override
+- Updated dependencies
+  - @mlightcad/data-model@1.7.34
+  - @mlightcad/libredwg-converter@3.5.34
+
 ## 0.1.33
 
 ### Patch Changes

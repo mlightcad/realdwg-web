@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.34
+
+### Patch Changes
+
+- fix: build entity color via assignment to support AcDbHatch override
+- Updated dependencies
+  - @mlightcad/common@1.4.34
+  - @mlightcad/geometry-engine@3.2.34
+
 ## 3.3.33
 
 ### Patch Changes

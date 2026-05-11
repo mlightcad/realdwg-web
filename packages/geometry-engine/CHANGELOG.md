@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.34
+
+### Patch Changes
+
+- fix: build entity color via assignment to support AcDbHatch override
+- Updated dependencies
+  - @mlightcad/common@1.4.34
+
 ## 3.2.33
 
 ### Patch Changes

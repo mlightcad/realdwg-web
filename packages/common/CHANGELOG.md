@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.34
+
+### Patch Changes
+
+- fix: build entity color via assignment to support AcDbHatch override
+
 ## 1.4.33
 
 ### Patch Changes
