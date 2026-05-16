@@ -539,6 +539,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     if (header.AUPREC != null) db.auprec = header.AUPREC
     if (header.LUNITS != null) db.lunits = header.LUNITS
     if (header.LUPREC != null) db.luprec = header.LUPREC
+    if (header.UNITMODE != null) db.unitmode = header.UNITMODE
+    if (header.MEASUREMENT != null) db.measurement = header.MEASUREMENT
     db.celtype = header.CELTYPE ?? ByLayer
     db.celtscale = header.CELTSCALE ?? 1
     db.ltscale = header.LTSCALE ?? 1

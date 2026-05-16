@@ -480,6 +480,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     if (header['$AUPREC'] != null) db.auprec = header['$AUPREC']
     if (header['$LUNITS'] != null) db.lunits = header['$LUNITS']
     if (header['$LUPREC'] != null) db.luprec = header['$LUPREC']
+    if (header['$UNITMODE'] != null) db.unitmode = header['$UNITMODE']
+    if (header['$MEASUREMENT'] != null) db.measurement = header['$MEASUREMENT']
     db.celtype = header['$CELTYPE'] || ByLayer
     AcDbSysVarManager.instance().setVar(
       AcDbSystemVariables.CETRANSPARENCY,
