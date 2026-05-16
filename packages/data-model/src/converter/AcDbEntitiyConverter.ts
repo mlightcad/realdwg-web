@@ -317,8 +317,7 @@ export class AcDbEntityConverter {
     // `libredwg-converter` for the same defensive handling.
     const ap = attrib.alignmentPoint
     const isApZero =
-      !ap ||
-      (ap.x === 0 && ap.y === 0 && ((ap as { z?: number }).z ?? 0) === 0)
+      !ap || (ap.x === 0 && ap.y === 0 && ((ap as { z?: number }).z ?? 0) === 0)
     if (ap && !isApZero) {
       dbAttrib.alignmentPoint.copy(ap)
     } else {
@@ -772,8 +771,7 @@ export class AcDbEntityConverter {
     // `convertAttributeCommon`.
     const ep = text.endPoint
     const isEpZero =
-      !ep ||
-      (ep.x === 0 && ep.y === 0 && ((ep as { z?: number }).z ?? 0) === 0)
+      !ep || (ep.x === 0 && ep.y === 0 && ((ep as { z?: number }).z ?? 0) === 0)
     if (ep && !isEpZero) {
       dbEntity.alignmentPoint.copy(ep)
     } else {
@@ -1398,11 +1396,7 @@ export class AcDbEntityConverter {
     // AcDbHatch that override the getter to return a clone of an HPCOLOR /
     // CECOLOR fallback (PR #78). Mutations on a clone are dropped, leaving
     // the entity stuck on the sysvar default and losing the DXF's RGB.
-    if (
-      entity.color != null ||
-      entity.colorIndex != null ||
-      entity.colorName
-    ) {
+    if (entity.color != null || entity.colorIndex != null || entity.colorName) {
       const color = new AcCmColor()
       if (entity.color != null) {
         color.setRGBValue(entity.color)

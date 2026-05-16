@@ -369,11 +369,7 @@ export class AcDbPatSvgRenderer {
         const nextCursor = cursor + length
         if (dashValue > 0 || dashValue === 0) {
           const drawStart = AcGeMathUtil.clamp(cursor, startAlong, endAlong)
-          const drawEnd = AcGeMathUtil.clamp(
-            nextCursor,
-            startAlong,
-            endAlong
-          )
+          const drawEnd = AcGeMathUtil.clamp(nextCursor, startAlong, endAlong)
           if (drawEnd > drawStart) {
             segments.push({
               x1: originX + dirX * drawStart,

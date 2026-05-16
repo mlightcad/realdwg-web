@@ -4,6 +4,9 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+overrides:
+  '@mlightcad/dxf-json': ^1.2.0
+
 importers:
 
   .:

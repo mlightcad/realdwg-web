@@ -19,6 +19,7 @@ import {
   ACAD_APPID,
   AcDbAngleUnits,
   AcDbDataGenerator,
+  AcDbLinearUnits,
   AcDbUnitsValue,
   ByBlock,
   ByLayer,
@@ -302,11 +303,17 @@ export class AcDbDatabase extends AcDbObject {
   /** Version of the database */
   private _version: AcDbDwgVersion
   /** Angle base for the database */
-  private _angBase: number
+  private _angbase: number
   /** Angle direction for the database */
-  private _angDir: number
+  private _angdir: number
   /** Angle units for the database */
   private _aunits: AcDbAngleUnits
+  /** Angular display precision (AUPREC), used with {@link AcDbDatabase.aunits | AUNITS}. */
+  private _auprec: number
+  /** Linear unit display format (LUNITS) for coordinates and distances. */
+  private _lunits: AcDbLinearUnits
+  /** Linear display precision (LUPREC), used with {@link lunits}. */
+  private _luprec: number
   /** Current entity color */
   private _cecolor: AcCmColor
   /** Current entity linetype scale */
@@ -398,9 +405,12 @@ export class AcDbDatabase extends AcDbObject {
   constructor() {
     super({ objectId: '0' })
     this._version = new AcDbDwgVersion('AC1014')
-    this._angBase = 0
-    this._angDir = 0
+    this._angbase = 0
+    this._angdir = 0
     this._aunits = AcDbAngleUnits.DecimalDegrees
+    this._auprec = 0
+    this._lunits = AcDbLinearUnits.Decimal
+    this._luprec = 4
     this._celtscale = 1
     this._cecolor = new AcCmColor()
     this._celtype = ByLayer
@@ -572,11 +582,27 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Gets the angle units for the database.
+   * Angular unit **display and entry** format for the drawing (AutoCAD system variable **AUNITS**).
    *
-   * This is the current AUNITS value for the database.
+   * This does not change how angles are stored internally (radians in geometry); it controls how
+   * angles are formatted in the UI and how numeric angle input is interpreted, together with
+   * {@link angbase} (**ANGBASE**) and {@link angdir} (**ANGDIR**).
    *
-   * @returns The angle units value
+   * @returns Integer code matching {@link AcDbAngleUnits}:
+   *
+   * | Value | Meaning |
+   * |------:|---------|
+   * | `0` | **Decimal degrees** — e.g. `45.5` |
+   * | `1` | **Degrees/minutes/seconds** — e.g. `45d30'15"` |
+   * | `2` | **Gradians** — e.g. `50g` (400 grads = full circle) |
+   * | `3` | **Radians** — e.g. `0.785398...` |
+   * | `4` | **Surveyor's units** — quadrant bearing notation (e.g. `N 45d30'15" E`) |
+   *
+   * @remarks
+   * Prefer assigning {@link AcDbAngleUnits} enum members for readability instead of raw integers.
+   *
+   * @see {@link AcDbAngleUnits} for the canonical enum used by this codebase.
+   * @see {@link https://help.autodesk.com/view/ACD/2027/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-C7C0F6A5-7982-43DB-97F9-5B9B0044E9FA-htm.html | AutoCAD Help: AUNITS}
    *
    * @example
    * ```typescript
@@ -588,9 +614,9 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Sets the angle units for the database.
+   * Sets **AUNITS** — the angular unit display format (see {@link aunits} getter for value meanings).
    *
-   * @param value - The new angle units value
+   * @param value - Integer `0`–`4` per {@link AcDbAngleUnits}, or `undefined`/`null` coerced to `0` by the setter chain.
    *
    * @example
    * ```typescript
@@ -604,6 +630,103 @@ export class AcDbDatabase extends AcDbObject {
       value ?? 0,
       nextValue => {
         this._aunits = nextValue
+      }
+    )
+  }
+
+  /**
+   * Angular display precision for the drawing (**AUPREC**): how many decimal places (or equivalent)
+   * are used when showing angles, in conjunction with {@link aunits}.
+   *
+   * AutoCAD typically uses integers in the range **0–8**; behavior for other values is
+   * implementation-defined in this library (stored as-is).
+   *
+   * @see {@link https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3 | AutoCAD Help: AUPREC}
+   */
+  get auprec(): number {
+    return this._auprec
+  }
+
+  /**
+   * Sets **AUPREC** — angular display precision (see {@link auprec} getter).
+   */
+  set auprec(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.AUPREC,
+      this._auprec,
+      value ?? 0,
+      nextValue => {
+        this._auprec = nextValue
+      }
+    )
+  }
+
+  /**
+   * Linear unit **display and entry** format for coordinates and lengths (**LUNITS**).
+   *
+   * This does not set real-world drawing units for inserts (see {@link insunits}); it controls how
+   * linear distances are shown and parsed (scientific, decimal, engineering, and so on).
+   *
+   * @returns Integer code matching {@link AcDbLinearUnits}:
+   *
+   * | Value | Meaning |
+   * |------:|---------|
+   * | `1` | **Scientific** |
+   * | `2` | **Decimal** |
+   * | `3` | **Engineering** (feet + decimal inches) |
+   * | `4` | **Architectural** (feet + fractional inches) |
+   * | `5` | **Fractional** |
+   * | `6` | **Windows desktop** (processing / computational format) |
+   *
+   * @remarks
+   * Prefer assigning {@link AcDbLinearUnits} enum members instead of raw integers.
+   *
+   * @see {@link AcDbLinearUnits}
+   * @see {@link https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-D7C80D1F-B1C0-44A9-898E-B3100FF391CB | AutoCAD Help: LUNITS}
+   */
+  get lunits(): number {
+    return this._lunits
+  }
+
+  /**
+   * Sets **LUNITS** — linear display format (see {@link lunits} getter).
+   *
+   * @param value - Integer per {@link AcDbLinearUnits}, or coerced default {@link AcDbLinearUnits.Decimal} when `undefined`/`null`.
+   */
+  set lunits(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.LUNITS,
+      this._lunits,
+      value ?? AcDbLinearUnits.Decimal,
+      nextValue => {
+        this._lunits = nextValue
+      }
+    )
+  }
+
+  /**
+   * Linear display precision for the drawing (**LUPREC**): number of decimal places (or equivalent)
+   * used when showing linear distances, together with {@link lunits}.
+   *
+   * AutoCAD typically uses integers in the range **0–8**; initial value is commonly **4**.
+   * Values outside that range are stored as-is by this library.
+   *
+   * @see {@link https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-5FFF39D6-EFC7-49F5-B56A-6023EB5C0DE7 | AutoCAD Help: LUPREC}
+   */
+  get luprec(): number {
+    return this._luprec
+  }
+
+  /**
+   * Sets **LUPREC** — linear display precision (see {@link luprec} getter).
+   */
+  set luprec(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.LUPREC,
+      this._luprec,
+      value ?? 4,
+      nextValue => {
+        this._luprec = nextValue
       }
     )
   }
@@ -1006,16 +1129,16 @@ export class AcDbDatabase extends AcDbObject {
   /**
    * The zero (0) base angle with respect to the current UCS in radians.
    */
-  get angBase(): number {
-    return this._angBase
+  get angbase(): number {
+    return this._angbase
   }
-  set angBase(value: number) {
+  set angbase(value: number) {
     this.updateSysVar(
       AcDbSystemVariables.ANGBASE,
-      this._angBase,
+      this._angbase,
       value ?? 0,
       nextValue => {
-        this._angBase = nextValue
+        this._angbase = nextValue
       }
     )
   }
@@ -1025,16 +1148,16 @@ export class AcDbDatabase extends AcDbObject {
    * - 0: Counterclockwise
    * - 1: Clockwise
    */
-  get angDir(): number {
-    return this._angDir
+  get angdir(): number {
+    return this._angdir
   }
-  set angDir(value: number) {
+  set angdir(value: number) {
     this.updateSysVar(
       AcDbSystemVariables.ANGDIR,
-      this._angDir,
+      this._angdir,
       value ?? 0,
       nextValue => {
-        this._angDir = nextValue
+        this._angdir = nextValue
       }
     )
   }
@@ -1644,6 +1767,10 @@ export class AcDbDatabase extends AcDbObject {
     }
     filer.writeString(9, '$INSUNITS')
     filer.writeInt16(70, this.insunits)
+    filer.writeString(9, '$LUNITS')
+    filer.writeInt16(70, this.lunits)
+    filer.writeString(9, '$LUPREC')
+    filer.writeInt16(70, this.luprec)
     filer.writeString(9, '$LTSCALE')
     filer.writeDouble(40, this.ltscale)
     filer.writeString(9, '$LWDISPLAY')
@@ -1679,9 +1806,13 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
     filer.writeString(9, '$ANGBASE')
-    filer.writeAngle(50, this.angBase)
+    filer.writeAngle(50, this.angbase)
     filer.writeString(9, '$ANGDIR')
-    filer.writeInt16(70, this.angDir)
+    filer.writeInt16(70, this.angdir)
+    filer.writeString(9, '$AUNITS')
+    filer.writeInt16(70, this.aunits)
+    filer.writeString(9, '$AUPREC')
+    filer.writeInt16(70, this.auprec)
     filer.writeString(9, '$EXTMIN')
     filer.writePoint3d(10, this.extmin)
     filer.writeString(9, '$EXTMAX')

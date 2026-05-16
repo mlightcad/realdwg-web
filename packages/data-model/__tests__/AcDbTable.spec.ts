@@ -246,9 +246,7 @@ describe('AcDbTable', () => {
 
     expect(renderer.mtext).toHaveBeenCalledTimes(1)
     const mtextCall = renderer.mtext.mock.calls[0] as unknown[]
-    expect((mtextCall[0] as { text: string }).text).toBe(
-      'BLOCK_TABLE_TEXT'
-    )
+    expect((mtextCall[0] as { text: string }).text).toBe('BLOCK_TABLE_TEXT')
     expect((mtextCall[0] as { height: number }).height).toBe(4.5)
     expect(renderer.lineSegments).not.toHaveBeenCalled()
   })

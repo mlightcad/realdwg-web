@@ -23,6 +23,8 @@ export const AcDbSystemVariables = {
   ANGDIR: 'ANGDIR',
   /** Angular unit display mode, such as decimal degrees or degrees/minutes/seconds. */
   AUNITS: 'AUNITS',
+  /** Number of decimal places (or display precision) for angular values; used together with AUNITS. */
+  AUPREC: 'AUPREC',
   /** Current color applied to newly created entities. */
   CECOLOR: 'CECOLOR',
   /** Current linetype name used when creating new entities. */
@@ -80,6 +82,10 @@ export const AcDbSystemVariables = {
   INSUNITS: 'INSUNITS',
   /** Global linetype scale multiplier for the drawing database. */
   LTSCALE: 'LTSCALE',
+  /** Linear unit display format for coordinates and distances (scientific, decimal, engineering, etc.). */
+  LUNITS: 'LUNITS',
+  /** Decimal places (or display precision) for linear values; used together with LUNITS. */
+  LUPREC: 'LUPREC',
   /** Flag indicating whether lineweights are displayed in the editor/viewer. */
   LWDISPLAY: 'LWDISPLAY',
   /** Color used for measurement tool overlays (distance, area, arc). */

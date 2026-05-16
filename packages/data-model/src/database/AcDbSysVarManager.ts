@@ -8,6 +8,9 @@ import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import {
+  AcDbAngleUnits,
+  AcDbLinearUnits,
+  AcDbUnitsValue,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
@@ -312,6 +315,89 @@ export class AcDbSysVarManager {
       type: 'transparency',
       isDbVar: true,
       defaultValue: new AcCmTransparency()
+    })
+    /**
+     * Direction of positive angles (**ANGDIR**).
+     * - `0`: Counterclockwise
+     * - `1`: Clockwise
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ANGDIR,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Sets the angular unit display format for angles (not the geometric angle itself).
+     * Integer codes match AutoCAD and {@link AcDbAngleUnits}:
+     * - `0`: Decimal degrees
+     * - `1`: Degrees/minutes/seconds
+     * - `2`: Gradians
+     * - `3`: Radians
+     * - `4`: Surveyor's units
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-C7C0F6A5-7982-43DB-97F9-5B9B0044E9FA-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.AUNITS,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: AcDbAngleUnits.DecimalDegrees
+    })
+    /**
+     * Sets the display precision for angles (number of decimal places or equivalent), used together
+     * with {@link AcDbDatabase.aunits | AUNITS}. Typical range in AutoCAD is **0–8**; initial value **0**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.AUPREC,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Sets the linear unit display format for coordinates and distances (not insertion scaling).
+     * Integer codes match AutoCAD and {@link AcDbLinearUnits}:
+     * - `1`: Scientific
+     * - `2`: Decimal
+     * - `3`: Engineering
+     * - `4`: Architectural
+     * - `5`: Fractional
+     * - `6`: Windows desktop (processing units)
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-D7C80D1F-B1C0-44A9-898E-B3100FF391CB
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.LUNITS,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: AcDbLinearUnits.Decimal
+    })
+    /**
+     * Sets the display precision for linear distances (decimal places or equivalent), used together
+     * with {@link AcDbDatabase.lunits | LUNITS}. Typical range in AutoCAD is **0–8**; common initial value **4**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-5FFF39D6-EFC7-49F5-B56A-6023EB5C0DE7
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.LUPREC,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 4
+    })
+    /**
+     * Specifies a drawing-units value for automatic scaling of blocks, images, or xrefs
+     * inserted or attached into this drawing. Integer codes match AutoCAD (0 = unitless,
+     * 1 = inches, 4 = millimeters, etc.); see {@link AcDbUnitsValue}.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-A58A87BB-482B-4042-A00A-EEF55A2B4FD8
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.INSUNITS,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: AcDbUnitsValue.Millimeters
     })
     this.registerVar({
       name: AcDbSystemVariables.LWDISPLAY,

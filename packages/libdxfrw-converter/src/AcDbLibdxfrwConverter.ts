@@ -345,7 +345,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
 
     variant = header.getVar('$ANGDIR')
     // Initial value:	0
-    db.angDir = variant ? variant.getInt() : 0
+    db.angdir = variant ? variant.getInt() : 0
 
     variant = header.getVar('$AUNITS')
     // Initial value:	0
