@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.36
+
+### Patch Changes
+
+- feat: add AcDbFormatter for AutoCAD-style length, point, and angle display
+- Updated dependencies
+  - @mlightcad/common@1.4.36
+  - @mlightcad/geometry-engine@3.2.36
+
 ## 3.3.35
 
 ### Patch Changes

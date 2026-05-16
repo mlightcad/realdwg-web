@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.36
+
+### Patch Changes
+
+- feat: add AcDbFormatter for AutoCAD-style length, point, and angle display
+- Updated dependencies
+  - @mlightcad/data-model@1.7.36
+  - @mlightcad/libredwg-converter@3.5.36
+
 ## 0.1.35
 
 ### Patch Changes

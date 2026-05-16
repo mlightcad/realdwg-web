@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.36
+
+### Patch Changes
+
+- feat: add AcDbFormatter for AutoCAD-style length, point, and angle display
+- Updated dependencies
+  - @mlightcad/data-model@1.7.36
+
 ## 3.5.35
 
 ### Patch Changes
