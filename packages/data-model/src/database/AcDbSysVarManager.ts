@@ -108,7 +108,57 @@ export class AcDbSysVarManager {
     sysVarChanged: new AcCmEventManager<AcDbSysVarEventArgs>()
   }
 
+  /** Registers all known system variables in alphabetical order by name. */
   private constructor() {
+    /**
+     * Base angle for zero direction (**ANGBASE**), in radians.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ANGBASE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Direction of positive angles (**ANGDIR**).
+     * - `0`: Counterclockwise
+     * - `1`: Clockwise
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ANGDIR,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Sets the angular unit display format for angles (not the geometric angle itself).
+     * Integer codes match AutoCAD and {@link AcDbAngleUnits}:
+     * - `0`: Decimal degrees
+     * - `1`: Degrees/minutes/seconds
+     * - `2`: Gradians
+     * - `3`: Radians
+     * - `4`: Surveyor's units
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-C7C0F6A5-7982-43DB-97F9-5B9B0044E9FA-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.AUNITS,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: AcDbAngleUnits.DecimalDegrees
+    })
+    /**
+     * Sets the display precision for angles (number of decimal places or equivalent), used together
+     * with {@link AcDbDatabase.aunits | AUNITS}. Typical range in AutoCAD is **0–8**; initial value **0**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.AUPREC,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
     this.registerVar({
       name: AcDbSystemVariables.CECOLOR,
       type: 'color',
@@ -146,13 +196,13 @@ export class AcDbSysVarManager {
       defaultValue: '0'
     })
     /**
-     * Sets the multiline style that governs the appearance of the multiline.
+     * Sets the name of the current multileader style.
      */
     this.registerVar({
-      name: AcDbSystemVariables.CMLSTYLE,
+      name: AcDbSystemVariables.CMLEADERSTYLE,
       type: 'string',
       isDbVar: true,
-      defaultValue: DEFAULT_MLINE_STYLE
+      defaultValue: DEFAULT_MLEADER_STYLE
     })
     /**
      * Controls the overall width of a multiline.
@@ -164,13 +214,13 @@ export class AcDbSysVarManager {
       defaultValue: 1
     })
     /**
-     * Sets the name of the current multileader style.
+     * Sets the multiline style that governs the appearance of the multiline.
      */
     this.registerVar({
-      name: AcDbSystemVariables.CMLEADERSTYLE,
+      name: AcDbSystemVariables.CMLSTYLE,
       type: 'string',
       isDbVar: true,
-      defaultValue: DEFAULT_MLEADER_STYLE
+      defaultValue: DEFAULT_MLINE_STYLE
     })
     /**
      * Color theme of UI elements
@@ -202,6 +252,15 @@ export class AcDbSysVarManager {
       defaultValue: true
     })
     /**
+     * Sets the default angle, in radians, for new hatch patterns in this session.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPANG,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
+    /**
      * Controls whether newly created hatches and fills are associative.
      * - 0: Not associative
      * - 1: Associative
@@ -211,15 +270,6 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 1
-    })
-    /**
-     * Sets the default angle, in radians, for new hatch patterns in this session.
-     */
-    this.registerVar({
-      name: AcDbSystemVariables.HPANG,
-      type: 'number',
-      isDbVar: false,
-      defaultValue: 0
     })
     /**
      * Sets the default background color for new hatch patterns in the current drawing.
@@ -317,44 +367,17 @@ export class AcDbSysVarManager {
       defaultValue: new AcCmTransparency()
     })
     /**
-     * Direction of positive angles (**ANGDIR**).
-     * - `0`: Counterclockwise
-     * - `1`: Clockwise
-     */
-    this.registerVar({
-      name: AcDbSystemVariables.ANGDIR,
-      type: 'number',
-      isDbVar: true,
-      defaultValue: 0
-    })
-    /**
-     * Sets the angular unit display format for angles (not the geometric angle itself).
-     * Integer codes match AutoCAD and {@link AcDbAngleUnits}:
-     * - `0`: Decimal degrees
-     * - `1`: Degrees/minutes/seconds
-     * - `2`: Gradians
-     * - `3`: Radians
-     * - `4`: Surveyor's units
+     * Specifies a drawing-units value for automatic scaling of blocks, images, or xrefs
+     * inserted or attached into this drawing. Integer codes match AutoCAD (0 = unitless,
+     * 1 = inches, 4 = millimeters, etc.); see {@link AcDbUnitsValue}.
      *
-     * @see https://help.autodesk.com/view/ACD/2027/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-C7C0F6A5-7982-43DB-97F9-5B9B0044E9FA-htm.html
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-A58A87BB-482B-4042-A00A-EEF55A2B4FD8
      */
     this.registerVar({
-      name: AcDbSystemVariables.AUNITS,
+      name: AcDbSystemVariables.INSUNITS,
       type: 'number',
       isDbVar: true,
-      defaultValue: AcDbAngleUnits.DecimalDegrees
-    })
-    /**
-     * Sets the display precision for angles (number of decimal places or equivalent), used together
-     * with {@link AcDbDatabase.aunits | AUNITS}. Typical range in AutoCAD is **0–8**; initial value **0**.
-     *
-     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3
-     */
-    this.registerVar({
-      name: AcDbSystemVariables.AUPREC,
-      type: 'number',
-      isDbVar: true,
-      defaultValue: 0
+      defaultValue: AcDbUnitsValue.Millimeters
     })
     /**
      * Sets the linear unit display format for coordinates and distances (not insertion scaling).
@@ -386,24 +409,20 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: 4
     })
-    /**
-     * Specifies a drawing-units value for automatic scaling of blocks, images, or xrefs
-     * inserted or attached into this drawing. Integer codes match AutoCAD (0 = unitless,
-     * 1 = inches, 4 = millimeters, etc.); see {@link AcDbUnitsValue}.
-     *
-     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-A58A87BB-482B-4042-A00A-EEF55A2B4FD8
-     */
-    this.registerVar({
-      name: AcDbSystemVariables.INSUNITS,
-      type: 'number',
-      isDbVar: true,
-      defaultValue: AcDbUnitsValue.Millimeters
-    })
     this.registerVar({
       name: AcDbSystemVariables.LWDISPLAY,
       type: 'boolean',
       isDbVar: true,
       defaultValue: false
+    })
+    /**
+     * Legacy metric vs imperial flag (`0` English, `1` metric).
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.MEASUREMENT,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 1
     })
     /**
      * Color used for measurement tool overlays (distance, area, arc).
@@ -458,6 +477,15 @@ export class AcDbSysVarManager {
       type: 'string',
       isDbVar: true,
       defaultValue: DEFAULT_TEXT_STYLE
+    })
+    /**
+     * Feet-inch / fractional delimiter style used with **LUNITS** (`0` report, `1` input).
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UNITMODE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
     })
     this.registerVar({
       /**

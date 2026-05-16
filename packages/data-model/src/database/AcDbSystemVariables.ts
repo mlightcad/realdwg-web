@@ -27,22 +27,22 @@ export const AcDbSystemVariables = {
   AUPREC: 'AUPREC',
   /** Current color applied to newly created entities. */
   CECOLOR: 'CECOLOR',
-  /** Current linetype name used when creating new entities. */
-  CELTYPE: 'CELTYPE',
   /** Current entity linetype scale multiplier for newly created entities. */
   CELTSCALE: 'CELTSCALE',
+  /** Current linetype name used when creating new entities. */
+  CELTYPE: 'CELTYPE',
   /** Current lineweight applied to newly created entities. */
   CELWEIGHT: 'CELWEIGHT',
   /** Current transparency level for newly created entities. */
   CETRANSPARENCY: 'CETRANSPARENCY',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
-  /** Current multiline style name used when creating new MLINE entities. */
-  CMLSTYLE: 'CMLSTYLE',
-  /** Current multiline scale used when creating new MLINE entities. */
-  CMLSCALE: 'CMLSCALE',
   /** Current multileader style name used when creating new MLEADER entities. */
   CMLEADERSTYLE: 'CMLEADERSTYLE',
+  /** Current multiline scale used when creating new MLINE entities. */
+  CMLSCALE: 'CMLSCALE',
+  /** Current multiline style name used when creating new MLINE entities. */
+  CMLSTYLE: 'CMLSTYLE',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
   /**
@@ -56,10 +56,10 @@ export const AcDbSystemVariables = {
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */
   EXTMIN: 'EXTMIN',
-  /** Controls whether newly created hatches are associative. */
-  HPASSOC: 'HPASSOC',
   /** Default angle, in radians, for newly created hatch patterns. */
   HPANG: 'HPANG',
+  /** Controls whether newly created hatches are associative. */
+  HPASSOC: 'HPASSOC',
   /** Default background color for newly created hatch patterns. */
   HPBACKGROUNDCOLOR: 'HPBACKGROUNDCOLOR',
   /** Default color for newly created hatches. */
@@ -88,6 +88,11 @@ export const AcDbSystemVariables = {
   LUPREC: 'LUPREC',
   /** Flag indicating whether lineweights are displayed in the editor/viewer. */
   LWDISPLAY: 'LWDISPLAY',
+  /**
+   * Legacy drawing measurement system: `0` = English (imperial), `1` = metric.
+   * Used with unitless **INSUNITS** to choose default unit labeling.
+   */
+  MEASUREMENT: 'MEASUREMENT',
   /** Color used for measurement tool overlays (distance, area, arc). */
   MEASUREMENTCOLOR: 'MEASUREMENTCOLOR',
   /** Running object snap mode bitmask (OSNAP settings). */
@@ -102,6 +107,11 @@ export const AcDbSystemVariables = {
   SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
   TEXTSTYLE: 'TEXTSTYLE',
+  /**
+   * Controls feet-inch and fractional display delimiters together with **LUNITS**
+   * (`0` = report format, `1` = input format).
+   */
+  UNITMODE: 'UNITMODE',
   /** Flag indicating whether the drawing background should be rendered as white. */
   WHITEBKCOLOR: 'WHITEBKCOLOR'
 } as const

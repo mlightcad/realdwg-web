@@ -19,6 +19,7 @@ import {
   ACAD_APPID,
   AcDbAngleUnits,
   AcDbDataGenerator,
+  AcDbFormatter,
   AcDbLinearUnits,
   AcDbUnitsValue,
   ByBlock,
@@ -346,6 +347,10 @@ export class AcDbDatabase extends AcDbObject {
   private _extents: AcGeBox3d
   /** Insertion units for the database */
   private _insunits: AcDbUnitsValue
+  /** Feet-inch / fractional delimiter style (UNITMODE) */
+  private _unitmode: number
+  /** Legacy metric vs imperial flag (MEASUREMENT) */
+  private _measurement: number
   /** Global linetype scale */
   private _ltscale: number
   /** The flag whether to display line weight */
@@ -371,6 +376,8 @@ export class AcDbDatabase extends AcDbObject {
   private _currentSpace?: AcDbBlockTableRecord
   /** The maximum handle value in the database, used for generating unique object IDs */
   private _maxHandle: number
+  /** Lazily created formatter for lengths, angles, and coordinates */
+  private _formatter?: AcDbFormatter
 
   /**
    * Events that can be triggered by the database.
@@ -428,6 +435,8 @@ export class AcDbDatabase extends AcDbObject {
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
+    this._unitmode = 0
+    this._measurement = 1
     this._ltscale = 1
     this._lwdisplay = false
     this._pdmode = 0
@@ -483,6 +492,21 @@ export class AcDbDatabase extends AcDbObject {
    */
   get objects() {
     return this._objects
+  }
+
+  /**
+   * Formatter for linear distances, point coordinates, and angles using this database's
+   * **LUNITS**, **AUNITS**, and related system variables.
+   *
+   * @example
+   * ```typescript
+   * database.formatter.formatLength(12.3456);
+   * database.formatter.formatPoint3d(point);
+   * database.formatter.formatAngle(angleRadians, { showUnits: true });
+   * ```
+   */
+  get formatter(): AcDbFormatter {
+    return (this._formatter ??= new AcDbFormatter(this))
   }
 
   /**
@@ -791,6 +815,49 @@ export class AcDbDatabase extends AcDbObject {
       value ?? 4,
       nextValue => {
         this._insunits = nextValue
+      }
+    )
+  }
+
+  /**
+   * Controls how feet-inch and fractional linear values are delimited (**UNITMODE**).
+   *
+   * - `0`: Report format (for example `1'-3 1/2"`)
+   * - `1`: Input format (for example `1'-3-1/2"`, fewer spaces)
+   *
+   * @see {@link https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-C52134E8-10EB-4AE7-A0C0-8F798C68F823 | AutoCAD Help: UNITMODE}
+   */
+  get unitmode(): number {
+    return this._unitmode
+  }
+
+  set unitmode(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.UNITMODE,
+      this._unitmode,
+      value ?? 0,
+      nextValue => {
+        this._unitmode = nextValue
+      }
+    )
+  }
+
+  /**
+   * Legacy drawing measurement system (**MEASUREMENT**): `0` = English, `1` = metric.
+   *
+   * When **INSUNITS** is unitless, this selects the default real-world unit family for labels.
+   */
+  get measurement(): number {
+    return this._measurement
+  }
+
+  set measurement(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.MEASUREMENT,
+      this._measurement,
+      value ?? 1,
+      nextValue => {
+        this._measurement = nextValue
       }
     )
   }
@@ -1771,6 +1838,10 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt16(70, this.lunits)
     filer.writeString(9, '$LUPREC')
     filer.writeInt16(70, this.luprec)
+    filer.writeString(9, '$UNITMODE')
+    filer.writeInt16(70, this.unitmode)
+    filer.writeString(9, '$MEASUREMENT')
+    filer.writeInt16(70, this.measurement)
     filer.writeString(9, '$LTSCALE')
     filer.writeDouble(40, this.ltscale)
     filer.writeString(9, '$LWDISPLAY')

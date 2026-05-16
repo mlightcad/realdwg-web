@@ -359,6 +359,12 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     // Initial value:	1 (imperial) or 4 (metric)
     db.insunits = variant ? variant.getInt() : 1
 
+    variant = header.getVar('$UNITMODE')
+    if (variant) db.unitmode = variant.getInt()
+
+    variant = header.getVar('$MEASUREMENT')
+    if (variant) db.measurement = variant.getInt()
+
     variant = header.getVar('$PDMODE')
     // Initial value:	0
     db.pdmode = variant ? variant.getInt() : 0
