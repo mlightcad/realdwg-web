@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.35
+
+### Patch Changes
+
+- feat: LUNITS/LUPREC/AUPREC, VPORT fallbacks, angbase/angdir; pnpm 10 + CI
+
 ## 1.4.34
 
 ### Patch Changes

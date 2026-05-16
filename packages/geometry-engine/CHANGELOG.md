@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.35
+
+### Patch Changes
+
+- feat: LUNITS/LUPREC/AUPREC, VPORT fallbacks, angbase/angdir; pnpm 10 + CI
+- Updated dependencies
+  - @mlightcad/common@1.4.35
+
 ## 3.2.34
 
 ### Patch Changes

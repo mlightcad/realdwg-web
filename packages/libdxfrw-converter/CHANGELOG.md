@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.35
+
+### Patch Changes
+
+- feat: LUNITS/LUPREC/AUPREC, VPORT fallbacks, angbase/angdir; pnpm 10 + CI
+- Updated dependencies
+  - @mlightcad/data-model@1.7.35
+
 ## 3.5.34
 
 ### Patch Changes

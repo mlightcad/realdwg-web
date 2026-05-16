@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.35
+
+### Patch Changes
+
+- feat: LUNITS/LUPREC/AUPREC, VPORT fallbacks, angbase/angdir; pnpm 10 + CI
+- Updated dependencies
+  - @mlightcad/common@1.4.35
+  - @mlightcad/geometry-engine@3.2.35
+  - @mlightcad/graphic-interface@3.3.35
+
 ## 1.7.34
 
 ### Patch Changes
