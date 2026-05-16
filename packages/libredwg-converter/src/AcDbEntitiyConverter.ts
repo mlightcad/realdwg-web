@@ -1221,11 +1221,7 @@ export class AcDbEntityConverter {
     // AcDbHatch that override the getter to return a clone of an HPCOLOR /
     // CECOLOR fallback (PR #78). Mutations on a clone are dropped, leaving
     // the entity stuck on the sysvar default and losing the DWG's RGB.
-    if (
-      entity.color != null ||
-      entity.colorIndex != null ||
-      entity.colorName
-    ) {
+    if (entity.color != null || entity.colorIndex != null || entity.colorName) {
       const color = new AcCmColor()
       if (entity.color != null) {
         color.setRGBValue(entity.color)

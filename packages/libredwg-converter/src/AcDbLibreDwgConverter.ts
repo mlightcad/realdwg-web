@@ -30,7 +30,12 @@ import {
   AcGiRenderMode,
   ByLayer,
   createWorkerApi,
-  DEFAULT_TEXT_STYLE
+  DEFAULT_TEXT_STYLE,
+  VPORT_FALLBACK_CENTER_2D,
+  VPORT_FALLBACK_LLC,
+  VPORT_FALLBACK_URC,
+  VPORT_FALLBACK_VIEW_DIR,
+  VPORT_FALLBACK_VIEW_TARGET
 } from '@mlightcad/data-model'
 import {
   DwgBlockRecordTableEntry,
@@ -310,9 +315,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         record.circleSides = item.circleSides
       }
       record.standardFlag = item.standardFlag
-      record.center.copy(item.center)
-      record.lowerLeftCorner.copy(item.lowerLeftCorner)
-      record.upperRightCorner.copy(item.upperRightCorner)
+      record.center.copy(item.center ?? VPORT_FALLBACK_CENTER_2D)
+      record.lowerLeftCorner.copy(item.lowerLeftCorner ?? VPORT_FALLBACK_LLC)
+      record.upperRightCorner.copy(item.upperRightCorner ?? VPORT_FALLBACK_URC)
       if (item.snapBasePoint) {
         record.snapBase.copy(item.snapBasePoint)
       }
@@ -332,9 +337,13 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         record.backgroundObjectId = item.backgroundObjectId
       }
 
-      record.gsView.center.copy(item.center)
-      record.gsView.viewDirectionFromTarget.copy(item.viewDirectionFromTarget)
-      record.gsView.viewTarget.copy(item.viewTarget)
+      record.gsView.center.copy(item.center ?? VPORT_FALLBACK_CENTER_2D)
+      record.gsView.viewDirectionFromTarget.copy(
+        item.viewDirectionFromTarget ?? VPORT_FALLBACK_VIEW_DIR
+      )
+      record.gsView.viewTarget.copy(
+        item.viewTarget ?? VPORT_FALLBACK_VIEW_TARGET
+      )
       if (item.lensLength) {
         record.gsView.lensLength = item.lensLength
       }
@@ -524,9 +533,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         db.cecolor.setRGBValue(header.CECOLOR.rgb)
       }
     }
-    db.angBase = header.ANGBASE ?? 0
-    db.angDir = header.ANGDIR ?? 0
+    db.angbase = header.ANGBASE ?? 0
+    db.angdir = header.ANGDIR ?? 0
     db.aunits = header.AUNITS ?? 0
+    if (header.AUPREC != null) db.auprec = header.AUPREC
+    if (header.LUNITS != null) db.lunits = header.LUNITS
+    if (header.LUPREC != null) db.luprec = header.LUPREC
     db.celtype = header.CELTYPE ?? ByLayer
     db.celtscale = header.CELTSCALE ?? 1
     db.ltscale = header.LTSCALE ?? 1

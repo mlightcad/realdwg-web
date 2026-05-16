@@ -57,7 +57,12 @@ import {
   ByLayer,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
-  DEFAULT_TEXT_STYLE
+  DEFAULT_TEXT_STYLE,
+  VPORT_FALLBACK_CENTER_2D,
+  VPORT_FALLBACK_LLC,
+  VPORT_FALLBACK_URC,
+  VPORT_FALLBACK_VIEW_DIR,
+  VPORT_FALLBACK_VIEW_TARGET
 } from '../misc'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
@@ -469,9 +474,12 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
 
     // Color index 256 is 'ByLayer'
     db.cecolor.colorIndex = header['$CECOLOR'] || 256
-    db.angBase = header['$ANGBASE'] || 0
-    db.angDir = header['$ANGDIR'] || 0
+    db.angbase = header['$ANGBASE'] || 0
+    db.angdir = header['$ANGDIR'] || 0
     if (header['$AUNITS'] != null) db.aunits = header['$AUNITS']
+    if (header['$AUPREC'] != null) db.auprec = header['$AUPREC']
+    if (header['$LUNITS'] != null) db.lunits = header['$LUNITS']
+    if (header['$LUPREC'] != null) db.luprec = header['$LUPREC']
     db.celtype = header['$CELTYPE'] || ByLayer
     AcDbSysVarManager.instance().setVar(
       AcDbSystemVariables.CETRANSPARENCY,
@@ -638,9 +646,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
             record.circleSides = item.circleSides
           }
           record.standardFlag = item.standardFlag
-          record.center.copy(item.center)
-          record.lowerLeftCorner.copy(item.lowerLeftCorner)
-          record.upperRightCorner.copy(item.upperRightCorner)
+          record.center.copy(item.center ?? VPORT_FALLBACK_CENTER_2D)
+          record.lowerLeftCorner.copy(
+            item.lowerLeftCorner ?? VPORT_FALLBACK_LLC
+          )
+          record.upperRightCorner.copy(
+            item.upperRightCorner ?? VPORT_FALLBACK_URC
+          )
           if (item.snapBasePoint) {
             record.snapBase.copy(item.snapBasePoint)
           }
@@ -660,11 +672,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
             record.backgroundObjectId = item.backgroundObjectId
           }
 
-          record.gsView.center.copy(item.center)
+          record.gsView.center.copy(item.center ?? VPORT_FALLBACK_CENTER_2D)
           record.gsView.viewDirectionFromTarget.copy(
-            item.viewDirectionFromTarget
+            item.viewDirectionFromTarget ?? VPORT_FALLBACK_VIEW_DIR
           )
-          record.gsView.viewTarget.copy(item.viewTarget)
+          record.gsView.viewTarget.copy(
+            item.viewTarget ?? VPORT_FALLBACK_VIEW_TARGET
+          )
           if (item.lensLength) {
             record.gsView.lensLength = item.lensLength
           }

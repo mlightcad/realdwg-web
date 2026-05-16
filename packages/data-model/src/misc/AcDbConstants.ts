@@ -81,3 +81,13 @@ export const MLIGHTCAD_APPID = 'mlightcad'
  * Built-in AutoCAD application ID used for standard XData registration.
  */
 export const ACAD_APPID = 'ACAD'
+
+/**
+ * Frozen 2D/3D placeholders when a VPORT table row omits geometry (partial DXF
+ * groups, incomplete DWG decode). Used before `AcGePoint2d.copy` / `AcGePoint3d.copy`.
+ */
+export const VPORT_FALLBACK_CENTER_2D = Object.freeze({ x: 0, y: 0 })
+export const VPORT_FALLBACK_LLC = Object.freeze({ x: 0, y: 0 })
+export const VPORT_FALLBACK_URC = Object.freeze({ x: 1, y: 1 })
+export const VPORT_FALLBACK_VIEW_DIR = Object.freeze({ x: 0, y: 0, z: 1 })
+export const VPORT_FALLBACK_VIEW_TARGET = Object.freeze({ x: 0, y: 0, z: 0 })
