@@ -16,7 +16,7 @@
  * - Group codes 400+   : extended data (XData)
  * - Negative values   : internal / structural markers
  */
-export const enum AcDbDxfCode {
+export enum AcDbDxfCode {
   /** Invalid DXF code */
   Invalid = -9999,
 

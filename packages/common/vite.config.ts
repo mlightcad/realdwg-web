@@ -12,7 +12,8 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'common',
-      fileName: 'common'
+      fileName: 'common',
+      formats: ['umd']
     },
     minify: 'esbuild',
     rollupOptions: {

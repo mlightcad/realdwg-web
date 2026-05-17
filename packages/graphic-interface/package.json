@@ -23,12 +23,13 @@
     "README.md",
     "package.json"
   ],
+  "sideEffects": false,
   "main": "./dist/graphic-interface.umd.cjs",
-  "module": "./dist/graphic-interface.js",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
-    "import": "./dist/graphic-interface.js",
+    "import": "./lib/index.js",
     "require": "./dist/graphic-interface.umd.cjs"
   },
   "scripts": {

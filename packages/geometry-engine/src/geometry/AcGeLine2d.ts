@@ -104,4 +104,33 @@ export class AcGeLine2d extends AcGeCurve2d {
   clone() {
     return new AcGeLine2d(this._start.clone(), this._end.clone())
   }
+
+  /**
+   * Projects a point onto the infinite line containing this segment, then clamps
+   * to the segment endpoints.
+   *
+   * @param pt - Point to project (WCS, XY).
+   * @returns Closest point on the segment.
+   */
+  project(pt: AcGePoint2dLike): AcGePoint2d {
+    const dx = this._end.x - this._start.x
+    const dy = this._end.y - this._start.y
+    const lenSq = dx * dx + dy * dy
+    if (lenSq < 1e-18) {
+      return this._start.clone()
+    }
+    let t = ((pt.x - this._start.x) * dx + (pt.y - this._start.y) * dy) / lenSq
+    t = Math.max(0, Math.min(1, t))
+    return new AcGePoint2d(this._start.x + t * dx, this._start.y + t * dy)
+  }
+
+  /**
+   * Returns the nearest point on this segment to the given point.
+   *
+   * @param point - Query point in WCS.
+   * @returns Same as {@link AcGeLine2d.project}.
+   */
+  nearestPoint(point: AcGePoint2dLike): AcGePoint2d {
+    return this.project(point)
+  }
 }

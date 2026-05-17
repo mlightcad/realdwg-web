@@ -12,7 +12,8 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'libdxfrw-converter',
-      fileName: 'libdxfrw-converter'
+      fileName: 'libdxfrw-converter',
+      formats: ['umd']
     },
     minify: 'esbuild',
     rollupOptions: {

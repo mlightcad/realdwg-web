@@ -23,12 +23,13 @@
     "README.md",
     "package.json"
   ],
+  "sideEffects": false,
   "main": "./dist/data-model.cjs",
-  "module": "./dist/data-model.js",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
-    "import": "./dist/data-model.js",
+    "import": "./lib/index.js",
     "require": "./dist/data-model.cjs"
   },
   "scripts": {

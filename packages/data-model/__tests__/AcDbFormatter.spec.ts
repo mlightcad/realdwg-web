@@ -122,9 +122,9 @@ describe('AcDbFormatter', () => {
       db.auprec = 0
 
       const radians = (45.4 * Math.PI) / 180
-      expect(
-        formatter.formatAngle(radians, { showApproximate: true })
-      ).toBe('~ 45')
+      expect(formatter.formatAngle(radians, { showApproximate: true })).toBe(
+        '~ 45'
+      )
       expect(
         formatter.formatAngle(Math.PI / 4, { showApproximate: true })
       ).toBe('45')

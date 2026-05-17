@@ -361,4 +361,65 @@ export class AcGeEllipseArc2d extends AcGeCurve2d {
       this.rotation
     )
   }
+
+  /**
+   * Returns the two focal points of this ellipse in WCS (XY).
+   *
+   * Returns an empty array when the ellipse is circular (major equals minor).
+   */
+  getFocusPoints(): AcGePoint2d[] {
+    const a = Math.max(this.majorAxisRadius, this.minorAxisRadius)
+    const b = Math.min(this.majorAxisRadius, this.minorAxisRadius)
+    if (a - b < 1e-9) {
+      return []
+    }
+    const c = Math.sqrt(a * a - b * b)
+    const cos = Math.cos(this.rotation)
+    const sin = Math.sin(this.rotation)
+    const isMajorPrimary = this.majorAxisRadius >= this.minorAxisRadius
+    const ux = isMajorPrimary ? cos : -sin
+    const uy = isMajorPrimary ? sin : cos
+    return [
+      new AcGePoint2d(this.center.x - c * ux, this.center.y - c * uy),
+      new AcGePoint2d(this.center.x + c * ux, this.center.y + c * uy)
+    ]
+  }
+
+  /**
+   * Returns quadrant snap points for a closed ellipse (axis crossings).
+   */
+  getQuadrantPoints(): AcGePoint2d[] {
+    if (!this.closed) {
+      return []
+    }
+    return [
+      this.getPoint(0),
+      this.getPoint(0.25),
+      this.getPoint(0.5),
+      this.getPoint(0.75)
+    ]
+  }
+
+  /**
+   * Returns the nearest point on this ellipse arc to the given point.
+   *
+   * Uses uniform sampling in curve parameter space; sufficient for object snap.
+   *
+   * @param point - Query point in WCS.
+   */
+  nearestPoint(point: AcGePointLike): AcGePoint2d {
+    const p = new AcGePoint2d(point.x, point.y)
+    let best = this.getPoint(0)
+    let bestDistSq = p.distanceToSquared(best)
+    const samples = 72
+    for (let i = 1; i <= samples; i++) {
+      const candidate = this.getPoint(i / samples)
+      const d = p.distanceToSquared(candidate)
+      if (d < bestDistSq) {
+        bestDistSq = d
+        best = candidate
+      }
+    }
+    return best
+  }
 }

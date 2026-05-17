@@ -12,7 +12,8 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'geometry-engine',
-      fileName: 'geometry-engine'
+      fileName: 'geometry-engine',
+      formats: ['umd']
     },
     minify: 'esbuild',
     rollupOptions: {

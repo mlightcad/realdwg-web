@@ -1,4 +1,11 @@
 import { AcGePoint3d, AcGePoint3dLike } from '../math'
+
+function distSq3d(a: AcGePoint3dLike, b: number[]): number {
+  const dx = a.x - b[0]!
+  const dy = a.y - b[1]!
+  const dz = (a.z ?? 0) - (b[2] ?? 0)
+  return dx * dx + dy * dy + dz * dz
+}
 import {
   calculateCurveLength,
   evaluateNurbsPoint,
@@ -209,6 +216,30 @@ export class AcGeNurbsCurve {
     // Use more divisions for smoother curve
     const divisions = Math.max(50, points.length * 2)
     return catmullRomCurve.getPoints(divisions)
+  }
+
+  /**
+   * Returns the nearest point on this NURBS curve to the given point.
+   *
+   * Evaluates the curve at uniform steps in parameter space over the valid knot span.
+   *
+   * @param point - Query point.
+   * @param samples - Number of interior samples (default 64).
+   */
+  nearestPoint(point: AcGePoint3dLike, samples = 64): AcGePoint3dLike {
+    const { start, end } = this.getParameterRange()
+    let best = this.point(start)
+    let bestDistSq = distSq3d(point, best)
+    for (let i = 0; i <= samples; i++) {
+      const t = start + ((end - start) * i) / samples
+      const candidate = this.point(t)
+      const d = distSq3d(point, candidate)
+      if (d < bestDistSq) {
+        bestDistSq = d
+        best = candidate
+      }
+    }
+    return { x: best[0]!, y: best[1]!, z: best[2] ?? 0 }
   }
 
   /**
