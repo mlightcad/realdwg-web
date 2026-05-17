@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.37
+
+### Patch Changes
+
+- feat: improve tree-shaking with explicit ESM exports and add geometry snap helpers
+- Updated dependencies
+  - @mlightcad/data-model@1.7.37
+  - @mlightcad/libredwg-converter@3.5.37
+
 ## 0.1.36
 
 ### Patch Changes

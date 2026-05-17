@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.37
+
+### Patch Changes
+
+- feat: improve tree-shaking with explicit ESM exports and add geometry snap helpers
+
 ## 1.4.36
 
 ### Patch Changes

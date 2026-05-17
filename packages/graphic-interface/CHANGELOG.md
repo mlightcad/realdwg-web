@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.37
+
+### Patch Changes
+
+- feat: improve tree-shaking with explicit ESM exports and add geometry snap helpers
+- Updated dependencies
+  - @mlightcad/common@1.4.37
+  - @mlightcad/geometry-engine@3.2.37
+
 ## 3.3.36
 
 ### Patch Changes

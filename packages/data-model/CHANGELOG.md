@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.37
+
+### Patch Changes
+
+- feat: improve tree-shaking with explicit ESM exports and add geometry snap helpers
+- Updated dependencies
+  - @mlightcad/common@1.4.37
+  - @mlightcad/geometry-engine@3.2.37
+  - @mlightcad/graphic-interface@3.3.37
+
 ## 1.7.36
 
 ### Patch Changes
