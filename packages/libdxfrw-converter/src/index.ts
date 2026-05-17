@@ -1,1 +1,1 @@
-export * from './AcDbLibdxfrwConverter'
+export { AcDbLibdxfrwConverter } from './AcDbLibdxfrwConverter'

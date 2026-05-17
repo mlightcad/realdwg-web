@@ -23,12 +23,15 @@
     "README.md",
     "package.json"
   ],
+  "sideEffects": [
+    "./lib/AcCmLogUtil.js"
+  ],
   "main": "./dist/common.umd.cjs",
-  "module": "./dist/common.js",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
-    "import": "./dist/common.js",
+    "import": "./lib/index.js",
     "require": "./dist/common.umd.cjs"
   },
   "scripts": {

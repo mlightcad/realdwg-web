@@ -1,4 +1,17 @@
-export * from './AcDbPatDefinition'
-export * from './AcDbPatParser'
-export * from './AcDbPatPredefined'
-export * from './AcDbPatSvgRenderer'
+export type {
+  AcDbPatDocument,
+  AcDbPatLine,
+  AcDbPatParseIssue,
+  AcDbPatPattern,
+  AcDbPatPreviewOptions
+} from './AcDbPatDefinition'
+export { AcDbPatParser } from './AcDbPatParser'
+export {
+  AcDbPredefinedAcadIsoPat,
+  AcDbPredefinedAcadPat
+} from './AcDbPatPredefined'
+export { AcDbPatSvgRenderer } from './AcDbPatSvgRenderer'
+export type {
+  AcDbPatGradientColor,
+  AcDbPatGradientPreviewOptions
+} from './AcDbPatSvgRenderer'

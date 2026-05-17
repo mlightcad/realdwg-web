@@ -24,12 +24,13 @@
     "README.md",
     "package.json"
   ],
+  "sideEffects": false,
   "main": "./dist/libredwg-converter.umd.cjs",
-  "module": "./dist/libredwg-converter.js",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
-    "import": "./dist/libredwg-converter.js",
+    "import": "./lib/index.js",
     "require": "./dist/libredwg-converter.umd.cjs"
   },
   "scripts": {

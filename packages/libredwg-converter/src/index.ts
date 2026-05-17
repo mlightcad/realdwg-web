@@ -1,1 +1,1 @@
-export * from './AcDbLibreDwgConverter'
+export { AcDbLibreDwgConverter } from './AcDbLibreDwgConverter'

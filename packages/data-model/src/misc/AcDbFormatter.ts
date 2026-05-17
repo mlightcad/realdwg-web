@@ -516,10 +516,7 @@ function isAngleValueApproximate(
  *
  * @internal
  */
-function isSurveyorAngleApproximate(
-  radians: number,
-  auprec: number
-): boolean {
+function isSurveyorAngleApproximate(radians: number, auprec: number): boolean {
   const degrees = AcGeMathUtil.radToDeg(radians)
   const bearing = (((90 - degrees) % 360) + 360) % 360
   const quadrant = bearingToQuadrant(bearing)
@@ -528,10 +525,7 @@ function isSurveyorAngleApproximate(
     Math.abs(quadrant.base + 90 - bearing)
   )
   const deflectionRadians = AcGeMathUtil.degToRad(deflection)
-  const quantizedDeflection = quantizeAngleDmsRadians(
-    deflectionRadians,
-    auprec
-  )
+  const quantizedDeflection = quantizeAngleDmsRadians(deflectionRadians, auprec)
   return differsAfterQuantization(deflectionRadians, quantizedDeflection)
 }
 
@@ -567,7 +561,9 @@ function quantizeAngleValue(radians: number, ctx: AcDbFormatContext): number {
     case AcDbAngleUnits.DegreesMinutesSeconds:
       return quantizeAngleDmsRadians(normalized, ctx.auprec)
     case AcDbAngleUnits.Gradians:
-      return quantizeDecimal(normalized / RAD_PER_GRAD, ctx.auprec) * RAD_PER_GRAD
+      return (
+        quantizeDecimal(normalized / RAD_PER_GRAD, ctx.auprec) * RAD_PER_GRAD
+      )
     case AcDbAngleUnits.Radians:
       return quantizeDecimal(normalized, ctx.auprec)
     case AcDbAngleUnits.DecimalDegrees:
@@ -634,10 +630,7 @@ function quantizeImperialInches(
  *
  * @internal
  */
-function quantizeFractionalInches(
-  inches: number,
-  denominator: number
-): number {
+function quantizeFractionalInches(inches: number, denominator: number): number {
   const whole = Math.floor(inches)
   const remainder = inches - whole
   const numerator = Math.round(remainder * denominator)
@@ -669,7 +662,10 @@ function quantizeAngleDmsRadians(radians: number, auprec: number): number {
  *
  * @internal
  */
-function differsAfterQuantization(original: number, quantized: number): boolean {
+function differsAfterQuantization(
+  original: number,
+  quantized: number
+): boolean {
   if (original === quantized) return false
   const scale = Math.max(Math.abs(original), Math.abs(quantized), 1)
   return Math.abs(original - quantized) > scale * Number.EPSILON * 8

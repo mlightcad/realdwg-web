@@ -58,6 +58,24 @@ describe('Test AcGeCircArc2d', () => {
     expect(arc2.clockwise).toBe(true)
   })
 
+  it('nearestPoint returns on-arc point and endpoints when outside span', () => {
+    const arc = new AcGeCircArc2d(ORIGIN_POINT_2D, 1, 0, Math.PI / 2, false)
+    const onArc = arc.nearestPoint({ x: 0.7, y: 0.7 })
+    expect(onArc.distanceTo({ x: 0.7, y: 0.7 })).toBeLessThan(0.2)
+
+    const nearStart = arc.nearestPoint({ x: 1.5, y: -1 })
+    expectPointClose(nearStart, arc.startPoint)
+  })
+
+  it('getQuadrantPoints returns axis points on arc', () => {
+    const arc = new AcGeCircArc2d(ORIGIN_POINT_2D, 1, 0, Math.PI, false)
+    const quads = arc.getQuadrantPoints()
+    expect(quads.length).toBeGreaterThanOrEqual(2)
+    expect(
+      quads.some(p => Math.abs(p.x - 1) < 1e-6 && Math.abs(p.y) < 1e-6)
+    ).toBe(true)
+  })
+
   it('computes midpoint correctly', () => {
     const arc1 = new AcGeCircArc2d(ORIGIN_POINT_2D, 1, 0, Math.PI, true)
     expect(AcGeTol.equal(arc1.midPoint.x, 0))

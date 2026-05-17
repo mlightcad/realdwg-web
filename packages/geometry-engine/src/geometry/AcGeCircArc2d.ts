@@ -487,6 +487,69 @@ export class AcGeCircArc2d extends AcGeCurve2d {
   }
 
   /**
+   * Returns quadrant snap points (0°, 90°, 180°, 270°) that lie on this arc.
+   * For a full circle, all four points are returned.
+   */
+  getQuadrantPoints(): AcGePoint2d[] {
+    const points: AcGePoint2d[] = []
+    const internalStart = this._getInternalAngle(this.startAngle)
+    const internalEnd = this._getInternalAngle(this.endAngle)
+    const criticalAngles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
+    for (const angle of criticalAngles) {
+      const internalAngle = this._getInternalAngle(angle)
+      if (
+        AcGeMathUtil.isBetweenAngle(
+          internalAngle,
+          internalStart,
+          internalEnd,
+          this.clockwise
+        )
+      ) {
+        points.push(this.getPointAtAngle(angle))
+      }
+    }
+    return points
+  }
+
+  /**
+   * Returns the nearest point on this arc (or full circle) to the given point.
+   *
+   * @param point - Query point in WCS (XY).
+   */
+  nearestPoint(point: AcGePoint2dLike): AcGePoint2d {
+    const p = new AcGePoint2d(point.x, point.y)
+    const dx = p.x - this.center.x
+    const dy = p.y - this.center.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 1e-12) {
+      return this.startPoint.clone()
+    }
+
+    const theta = Math.atan2(dy, dx)
+    const publicAngle = this.clockwise
+      ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(theta))
+      : AcGeMathUtil.normalizeAngle(theta)
+    const internalAngle = this._getInternalAngle(publicAngle)
+    const internalStart = this._getInternalAngle(this.startAngle)
+    const internalEnd = this._getInternalAngle(this.endAngle)
+
+    if (
+      AcGeMathUtil.isBetweenAngle(
+        internalAngle,
+        internalStart,
+        internalEnd,
+        this.clockwise
+      )
+    ) {
+      return this.getPointAtAngle(publicAngle)
+    }
+
+    const dStart = p.distanceToSquared(this.startPoint)
+    const dEnd = p.distanceToSquared(this.endPoint)
+    return dStart <= dEnd ? this.startPoint.clone() : this.endPoint.clone()
+  }
+
+  /**
    * Divide this arc into the specified nubmer of points and return those points as an array of points.
    * @param numPoints Input the nubmer of points returned
    * @returns Return an array of points

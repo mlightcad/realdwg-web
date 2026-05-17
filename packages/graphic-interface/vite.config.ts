@@ -12,7 +12,8 @@ export default defineConfig({
     lib: {
       entry: 'src/index.ts',
       name: 'graphic-interface',
-      fileName: 'graphic-interface'
+      fileName: 'graphic-interface',
+      formats: ['umd']
     },
     minify: 'esbuild',
     rollupOptions: {

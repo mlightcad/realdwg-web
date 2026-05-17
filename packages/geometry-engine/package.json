@@ -23,12 +23,13 @@
     "README.md",
     "package.json"
   ],
+  "sideEffects": false,
   "main": "./dist/geometry-engine.umd.cjs",
-  "module": "./dist/geometry-engine.js",
+  "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
-    "import": "./dist/geometry-engine.js",
+    "import": "./lib/index.js",
     "require": "./dist/geometry-engine.umd.cjs"
   },
   "scripts": {

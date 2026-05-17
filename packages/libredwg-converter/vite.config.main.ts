@@ -22,7 +22,8 @@ export default defineConfig(({ mode }) => {
       lib: {
         entry: 'src/index.ts',
         name: 'libredwg-converter',
-        fileName: 'libredwg-converter'
+        fileName: 'libredwg-converter',
+        formats: ['umd']
       },
       minify: 'esbuild',
       rollupOptions: {

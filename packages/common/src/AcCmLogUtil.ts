@@ -8,7 +8,7 @@
  * @version 1.0.0
  */
 
-import * as loglevel from 'loglevel'
+import loglevel from 'loglevel'
 
 /**
  * Flag indicating whether debug mode is enabled.
