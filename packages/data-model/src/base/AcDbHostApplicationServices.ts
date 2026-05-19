@@ -1,5 +1,5 @@
 import { AcDbDatabase } from '../database/AcDbDatabase'
-import type { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
+import { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
 import { setAcDbHostApplicationServicesProvider } from './AcDbObject'
 
 let layoutManagerFactory: (() => AcDbLayoutManager) | undefined
@@ -121,9 +121,9 @@ export class AcDbHostApplicationServices {
   get layoutManager() {
     if (!this._layoutManager) {
       if (!layoutManagerFactory) {
-        throw new Error(
-          'The layout manager factory must be registered before using it!'
-        )
+        // Default factory when AcDbLayoutManager module side effects were tree-shaken
+        // (package.json sideEffects:false since commit 5ae666c).
+        layoutManagerFactory = () => new AcDbLayoutManager()
       }
       this._layoutManager = layoutManagerFactory()
     }

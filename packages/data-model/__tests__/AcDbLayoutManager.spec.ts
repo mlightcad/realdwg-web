@@ -1,7 +1,4 @@
-import {
-  acdbHostApplicationServices,
-  setAcDbLayoutManagerFactory
-} from '../src/base/AcDbHostApplicationServices'
+import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbDataGenerator } from '../src/misc/AcDbDataGenerator'
 import { AcDbLayoutManager } from '../src/object/layout/AcDbLayoutManager'
@@ -62,8 +59,12 @@ describe('AcDbLayoutManager', () => {
     expect(manager.setCurrentLayoutBtrId('missing-btr-id', db)).toBe(false)
   })
 
-  it('registers factory for host services', () => {
-    setAcDbLayoutManagerFactory(() => new AcDbLayoutManager())
+  it('provides layout manager through host services', () => {
+    ;(
+      acdbHostApplicationServices() as unknown as {
+        _layoutManager?: unknown
+      }
+    )._layoutManager = undefined
     expect(acdbHostApplicationServices().layoutManager).toBeInstanceOf(
       AcDbLayoutManager
     )

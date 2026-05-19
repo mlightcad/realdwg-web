@@ -1,9 +1,6 @@
 import { AcCmEventManager } from '@mlightcad/common'
 
-import {
-  acdbHostApplicationServices,
-  setAcDbLayoutManagerFactory
-} from '../../base/AcDbHostApplicationServices'
+import { acdbHostApplicationServices } from '../../base/AcDbHostApplicationServices'
 import { AcDbObjectId } from '../../base/AcDbObject'
 import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord'
 import { AcDbDatabase } from '../../database/AcDbDatabase'
@@ -286,5 +283,3 @@ export class AcDbLayoutManager {
     return false
   }
 }
-
-setAcDbLayoutManagerFactory(() => new AcDbLayoutManager())

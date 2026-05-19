@@ -4,6 +4,7 @@ import {
   setAcDbLayoutManagerFactory
 } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import { AcDbLayoutManager } from '../src/object/layout/AcDbLayoutManager'
 
 describe('AcDbHostApplicationServices', () => {
   it('exposes singleton, database and lazy layout manager', () => {
@@ -25,13 +26,11 @@ describe('AcDbHostApplicationServices', () => {
     expect(services.layoutManager).toEqual({ kind: 'layout' })
   })
 
-  it('throws when layout manager factory is not registered', () => {
+  it('uses default AcDbLayoutManager when factory is not customized', () => {
     const services = acdbHostApplicationServices()
     ;(services as unknown as { _layoutManager?: unknown })._layoutManager =
       undefined
     setAcDbLayoutManagerFactory(undefined as never)
-    expect(() => services.layoutManager).toThrow(
-      'The layout manager factory must be registered before using it!'
-    )
+    expect(services.layoutManager).toBeInstanceOf(AcDbLayoutManager)
   })
 })

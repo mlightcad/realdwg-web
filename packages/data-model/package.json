@@ -23,7 +23,9 @@
     "README.md",
     "package.json"
   ],
-  "sideEffects": false,
+  "sideEffects": [
+    "./lib/base/AcDbHostApplicationServices.js"
+  ],
   "main": "./dist/data-model.cjs",
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
