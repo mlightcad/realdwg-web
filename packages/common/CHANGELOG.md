@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+
 ## 1.4.37
 
 ### Patch Changes

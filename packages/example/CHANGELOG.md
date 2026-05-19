@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+- Updated dependencies
+  - @mlightcad/data-model@1.7.38
+  - @mlightcad/libredwg-converter@3.5.38
+
 ## 0.1.37
 
 ### Patch Changes

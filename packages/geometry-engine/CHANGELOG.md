@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+- Updated dependencies
+  - @mlightcad/common@1.4.38
+
 ## 3.2.37
 
 ### Patch Changes

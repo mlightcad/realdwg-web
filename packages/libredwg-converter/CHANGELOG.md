@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.5.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+- Updated dependencies
+  - @mlightcad/data-model@1.7.38
+
 ## 3.5.37
 
 ### Patch Changes

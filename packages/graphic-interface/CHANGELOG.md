@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+- Updated dependencies
+  - @mlightcad/common@1.4.38
+  - @mlightcad/geometry-engine@3.2.38
+
 ## 3.3.37
 
 ### Patch Changes

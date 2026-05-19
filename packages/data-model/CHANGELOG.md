@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.38
+
+### Patch Changes
+
+- fix: default layout manager factory survives production tree-shaking
+- Updated dependencies
+  - @mlightcad/common@1.4.38
+  - @mlightcad/geometry-engine@3.2.38
+  - @mlightcad/graphic-interface@3.3.38
+
 ## 1.7.37
 
 ### Patch Changes
