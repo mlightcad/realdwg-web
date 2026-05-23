@@ -1,4 +1,4 @@
-import { AcGeMatrix2d, AcGePolyline2d } from '../src'
+import { AcGeCircArc2d, AcGeMatrix2d, AcGePolyline2d } from '../src'
 
 describe('Test AcGePolyline2d', () => {
   it('computes length correctly', () => {
@@ -84,5 +84,66 @@ describe('Test AcGePolyline2d', () => {
 
     cloned.vertices[0].x = 9
     expect(polyline.vertices[0].x).toBe(0)
+  })
+
+  it('offsets an open semicircle bulge segment outward', () => {
+    const polyline = new AcGePolyline2d()
+    polyline.addVertexAt(0, { x: 0, y: 0, bulge: 1 })
+    polyline.addVertexAt(1, { x: 10, y: 0 })
+    const [result] = polyline.offset(1)
+    const minY = Math.min(...result.vertices.map(vertex => vertex.y))
+    expect(minY).toBeCloseTo(-6, 0)
+  })
+
+  it('offsets a mixed line-arc polyline to the same side of the path', () => {
+    const polyline = new AcGePolyline2d()
+    polyline.addVertexAt(0, { x: 0, y: 0 })
+    polyline.addVertexAt(1, { x: 80, y: 15, bulge: 0.6 })
+    polyline.addVertexAt(2, { x: 160, y: 15, bulge: -0.6 })
+    polyline.addVertexAt(3, { x: 240, y: 5 })
+
+    const [result] = polyline.offset(2)
+    expect(result.numberOfVertices).toBeGreaterThan(4)
+
+    const lineEndOffset = {
+      x: 80 + (-15 / Math.hypot(80, 15)) * 2,
+      y: 15 + (80 / Math.hypot(80, 15)) * 2
+    }
+    const junction = result.vertices.find(
+      vertex =>
+        Math.hypot(vertex.x - lineEndOffset.x, vertex.y - lineEndOffset.y) < 3
+    )
+    expect(junction).toBeDefined()
+    expect(junction!.y).toBeGreaterThan(15)
+
+    const arc = new AcGeCircArc2d({ x: 80, y: 15 }, { x: 160, y: 15 }, 0.6)
+    const offsetArc = new AcGeCircArc2d(
+      arc.center,
+      arc.radius - 2,
+      arc.startAngle,
+      arc.endAngle,
+      arc.clockwise
+    )
+    const distToLineEnd = Math.hypot(
+      junction!.x - lineEndOffset.x,
+      junction!.y - lineEndOffset.y
+    )
+    const distToArcStart = Math.hypot(
+      junction!.x - offsetArc.startPoint.x,
+      junction!.y - offsetArc.startPoint.y
+    )
+    expect(distToLineEnd).toBeLessThan(3)
+    expect(distToArcStart).toBeLessThan(3)
+  })
+
+  it('offsets a closed polyline that contains a bulge arc segment', () => {
+    const polyline = new AcGePolyline2d()
+    polyline.addVertexAt(0, { x: 0, y: 0 })
+    polyline.addVertexAt(1, { x: 10, y: 0, bulge: 1 })
+    polyline.addVertexAt(2, { x: 10, y: 10 })
+    polyline.addVertexAt(3, { x: 0, y: 10 })
+    polyline.closed = true
+    const [result] = polyline.offset(1)
+    expect(result.numberOfVertices).toBeGreaterThanOrEqual(4)
   })
 })

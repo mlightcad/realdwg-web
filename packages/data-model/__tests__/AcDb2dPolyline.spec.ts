@@ -1,7 +1,7 @@
 import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../src/base'
-import { AcDb2dPolyline, AcDbPoly2dType } from '../src/entity'
+import { AcDb2dPolyline, AcDbPoly2dType, AcDbPolyline } from '../src/entity'
 import { AcDbOsnapMode } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 import {
@@ -266,5 +266,34 @@ describe('AcDb2dPolyline', () => {
     expect(out).toContain('\n100\nAcDb2dVertex\n')
     expect(out).toContain('\n42\n0.5\n')
     expect(out).toContain('\n30\n3\n')
+  })
+
+  it('offsets a simple 2d polyline path', () => {
+    const poly = new AcDb2dPolyline(
+      AcDbPoly2dType.SimplePoly,
+      [new AcGePoint3d(0, 0, 0), new AcGePoint3d(10, 0, 0)],
+      0,
+      false
+    )
+    const [result] = poly.getOffsetCurves(1) as AcDbPolyline[]
+    expect(result.numberOfVertices).toBeGreaterThanOrEqual(2)
+  })
+
+  it('offsets a 2d polyline path that contains bulge arcs', () => {
+    const poly = new AcDb2dPolyline(
+      AcDbPoly2dType.SimplePoly,
+      [new AcGePoint3d(0, 0, 0), new AcGePoint3d(10, 0, 0)],
+      0,
+      false,
+      0,
+      0,
+      [1, 0]
+    )
+    const [result] = poly.getOffsetCurves(1) as AcDbPolyline[]
+    let minY = Infinity
+    for (let i = 0; i < result.numberOfVertices; i++) {
+      minY = Math.min(minY, result.getPoint2dAt(i).y)
+    }
+    expect(minY).toBeLessThan(-5)
   })
 })

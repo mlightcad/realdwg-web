@@ -235,4 +235,40 @@ describe('AcDbLine', () => {
       () => new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 1, 0))
     )
   })
+
+  it('offsets a horizontal line upward by distance 2', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    const [result] = line.getOffsetCurves(2) as AcDbLine[]
+    expect(result.startPoint.y).toBeCloseTo(2)
+    expect(result.endPoint.y).toBeCloseTo(2)
+  })
+
+  it('offsets a horizontal line downward with negative distance', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    const [result] = line.getOffsetCurves(-2) as AcDbLine[]
+    expect(result.startPoint.y).toBeCloseTo(-2)
+    expect(result.endPoint.y).toBeCloseTo(-2)
+  })
+
+  it('returns 1 for point above a horizontal line in getOffsetSideAtPoint', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    expect(line.getOffsetSideAtPoint(new AcGePoint3d(5, 3, 0))).toBe(1)
+  })
+
+  it('returns -1 for point below a horizontal line in getOffsetSideAtPoint', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    expect(line.getOffsetSideAtPoint(new AcGePoint3d(5, -3, 0))).toBe(-1)
+  })
 })

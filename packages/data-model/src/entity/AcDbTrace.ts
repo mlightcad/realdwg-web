@@ -2,6 +2,7 @@ import {
   AcGeArea2d,
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
@@ -12,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a trace entity in AutoCAD.
@@ -311,5 +313,48 @@ export class AcDbTrace extends AcDbCurve {
     filer.writePoint3d(12, this.getPointAt(2))
     filer.writePoint3d(13, this.getPointAt(3))
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Offsets the quadrilateral boundary (four corners in vertex order) as a closed
+   * {@link AcDbPolyline} in the XY plane.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Treats the trace outline as a closed polygon in XY.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectBoundary2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, true).getOffsetSideAtPoint(point)
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline around the trace boundary, or `null` on failure
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    return offsetVertexPathAsPolyline(
+      this.collectBoundary2d(),
+      true,
+      offsetDist
+    )
+  }
+
+  /**
+   * Projects the four trace corners to a closed 2D loop (codes 10–13 order).
+   *
+   * @returns XY boundary vertices
+   */
+  private collectBoundary2d(): AcGePoint2d[] {
+    return this._vertices.map(vertex => new AcGePoint2d(vertex.x, vertex.y))
   }
 }

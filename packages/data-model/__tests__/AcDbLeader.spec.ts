@@ -2,7 +2,11 @@ import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
-import { AcDbLeader, AcDbLeaderAnnotationType } from '../src/entity'
+import {
+  AcDbLeader,
+  AcDbLeaderAnnotationType,
+  AcDbPolyline
+} from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -185,5 +189,14 @@ describe('AcDbLeader', () => {
 
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbLeader())
+  })
+
+  it('offsets straight leader vertices as a polyline path', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(10, 0, 0))
+    leader.appendVertex(new AcGePoint3d(10, 5, 0))
+    const [result] = leader.getOffsetCurves(2) as AcDbPolyline[]
+    expect(result.numberOfVertices).toBeGreaterThanOrEqual(2)
   })
 })

@@ -294,4 +294,19 @@ describe('AcDbEllipse', () => {
     expect(dxf).toContain('41\n0.25')
     expect(dxf).toContain('42\n1.5')
   })
+
+  it('increases both radii when offsetting outward', () => {
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(0, 0, 0),
+      new AcGeVector3d(0, 0, 1),
+      new AcGeVector3d(1, 0, 0),
+      10,
+      5,
+      0,
+      Math.PI * 2
+    )
+    const [result] = ellipse.getOffsetCurves(2) as AcDbEllipse[]
+    expect(result.majorAxisRadius).toBeCloseTo(12)
+    expect(result.minorAxisRadius).toBeCloseTo(7)
+  })
 })

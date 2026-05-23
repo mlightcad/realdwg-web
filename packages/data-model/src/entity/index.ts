@@ -77,7 +77,7 @@ export {
   AcDbTextVerticalMode
 } from './AcDbText'
 export { AcDbTrace } from './AcDbTrace'
-export { AcDbPolyline } from './AcDbPolyline'
+export { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 export { AcDbPoint } from './AcDbPoint'
 export {
   AcDbRasterImage,

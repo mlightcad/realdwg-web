@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -10,6 +11,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a polygon mesh vertex in AutoCAD.
@@ -392,5 +394,88 @@ export class AcDbPolygonMesh extends AcDbCurve {
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Offsets the mesh perimeter in XY: a single row/column for degenerate meshes, or a
+   * counter-clockwise walk around the M×N grid when both dimensions exceed one.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Uses the same perimeter path and closed flag as {@link getOffsetCurves}.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectBoundary2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(
+      path,
+      this.isBoundaryClosed()
+    ).getOffsetSideAtPoint(point)
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline along the mesh boundary, or `null` on failure
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    return offsetVertexPathAsPolyline(
+      this.collectBoundary2d(),
+      this.isBoundaryClosed(),
+      offsetDist
+    )
+  }
+
+  /**
+   * Whether the collected perimeter should be offset as a closed polygon.
+   *
+   * Requires both M and N closure flags and at least two vertices along each direction.
+   */
+  private isBoundaryClosed(): boolean {
+    return (
+      this._closedM && this._closedN && this._mCount > 1 && this._nCount > 1
+    )
+  }
+
+  /**
+   * Builds the XY perimeter of the polygon mesh for offset operations.
+   *
+   * For `M === 1` or `N === 1`, returns the sole row or column. Otherwise traces the
+   * outer ring: first column up, last row across, last column down, first row back.
+   *
+   * @returns Boundary vertices in traversal order
+   */
+  private collectBoundary2d(): AcGePoint2d[] {
+    const m = this._mCount
+    const n = this._nCount
+    if (m < 1 || n < 1) return []
+
+    const points: AcGePoint2d[] = []
+    const push = (mi: number, ni: number) => {
+      const position = this.getVertexAtMN(mi, ni).position
+      points.push(new AcGePoint2d(position.x, position.y))
+    }
+
+    if (m === 1) {
+      for (let j = 0; j < n; j++) push(0, j)
+      return points
+    }
+    if (n === 1) {
+      for (let i = 0; i < m; i++) push(i, 0)
+      return points
+    }
+
+    for (let j = 0; j < n; j++) push(0, j)
+    for (let i = 1; i < m; i++) push(i, n - 1)
+    for (let j = n - 2; j >= 0; j--) push(m - 1, j)
+    for (let i = m - 2; i >= 1; i--) push(i, 0)
+    return points
   }
 }

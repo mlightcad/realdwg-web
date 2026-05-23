@@ -2,6 +2,7 @@ import { AcCmErrors } from '@mlightcad/common'
 import {
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3dLike,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
@@ -10,6 +11,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a spline entity in AutoCAD.
@@ -336,5 +338,52 @@ export class AcDbSpline extends AcDbCurve {
       filer.writePoint3d(11, point)
     }
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Approximates the spline with a sampled polyline in XY, then offsets that path.
+   * The result is an {@link AcDbPolyline}, not a spline entity.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Evaluates side relative to the sampled 2D approximation of the spline.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectPath2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, this.closed).getOffsetSideAtPoint(
+      point
+    )
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline approximating this spline, or `null` on failure
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    return offsetVertexPathAsPolyline(
+      this.collectPath2d(),
+      this.closed,
+      offsetDist
+    )
+  }
+
+  /**
+   * Samples {@link AcGeSpline3d} into a fixed-density 2D path for planar offset.
+   *
+   * @returns 64 XY points along the spline
+   */
+  private collectPath2d(): AcGePoint2d[] {
+    return this._geo
+      .getPoints(64)
+      .map(point => new AcGePoint2d(point.x, point.y))
   }
 }

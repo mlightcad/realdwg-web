@@ -1,3 +1,5 @@
+import { AcGePoint3dLike } from '@mlightcad/geometry-engine'
+
 import { AcDbEntity } from './AcDbEntity'
 
 /**
@@ -40,4 +42,26 @@ export abstract class AcDbCurve extends AcDbEntity {
    * ```
    */
   abstract get closed(): boolean
+
+  /**
+   * Creates offset curves at the given signed distance, similar to ObjectARX
+   * `AcDbCurve::getOffsetCurves`.
+   *
+   * The sign of `offsetDist` determines the offset side relative to the curve
+   * direction in the curve plane. Returns an empty array when offsetting fails.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset curve entities (equivalent to `AcDbVoidPtrArray`)
+   */
+  abstract getOffsetCurves(offsetDist: number): AcDbCurve[]
+
+  /**
+   * Determines which side of this curve a point lies on for offset operations.
+   *
+   * @param point - Test point in WCS
+   * @returns `1` for the positive offset side, `-1` for the negative side
+   */
+  getOffsetSideAtPoint(_point: AcGePoint3dLike): 1 | -1 {
+    return 1
+  }
 }

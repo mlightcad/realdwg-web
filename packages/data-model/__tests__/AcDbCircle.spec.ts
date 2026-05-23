@@ -252,4 +252,9 @@ describe('AcDbCircle', () => {
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbCircle(new AcGePoint3d(), 1))
   })
+
+  it('increases radius when offsetting outward', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 5)
+    expect((circle.getOffsetCurves(3)[0] as AcDbCircle).radius).toBeCloseTo(8)
+  })
 })

@@ -391,4 +391,17 @@ export class AcDbLine extends AcDbCurve {
     filer.writePoint3d(11, this.endPoint)
     return this
   }
+
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const geo = this._geo.offset(offsetDist)
+    return [new AcDbLine(geo.startPoint, geo.endPoint)]
+  }
+
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const s = this.startPoint
+    const e = this.endPoint
+    return (e.x - s.x) * (point.y - s.y) - (e.y - s.y) * (point.x - s.x) >= 0
+      ? 1
+      : -1
+  }
 }

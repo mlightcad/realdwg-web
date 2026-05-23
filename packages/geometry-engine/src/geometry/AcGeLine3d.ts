@@ -303,6 +303,29 @@ export class AcGeLine3d extends AcGeCurve3d {
   clone() {
     return new AcGeLine3d(this._start.clone(), this._end.clone())
   }
+
+  /**
+   * Returns a parallel copy offset perpendicular to the XY projection of this line.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset line; degenerate XY segments return a clone at the same location
+   */
+  offset(offsetDist: number): AcGeLine3d {
+    const s = this.startPoint
+    const e = this.endPoint
+    const len = Math.hypot(e.x - s.x, e.y - s.y)
+    if (len === 0) return this.clone()
+    const dir = new AcGeVector3d(e.x - s.x, e.y - s.y, 0).normalize()
+    const perp = new AcGeVector3d(-dir.y, dir.x, 0)
+    return new AcGeLine3d(
+      new AcGePoint3d(
+        s.x + perp.x * offsetDist,
+        s.y + perp.y * offsetDist,
+        s.z
+      ),
+      new AcGePoint3d(e.x + perp.x * offsetDist, e.y + perp.y * offsetDist, e.z)
+    )
+  }
 }
 
 const _vector = /*@__PURE__*/ new AcGeVector3d()

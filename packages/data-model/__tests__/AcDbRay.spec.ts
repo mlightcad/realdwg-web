@@ -180,4 +180,13 @@ describe('AcDbRay', () => {
     createWorkingDb()
     expectDetachedClone(() => new AcDbRay())
   })
+
+  it('offsets base point perpendicular to direction', () => {
+    const ray = new AcDbRay()
+    ray.basePoint = new AcGePoint3d(0, 0, 0)
+    ray.unitDir = new AcGeVector3d(1, 0, 0)
+    const [result] = ray.getOffsetCurves(3) as AcDbRay[]
+    expect(result.basePoint.y).toBeCloseTo(3)
+    expect(result.unitDir.x).toBeCloseTo(1)
+  })
 })

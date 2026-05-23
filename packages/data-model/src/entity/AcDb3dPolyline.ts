@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
@@ -12,6 +13,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents the spline-fit type for this 3D polyline.
@@ -359,5 +361,105 @@ export class AcDb3dPolyline extends AcDbCurve {
     filer.writeInt16(66, this.numberOfVertices > 0 ? 1 : 0)
     filer.writeInt16(70, flag)
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Offsets the XY projection of the 3D path, then restores elevation on each result
+   * vertex by interpolating Z from the original polyline segments.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Uses the sampled 2D projection of this polyline for the side test.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectPath2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, this.closed).getOffsetSideAtPoint(
+      point
+    )
+  }
+
+  /**
+   * Offsets in XY and lifts vertices back to 3D with {@link interpolateZ}.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns A new 3D polyline with the same spline-fit type and closed flag, or `null`
+   * when offsetting fails
+   */
+  private createOffsetCurve(offsetDist: number): AcDb3dPolyline | null {
+    const results = this._geo.offset(offsetDist)
+    if (results.length === 0) return null
+
+    const offsetPolyline = results[0]
+    const vertices: AcGePoint3dLike[] = []
+    for (let i = 0; i < offsetPolyline.numberOfVertices; i++) {
+      const point2d = offsetPolyline.getPointAt(i)
+      vertices.push(
+        new AcGePoint3d(
+          point2d.x,
+          point2d.y,
+          this.interpolateZ(point2d.x, point2d.y)
+        )
+      )
+    }
+    return new AcDb3dPolyline(this.polyType, vertices, this.closed)
+  }
+
+  /**
+   * Samples the underlying geometry into a 2D path used for planar offset.
+   *
+   * @returns XY points along the 3D polyline projection
+   */
+  private collectPath2d(): AcGePoint2d[] {
+    const sampleCount = Math.max(32, this.numberOfVertices * 4)
+    return this._geo.getPoints(sampleCount)
+  }
+
+  /**
+   * Estimates the Z coordinate at a planar point by projecting onto the original segments.
+   *
+   * For each segment (respecting {@link closed}), finds the closest point in XY and
+   * linearly interpolates Z between the segment endpoints. Used when promoting a 2D
+   * offset polyline back to {@link AcDb3dPolyline}.
+   *
+   * @param x - X coordinate in WCS
+   * @param y - Y coordinate in WCS
+   * @returns Interpolated elevation, or `0` when the polyline has no vertices
+   */
+  private interpolateZ(x: number, y: number): number {
+    const count = this.numberOfVertices
+    if (count <= 0) return 0
+
+    let bestDist = Infinity
+    let bestZ = this.getPointAt(0).z
+    const segCount = this.closed ? count : count - 1
+    for (let i = 0; i < segCount; i++) {
+      const a = this.getPointAt(i)
+      const b = this.getPointAt((i + 1) % count)
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const len2 = dx * dx + dy * dy
+      if (len2 === 0) continue
+      const t = Math.max(
+        0,
+        Math.min(1, ((x - a.x) * dx + (y - a.y) * dy) / len2)
+      )
+      const px = a.x + dx * t
+      const py = a.y + dy * t
+      const dist = (x - px) ** 2 + (y - py) ** 2
+      if (dist < bestDist) {
+        bestDist = dist
+        bestZ = a.z + (b.z - a.z) * t
+      }
+    }
+    return bestZ
   }
 }

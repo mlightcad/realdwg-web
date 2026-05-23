@@ -609,6 +609,25 @@ export class AcGeCircArc3d extends AcGeCurve3d {
     const distance = new AcGeVector3d(this.center).distanceTo(ORIGIN_POINT_3D)
     return new AcGePlane(this.normal, distance)
   }
+
+  /**
+   * Returns a concentric copy with radius adjusted by `offsetDist`.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset arc, or `null` when the resulting radius is not positive
+   */
+  offset(offsetDist: number): AcGeCircArc3d | null {
+    const radius = this.radius + offsetDist
+    if (radius <= 0) return null
+    return new AcGeCircArc3d(
+      this.center,
+      radius,
+      this.startAngle,
+      this.endAngle,
+      this.normal,
+      this.refVec
+    )
+  }
 }
 
 const _vector3 = /*@__PURE__*/ new AcGeVector3d()
