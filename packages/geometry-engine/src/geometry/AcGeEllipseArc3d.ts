@@ -549,4 +549,25 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
     const distance = new AcGeVector3d(this.center).distanceTo(ORIGIN_POINT_3D)
     return new AcGePlane(this.normal, distance)
   }
+
+  /**
+   * Returns a copy with major and minor radii adjusted by `offsetDist`.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset ellipse arc, or `null` when either radius is not positive
+   */
+  offset(offsetDist: number): AcGeEllipseArc3d | null {
+    const majorAxisRadius = this.majorAxisRadius + offsetDist
+    const minorAxisRadius = this.minorAxisRadius + offsetDist
+    if (majorAxisRadius <= 0 || minorAxisRadius <= 0) return null
+    return new AcGeEllipseArc3d(
+      this.center,
+      this.normal,
+      this.majorAxis,
+      majorAxisRadius,
+      minorAxisRadius,
+      this.startAngle,
+      this.endAngle
+    )
+  }
 }

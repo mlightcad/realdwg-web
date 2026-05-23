@@ -375,4 +375,37 @@ describe('AcDbPolyline', () => {
     const dxf = filer.toString()
     expect(getDxfGroupValues(dxf, 70)).toContain('0')
   })
+
+  it('offsets a closed square outward', () => {
+    const poly = new AcDbPolyline()
+    poly.addVertexAt(0, new AcGePoint2d(0, 0))
+    poly.addVertexAt(1, new AcGePoint2d(10, 0))
+    poly.addVertexAt(2, new AcGePoint2d(10, 10))
+    poly.addVertexAt(3, new AcGePoint2d(0, 10))
+    poly.closed = true
+    const [result] = poly.getOffsetCurves(1) as AcDbPolyline[]
+    expect(result.numberOfVertices).toBeGreaterThanOrEqual(4)
+  })
+
+  it('offsets an open polyline with 2 vertices', () => {
+    const poly = new AcDbPolyline()
+    poly.addVertexAt(0, new AcGePoint2d(0, 0))
+    poly.addVertexAt(1, new AcGePoint2d(10, 0))
+    const [result] = poly.getOffsetCurves(2) as AcDbPolyline[]
+    expect(result.numberOfVertices).toBe(2)
+    expect(result.getPoint2dAt(0).y).toBeCloseTo(2)
+    expect(result.getPoint2dAt(1).y).toBeCloseTo(2)
+  })
+
+  it('offsets an open polyline with a bulge arc segment', () => {
+    const poly = new AcDbPolyline()
+    poly.addVertexAt(0, new AcGePoint2d(0, 0), 1)
+    poly.addVertexAt(1, new AcGePoint2d(10, 0))
+    const [result] = poly.getOffsetCurves(1) as AcDbPolyline[]
+    let minY = Infinity
+    for (let i = 0; i < result.numberOfVertices; i++) {
+      minY = Math.min(minY, result.getPoint2dAt(i).y)
+    }
+    expect(minY).toBeLessThan(-5)
+  })
 })

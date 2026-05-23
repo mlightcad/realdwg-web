@@ -226,4 +226,17 @@ describe('AcDbSpline', () => {
         )
     )
   })
+
+  it('offsets a control-point spline as a sampled polyline', () => {
+    const spline = new AcDbSpline(
+      [
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(1, 1, 0),
+        new AcGePoint3d(2, -1, 0),
+        new AcGePoint3d(3, 0, 0)
+      ],
+      [0, 0, 0, 0, 1, 1, 1, 1]
+    )
+    expect(spline.getOffsetCurves(1).length).toBeGreaterThan(0)
+  })
 })

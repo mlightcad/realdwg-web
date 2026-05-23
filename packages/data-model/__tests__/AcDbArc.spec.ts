@@ -269,4 +269,15 @@ describe('AcDbArc', () => {
     expect(out).toContain('51\n90')
     expect(out).toContain('230\n-1')
   })
+
+  it('increases radius when offsetting outward', () => {
+    const arc = new AcDbArc(new AcGePoint3d(0, 0, 0), 5, 0, Math.PI)
+    const [result] = arc.getOffsetCurves(2) as AcDbArc[]
+    expect(result.radius).toBeCloseTo(7)
+  })
+
+  it('returns empty array when inward offset collapses radius', () => {
+    const arc = new AcDbArc(new AcGePoint3d(0, 0, 0), 2, 0, Math.PI)
+    expect(arc.getOffsetCurves(-3)).toEqual([])
+  })
 })

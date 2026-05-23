@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d,
@@ -11,6 +12,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
 import { AcDbCurve } from './AcDbCurve'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Defines the annotation type for leader entities.
@@ -490,6 +492,54 @@ export class AcDbLeader extends AcDbCurve {
       filer.writeVector3d(213, this._offsetFromAnnotation)
     }
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Offsets the leader's vertex path in the XY plane and returns an {@link AcDbPolyline}.
+   * Splined leaders are sampled before offsetting; the leader is always treated as an
+   * open path.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Side test follows the straight or sampled spline path as an open polyline.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectPath2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, false).getOffsetSideAtPoint(point)
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline along the leader path, or `null` when offset fails
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    return offsetVertexPathAsPolyline(this.collectPath2d(), false, offsetDist)
+  }
+
+  /**
+   * Flattens the leader geometry to a 2D vertex list for offset operations.
+   *
+   * Uses 64 samples from the fit spline when {@link isSplined} is true; otherwise
+   * returns the stored WCS vertices projected to XY.
+   *
+   * @returns Leader path in the XY plane
+   */
+  private collectPath2d(): AcGePoint2d[] {
+    if (this.isSplined && this.splineGeo) {
+      return this.splineGeo
+        .getPoints(64)
+        .map(point => new AcGePoint2d(point.x, point.y))
+    }
+    return this._vertices.map(vertex => new AcGePoint2d(vertex.x, vertex.y))
   }
 
   private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {

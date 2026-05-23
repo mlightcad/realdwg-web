@@ -57,3 +57,7 @@ export {
   transformWcsPointToOcs
 } from './AcGeOcsUtil'
 export { AcGeTol, DEFAULT_TOL } from './AcGeTol'
+export {
+  offsetPointByDirectionInXY,
+  offsetVertexPath
+} from './AcGeCurveOffsetUtil'

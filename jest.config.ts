@@ -4,6 +4,7 @@ const config: Config = {
   verbose: true,
   preset: "ts-jest",
   testEnvironment: "node",
+  setupFiles: ["<rootDir>/packages/geometry-engine/__tests__/setupClipper2Mock.ts"],
   moduleNameMapper: {
     "^@mlightcad/common$": "<rootDir>/packages/common/src/index.ts",
     "^@mlightcad/geometry-engine$": "<rootDir>/packages/geometry-engine/src/index.ts",
@@ -15,6 +16,7 @@ const config: Config = {
   },
   testPathIgnorePatterns: [
     "packages/dxf-json/",
+    "setupClipper2Mock",
   ]
 }
 

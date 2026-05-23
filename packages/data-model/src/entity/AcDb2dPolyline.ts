@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
@@ -12,6 +13,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents the curve/spline-fit type for one 2d polyline.
@@ -451,5 +453,55 @@ export class AcDb2dPolyline extends AcDbCurve {
     filer.writeDouble(20, 0)
     filer.writeDouble(30, this.elevation)
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Approximates the legacy 2D polyline in the XY plane, offsets that path, and
+   * returns a single {@link AcDbPolyline}. Elevation is not preserved on the result.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Projects the entity to a sampled 2D path and delegates the side test to a
+   * temporary {@link AcDbPolyline}.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectPath2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, this.closed).getOffsetSideAtPoint(
+      point
+    )
+  }
+
+  /**
+   * Builds the offset result as a lightweight {@link AcDbPolyline}.
+   *
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline, or `null` when the sampled path is too short or offset fails
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    const results = this._geo.offset(offsetDist)
+    if (results.length === 0) return null
+    return AcDbPolyline.fromGePolyline(results[0])
+  }
+
+  /**
+   * Samples the underlying {@link AcGePolyline2d} into a dense 2D path for offsetting.
+   *
+   * Sample count scales with vertex count so curved or fitted segments are represented
+   * adequately in the planar approximation.
+   *
+   * @returns XY points along the polyline geometry
+   */
+  private collectPath2d(): AcGePoint2d[] {
+    const sampleCount = Math.max(32, this.numberOfVertices * 4)
+    return this._geo.getPoints(sampleCount)
   }
 }

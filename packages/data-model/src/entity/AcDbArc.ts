@@ -589,4 +589,27 @@ export class AcDbArc extends AcDbCurve {
     filer.writeVector3d(210, this.normal)
     return this
   }
+
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const c = this.center
+    const r = this.radius
+    return Math.sqrt((point.x - c.x) ** 2 + (point.y - c.y) ** 2) >= r ? 1 : -1
+  }
+
+  private createOffsetCurve(offsetDist: number): AcDbArc | null {
+    const geo = this._geo.offset(offsetDist)
+    if (!geo) return null
+    return new AcDbArc(
+      geo.center,
+      geo.radius,
+      geo.startAngle,
+      geo.endAngle,
+      geo.normal
+    )
+  }
 }

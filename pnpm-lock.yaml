@@ -141,6 +141,9 @@ importers:
       '@mlightcad/common':
         specifier: workspace:*
         version: link:../common
+      clipper2-ts:
+        specifier: 2.0.1-15
+        version: 2.0.1-15
 
   packages/graphic-interface:
     dependencies:
@@ -2204,6 +2207,10 @@ packages:
   cli-truncate@4.0.0:
     resolution: {integrity: sha512-nPdaFdQ0h/GEigbPClz11D0v/ZJEwxmeVZGeMo3Z5StPtUTkA9o1lD6QwoirYiSDzbcwn2XcjwmCp68W1IS4TA==}
     engines: {node: '>=18'}
+
+  clipper2-ts@2.0.1-15:
+    resolution: {integrity: sha512-roegGp2c3DIyBvTDZM6IwFxe1xRIkg4vvftmf4S6U9FYcRyzfiXVKZxtVL3F4JjqArXq78Cf4L1FzLWXOlE3cQ==}
+    engines: {node: '>=14.0.0'}
 
   cliui@8.0.1:
     resolution: {integrity: sha512-BSeNnyus75C4//NQ9gQt1/csTXyo/8Sb+afLAkzAptFuMsod9HFokGNudZpi/oQV73hnVK+sR+5PVRMd+Dr7YQ==}
@@ -7150,6 +7157,8 @@ snapshots:
     dependencies:
       slice-ansi: 5.0.0
       string-width: 7.2.0
+
+  clipper2-ts@2.0.1-15: {}
 
   cliui@8.0.1:
     dependencies:

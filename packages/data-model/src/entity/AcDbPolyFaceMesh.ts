@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -10,6 +11,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a polyface mesh vertex in AutoCAD.
@@ -355,5 +357,67 @@ export class AcDbPolyFaceMesh extends AcDbCurve {
     filer.writeObjectId(330, this.objectId)
     filer.writeSubclassMarker('AcDbEntity')
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Offsets the XY boundary of the largest face in the mesh as a closed
+   * {@link AcDbPolyline}. When no face records exist, falls back to all mesh vertices
+   * in storage order.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Side test uses the same largest-face boundary as {@link getOffsetCurves}.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const path = this.collectLargestFaceBoundary2d()
+    if (path.length < 2) return 1
+    return AcDbPolyline.from2dPoints(path, true).getOffsetSideAtPoint(point)
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units
+   * @returns Offset polyline around the dominant face boundary, or `null` on failure
+   */
+  private createOffsetCurve(offsetDist: number): AcDbCurve | null {
+    return offsetVertexPathAsPolyline(
+      this.collectLargestFaceBoundary2d(),
+      true,
+      offsetDist
+    )
+  }
+
+  /**
+   * Selects the face with the most referenced vertices and returns its XY outline.
+   *
+   * Face vertex indices follow mesh face records; negative indices are ignored. If no
+   * suitable face is found, every mesh vertex position is projected to XY in index order.
+   *
+   * @returns Closed or open 2D loop used for offset approximation
+   */
+  private collectLargestFaceBoundary2d(): AcGePoint2d[] {
+    let bestIndices: number[] = []
+    for (const face of this._faces) {
+      const indices = face.vertexIndices.filter(index => index >= 0)
+      if (indices.length > bestIndices.length) {
+        bestIndices = indices
+      }
+    }
+    if (bestIndices.length < 2) {
+      return this._vertices.map(
+        vertex => new AcGePoint2d(vertex.position.x, vertex.position.y)
+      )
+    }
+    return bestIndices.map(index => {
+      const position = this.getVertexAt(index).position
+      return new AcGePoint2d(position.x, position.y)
+    })
   }
 }

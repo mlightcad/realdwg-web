@@ -2,7 +2,9 @@ import {
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGeVector3d
+  AcGePoint3dLike,
+  AcGeVector3d,
+  offsetPointByDirectionInXY
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -313,5 +315,49 @@ export class AcDbXline extends AcDbCurve {
     filer.writePoint3d(10, this.basePoint)
     filer.writeVector3d(11, this.unitDir)
     return this
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetCurves}
+   *
+   * Returns a parallel construction line: {@link basePoint} moves perpendicular to the
+   * XY projection of {@link unitDir} by `offsetDist`; direction is unchanged. Returns an
+   * empty array when the XY direction is degenerate.
+   */
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  /**
+   * {@inheritDoc AcDbCurve.getOffsetSideAtPoint}
+   *
+   * Same planar left/right test as {@link AcDbRay.getOffsetSideAtPoint}.
+   */
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const bp = this.basePoint
+    const dir = this.unitDir
+    const len = Math.hypot(dir.x, dir.y)
+    if (len <= 1e-9) return 1
+    return (dir.x * (point.y - bp.y) - dir.y * (point.x - bp.x)) / len >= 0
+      ? 1
+      : -1
+  }
+
+  /**
+   * @param offsetDist - Signed offset distance in drawing units (perpendicular in XY)
+   * @returns Parallel xline, or `null` when {@link unitDir} has negligible XY component
+   */
+  private createOffsetCurve(offsetDist: number): AcDbXline | null {
+    const offsetPoint = offsetPointByDirectionInXY(
+      this.basePoint,
+      this.unitDir,
+      offsetDist
+    )
+    if (!offsetPoint) return null
+    const xline = new AcDbXline()
+    xline.basePoint = offsetPoint
+    xline.unitDir = this.unitDir.clone()
+    return xline
   }
 }

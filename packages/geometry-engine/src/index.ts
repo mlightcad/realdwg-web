@@ -95,5 +95,7 @@ export {
   smootherstep,
   smoothstep,
   transformOcsPointToWcs,
-  transformWcsPointToOcs
+  transformWcsPointToOcs,
+  offsetPointByDirectionInXY,
+  offsetVertexPath
 } from './util'

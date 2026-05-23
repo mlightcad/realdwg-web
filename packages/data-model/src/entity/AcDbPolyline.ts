@@ -7,7 +7,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
-  AcGePolyline2dVertex
+  AcGePolyline2dVertex,
+  offsetVertexPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -600,6 +601,98 @@ export class AcDbPolyline extends AcDbCurve {
       new AcGePoint2d(endVertex.x, endVertex.y)
     ]
   }
+
+  /**
+   * Constructs a temporary {@link AcDbPolyline} from a planar vertex list.
+   *
+   * Other curve types use this factory when they need polyline offset or side-test
+   * behavior without persisting an intermediate entity in the database. Vertices are
+   * added in list order with zero bulge; arc segments are not represented.
+   *
+   * @param points - 2D vertices in WCS (XY), at least one point
+   * @param closed - Whether the path forms a closed loop for offset and side tests
+   * @returns A new lightweight polyline with the given topology
+   */
+  static from2dPoints(points: AcGePoint2d[], closed: boolean): AcDbPolyline {
+    const polyline = new AcDbPolyline()
+    points.forEach((point, index) => polyline.addVertexAt(index, point))
+    polyline.closed = closed
+    return polyline
+  }
+
+  /**
+   * Creates a polyline entity from {@link AcGePolyline2d} geometry.
+   *
+   * @param geo - Source polyline geometry
+   * @returns Polyline entity with matching vertices and closed flag
+   */
+  static fromGePolyline(geo: AcGePolyline2d): AcDbPolyline {
+    const polyline = new AcDbPolyline()
+    geo.vertices.forEach((vertex, index) => {
+      polyline.addVertexAt(
+        index,
+        new AcGePoint2d(vertex.x, vertex.y),
+        vertex.bulge ?? 0
+      )
+    })
+    polyline.closed = geo.closed
+    return polyline
+  }
+
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const n = this.numberOfVertices
+    let bestDist = Infinity
+    let bestSide: 1 | -1 = 1
+    const segCount = this.closed ? n : n - 1
+    for (let i = 0; i < segCount; i++) {
+      const a = this.getPoint2dAt(i)
+      const b = this.getPoint2dAt((i + 1) % n)
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const len2 = dx * dx + dy * dy
+      if (len2 === 0) continue
+      const t = Math.max(
+        0,
+        Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / len2)
+      )
+      const d = (point.x - a.x - t * dx) ** 2 + (point.y - a.y - t * dy) ** 2
+      if (d < bestDist) {
+        bestDist = d
+        bestSide = dx * (point.y - a.y) - dy * (point.x - a.x) >= 0 ? 1 : -1
+      }
+    }
+    return bestSide
+  }
+
+  private createOffsetCurve(offsetDist: number): AcDbPolyline | null {
+    const results = this._geo.offset(offsetDist)
+    if (results.length === 0) return null
+    return AcDbPolyline.fromGePolyline(results[0])
+  }
+}
+
+/**
+ * Offsets a planar vertex path using {@link offsetVertexPath} and wraps the
+ * result as an {@link AcDbPolyline}.
+ *
+ * @param points - Sampled or vertex-derived 2D path in WCS (XY)
+ * @param closed - Whether the path is treated as a closed polygon for offsetting
+ * @param offsetDist - Signed offset distance in drawing units (see {@link AcDbCurve#getOffsetCurves})
+ * @returns The first offset polyline, or `null` when the path has fewer than two points
+ * or offsetting fails
+ */
+export function offsetVertexPathAsPolyline(
+  points: AcGePoint2d[],
+  closed: boolean,
+  offsetDist: number
+): AcDbPolyline | null {
+  const geo = offsetVertexPath(points, closed, offsetDist)
+  return geo ? AcDbPolyline.fromGePolyline(geo) : null
 }
 
 const WIDTH_EPSILON = 1e-6

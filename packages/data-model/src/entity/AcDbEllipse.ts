@@ -151,6 +151,10 @@ export class AcDbEllipse extends AcDbCurve {
    * console.log(`Major radius: ${majorRadius}`);
    * ```
    */
+  get majorAxis(): AcGeVector3dLike {
+    return this._geo.majorAxis
+  }
+
   get majorAxisRadius(): number {
     return this._geo.majorAxisRadius
   }
@@ -549,5 +553,41 @@ export class AcDbEllipse extends AcDbCurve {
     filer.writeDouble(41, this.startAngle)
     filer.writeDouble(42, this.endAngle)
     return this
+  }
+
+  override getOffsetCurves(offsetDist: number): AcDbCurve[] {
+    const curve = this.createOffsetCurve(offsetDist)
+    return curve ? [curve] : []
+  }
+
+  override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
+    const c = this.center
+    const dx = point.x - c.x
+    const dy = point.y - c.y
+    const major = this.majorAxis
+    const majorLen = Math.hypot(major.x, major.y) || 1
+    const minorLen =
+      (this.minorAxisRadius / this.majorAxisRadius) * majorLen || 1
+    const ux = major.x / majorLen
+    const uy = major.y / majorLen
+    const vx = -uy
+    const vy = ux
+    const u = dx * ux + dy * uy
+    const v = dx * vx + dy * vy
+    return (u / majorLen) ** 2 + (v / minorLen) ** 2 >= 1 ? 1 : -1
+  }
+
+  private createOffsetCurve(offsetDist: number): AcDbEllipse | null {
+    const geo = this._geo.offset(offsetDist)
+    if (!geo) return null
+    return new AcDbEllipse(
+      geo.center,
+      geo.normal,
+      geo.majorAxis,
+      geo.majorAxisRadius,
+      geo.minorAxisRadius,
+      geo.startAngle,
+      geo.endAngle
+    )
   }
 }
