@@ -86,6 +86,27 @@ describe('Test AcGePolyline2d', () => {
     expect(polyline.vertices[0].x).toBe(0)
   })
 
+  it('offsets a closed square with miter joins', () => {
+    const polyline = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 }
+      ],
+      true
+    )
+    const [result] = polyline.offset(1)
+    expect(result.closed).toBe(true)
+    expect(result.numberOfVertices).toBe(4)
+    const xs = result.vertices.map(vertex => vertex.x)
+    const ys = result.vertices.map(vertex => vertex.y)
+    expect(Math.min(...xs)).toBeCloseTo(1)
+    expect(Math.max(...xs)).toBeCloseTo(9)
+    expect(Math.min(...ys)).toBeCloseTo(1)
+    expect(Math.max(...ys)).toBeCloseTo(9)
+  })
+
   it('offsets an open semicircle bulge segment outward', () => {
     const polyline = new AcGePolyline2d()
     polyline.addVertexAt(0, { x: 0, y: 0, bulge: 1 })
@@ -93,6 +114,78 @@ describe('Test AcGePolyline2d', () => {
     const [result] = polyline.offset(1)
     const minY = Math.min(...result.vertices.map(vertex => vertex.y))
     expect(minY).toBeCloseTo(-6, 0)
+  })
+
+  it('offsets arc-arc cusp with a round join instead of a straight bridge', () => {
+    const polyline = new AcGePolyline2d()
+    polyline.addVertexAt(0, { x: 0, y: 0, bulge: 0.55 })
+    polyline.addVertexAt(1, { x: 100, y: 50, bulge: -0.55 })
+    polyline.addVertexAt(2, { x: 100, y: 100 })
+
+    const [result] = polyline.offset(2)
+    const cusp = polyline.vertices[1]
+    const arcA = new AcGeCircArc2d(
+      polyline.vertices[0],
+      cusp,
+      polyline.vertices[0].bulge ?? 0.55
+    )
+    const arcB = new AcGeCircArc2d(
+      cusp,
+      polyline.vertices[2],
+      polyline.vertices[1].bulge ?? -0.55
+    )
+    const offsetA = new AcGeCircArc2d(
+      arcA.center,
+      arcA.radius + 2,
+      arcA.startAngle,
+      arcA.endAngle,
+      arcA.clockwise
+    )
+    const offsetB = new AcGeCircArc2d(
+      arcB.center,
+      arcB.radius - 2,
+      arcB.startAngle,
+      arcB.endAngle,
+      arcB.clockwise
+    )
+
+    const bridge = result.vertices.find((vertex, index) => {
+      if (index === 0) return false
+      const prev = result.vertices[index - 1]
+      const onA =
+        Math.abs(
+          Math.hypot(prev.x - offsetA.center.x, prev.y - offsetA.center.y) -
+            offsetA.radius
+        ) < 0.5
+      const onB =
+        Math.abs(
+          Math.hypot(vertex.x - offsetB.center.x, vertex.y - offsetB.center.y) -
+            offsetB.radius
+        ) < 0.5
+      const dist = Math.hypot(vertex.x - prev.x, vertex.y - prev.y)
+      return onA && onB && dist > 0.05 && dist < 8
+    })
+    expect(bridge).toBeUndefined()
+  })
+
+  it('offsets tangent line-arc polyline without a loop at the vertex', () => {
+    const polyline = new AcGePolyline2d()
+    polyline.addVertexAt(0, { x: 0, y: 0 })
+    polyline.addVertexAt(1, { x: 100, y: 0, bulge: 0.45 })
+    polyline.addVertexAt(2, { x: 160, y: 40 })
+
+    const [result] = polyline.offset(2)
+    const junctionVertex = polyline.vertices[1]
+    const joinRadius = 2
+    const joinCirclePoints = result.vertices.filter(
+      vertex =>
+        Math.abs(
+          Math.hypot(vertex.x - junctionVertex.x, vertex.y - junctionVertex.y) -
+            joinRadius
+        ) < 0.25
+    )
+    expect(joinCirclePoints.length).toBeLessThan(12)
+    expect(result.vertices.length).toBeLessThan(80)
   })
 
   it('offsets a mixed line-arc polyline to the same side of the path', () => {
