@@ -376,7 +376,7 @@ describe('AcDbPolyline', () => {
     expect(getDxfGroupValues(dxf, 70)).toContain('0')
   })
 
-  it('offsets a closed square outward', () => {
+  it('offsets a closed square', () => {
     const poly = new AcDbPolyline()
     poly.addVertexAt(0, new AcGePoint2d(0, 0))
     poly.addVertexAt(1, new AcGePoint2d(10, 0))
@@ -384,7 +384,18 @@ describe('AcDbPolyline', () => {
     poly.addVertexAt(3, new AcGePoint2d(0, 10))
     poly.closed = true
     const [result] = poly.getOffsetCurves(1) as AcDbPolyline[]
-    expect(result.numberOfVertices).toBeGreaterThanOrEqual(4)
+    expect(result.numberOfVertices).toBe(4)
+    const xs: number[] = []
+    const ys: number[] = []
+    for (let i = 0; i < result.numberOfVertices; i++) {
+      const point = result.getPoint2dAt(i)
+      xs.push(point.x)
+      ys.push(point.y)
+    }
+    expect(Math.min(...xs)).toBeCloseTo(1)
+    expect(Math.max(...xs)).toBeCloseTo(9)
+    expect(Math.min(...ys)).toBeCloseTo(1)
+    expect(Math.max(...ys)).toBeCloseTo(9)
   })
 
   it('offsets an open polyline with 2 vertices', () => {

@@ -40,8 +40,5 @@
   },
   "peerDependencies": {
     "@mlightcad/common": "workspace:*"
-  },
-  "dependencies": {
-    "clipper2-ts": "2.0.1-15"
   }
 }
