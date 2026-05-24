@@ -7,12 +7,11 @@ import {
 } from 'clipper2-ts'
 
 import { AcGePoint2d } from '../math/AcGePoint2d'
-import { AcGeMathUtil, TAU } from '../util'
+import { AcGeMathUtil, AcGeTol, TAU } from '../util'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGePolyline2d } from './AcGePolyline2d'
 
 const POLYLINE_OFFSET_CLIPPER_SCALE = 1e6
-const PATH_EPSILON = 1e-9
 
 type PolylineOffsetSegment = {
   start: AcGePoint2d
@@ -138,7 +137,7 @@ function collectPlanarSegments(polyline: AcGePolyline2d): PlanarSegment[] {
   for (let i = 0; i < segmentCount; i++) {
     const start = polyline.vertices[i]
     const end = polyline.vertices[(i + 1) % count]
-    if (Math.abs(start.bulge ?? 0) > PATH_EPSILON) {
+    if (AcGeTol.isPositive(Math.abs(start.bulge ?? 0))) {
       segments.push({
         kind: 'arc',
         arc: new AcGeCircArc2d(start, end, start.bulge!)
@@ -191,7 +190,7 @@ function offsetCircArc2d(
 ): AcGeCircArc2d | null {
   const radiusDelta = getArcRadiusDelta(arc, start, end, offsetDist)
   const radius = arc.radius + radiusDelta
-  if (radius <= PATH_EPSILON) return null
+  if (AcGeTol.isNonPositive(radius)) return null
   return new AcGeCircArc2d(
     arc.center,
     radius,
@@ -218,7 +217,7 @@ function getArcRadiusDelta(
   const dx = end.x - start.x
   const dy = end.y - start.y
   const len = Math.hypot(dx, dy)
-  if (len <= PATH_EPSILON) {
+  if (AcGeTol.isNonPositive(len)) {
     return arc.clockwise ? -offsetDist : offsetDist
   }
 
@@ -239,7 +238,7 @@ function offsetLineSegment(
   const dx = end.x - start.x
   const dy = end.y - start.y
   const len = Math.hypot(dx, dy)
-  if (len <= PATH_EPSILON) return null
+  if (AcGeTol.isNonPositive(len)) return null
 
   const nx = (-dy / len) * offsetDist
   const ny = (dx / len) * offsetDist
@@ -370,14 +369,14 @@ function sweepAlongArc(
 ): number {
   if (arc.clockwise) {
     let sweep = fromInternal - toInternal
-    if (sweep <= PATH_EPSILON) {
+    if (AcGeTol.isNonPositive(sweep)) {
       sweep += TAU
     }
     return sweep
   }
 
   let sweep = toInternal - fromInternal
-  if (sweep <= PATH_EPSILON) {
+  if (AcGeTol.isNonPositive(sweep)) {
     sweep += TAU
   }
   return sweep
@@ -450,7 +449,7 @@ function intersectLineWithCircle(
   near: AcGePoint2d
 ): AcGePoint2d {
   const dirLen = Math.hypot(line.dx, line.dy)
-  if (dirLen <= PATH_EPSILON) {
+  if (AcGeTol.isNonPositive(dirLen)) {
     return near.clone()
   }
 
@@ -479,7 +478,7 @@ function isPointOnArc(arc: AcGeCircArc2d, point: AcGePoint2d): boolean {
   const radiusDelta = Math.abs(
     Math.hypot(point.x - arc.center.x, point.y - arc.center.y) - arc.radius
   )
-  if (radiusDelta > 1e-6) {
+  if (AcGeTol.isPositive(radiusDelta)) {
     return false
   }
 
@@ -507,7 +506,7 @@ function intersectCircles(
   const dx = b.center.x - a.center.x
   const dy = b.center.y - a.center.y
   const dist = Math.hypot(dx, dy)
-  if (dist <= PATH_EPSILON || dist > a.radius + b.radius) {
+  if (AcGeTol.isNonPositive(dist) || dist > a.radius + b.radius) {
     return near.clone()
   }
 
@@ -555,7 +554,7 @@ function hasArcSegments(polyline: AcGePolyline2d): boolean {
   const segmentCount = polyline.closed ? count : count - 1
   for (let i = 0; i < segmentCount; i++) {
     const vertex = polyline.vertices[i]
-    if (Math.abs(vertex.bulge ?? 0) > PATH_EPSILON) {
+    if (AcGeTol.isPositive(Math.abs(vertex.bulge ?? 0))) {
       return true
     }
   }
@@ -585,7 +584,7 @@ function normalizePathPoints(
 
   const first = deduped[0]
   const last = deduped[deduped.length - 1]
-  if (Math.hypot(first.x - last.x, first.y - last.y) <= PATH_EPSILON) {
+  if (AcGeTol.isNonPositive(Math.hypot(first.x - last.x, first.y - last.y))) {
     deduped.pop()
   }
   return deduped
@@ -597,7 +596,7 @@ function dedupeConsecutivePoints(points: AcGePoint2d[]): AcGePoint2d[] {
     const last = result[result.length - 1]
     if (
       !last ||
-      Math.hypot(last.x - point.x, last.y - point.y) > PATH_EPSILON
+      AcGeTol.isPositive(Math.hypot(last.x - point.x, last.y - point.y))
     ) {
       result.push(new AcGePoint2d(point.x, point.y))
     }
@@ -621,7 +620,7 @@ function createOpenPolylineOffset(
     const dx = end.x - start.x
     const dy = end.y - start.y
     const len = Math.hypot(dx, dy)
-    if (len <= PATH_EPSILON) continue
+    if (AcGeTol.isNonPositive(len)) continue
 
     const nx = (-dy / len) * offsetDist
     const ny = (dx / len) * offsetDist
@@ -656,7 +655,7 @@ function intersectPolylineOffsetSegments(
   b: PolylineOffsetSegment
 ): AcGePoint2d {
   const det = a.dx * b.dy - a.dy * b.dx
-  if (Math.abs(det) <= PATH_EPSILON) {
+  if (AcGeTol.equalToZero(det)) {
     return new AcGePoint2d((a.end.x + b.start.x) / 2, (a.end.y + b.start.y) / 2)
   }
 

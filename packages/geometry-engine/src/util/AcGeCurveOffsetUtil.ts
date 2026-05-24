@@ -5,6 +5,7 @@ import {
 } from '../geometry/AcGePolyline2dOffset'
 import { AcGePoint3d, AcGePoint3dLike, AcGeVector3dLike } from '../math'
 import { AcGePoint2d } from '../math/AcGePoint2d'
+import { AcGeTol } from './AcGeTol'
 
 /**
  * Offsets a point perpendicular to the XY projection of a direction vector.
@@ -20,7 +21,7 @@ export function offsetPointByDirectionInXY(
   offsetDist: number
 ): AcGePoint3d | null {
   const len = Math.hypot(direction.x, direction.y)
-  if (len <= 1e-9) return null
+  if (AcGeTol.isNonPositive(len)) return null
   const nx = (-direction.y / len) * offsetDist
   const ny = (direction.x / len) * offsetDist
   return new AcGePoint3d(point.x + nx, point.y + ny, point.z)
