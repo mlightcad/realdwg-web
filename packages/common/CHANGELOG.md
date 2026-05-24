@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.39
+
+### Patch Changes
+
+- feat: add AcDbCurve::getOffsetCurves and centralize offset tolerance checks with AcGeTol
+
 ## 1.4.38
 
 ### Patch Changes

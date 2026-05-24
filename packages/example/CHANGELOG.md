@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.39
+
+### Patch Changes
+
+- feat: add AcDbCurve::getOffsetCurves and centralize offset tolerance checks with AcGeTol
+- Updated dependencies
+  - @mlightcad/data-model@1.7.39
+  - @mlightcad/libredwg-converter@3.5.39
+
 ## 0.1.38
 
 ### Patch Changes

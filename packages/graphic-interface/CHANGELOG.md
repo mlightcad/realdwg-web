@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.3.39
+
+### Patch Changes
+
+- feat: add AcDbCurve::getOffsetCurves and centralize offset tolerance checks with AcGeTol
+- Updated dependencies
+  - @mlightcad/common@1.4.39
+  - @mlightcad/geometry-engine@3.2.39
+
 ## 3.3.38
 
 ### Patch Changes
