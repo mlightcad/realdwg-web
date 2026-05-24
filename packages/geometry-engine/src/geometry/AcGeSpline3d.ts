@@ -3,6 +3,7 @@ import { AcCmErrors } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike
@@ -348,6 +349,17 @@ export class AcGeSpline3d extends AcGeCurve3d {
     const length = this._controlPoints.length
     const newIndex = index < 0 || index >= length ? length - 1 : index
     return this._controlPoints[newIndex]
+  }
+
+  /**
+   * Samples the spline for planar offset using analytic NURBS tangents and
+   * curvature-adaptive parameter refinement.
+   */
+  getOffsetSamplePath2d(offsetDist: number): {
+    points: AcGePoint2d[]
+    tangents: AcGePoint2d[]
+  } {
+    return this._nurbsCurve.getOffsetSamplePath2d(offsetDist)
   }
 
   /**

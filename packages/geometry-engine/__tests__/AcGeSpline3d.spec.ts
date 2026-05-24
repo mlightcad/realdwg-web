@@ -787,4 +787,27 @@ describe('AcGeSpline3d', () => {
       expect(cloned.knotParameterization).toBe('Uniform')
     })
   })
+
+  describe('getOffsetSamplePath2d', () => {
+    it('returns more samples in high-curvature regions', () => {
+      const spline = new AcGeSpline3d(
+        [
+          new AcGePoint3d(0, 0, 0),
+          new AcGePoint3d(10, 8, 0),
+          new AcGePoint3d(20, -8, 0),
+          new AcGePoint3d(30, 8, 0),
+          new AcGePoint3d(40, 0, 0)
+        ],
+        [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+      )
+
+      const path = spline.getOffsetSamplePath2d(2)
+
+      expect(path.points.length).toBeGreaterThan(64)
+      expect(path.tangents).toHaveLength(path.points.length)
+      path.tangents.forEach(tangent => {
+        expect(Math.hypot(tangent.x, tangent.y)).toBeCloseTo(1, 4)
+      })
+    })
+  })
 })

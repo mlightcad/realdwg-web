@@ -4,14 +4,15 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3dLike,
-  AcGeSpline3d
+  AcGeSpline3d,
+  offsetSmoothedSampledPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import { AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents a spline entity in AutoCAD.
@@ -343,7 +344,8 @@ export class AcDbSpline extends AcDbCurve {
   /**
    * {@inheritDoc AcDbCurve.getOffsetCurves}
    *
-   * Approximates the spline with a sampled polyline in XY, then offsets that path.
+   * Approximates the spline with a densely sampled path in XY, offsets each sample
+   * along its local normal, and trims self-intersecting loops at tight bends.
    * The result is an {@link AcDbPolyline}, not a spline entity.
    */
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {
@@ -357,7 +359,7 @@ export class AcDbSpline extends AcDbCurve {
    * Evaluates side relative to the sampled 2D approximation of the spline.
    */
   override getOffsetSideAtPoint(point: AcGePoint3dLike): 1 | -1 {
-    const path = this.collectPath2d()
+    const path = this.collectPath2d(1)
     if (path.length < 2) return 1
     return AcDbPolyline.from2dPoints(path, this.closed).getOffsetSideAtPoint(
       point
@@ -369,21 +371,23 @@ export class AcDbSpline extends AcDbCurve {
    * @returns Offset polyline approximating this spline, or `null` on failure
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return offsetVertexPathAsPolyline(
-      this.collectPath2d(),
+    const { points, tangents } = this._geo.getOffsetSamplePath2d(offsetDist)
+    const geo = offsetSmoothedSampledPath(
+      points,
       this.closed,
-      offsetDist
+      offsetDist,
+      tangents
     )
+    return geo ? AcDbPolyline.fromGePolyline(geo) : null
   }
 
   /**
-   * Samples {@link AcGeSpline3d} into a fixed-density 2D path for planar offset.
+   * Samples {@link AcGeSpline3d} for side tests (uniform parameter density).
    *
-   * @returns 64 XY points along the spline
+   * @param offsetDist - Used only to choose sample spacing
+   * @returns XY points along the spline
    */
-  private collectPath2d(): AcGePoint2d[] {
-    return this._geo
-      .getPoints(64)
-      .map(point => new AcGePoint2d(point.x, point.y))
+  private collectPath2d(offsetDist: number): AcGePoint2d[] {
+    return this._geo.getOffsetSamplePath2d(offsetDist).points
   }
 }

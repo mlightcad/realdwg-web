@@ -331,7 +331,9 @@ function buildJoinedOffsetPath(
     closed,
     offsetDist
   )
-  const points: AcGePoint2d[] = [joins[0].nextSegmentStart?.clone() ?? joins[0].point.clone()]
+  const points: AcGePoint2d[] = [
+    joins[0].nextSegmentStart?.clone() ?? joins[0].point.clone()
+  ]
 
   for (let i = 0; i < count; i++) {
     const segment = offsetSegments[i]
@@ -583,32 +585,15 @@ function joinOffsetSegments(
   }
 
   if (previous.kind === 'line' && next.kind === 'arc') {
-    return joinLineWithArcOffset(
-      previous,
-      next.arc,
-      vertex,
-      offsetDist,
-      true
-    )
+    return joinLineWithArcOffset(previous, next.arc, vertex, offsetDist, true)
   }
 
   if (previous.kind === 'arc' && next.kind === 'line') {
-    return joinLineWithArcOffset(
-      next,
-      previous.arc,
-      vertex,
-      offsetDist,
-      false
-    )
+    return joinLineWithArcOffset(next, previous.arc, vertex, offsetDist, false)
   }
 
   if (previous.kind === 'arc' && next.kind === 'arc') {
-    return joinArcWithArcOffset(
-      previous.arc,
-      next.arc,
-      vertex,
-      offsetDist
-    )
+    return joinArcWithArcOffset(previous.arc, next.arc, vertex, offsetDist)
   }
 
   return { point: vertex.clone() }
@@ -930,10 +915,7 @@ function intersectOffsetCircles(
   const rx = (-dy * h) / dist
   const ry = (dx * h) / dist
 
-  return [
-    new AcGePoint2d(mx + rx, my + ry),
-    new AcGePoint2d(mx - rx, my - ry)
-  ]
+  return [new AcGePoint2d(mx + rx, my + ry), new AcGePoint2d(mx - rx, my - ry)]
 }
 
 /**
