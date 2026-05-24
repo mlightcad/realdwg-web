@@ -10,6 +10,10 @@ describe('AcGeTol', () => {
     expect(AcGeTol.great(1, 2)).toBe(false)
     expect(AcGeTol.less(1, 2)).toBe(true)
     expect(AcGeTol.less(2, 1)).toBe(false)
+    expect(AcGeTol.isPositive(1e-5)).toBe(true)
+    expect(AcGeTol.isPositive(1e-7)).toBe(false)
+    expect(AcGeTol.isNonPositive(1e-7)).toBe(true)
+    expect(AcGeTol.isNonPositive(1e-5)).toBe(false)
   })
 
   it('clones tolerance values', () => {
