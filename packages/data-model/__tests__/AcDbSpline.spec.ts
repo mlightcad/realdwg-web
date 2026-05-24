@@ -5,7 +5,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
-import { AcDbSpline } from '../src/entity'
+import { AcDbSpline, AcDbPolyline } from '../src/entity'
 import { AcDbOsnapMode } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -238,5 +238,46 @@ describe('AcDbSpline', () => {
       [0, 0, 0, 0, 1, 1, 1, 1]
     )
     expect(spline.getOffsetCurves(1).length).toBeGreaterThan(0)
+  })
+
+  it('offsets a tight spline without self-intersecting loops', () => {
+    const spline = new AcDbSpline(
+      [
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(10, 8, 0),
+        new AcGePoint3d(20, -8, 0),
+        new AcGePoint3d(30, 8, 0),
+        new AcGePoint3d(40, 0, 0)
+      ],
+      [0, 0, 0, 0, 0.5, 1, 1, 1, 1]
+    )
+    const [result] = spline.getOffsetCurves(2) as AcDbPolyline[]
+    expect(result).toBeDefined()
+    const points = Array.from({ length: result.numberOfVertices }, (_, i) =>
+      result.getPoint2dAt(i)
+    )
+    const hasCrossing = (() => {
+      for (let i = 0; i < points.length - 1; i++) {
+        const a0 = points[i]
+        const a1 = points[i + 1]
+        for (let j = i + 2; j < points.length - 1; j++) {
+          const b0 = points[j]
+          const b1 = points[j + 1]
+          const dx1 = a1.x - a0.x
+          const dy1 = a1.y - a0.y
+          const dx2 = b1.x - b0.x
+          const dy2 = b1.y - b0.y
+          const det = dx1 * dy2 - dy1 * dx2
+          if (Math.abs(det) <= 1e-9) continue
+          const qpx = b0.x - a0.x
+          const qpy = b0.y - a0.y
+          const t = (qpx * dy2 - qpy * dx2) / det
+          const u = (qpx * dy1 - qpy * dx1) / det
+          if (t >= 0 && t <= 1 && u >= 0 && u <= 1) return true
+        }
+      }
+      return false
+    })()
+    expect(hasCrossing).toBe(false)
   })
 })

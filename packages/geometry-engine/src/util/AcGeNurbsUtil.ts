@@ -444,6 +444,149 @@ export function evaluateNurbsPoint(
   return point
 }
 
+export type AcGeNurbsEvaluation = {
+  point: number[]
+  deriv1: number[]
+  deriv2: number[]
+}
+
+/**
+ * First derivative of a B-spline basis function N_{i,p}(u).
+ */
+function basisFunctionDeriv1(
+  i: number,
+  k: number,
+  u: number,
+  knots: number[]
+): number {
+  if (k === 0) return 0
+
+  const denomA = knots[i + k] - knots[i]
+  const denomB = knots[i + k + 1] - knots[i + 1]
+  let value = 0
+
+  if (denomA > 1e-10) {
+    value += (k / denomA) * basisFunction(i, k - 1, u, knots)
+  }
+  if (denomB > 1e-10) {
+    value -= (k / denomB) * basisFunction(i + 1, k - 1, u, knots)
+  }
+
+  return value
+}
+
+/**
+ * Second derivative of a B-spline basis function N_{i,p}(u).
+ */
+function basisFunctionDeriv2(
+  i: number,
+  k: number,
+  u: number,
+  knots: number[]
+): number {
+  if (k <= 1) return 0
+
+  const denomA = knots[i + k] - knots[i]
+  const denomB = knots[i + k + 1] - knots[i + 1]
+  let value = 0
+
+  if (denomA > 1e-10) {
+    value += (k / denomA) * basisFunctionDeriv1(i, k - 1, u, knots)
+  }
+  if (denomB > 1e-10) {
+    value -= (k / denomB) * basisFunctionDeriv1(i + 1, k - 1, u, knots)
+  }
+
+  return value
+}
+
+/**
+ * Evaluates a rational NURBS curve and its first two parametric derivatives.
+ */
+export function evaluateNurbsDerivatives(
+  u: number,
+  degree: number,
+  knots: number[],
+  controlPoints: number[][],
+  weights: number[]
+): AcGeNurbsEvaluation {
+  const n = controlPoints.length - 1
+  const p = degree
+  const startParam = knots[p]
+  const endParam = knots[n + 1]
+  u = Math.max(startParam, Math.min(endParam, u))
+
+  const aw = [0, 0, 0]
+  const daw = [0, 0, 0]
+  const d2aw = [0, 0, 0]
+  let w = 0
+  let dw = 0
+  let d2w = 0
+
+  for (let i = 0; i <= n; i++) {
+    const basis = basisFunction(i, p, u, knots)
+    const dbasis = basisFunctionDeriv1(i, p, u, knots)
+    const d2basis = basisFunctionDeriv2(i, p, u, knots)
+    const weight = weights[i]
+    const wBasis = weight * basis
+    const wDBasis = weight * dbasis
+    const wD2Basis = weight * d2basis
+    const cp = controlPoints[i]
+
+    aw[0] += wBasis * cp[0]
+    aw[1] += wBasis * cp[1]
+    aw[2] += wBasis * cp[2]
+    daw[0] += wDBasis * cp[0]
+    daw[1] += wDBasis * cp[1]
+    daw[2] += wDBasis * cp[2]
+    d2aw[0] += wD2Basis * cp[0]
+    d2aw[1] += wD2Basis * cp[1]
+    d2aw[2] += wD2Basis * cp[2]
+    w += wBasis
+    dw += wDBasis
+    d2w += wD2Basis
+  }
+
+  if (Math.abs(w) < 1e-10) {
+    const point = evaluateNurbsPoint(u, degree, knots, controlPoints, weights)
+    return { point, deriv1: [0, 0, 0], deriv2: [0, 0, 0] }
+  }
+
+  const w2 = w * w
+  const point = [aw[0] / w, aw[1] / w, aw[2] / w]
+  const deriv1 = [
+    (daw[0] * w - aw[0] * dw) / w2,
+    (daw[1] * w - aw[1] * dw) / w2,
+    (daw[2] * w - aw[2] * dw) / w2
+  ]
+  const num2x = d2aw[0] * w - aw[0] * d2w
+  const num2y = d2aw[1] * w - aw[1] * d2w
+  const num2z = d2aw[2] * w - aw[2] * d2w
+  const deriv2 = [
+    num2x / w2 - (2 * dw * deriv1[0]) / w,
+    num2y / w2 - (2 * dw * deriv1[1]) / w,
+    num2z / w2 - (2 * dw * deriv1[2]) / w
+  ]
+
+  return { point, deriv1, deriv2 }
+}
+
+/**
+ * Signed planar curvature from parametric derivatives in XY.
+ */
+export function signedPlanarCurvature(
+  deriv1: number[],
+  deriv2: number[]
+): number {
+  const dx = deriv1[0]
+  const dy = deriv1[1]
+  const ddx = deriv2[0]
+  const ddy = deriv2[1]
+  const speed2 = dx * dx + dy * dy
+  if (speed2 < 1e-20) return 0
+  return (dx * ddy - dy * ddx) / Math.pow(speed2, 1.5)
+}
+
 /**
  * Calculate curve length using numerical integration
  */

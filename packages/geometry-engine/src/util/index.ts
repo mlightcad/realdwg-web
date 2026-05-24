@@ -43,6 +43,8 @@ export {
   calculateCurveLength,
   computeParameterValues,
   evaluateNurbsPoint,
+  evaluateNurbsDerivatives,
+  signedPlanarCurvature,
   generateAveragedKnots,
   generateChordKnots,
   generateSqrtChordKnots,
@@ -61,3 +63,4 @@ export {
   offsetPointByDirectionInXY,
   offsetVertexPath
 } from './AcGeCurveOffsetUtil'
+export { offsetSmoothedSampledPath } from './AcGeSampledCurveOffsetUtil'

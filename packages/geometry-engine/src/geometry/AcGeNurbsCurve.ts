@@ -1,15 +1,24 @@
 import { AcGePoint3d, AcGePoint3dLike } from '../math'
 
+/**
+ * Squared distance from a geometry point to a numeric `[x, y, z]` tuple.
+ *
+ * @param a - Query point
+ * @param b - Target coordinates as `[x, y, z]`
+ * @returns Squared Euclidean distance
+ */
 function distSq3d(a: AcGePoint3dLike, b: number[]): number {
   const dx = a.x - b[0]!
   const dy = a.y - b[1]!
   const dz = (a.z ?? 0) - (b[2] ?? 0)
   return dx * dx + dy * dy + dz * dz
 }
+import { AcGePoint2d } from '../math/AcGePoint2d'
 import {
   calculateCurveLength,
-  evaluateNurbsPoint,
-  interpolateNurbsCurve
+  evaluateNurbsDerivatives,
+  interpolateNurbsCurve,
+  signedPlanarCurvature
 } from '../util'
 import { AcGeCatmullRomCurve3d } from './AcGeCatmullRomCurve3d'
 
@@ -27,6 +36,17 @@ export class AcGeNurbsCurve {
   private _controlPoints: AcGePoint3dLike[]
   private _weights: number[]
 
+  /**
+   * Creates a NURBS curve from degree, knots, control points, and optional weights.
+   *
+   * When `weights` is omitted, all control points receive a weight of `1.0`
+   * (non-rational B-spline).
+   *
+   * @param degree - Polynomial degree `p` of the basis functions
+   * @param knots - Non-decreasing knot vector of length `n + p + 1`
+   * @param controlPoints - Control points in curve order
+   * @param weights - Optional rational weights aligned with control points
+   */
   constructor(
     degree: number,
     knots: number[],
@@ -82,18 +102,120 @@ export class AcGeNurbsCurve {
   }
 
   /**
-   * Calculate a point on the curve at parameter u
+   * Calculates a point on the curve at parameter `u`.
+   *
+   * Delegates to {@link evaluate} and returns only the position component.
+   *
+   * @param u - Curve parameter in the valid knot span
+   * @returns Evaluated point as `[x, y, z]`
    */
   point(u: number): number[] {
-    // Convert AcGePoint3dLike[] to number[][] for utility functions
+    return this.evaluate(u).point
+  }
+
+  /**
+   * Evaluates position and parametric derivatives at parameter `u`.
+   *
+   * Returns the rational NURBS point together with first- and second-order
+   * parametric derivatives computed analytically from the basis functions.
+   *
+   * @param u - Curve parameter in the valid knot span
+   * @returns Position `point`, first derivative `deriv1`, and second derivative `deriv2`
+   */
+  evaluate(u: number) {
     const controlPointsArray = this._controlPoints.map(p => [p.x, p.y, p.z])
-    return evaluateNurbsPoint(
+    return evaluateNurbsDerivatives(
       u,
       this._degree,
       this._knots,
       controlPointsArray,
       this._weights
     )
+  }
+
+  /**
+   * Signed curvature in the XY plane at parameter `u`.
+   *
+   * Uses the standard planar formula
+   * `(x'y'' - y'x'') / (x'^2 + y'^2)^(3/2)` applied to the parametric
+   * derivatives from {@link evaluate}.
+   *
+   * @param u - Curve parameter in the valid knot span
+   * @returns Signed curvature; positive indicates counterclockwise bending
+   */
+  signedPlanarCurvatureAt(u: number): number {
+    const evaluation = this.evaluate(u)
+    return signedPlanarCurvature(evaluation.deriv1, evaluation.deriv2)
+  }
+
+  /**
+   * Samples a 2D path with analytic tangents for planar offset.
+   *
+   * Builds an initial uniform parameter list scaled by curve length and offset
+   * distance, then refines intervals where `|offsetDist| * |curvature|` exceeds
+   * `0.85` (potential cusp region). Each final sample includes a unit tangent
+   * derived from the analytic first derivative.
+   *
+   * @param offsetDist - Signed offset distance used to choose sample density
+   * @param maxSamples - Upper bound on the number of returned samples (default 512)
+   * @returns XY samples and matching unit tangents in parameter order
+   */
+  getOffsetSamplePath2d(
+    offsetDist: number,
+    maxSamples = 512
+  ): { points: AcGePoint2d[]; tangents: AcGePoint2d[] } {
+    const absOffset = Math.abs(offsetDist)
+    const { start, end } = this.getParameterRange()
+    const length = this.length()
+    const minSamples = Math.max(
+      64,
+      Math.ceil(length / Math.max(absOffset * 0.2, 1e-6))
+    )
+    let params = uniformNurbsParameters(
+      start,
+      end,
+      Math.min(minSamples, maxSamples)
+    )
+
+    for (let pass = 0; pass < 8 && params.length < maxSamples; pass++) {
+      const insertions: number[] = []
+      for (let i = 0; i < params.length - 1; i++) {
+        const t0 = params[i]
+        const t1 = params[i + 1]
+        const mid = (t0 + t1) / 2
+        const curvature = Math.max(
+          Math.abs(this.signedPlanarCurvatureAt(t0)),
+          Math.abs(this.signedPlanarCurvatureAt(t1)),
+          Math.abs(this.signedPlanarCurvatureAt(mid))
+        )
+        if (absOffset * curvature > 0.85) {
+          insertions.push(mid)
+        }
+      }
+      if (insertions.length === 0) break
+      params = mergeSortedParameters(params, insertions)
+      if (params.length > maxSamples) {
+        params = params.slice(0, maxSamples)
+        break
+      }
+    }
+
+    const points: AcGePoint2d[] = []
+    const tangents: AcGePoint2d[] = []
+    params.forEach(param => {
+      const evaluation = this.evaluate(param)
+      points.push(new AcGePoint2d(evaluation.point[0], evaluation.point[1]))
+      const dx = evaluation.deriv1[0]
+      const dy = evaluation.deriv1[1]
+      const len = Math.hypot(dx, dy)
+      tangents.push(
+        len > 1e-10
+          ? new AcGePoint2d(dx / len, dy / len)
+          : new AcGePoint2d(1, 0)
+      )
+    })
+
+    return { points, tangents }
   }
 
   /**
@@ -258,4 +380,51 @@ export class AcGeNurbsCurve {
     // Create NURBS curve from the interpolated points
     return AcGeNurbsCurve.byPoints(nurbsPoints, degree, parameterization)
   }
+}
+
+/**
+ * Builds a uniform parameter list between two knot-span endpoints.
+ *
+ * The last parameter is pinned exactly to `end` to avoid floating-point drift.
+ *
+ * @param start - First parameter value
+ * @param end - Last parameter value
+ * @param count - Number of parameters to generate (minimum 2)
+ * @returns Sorted parameter values from `start` to `end` inclusive
+ */
+function uniformNurbsParameters(
+  start: number,
+  end: number,
+  count: number
+): number[] {
+  if (count < 2) return [start, end]
+  const params: number[] = []
+  for (let i = 0; i < count; i++) {
+    params.push(
+      i === count - 1 ? end : start + ((end - start) * i) / (count - 1)
+    )
+  }
+  return params
+}
+
+/**
+ * Merges a sorted parameter list with additional insertion values.
+ *
+ * Duplicate values closer than `1e-10` are collapsed so refinement passes do
+ * not create redundant evaluations.
+ *
+ * @param base - Existing sorted parameter values
+ * @param insertions - Additional parameters to insert
+ * @returns Combined sorted parameter list without near-duplicates
+ */
+function mergeSortedParameters(base: number[], insertions: number[]): number[] {
+  const merged = [...base, ...insertions].sort((a, b) => a - b)
+  const result: number[] = []
+  merged.forEach(value => {
+    const last = result[result.length - 1]
+    if (last === undefined || Math.abs(last - value) > 1e-10) {
+      result.push(value)
+    }
+  })
+  return result
 }

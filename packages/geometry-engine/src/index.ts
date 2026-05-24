@@ -65,6 +65,8 @@ export {
   degToRad,
   euclideanModulo,
   evaluateNurbsPoint,
+  evaluateNurbsDerivatives,
+  signedPlanarCurvature,
   floorPowerOfTwo,
   generateAveragedKnots,
   generateChordKnots,
@@ -97,5 +99,6 @@ export {
   transformOcsPointToWcs,
   transformWcsPointToOcs,
   offsetPointByDirectionInXY,
+  offsetSmoothedSampledPath,
   offsetVertexPath
 } from './util'

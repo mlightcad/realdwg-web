@@ -5,6 +5,8 @@ import {
   generateSqrtChordKnots,
   basisFunction,
   evaluateNurbsPoint,
+  evaluateNurbsDerivatives,
+  signedPlanarCurvature,
   calculateCurveLength,
   interpolateControlPoints,
   interpolateNurbsCurve
@@ -277,6 +279,34 @@ describe('AcGeNurbsUtil', () => {
       expect(negativePoint[0]).toBeCloseTo(positivePoint[0], 10)
       expect(negativePoint[1]).toBeCloseTo(positivePoint[1], 10)
       expect(negativePoint[2]).toBeCloseTo(positivePoint[2], 10)
+    })
+  })
+
+  describe('evaluateNurbsDerivatives', () => {
+    it('returns a constant tangent for a straight degree-1 segment', () => {
+      const degree = 1
+      const knots = [0, 0, 1, 1]
+      const controlPoints = [
+        [0, 0, 0],
+        [4, 0, 0]
+      ]
+      const weights = [1, 1]
+
+      const evaluation = evaluateNurbsDerivatives(
+        0.5,
+        degree,
+        knots,
+        controlPoints,
+        weights
+      )
+
+      expect(evaluation.point[0]).toBeCloseTo(2, 6)
+      expect(evaluation.point[1]).toBeCloseTo(0, 6)
+      expect(evaluation.deriv1[0]).toBeCloseTo(4, 4)
+      expect(evaluation.deriv1[1]).toBeCloseTo(0, 4)
+      expect(
+        signedPlanarCurvature(evaluation.deriv1, evaluation.deriv2)
+      ).toBeCloseTo(0, 4)
     })
   })
 
