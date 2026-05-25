@@ -1632,6 +1632,51 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Ensures the default text style exists in the text style table.
+   *
+   * This is invoked while converting STYLE records and again after a drawing
+   * is fully opened so TEXT/MTEXT entities can resolve a style during
+   * progressive rendering.
+   */
+  ensureTextStyleDefaults() {
+    if (this.hasDefaultTextStyle()) {
+      return
+    }
+
+    this.tables.textStyleTable.add(
+      new AcDbTextStyleTableRecord({
+        name: DEFAULT_TEXT_STYLE,
+        standardFlag: 0,
+        fixedTextHeight: 0,
+        widthFactor: 1,
+        obliqueAngle: 0,
+        textGenerationFlag: 0,
+        lastHeight: 0.2,
+        font: 'SimKai',
+        bigFont: '',
+        extendedFont: 'SimKai'
+      })
+    )
+  }
+
+  private hasDefaultTextStyle() {
+    const defaultNames = [DEFAULT_TEXT_STYLE, 'STANDARD']
+    for (const name of defaultNames) {
+      if (this.tables.textStyleTable.has(name)) {
+        return true
+      }
+    }
+
+    for (const record of this.tables.textStyleTable.newIterator()) {
+      if (record.name.toUpperCase() === DEFAULT_TEXT_STYLE.toUpperCase()) {
+        return true
+      }
+    }
+
+    return false
+  }
+
+  /**
    * Ensures required default database data exists.
    *
    * This is used after opening a file (or before exporting) to fill in any
@@ -1686,22 +1731,7 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.textStyleTable.has(DEFAULT_TEXT_STYLE)) {
-      this.tables.textStyleTable.add(
-        new AcDbTextStyleTableRecord({
-          name: DEFAULT_TEXT_STYLE,
-          standardFlag: 0,
-          fixedTextHeight: 0,
-          widthFactor: 1,
-          obliqueAngle: 0,
-          textGenerationFlag: 0,
-          lastHeight: 0.2,
-          font: 'SimKai',
-          bigFont: '',
-          extendedFont: 'SimKai'
-        })
-      )
-    }
+    this.ensureTextStyleDefaults()
 
     if (!this.tables.dimStyleTable.has(DEFAULT_TEXT_STYLE)) {
       this.tables.dimStyleTable.add(

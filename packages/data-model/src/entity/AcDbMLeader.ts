@@ -24,8 +24,7 @@ import { AcDbDxfFiler } from '../base'
 import {
   AcDbRenderingCache,
   decodeMLeaderStyleRawColor,
-  DEFAULT_MLEADER_STYLE,
-  DEFAULT_TEXT_STYLE
+  DEFAULT_MLEADER_STYLE
 } from '../misc'
 import { AcDbMLeaderStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
@@ -2357,12 +2356,9 @@ export class AcDbMLeader extends AcDbEntity {
    * @returns A valid text style object.
    */
   private getTextStyle(): AcGiTextStyle {
-    const textStyleTable = this.database.tables.textStyleTable
-    const textStyleName = this.getResolvedTextStyleName()
-    const style =
-      (textStyleName ? textStyleTable.getAt(textStyleName) : undefined) ??
-      textStyleTable.getAt(this.database.textstyle) ??
-      textStyleTable.getAt(DEFAULT_TEXT_STYLE)
+    const style = this.database.tables.textStyleTable.resolveAt(
+      this.getResolvedTextStyleName()
+    )
 
     if (!style) {
       throw new Error('No valid text style found in text style table.')

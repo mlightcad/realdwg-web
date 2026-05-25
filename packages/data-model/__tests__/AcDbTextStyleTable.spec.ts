@@ -1,6 +1,7 @@
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbTextStyleTable } from '../src/database/AcDbTextStyleTable'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
+import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import type { AcGiTextStyle } from '@mlightcad/graphic-interface'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -46,5 +47,15 @@ describe('AcDbTextStyleTable', () => {
     const db = new AcDbDatabase()
     const table = db.tables.textStyleTable
     expect(table.fonts).toEqual([])
+  })
+
+  it('resolveAt creates and returns the default style when the table is empty', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    const table = db.tables.textStyleTable
+
+    const resolved = table.resolveAt('STANDARD')
+    expect(resolved?.name).toBe('Standard')
+    expect(table.getAt('Standard')).toBeDefined()
   })
 })

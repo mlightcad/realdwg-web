@@ -354,11 +354,13 @@ describe('AcDbTable', () => {
     ).not.toThrow()
 
     const styleTable = third.database.tables.textStyleTable
-    const getAtSpy = jest.spyOn(styleTable, 'getAt').mockReturnValue(undefined)
+    const resolveAtSpy = jest
+      .spyOn(styleTable, 'resolveAt')
+      .mockReturnValue(undefined)
     expect(() =>
       third.subWorldDraw(renderer as unknown as AcGiRenderer<AcGiEntity>)
     ).toThrow('No valid text style found in text style table.')
-    getAtSpy.mockRestore()
+    resolveAtSpy.mockRestore()
   })
 
   it('covers remaining text alignment branches in subWorldDraw', () => {

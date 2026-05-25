@@ -15,7 +15,6 @@ import {
 
 import { AcDbDxfFiler } from '../base'
 import type { AcDbBlockTableRecord } from '../database'
-import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbBlockReference } from './AcDbBlockReference'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -700,11 +699,7 @@ export class AcDbTable extends AcDbBlockReference {
    * @private
    */
   private getTextStyle(cell: AcDbTableCell): AcGiTextStyle {
-    const textStyleTable = this.database.tables.textStyleTable
-    const style =
-      (cell.textStyle ? textStyleTable.getAt(cell.textStyle) : undefined) ??
-      textStyleTable.getAt(this.database.textstyle) ??
-      textStyleTable.getAt(DEFAULT_TEXT_STYLE)
+    const style = this.database.tables.textStyleTable.resolveAt(cell.textStyle)
     if (!style) {
       throw new Error('No valid text style found in text style table.')
     }

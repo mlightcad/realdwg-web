@@ -206,6 +206,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       this.processCommonTableEntryAttrs(item, record)
       db.tables.textStyleTable.add(record)
     })
+    db.ensureTextStyleDefaults()
   }
 
   protected processDimStyles(model: DwgDatabase, db: AcDbDatabase) {

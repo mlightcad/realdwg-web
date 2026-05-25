@@ -230,17 +230,17 @@ describe('AcDbMText', () => {
     expect(renderer.mtext).toHaveBeenCalledTimes(3)
   })
 
-  it('throws when subWorldDraw cannot resolve any text style', () => {
+  it('recreates a default text style when the table was cleared', () => {
     const db = createWorkingDb()
     const mtext = new AcDbMText()
     mtext.styleName = '__missing_style__'
     db.textstyle = '__missing_textstyle__'
     db.tables.textStyleTable.removeAll()
 
-    const renderer = { mtext: jest.fn() }
-    expect(() => mtext.subWorldDraw(renderer as never)).toThrow(
-      'No valid text style found in text style table.'
-    )
+    const renderer = { mtext: jest.fn(() => ({})) }
+    expect(() => mtext.subWorldDraw(renderer as never)).not.toThrow()
+    expect(renderer.mtext).toHaveBeenCalled()
+    expect(db.tables.textStyleTable.getAt('Standard')).toBeDefined()
   })
 
   it('writes MTEXT DXF fields with encoded content and optional background fields', () => {

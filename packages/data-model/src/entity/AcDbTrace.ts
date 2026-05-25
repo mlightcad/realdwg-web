@@ -284,7 +284,10 @@ export class AcDbTrace extends AcDbCurve {
    * @returns The rendered trace entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const polyline = new AcGePolyline2d(this._vertices, true)
+    const polyline = new AcGePolyline2d(
+      AcDbTrace.boundaryPointsFromVertices(this._vertices),
+      true
+    )
     const area = new AcGeArea2d()
     area.add(polyline)
 
@@ -355,6 +358,27 @@ export class AcDbTrace extends AcDbCurve {
    * @returns XY boundary vertices
    */
   private collectBoundary2d(): AcGePoint2d[] {
-    return this._vertices.map(vertex => new AcGePoint2d(vertex.x, vertex.y))
+    return AcDbTrace.boundaryPointsFromVertices(this._vertices)
+  }
+
+  /**
+   * Builds the closed 2D boundary for TRACE/SOLID entities.
+   *
+   * DXF stores corners 10–13 as two opposite edges (1–2 and 3–4), not as a
+   * sequential perimeter. The filled outline follows 1 → 2 → 4 → 3.
+   */
+  static boundaryPointsFromVertices(
+    vertices: ReadonlyArray<AcGePoint3dLike>
+  ): AcGePoint2d[] {
+    const v0 = vertices[0]
+    const v1 = vertices[1]
+    const v2 = vertices[2]
+    const v3 = vertices[3]
+    return [
+      new AcGePoint2d(v0.x, v0.y),
+      new AcGePoint2d(v1.x, v1.y),
+      new AcGePoint2d(v3.x, v3.y),
+      new AcGePoint2d(v2.x, v2.y)
+    ]
   }
 }

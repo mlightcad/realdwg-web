@@ -210,19 +210,19 @@ describe('AcDbText', () => {
     expect(delay).toBe(true)
   })
 
-  it('throws when subWorldDraw cannot resolve a text style', () => {
+  it('creates a default text style when subWorldDraw runs against an empty table', () => {
     const text = new AcDbText()
     text.database = new AcDbDatabase()
+    text.textString = 'fallback'
     const renderer = {
-      mtext: jest.fn()
+      mtext: jest.fn(() => ({}))
     } as unknown as {
       mtext: jest.Mock
     }
 
-    expect(() => text.subWorldDraw(renderer as never)).toThrow(
-      'No valid text style found in text style table.'
-    )
-    expect(renderer.mtext).not.toHaveBeenCalled()
+    expect(() => text.subWorldDraw(renderer as never)).not.toThrow()
+    expect(renderer.mtext).toHaveBeenCalled()
+    expect(text.database.tables.textStyleTable.getAt('Standard')).toBeDefined()
   })
 
   it('writes expected DXF fields for text entity', () => {

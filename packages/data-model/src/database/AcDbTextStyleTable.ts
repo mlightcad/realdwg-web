@@ -1,3 +1,4 @@
+import { DEFAULT_TEXT_STYLE } from '../misc'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
 import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
@@ -47,6 +48,52 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
    * // Output: ['arial', 'times', 'calibri', ...]
    * ```
    */
+  /**
+   * Resolves a text style table record using AutoCAD-style fallbacks.
+   *
+   * Lookup order:
+   * 1. Exact style name on the entity
+   * 2. Current `$TEXTSTYLE` system variable
+   * 3. Default style names (`Standard`, `STANDARD`)
+   * 4. Case-insensitive match for each candidate above
+   * 5. First available style in the table
+   *
+   * Ensures a default text style exists before resolving so entities can be
+   * rendered while a drawing is still being converted.
+   */
+  resolveAt(name?: string): AcDbTextStyleTableRecord | undefined {
+    this.database.ensureTextStyleDefaults()
+
+    const candidates: string[] = []
+    const addCandidate = (value?: string) => {
+      const trimmed = value?.trim()
+      if (trimmed && !candidates.includes(trimmed)) {
+        candidates.push(trimmed)
+      }
+    }
+
+    addCandidate(name)
+    addCandidate(this.database.textstyle)
+    addCandidate(DEFAULT_TEXT_STYLE)
+    addCandidate('STANDARD')
+
+    for (const candidate of candidates) {
+      const exact = this.getAt(candidate)
+      if (exact) {
+        return exact
+      }
+
+      const normalizedCandidate = candidate.toUpperCase()
+      for (const record of this.newIterator()) {
+        if (record.name.toUpperCase() === normalizedCandidate) {
+          return record
+        }
+      }
+    }
+
+    return this.newIterator().next().value ?? undefined
+  }
+
   get fonts() {
     const fonts = new Set<string>()
     const setFontName = (fontFileName: string) => {

@@ -1,4 +1,8 @@
-import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeArea2d,
+  AcGeMatrix3d,
+  AcGePoint3d
+} from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
@@ -88,6 +92,36 @@ describe('AcDbTrace', () => {
       otherSnaps
     )
     expect(otherSnaps).toHaveLength(0)
+  })
+
+  it('orders DXF solid corners as a perimeter loop when drawing', () => {
+    const trace = new AcDbTrace()
+    trace.setPointAt(0, { x: 0, y: 0, z: 0 })
+    trace.setPointAt(1, { x: 10, y: 0, z: 0 })
+    trace.setPointAt(2, { x: 0, y: 5, z: 0 })
+    trace.setPointAt(3, { x: 10, y: 5, z: 0 })
+
+    let capturedArea: AcGeArea2d | undefined
+    const renderer = {
+      subEntityTraits: { fillType: undefined as unknown },
+      area: jest.fn((area: AcGeArea2d) => {
+        capturedArea = area
+        return { id: 'trace-area' }
+      })
+    }
+
+    trace.subWorldDraw(renderer as never)
+
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    const boundary = capturedArea!.getPoints(4)[0]
+    expect(boundary).toHaveLength(5)
+    expect(boundary.map(point => [point.x, point.y])).toEqual([
+      [0, 0],
+      [10, 0],
+      [10, 5],
+      [0, 5],
+      [0, 0]
+    ])
   })
 
   it('transforms itself and draws as filled area', () => {

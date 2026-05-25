@@ -853,6 +853,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         })
       }
     }
+    db.ensureTextStyleDefaults()
   }
 
   /**
