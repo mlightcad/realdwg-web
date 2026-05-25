@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.7.40
+
+### Patch Changes
+
+- fix: resolve text styles during progressive conversion and fix TRACE boundary order
+- Updated dependencies
+  - @mlightcad/common@1.4.40
+  - @mlightcad/geometry-engine@3.2.40
+  - @mlightcad/graphic-interface@3.3.40
+
 ## 1.7.39
 
 ### Patch Changes

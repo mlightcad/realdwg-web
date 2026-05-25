@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.4.40
+
+### Patch Changes
+
+- fix: resolve text styles during progressive conversion and fix TRACE boundary order
+
 ## 1.4.39
 
 ### Patch Changes

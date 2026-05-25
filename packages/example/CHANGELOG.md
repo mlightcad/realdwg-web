@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.1.40
+
+### Patch Changes
+
+- fix: resolve text styles during progressive conversion and fix TRACE boundary order
+- Updated dependencies
+  - @mlightcad/data-model@1.7.40
+  - @mlightcad/libredwg-converter@3.5.40
+
 ## 0.1.39
 
 ### Patch Changes

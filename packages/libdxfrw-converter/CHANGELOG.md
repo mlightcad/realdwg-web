@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.5.40
+
+### Patch Changes
+
+- fix: resolve text styles during progressive conversion and fix TRACE boundary order
+- Updated dependencies
+  - @mlightcad/data-model@1.7.40
+
 ## 3.5.39
 
 ### Patch Changes

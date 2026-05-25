@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.2.40
+
+### Patch Changes
+
+- fix: resolve text styles during progressive conversion and fix TRACE boundary order
+- Updated dependencies
+  - @mlightcad/common@1.4.40
+
 ## 3.2.39
 
 ### Patch Changes
