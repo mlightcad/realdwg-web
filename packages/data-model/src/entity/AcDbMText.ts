@@ -14,7 +14,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
-import { AcDbOsnapMode, DEFAULT_TEXT_STYLE } from '../misc'
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -619,11 +619,7 @@ export class AcDbMText extends AcDbEntity {
   }
 
   private getTextStyle(): AcGiTextStyle {
-    const textStyleTable = this.database.tables.textStyleTable
-    const style =
-      textStyleTable.getAt(this.styleName) ??
-      textStyleTable.getAt(this.database.textstyle) ??
-      textStyleTable.getAt(DEFAULT_TEXT_STYLE)
+    const style = this.database.tables.textStyleTable.resolveAt(this.styleName)
 
     if (!style) {
       throw new Error('No valid text style found in text style table.')

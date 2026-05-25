@@ -147,6 +147,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
         db.tables.textStyleTable.add(record)
       }
     }
+    db.ensureTextStyleDefaults()
   }
 
   protected processDimStyles(model: DRW_Database, db: AcDbDatabase) {
