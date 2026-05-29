@@ -439,6 +439,20 @@ export class AcDbSysVarManager {
       })()
     })
     /**
+     * Background color of the model-space drawing area.
+     * Default: RGB(0, 0, 0)
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.MODELBKCOLOR,
+      type: 'color',
+      isDbVar: false,
+      defaultValue: (() => {
+        const c = new AcCmColor(AcCmColorMethod.ByColor)
+        c.setRGB(0, 0, 0)
+        return c
+      })()
+    })
+    /**
      * Running Object Snap (OSNAP) modes stored as a bitcode value.
      * Each snap type corresponds to a bit, and the values are added together.
      */
@@ -447,6 +461,20 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: true,
       defaultValue: 0
+    })
+    /**
+     * Background color of the paper-space (layout) drawing area.
+     * Default: RGB(255, 255, 255)
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.PAPERBKCOLOR,
+      type: 'color',
+      isDbVar: false,
+      defaultValue: (() => {
+        const c = new AcCmColor(AcCmColorMethod.ByColor)
+        c.setRGB(255, 255, 255)
+        return c
+      })()
     })
     /**
      * Represents the half-size of the pickbox in pixels
@@ -486,17 +514,6 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: true,
       defaultValue: 0
-    })
-    this.registerVar({
-      /**
-       * The flag whether the background color is white
-       * - false: black
-       * - true: white
-       */
-      name: AcDbSystemVariables.WHITEBKCOLOR,
-      type: 'boolean',
-      isDbVar: false,
-      defaultValue: false
     })
   }
 

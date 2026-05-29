@@ -95,8 +95,12 @@ export const AcDbSystemVariables = {
   MEASUREMENT: 'MEASUREMENT',
   /** Color used for measurement tool overlays (distance, area, arc). */
   MEASUREMENTCOLOR: 'MEASUREMENTCOLOR',
+  /** Background color of the model-space drawing area. */
+  MODELBKCOLOR: 'MODELBKCOLOR',
   /** Running object snap mode bitmask (OSNAP settings). */
   OSMODE: 'OSMODE',
+  /** Background color of the paper-space (layout) drawing area. */
+  PAPERBKCOLOR: 'PAPERBKCOLOR',
   /** Point display style bitmask that controls how POINT entities are drawn. */
   PDMODE: 'PDMODE',
   /** Point display size, expressed as an absolute value or viewport percentage. */
@@ -111,9 +115,7 @@ export const AcDbSystemVariables = {
    * Controls feet-inch and fractional display delimiters together with **LUNITS**
    * (`0` = report format, `1` = input format).
    */
-  UNITMODE: 'UNITMODE',
-  /** Flag indicating whether the drawing background should be rendered as white. */
-  WHITEBKCOLOR: 'WHITEBKCOLOR'
+  UNITMODE: 'UNITMODE'
 } as const
 
 /**
