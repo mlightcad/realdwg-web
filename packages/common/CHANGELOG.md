@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.5.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
 ## 1.4.40
 
 ### Patch Changes

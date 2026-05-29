@@ -1,5 +1,16 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.6.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.8.0
+
 ## 3.5.40
 
 ### Patch Changes

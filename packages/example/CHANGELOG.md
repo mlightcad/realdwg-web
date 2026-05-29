@@ -1,5 +1,17 @@
 # @mlightcad/realdwg-web-example
 
+## 0.2.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.8.0
+  - @mlightcad/libredwg-converter@4.0.0
+
 ## 0.1.40
 
 ### Patch Changes

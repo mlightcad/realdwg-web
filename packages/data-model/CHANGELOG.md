@@ -1,5 +1,18 @@
 # @mlightcad/data-model
 
+## 1.8.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.5.0
+  - @mlightcad/geometry-engine@4.0.0
+  - @mlightcad/graphic-interface@4.0.0
+
 ## 1.7.40
 
 ### Patch Changes

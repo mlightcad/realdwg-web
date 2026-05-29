@@ -1,5 +1,16 @@
 # @mlightcad/geometry-engine
 
+## 3.3.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.5.0
+
 ## 3.2.40
 
 ### Patch Changes

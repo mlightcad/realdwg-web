@@ -1,5 +1,17 @@
 # @mlightcad/graphic-interface
 
+## 3.4.0
+
+### Minor Changes
+
+- feat: replace WHITEBKCOLOR with MODELBKCOLOR and PAPERBKCOLOR
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.5.0
+  - @mlightcad/geometry-engine@4.0.0
+
 ## 3.3.40
 
 ### Patch Changes
