@@ -182,6 +182,34 @@ describe('AcDbBlockReference', () => {
     expect(nearestSnaps[0].z).toBeCloseTo(0)
   })
 
+  it('collects nearest osnap from block geometry without gsMark', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'TEST_BLOCK')
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    block.appendEntity(line)
+
+    const blockRef = new AcDbBlockReference('TEST_BLOCK')
+    blockRef.position = new AcGePoint3d(10, 0, 0)
+    blockRef.rotation = Math.PI / 2
+    db.tables.blockTable.modelSpace.appendEntity(blockRef)
+
+    const nearestSnaps: AcGePoint3d[] = []
+    blockRef.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(11, 3, 0),
+      new AcGePoint3d(),
+      nearestSnaps
+    )
+
+    expect(nearestSnaps).toHaveLength(1)
+    expect(nearestSnaps[0].x).toBeCloseTo(10)
+    expect(nearestSnaps[0].y).toBeCloseTo(3)
+    expect(nearestSnaps[0].z).toBeCloseTo(0)
+  })
+
   it('resolves osnap points through nested block references', () => {
     const db = createDb()
     const leafBlock = createNamedBlock(db, 'LEAF_BLOCK')

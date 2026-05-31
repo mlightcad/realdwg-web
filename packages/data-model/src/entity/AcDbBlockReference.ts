@@ -17,6 +17,7 @@ import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup
 } from './AcDbEntityProperties'
+import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
  * Represents a block reference entity in AutoCAD.
@@ -441,6 +442,14 @@ export class AcDbBlockReference extends AcDbEntity {
         gsMark,
         parentInsertionMat
       )
+    } else {
+      this.collectBlockOsnapPoints(
+        osnapMode,
+        pickPoint,
+        lastPoint,
+        snapPoints,
+        parentInsertionMat
+      )
     }
   }
 
@@ -761,6 +770,70 @@ export class AcDbBlockReference extends AcDbEntity {
       filer.writeSubclassMarker('AcDbEntity')
     }
     return this
+  }
+
+  /**
+   * Collects object snap points from all entities in this block reference.
+   */
+  private collectBlockOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[],
+    parentInsertionMat: AcGeMatrix3d
+  ) {
+    const blockTableRecord = this.blockTableRecord
+    if (!blockTableRecord) return
+
+    const thisInsertionMat = new AcGeMatrix3d().multiplyMatrices(
+      parentInsertionMat,
+      this.getFullInsertionTransform()
+    )
+    const inverseMat = thisInsertionMat.clone().invert()
+    const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(inverseMat)
+    const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(inverseMat)
+    const candidates: AcGePoint3d[] = []
+
+    for (const entity of blockTableRecord.newIterator()) {
+      const localSnapPoints: AcGePoint3d[] = []
+      if (entity instanceof AcDbBlockReference) {
+        entity.subGetOsnapPoints(
+          osnapMode,
+          pickPoint,
+          lastPoint,
+          localSnapPoints,
+          undefined,
+          thisInsertionMat
+        )
+        candidates.push(...localSnapPoints)
+        continue
+      }
+
+      entity.subGetOsnapPoints(
+        osnapMode,
+        localPickPoint,
+        localLastPoint,
+        localSnapPoints,
+        undefined,
+        thisInsertionMat
+      )
+      localSnapPoints.forEach(point =>
+        candidates.push(new AcGePoint3d(point).applyMatrix4(thisInsertionMat))
+      )
+    }
+
+    if (candidates.length === 0) return
+
+    if (
+      osnapMode === AcDbOsnapMode.Nearest ||
+      osnapMode === AcDbOsnapMode.Perpendicular ||
+      osnapMode === AcDbOsnapMode.Tangent
+    ) {
+      const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+      if (nearest) snapPoints.push(nearest)
+    } else {
+      snapPoints.push(...candidates)
+    }
   }
 
   /**

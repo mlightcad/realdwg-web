@@ -376,6 +376,25 @@ describe('AcDbHatch', () => {
     )
     expect(nearestPoints).toHaveLength(1)
     expect(nearestPoints[0]).toMatchObject({ x: 5, y: 5, z: 2 })
+
+    const midPoints: Array<{ x: number; y: number; z: number }> = []
+    hatch.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      { x: 5, y: 6, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      midPoints
+    )
+    expect(midPoints.length).toBeGreaterThanOrEqual(4)
+
+    const perpendicularPoints: Array<{ x: number; y: number; z: number }> = []
+    hatch.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      { x: 5, y: 6, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 5, y: 5, z: 2 })
   })
 
   it('draws empty/single/multi hatch areas and applies fill traits', () => {

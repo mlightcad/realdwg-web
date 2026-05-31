@@ -1105,7 +1105,8 @@ export class AcDbHatch extends AcDbEntity {
             break
           case AcDbOsnapMode.MidPoint:
           case AcDbOsnapMode.Nearest:
-          case AcDbOsnapMode.Perpendicular: {
+          case AcDbOsnapMode.Perpendicular:
+          case AcDbOsnapMode.Tangent: {
             const segmentCount = loop.closed ? vertexCount : vertexCount - 1
             for (let index = 0; index < segmentCount; index++) {
               const segmentSnaps: AcGePoint3d[] = []
@@ -1148,7 +1149,8 @@ export class AcDbHatch extends AcDbEntity {
             snapPoints.push(...segmentSnaps)
           } else if (
             osnapMode === AcDbOsnapMode.Nearest ||
-            osnapMode === AcDbOsnapMode.Perpendicular
+            osnapMode === AcDbOsnapMode.Perpendicular ||
+            osnapMode === AcDbOsnapMode.Tangent
           ) {
             nearestCandidates.push(...segmentSnaps)
           } else {
@@ -1181,6 +1183,84 @@ export class AcDbHatch extends AcDbEntity {
               )
               break
             }
+            case AcDbOsnapMode.Perpendicular: {
+              const perpPoints = curve.perpendicularPoints({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              perpPoints.forEach(point =>
+                nearestCandidates.push(
+                  new AcGePoint3d(point.x, point.y, elevation)
+                )
+              )
+              break
+            }
+            case AcDbOsnapMode.Tangent: {
+              const tangentPoints = curve.tangentPoints({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              tangentPoints.forEach(point =>
+                nearestCandidates.push(
+                  new AcGePoint3d(point.x, point.y, elevation)
+                )
+              )
+              break
+            }
+            default:
+              break
+          }
+        } else if (curve instanceof AcGeEllipseArc2d) {
+          switch (osnapMode) {
+            case AcDbOsnapMode.EndPoint:
+              snapPoints.push(
+                new AcGePoint3d(
+                  curve.startPoint.x,
+                  curve.startPoint.y,
+                  elevation
+                ),
+                new AcGePoint3d(curve.endPoint.x, curve.endPoint.y, elevation)
+              )
+              break
+            case AcDbOsnapMode.MidPoint: {
+              const mid = curve.getPoint(0.5)
+              snapPoints.push(new AcGePoint3d(mid.x, mid.y, elevation))
+              break
+            }
+            case AcDbOsnapMode.Nearest: {
+              const nearest = curve.nearestPoint({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              nearestCandidates.push(
+                new AcGePoint3d(nearest.x, nearest.y, elevation)
+              )
+              break
+            }
+            case AcDbOsnapMode.Perpendicular: {
+              const perpPoints = curve.perpendicularPoints({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              perpPoints.forEach(point =>
+                nearestCandidates.push(
+                  new AcGePoint3d(point.x, point.y, elevation)
+                )
+              )
+              break
+            }
+            case AcDbOsnapMode.Tangent: {
+              const tangentPoints = curve.tangentPoints({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              tangentPoints.forEach(point =>
+                nearestCandidates.push(
+                  new AcGePoint3d(point.x, point.y, elevation)
+                )
+              )
+              break
+            }
             default:
               break
           }
@@ -1190,7 +1270,8 @@ export class AcDbHatch extends AcDbEntity {
 
     if (
       (osnapMode === AcDbOsnapMode.Nearest ||
-        osnapMode === AcDbOsnapMode.Perpendicular) &&
+        osnapMode === AcDbOsnapMode.Perpendicular ||
+        osnapMode === AcDbOsnapMode.Tangent) &&
       nearestCandidates.length > 0
     ) {
       const nearest = acdbPickNearestOsnapPoint(pickPoint, nearestCandidates)

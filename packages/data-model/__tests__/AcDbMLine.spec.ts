@@ -104,6 +104,26 @@ describe('AcDbMLine', () => {
     expect(midPoints).toHaveLength(2)
     expect(midPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
     expect(midPoints[1]).toMatchObject({ x: 15, y: 0, z: 0 })
+
+    const nearestPoints: Array<{ x: number; y: number; z: number }> = []
+    mline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      { x: 5, y: 2, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
+
+    const perpendicularPoints: Array<{ x: number; y: number; z: number }> = []
+    mline.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      { x: 5, y: 2, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
   })
 
   it('ensures database default mline style exists when appending a new MLINE', () => {

@@ -174,6 +174,35 @@ describe('AcDbRasterImage', () => {
       endPoints
     )
     expect(endPoints.length).toBeGreaterThanOrEqual(4)
+
+    const midPoints: AcGePoint3d[] = []
+    image.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(4)
+
+    const nearestPoints: AcGePoint3d[] = []
+    image.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(8, 4, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0].x).toBeCloseTo(8)
+    expect(nearestPoints[0].y).toBeCloseTo(4)
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    image.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(8, 10, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
   })
 
   it('draws via renderer.lines when image data is absent and renderer.image when present', () => {

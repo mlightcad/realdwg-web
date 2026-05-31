@@ -12,6 +12,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
  * Represents an ellipse entity in AutoCAD.
@@ -378,6 +379,15 @@ export class AcDbEllipse extends AcDbCurve {
       case AcDbOsnapMode.Nearest:
         snapPoints.push(this._geo.nearestPoint(pickPoint))
         break
+      case AcDbOsnapMode.Tangent:
+        snapPoints.push(...this._geo.tangentPoints(pickPoint))
+        break
+      case AcDbOsnapMode.Perpendicular: {
+        const candidates = this._geo.perpendicularPoints(pickPoint)
+        const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+        if (nearest) snapPoints.push(nearest)
+        break
+      }
       default:
         break
     }

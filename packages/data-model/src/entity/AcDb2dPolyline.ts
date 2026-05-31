@@ -266,7 +266,8 @@ export class AcDb2dPolyline extends AcDbCurve {
         break
       case AcDbOsnapMode.MidPoint:
       case AcDbOsnapMode.Nearest:
-      case AcDbOsnapMode.Perpendicular: {
+      case AcDbOsnapMode.Perpendicular:
+      case AcDbOsnapMode.Tangent: {
         const segmentCount = this.closed ? vertexCount : vertexCount - 1
         const candidates: AcGePoint3d[] = []
         for (let index = 0; index < segmentCount; index++) {

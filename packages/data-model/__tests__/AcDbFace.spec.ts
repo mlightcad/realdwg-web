@@ -115,6 +115,36 @@ describe('AcDbFace', () => {
       unsupportedPoints
     )
     expect(unsupportedPoints).toHaveLength(0)
+
+    const midPoints: AcGePoint3d[] = []
+    face.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(4)
+
+    const nearestPoints: AcGePoint3d[] = []
+    face.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(1, 2.5, 5),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0].x).toBeCloseTo(1)
+    expect(nearestPoints[0].y).toBeCloseTo(2.5)
+    expect(nearestPoints[0].z).toBeCloseTo(5)
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    face.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(0.5, 0.5, -1),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
   })
 
   it('transforms vertices and draws visible edges via line segments', () => {

@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler, AcDbObjectId } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
  * Defines the clip boundary type for raster images.
@@ -368,7 +369,7 @@ export class AcDbRasterImage extends AcDbEntity {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
@@ -377,9 +378,34 @@ export class AcDbRasterImage extends AcDbEntity {
       return
     }
 
-    if (osnapMode === AcDbOsnapMode.EndPoint) {
-      snapPoints.push(...this.boundaryPath())
+    const boundary = this.boundaryPath()
+    if (boundary.length === 0) return
+
+    let vertices = boundary
+    if (boundary.length > 1) {
+      const first = boundary[0]
+      const last = boundary[boundary.length - 1]
+      if (
+        first.x === last.x &&
+        first.y === last.y &&
+        (first.z || 0) === (last.z || 0)
+      ) {
+        vertices = boundary.slice(0, -1)
+      }
     }
+
+    if (osnapMode === AcDbOsnapMode.EndPoint) {
+      snapPoints.push(...vertices)
+      return
+    }
+
+    acdbCollectVertexPathOsnapPoints(
+      vertices,
+      true,
+      osnapMode,
+      pickPoint,
+      snapPoints
+    )
   }
 
   /**
