@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.2.1
+
+### Patch Changes
+
+- feat: extend object snap support across entities and add ORTHOMODE, POLARMODE, POLARANG, and POLARADDANG system variables
+- Updated dependencies
+  - @mlightcad/data-model@1.8.1
+  - @mlightcad/libredwg-converter@3.6.1
+
 ## 0.2.0
 
 ### Minor Changes

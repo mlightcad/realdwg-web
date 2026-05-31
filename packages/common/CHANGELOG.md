@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.5.1
+
+### Patch Changes
+
+- feat: extend object snap support across entities and add ORTHOMODE, POLARMODE, POLARANG, and POLARADDANG system variables
+
 ## 1.5.0
 
 ### Minor Changes

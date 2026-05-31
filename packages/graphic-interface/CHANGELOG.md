@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.4.1
+
+### Patch Changes
+
+- feat: extend object snap support across entities and add ORTHOMODE, POLARMODE, POLARANG, and POLARADDANG system variables
+- Updated dependencies
+  - @mlightcad/common@1.5.1
+  - @mlightcad/geometry-engine@3.3.1
+
 ## 3.4.0
 
 ### Minor Changes
