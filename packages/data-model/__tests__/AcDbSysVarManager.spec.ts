@@ -84,6 +84,13 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.CELTYPE, 'BYLAYER', db)
     expect(manager.getVar(AcDbSystemVariables.CELTYPE, db)).toBe('ByLayer')
 
+    manager.setVar(AcDbSystemVariables.POLARMODE, 3, db)
+    expect(manager.getVar(AcDbSystemVariables.POLARMODE, db)).toBe(3)
+    manager.setVar(AcDbSystemVariables.POLARANG, '45', db)
+    expect(manager.getVar(AcDbSystemVariables.POLARANG, db)).toBe(45)
+    manager.setVar(AcDbSystemVariables.POLARADDANG, '15;30;60', db)
+    expect(manager.getVar(AcDbSystemVariables.POLARADDANG, db)).toBe('15;30;60')
+
     expect(() =>
       manager.setVar(AcDbSystemVariables.PICKBOX, 'NaN-input', db)
     ).toThrow('Invalid number input!')
@@ -153,6 +160,9 @@ describe('AcDbSysVarManager', () => {
       manager.getDefaultValue(AcDbSystemVariables.HPTRANSPARENCY)?.toString()
     ).toBe('ByLayer')
     expect(manager.getDefaultValue(AcDbSystemVariables.CELTYPE)).toBe('ByLayer')
+    expect(manager.getDefaultValue(AcDbSystemVariables.POLARADDANG)).toBe('')
+    expect(manager.getDefaultValue(AcDbSystemVariables.POLARMODE)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.POLARANG)).toBe(90)
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'

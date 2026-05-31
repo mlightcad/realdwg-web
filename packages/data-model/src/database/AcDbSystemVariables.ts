@@ -112,6 +112,17 @@ export const AcDbSystemVariables = {
   PDSIZE: 'PDSIZE',
   /** Pickbox half-size, in pixels, used for selection hit testing in the UI. */
   PICKBOX: 'PICKBOX',
+  /**
+   * Additional polar tracking angles, stored as a semicolon-separated list (up to 10).
+   * Only effective when POLARMODE bit 4 is set.
+   */
+  POLARADDANG: 'POLARADDANG',
+  /**
+   * Polar and object snap tracking settings stored as a bitcode (sum of bit values).
+   */
+  POLARMODE: 'POLARMODE',
+  /** Polar angle increment, in degrees, for polar tracking alignment paths. */
+  POLARANG: 'POLARANG',
   /** Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area. */
   SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
