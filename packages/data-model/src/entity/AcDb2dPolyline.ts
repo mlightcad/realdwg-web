@@ -13,6 +13,10 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbCollectPolyline2dSegmentOsnapPoints,
+  acdbPickNearestOsnapPoint
+} from './AcDbOsnapHelpers'
 import { AcDbPolyline } from './AcDbPolyline'
 
 /**
@@ -225,7 +229,7 @@ export class AcDb2dPolyline extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     for (let i = 0; i < this._geo.numberOfVertices; ++i) {
       const temp = this._geo.getPointAt(i)
-      gripPoints.push(new AcGePoint3d(temp.x, temp.y, 0))
+      gripPoints.push(new AcGePoint3d(temp.x, temp.y, this._elevation))
     }
     return gripPoints
   }
@@ -244,19 +248,48 @@ export class AcDb2dPolyline extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
+    const geo = this._geo
+    const elevation = this._elevation
+    const vertexCount = geo.numberOfVertices
+    if (vertexCount === 0) return
+
     switch (osnapMode) {
       case AcDbOsnapMode.EndPoint:
-        {
-          for (let i = 0; i < this._geo.numberOfVertices; ++i) {
-            const temp = this._geo.getPointAt(i)
-            snapPoints.push(new AcGePoint3d(temp.x, temp.y, 0))
-          }
+        for (let index = 0; index < vertexCount; index++) {
+          const vertex = geo.getPointAt(index)
+          snapPoints.push(new AcGePoint3d(vertex.x, vertex.y, elevation))
         }
         break
+      case AcDbOsnapMode.MidPoint:
+      case AcDbOsnapMode.Nearest:
+      case AcDbOsnapMode.Perpendicular: {
+        const segmentCount = this.closed ? vertexCount : vertexCount - 1
+        const candidates: AcGePoint3d[] = []
+        for (let index = 0; index < segmentCount; index++) {
+          const segmentSnaps: AcGePoint3d[] = []
+          acdbCollectPolyline2dSegmentOsnapPoints(
+            geo.getPointAt(index),
+            geo.getPointAt((index + 1) % vertexCount),
+            geo.vertices[index]?.bulge,
+            elevation,
+            osnapMode,
+            pickPoint,
+            segmentSnaps
+          )
+          candidates.push(...segmentSnaps)
+        }
+        if (osnapMode === AcDbOsnapMode.MidPoint) {
+          snapPoints.push(...candidates)
+        } else {
+          const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+          if (nearest) snapPoints.push(nearest)
+        }
+        break
+      }
       default:
         break
     }

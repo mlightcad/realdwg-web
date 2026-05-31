@@ -416,6 +416,37 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
   }
 
   /**
+   * Returns the nearest point on this ellipse arc to the given point.
+   *
+   * Uses uniform sampling in parameter space, which is sufficient for object snap.
+   *
+   * @param point - Query point in WCS.
+   * @param samples - Number of interior samples along the arc span.
+   */
+  nearestPoint(point: AcGePointLike, samples = 72): AcGePoint3d {
+    const query = new AcGePoint3d(point.x, point.y, point.z || 0)
+    let best = this.getPointAtAngle(this.startAngle)
+    let bestDistSq = query.distanceToSquared(best)
+
+    for (let i = 1; i <= samples; i++) {
+      const angle = this.startAngle + (this.deltaAngle * i) / samples
+      const candidate = this.getPointAtAngle(angle)
+      const distSq = query.distanceToSquared(candidate)
+      if (distSq < bestDistSq) {
+        bestDistSq = distSq
+        best = candidate
+      }
+    }
+
+    const dStart = query.distanceToSquared(this.startPoint)
+    const dEnd = query.distanceToSquared(this.endPoint)
+    if (dStart < bestDistSq && dStart <= dEnd) return this.startPoint.clone()
+    if (dEnd < bestDistSq && dEnd < dStart) return this.endPoint.clone()
+
+    return best.clone()
+  }
+
+  /**
    * Determines whether a given point is inside the ellipse.
    * @param point - The 3D point to check.
    * @returns - True if the point is inside the ellipse, false otherwise.

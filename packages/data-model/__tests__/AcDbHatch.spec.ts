@@ -25,6 +25,7 @@ import {
   DEFAULT_HATCH_PATTERN_IMPERIAL,
   HATCH_PATTERN_SOLID
 } from '../src/misc'
+import { AcDbOsnapMode } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -350,6 +351,31 @@ describe('AcDbHatch', () => {
     expect(hatch.patternAngle).toBeCloseTo(Math.PI / 6)
     expect(hatch.patternScale).toBeCloseTo(3.25)
     expect(hatch.elevation).toBe(6)
+  })
+
+  it('computes osnap points on hatch boundary loops', () => {
+    const hatch = new AcDbHatch()
+    hatch.add(createRectLoop(0, 0, 10, 5))
+    hatch.elevation = 2
+
+    const endPoints: Array<{ x: number; y: number; z: number }> = []
+    hatch.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      endPoints
+    )
+    expect(endPoints.length).toBeGreaterThanOrEqual(4)
+
+    const nearestPoints: Array<{ x: number; y: number; z: number }> = []
+    hatch.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      { x: 5, y: 6, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 5, y: 5, z: 2 })
   })
 
   it('draws empty/single/multi hatch areas and applies fill traits', () => {

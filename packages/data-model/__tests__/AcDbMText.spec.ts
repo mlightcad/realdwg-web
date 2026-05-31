@@ -93,6 +93,15 @@ describe('AcDbMText', () => {
     expect(unsupportedPoints).toHaveLength(0)
   })
 
+  it('returns location as grip point', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.location = new AcGePoint3d(6, 7, 8)
+    const grips = mtext.subGetGripPoints()
+    expect(grips).toHaveLength(1)
+    expect(grips[0]).toBe(mtext.location)
+  })
+
   it('transforms location, direction, width and height with non-zero direction', () => {
     createWorkingDb()
     const mtext = new AcDbMText()

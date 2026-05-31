@@ -119,13 +119,22 @@ export class AcDbPoint extends AcDbEntity {
    * @param _lastPoint - The last point
    * @param snapPoints - Array to populate with snap points
    */
+  /**
+   * Gets the grip points for this point entity.
+   *
+   * @returns Array containing the point position.
+   */
+  subGetGripPoints() {
+    return [this._geo]
+  }
+
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
     _pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
-    if (AcDbOsnapMode.Node === osnapMode) {
+    if (osnapMode === AcDbOsnapMode.Node) {
       snapPoints.push(this._geo)
     }
   }

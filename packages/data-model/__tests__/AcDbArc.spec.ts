@@ -196,9 +196,19 @@ describe('AcDbArc', () => {
     )
     expect(tangentPoints).toEqual([tangentA, tangentB])
 
-    const unsupportedPoints: AcGePoint3d[] = []
+    const centerPoints: AcGePoint3d[] = []
     arc.subGetOsnapPoints(
       AcDbOsnapMode.Center,
+      new AcGePoint3d(9, 9, 0),
+      new AcGePoint3d(),
+      centerPoints
+    )
+    expect(centerPoints).toHaveLength(1)
+    expect(centerPoints[0]).toBe(arc.center)
+
+    const unsupportedPoints: AcGePoint3d[] = []
+    arc.subGetOsnapPoints(
+      AcDbOsnapMode.Node,
       new AcGePoint3d(9, 9, 0),
       new AcGePoint3d(),
       unsupportedPoints

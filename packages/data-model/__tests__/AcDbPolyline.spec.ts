@@ -87,7 +87,7 @@ describe('AcDbPolyline', () => {
     expect(extents.max).toMatchObject({ x: 3, y: 2, z: 6 })
   })
 
-  it('returns grip points and endpoint osnap points only', () => {
+  it('returns grip points and osnap points for supported modes', () => {
     const polyline = new AcDbPolyline()
     polyline.elevation = 2
     polyline.addVertexAt(0, new AcGePoint2d(0, 0))
@@ -109,6 +109,26 @@ describe('AcDbPolyline', () => {
       endpointSnaps
     )
     expect(endpointSnaps).toEqual(grips)
+
+    const midPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(2)
+    expect(midPoints[0]).toMatchObject({ x: 1, y: 0, z: 2 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(1, 1, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 1, y: 0, z: 2 })
 
     const centerSnaps: AcGePoint3d[] = []
     polyline.subGetOsnapPoints(

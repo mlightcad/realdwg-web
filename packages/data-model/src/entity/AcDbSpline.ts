@@ -3,6 +3,7 @@ import {
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
   AcGePoint2d,
+  AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d,
   offsetSmoothedSampledPath
@@ -256,6 +257,19 @@ export class AcDbSpline extends AcDbCurve {
   }
 
   /**
+   * Gets the grip points for this spline.
+   *
+   * Grip points are the B-spline control vertices (CVs).
+   *
+   * @returns Array of grip points at each control vertex
+   */
+  subGetGripPoints() {
+    return this._geo.controlPoints.map(
+      point => new AcGePoint3d(point.x, point.y, point.z ?? 0)
+    )
+  }
+
+  /**
    * Gets the object snap points for this spline.
    *
    * Object snap points are precise points that can be used for positioning
@@ -269,7 +283,7 @@ export class AcDbSpline extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
@@ -277,6 +291,18 @@ export class AcDbSpline extends AcDbCurve {
       case AcDbOsnapMode.EndPoint:
         snapPoints.push(this._geo.startPoint)
         snapPoints.push(this._geo.endPoint)
+        break
+      case AcDbOsnapMode.Node: {
+        const seen = new Set<number>()
+        for (const knot of this._geo.knots) {
+          if (seen.has(knot)) continue
+          seen.add(knot)
+          snapPoints.push(this._geo.evaluateAt(knot))
+        }
+        break
+      }
+      case AcDbOsnapMode.Nearest:
+        snapPoints.push(this._geo.nearestPoint(pickPoint))
         break
       default:
         break

@@ -514,6 +514,21 @@ export class AcDbArc extends AcDbCurve {
       case AcDbOsnapMode.MidPoint:
         snapPoints.push(this.midPoint)
         break
+      case AcDbOsnapMode.Center:
+      case AcDbOsnapMode.Centroid:
+        snapPoints.push(this._geo.center)
+        break
+      case AcDbOsnapMode.Quadrant: {
+        const criticalAngles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2]
+        for (const angle of criticalAngles) {
+          if (
+            AcGeMathUtil.isBetweenAngle(angle, this.startAngle, this.endAngle)
+          ) {
+            snapPoints.push(this._geo.getPointAtAngle(angle))
+          }
+        }
+        break
+      }
       case AcDbOsnapMode.Nearest:
         {
           const projectedPoint = this._geo.nearestPoint(pickPoint)

@@ -361,6 +361,8 @@ export class AcDbDatabase extends AcDbObject {
   private _pdsize: number
   /** Running object snap mode bitmask */
   private _osmode: number
+  /** Orthogonal mode flag (ORTHOMODE): 0 = off, 1 = on */
+  private _orthomode: number
   /** Tables in the database */
   private _tables: AcDbTables
   /** Nongraphical objects in the database */
@@ -442,6 +444,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
+    this._orthomode = 0
     this._maxHandle = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
@@ -1331,6 +1334,24 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Orthogonal mode flag (ORTHOMODE). When on, cursor movement is constrained
+   * to horizontal or vertical relative to the current UCS.
+   */
+  get orthomode(): number {
+    return this._orthomode
+  }
+  set orthomode(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.ORTHOMODE,
+      this._orthomode,
+      value ?? 0,
+      nextValue => {
+        this._orthomode = nextValue
+      }
+    )
+  }
+
+  /**
    * Reads drawing data from a string or ArrayBuffer.
    *
    * This method parses the provided data and populates the database with
@@ -1924,6 +1945,8 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeDouble(40, this.pdsize)
     filer.writeString(9, '$OSMODE')
     filer.writeInt32(70, this.osmode)
+    filer.writeString(9, '$ORTHOMODE')
+    filer.writeInt16(70, this.orthomode)
     filer.endSection()
   }
 

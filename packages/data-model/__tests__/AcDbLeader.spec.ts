@@ -8,6 +8,7 @@ import {
   AcDbPolyline
 } from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
+import { AcDbOsnapMode } from '../src/misc'
 
 const createWorkingDb = () => {
   const db = new AcDbDatabase()
@@ -62,6 +63,17 @@ describe('AcDbLeader', () => {
     const exported = leader.vertices
     exported[0].x = 999
     expect(leader.vertices[0].x).toBe(0)
+  })
+
+  it('returns all leader vertices as grip points', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(5, 5, 0))
+    leader.appendVertex(new AcGePoint3d(10, 5, 0))
+    const grips = leader.subGetGripPoints()
+    expect(grips).toHaveLength(3)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(grips[2]).toMatchObject({ x: 10, y: 5, z: 0 })
   })
 
   it('supports setVertexAt and vertexAt with range checking', () => {
@@ -198,5 +210,56 @@ describe('AcDbLeader', () => {
     leader.appendVertex(new AcGePoint3d(10, 5, 0))
     const [result] = leader.getOffsetCurves(2) as AcDbPolyline[]
     expect(result.numberOfVertices).toBeGreaterThanOrEqual(2)
+  })
+
+  it('computes osnap points for straight and splined leaders', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(4, 0, 0))
+    leader.appendVertex(new AcGePoint3d(4, 3, 0))
+
+    const endPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endPoints
+    )
+    expect(endPoints).toHaveLength(3)
+
+    const midPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(2)
+    expect(midPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
+    expect(midPoints[1]).toMatchObject({ x: 4, y: 1.5, z: 0 })
+
+    leader.appendVertex(new AcGePoint3d(6, 1, 0))
+    leader.appendVertex(new AcGePoint3d(8, 0, 0))
+    leader.isSplined = true
+
+    const splineEndPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      splineEndPoints
+    )
+    expect(splineEndPoints).toHaveLength(2)
+    expect(splineEndPoints[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(splineEndPoints[1]).toMatchObject({ x: 8, y: 0, z: 0 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(4, 2, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
   })
 })

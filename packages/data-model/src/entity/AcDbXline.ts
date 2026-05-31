@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -9,6 +10,7 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
+import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 
@@ -271,6 +273,40 @@ export class AcDbXline extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this.basePoint)
     return gripPoints
+  }
+
+  /**
+   * Gets the object snap points for this xline.
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    const origin = this.basePoint
+
+    if (osnapMode === AcDbOsnapMode.EndPoint) {
+      snapPoints.push(origin)
+      return
+    }
+
+    const direction = this.unitDir.clone()
+    if (direction.lengthSq() === 0) return
+
+    direction.normalize()
+    const line = new AcGeLine3d(origin, origin.clone().add(direction))
+
+    switch (osnapMode) {
+      case AcDbOsnapMode.Nearest:
+        snapPoints.push(line.project(pickPoint))
+        break
+      case AcDbOsnapMode.Perpendicular:
+        snapPoints.push(line.perpPoint(pickPoint))
+        break
+      default:
+        break
+    }
   }
 
   /**

@@ -109,6 +109,30 @@ describe('AcDbSpline', () => {
     expect(unsupportedSnaps).toHaveLength(0)
   })
 
+  it('returns nearest osnap point on the spline curve', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+    const nearestPoints: AcGePoint3d[] = []
+
+    spline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(1.5, 2, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0].x).toBeGreaterThanOrEqual(0)
+    expect(nearestPoints[0].x).toBeLessThanOrEqual(3)
+  })
+
+  it('returns control vertices as grip points', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+    const grips = spline.subGetGripPoints()
+    expect(grips).toHaveLength(4)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(grips[3]).toMatchObject({ x: 3, y: 0, z: 0 })
+  })
+
   it('transforms by matrix and returns itself', () => {
     const spline = new AcDbSpline(controlPoints, knots)
     const before: AcGePoint3d[] = []

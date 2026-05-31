@@ -52,8 +52,8 @@ describe('AcDb3dPolyline', () => {
 
     const grips = polyline.subGetGripPoints()
     expect(grips).toHaveLength(3)
-    expect(grips[0]).toMatchObject({ x: -1, y: 2, z: 0 })
-    expect(grips[2]).toMatchObject({ x: 0, y: 1, z: 0 })
+    expect(grips[0]).toMatchObject({ x: -1, y: 2, z: 3 })
+    expect(grips[2]).toMatchObject({ x: 0, y: 1, z: -2 })
 
     const endPoints: AcGePoint3d[] = []
     polyline.subGetOsnapPoints(
@@ -65,14 +65,34 @@ describe('AcDb3dPolyline', () => {
     expect(endPoints).toHaveLength(3)
     expect(endPoints[1]).toMatchObject({ x: 4, y: -5, z: 0 })
 
-    const nonEndPoints: AcGePoint3d[] = []
+    const midPoints: AcGePoint3d[] = []
     polyline.subGetOsnapPoints(
       AcDbOsnapMode.MidPoint,
       new AcGePoint3d(),
       new AcGePoint3d(),
-      nonEndPoints
+      midPoints
     )
-    expect(nonEndPoints).toHaveLength(0)
+    expect(midPoints).toHaveLength(2)
+    expect(midPoints[0]).toMatchObject({ x: 1.5, y: -1.5, z: 1.5 })
+    expect(midPoints[1]).toMatchObject({ x: 2, y: -2, z: -1 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+
+    const unsupportedPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Center,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      unsupportedPoints
+    )
+    expect(unsupportedPoints).toHaveLength(0)
   })
 
   it('transforms vertices and returns itself for chaining', () => {

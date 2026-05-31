@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -287,13 +288,33 @@ export class AcDbRay extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
+    const origin = this.basePoint
+
+    if (osnapMode === AcDbOsnapMode.EndPoint) {
+      snapPoints.push(origin)
+      return
+    }
+
+    const direction = this.unitDir.clone()
+    if (direction.lengthSq() === 0) return
+
+    direction.normalize()
+    const line = new AcGeLine3d(origin, origin.clone().add(direction))
+
     switch (osnapMode) {
-      case AcDbOsnapMode.EndPoint:
-        snapPoints.push(this.basePoint)
+      case AcDbOsnapMode.Nearest: {
+        const projected = line.project(pickPoint)
+        const offset = new AcGeVector3d(projected).sub(origin)
+        const t = offset.dot(direction)
+        snapPoints.push(t < 0 ? origin : projected)
+        break
+      }
+      case AcDbOsnapMode.Perpendicular:
+        snapPoints.push(line.perpPoint(pickPoint))
         break
       default:
         break

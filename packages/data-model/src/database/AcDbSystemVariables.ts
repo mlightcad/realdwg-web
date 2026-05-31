@@ -99,6 +99,11 @@ export const AcDbSystemVariables = {
   MODELBKCOLOR: 'MODELBKCOLOR',
   /** Running object snap mode bitmask (OSNAP settings). */
   OSMODE: 'OSMODE',
+  /**
+   * Orthogonal mode flag: `0` = off, `1` = on. When on, cursor movement is
+   * constrained to horizontal or vertical relative to the current UCS.
+   */
+  ORTHOMODE: 'ORTHOMODE',
   /** Background color of the paper-space (layout) drawing area. */
   PAPERBKCOLOR: 'PAPERBKCOLOR',
   /** Point display style bitmask that controls how POINT entities are drawn. */

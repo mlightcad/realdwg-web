@@ -26,9 +26,14 @@ import {
   decodeMLeaderStyleRawColor,
   DEFAULT_MLEADER_STYLE
 } from '../misc'
+import { AcDbOsnapMode } from '../misc'
 import { AcDbMLeaderStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbCollectLineSegmentOsnapPoints,
+  acdbPickNearestOsnapPoint
+} from './AcDbOsnapHelpers'
 
 /**
  * Defines the type of leader line used by a multileader.
@@ -1409,6 +1414,65 @@ export class AcDbMLeader extends AcDbEntity {
    */
   subGetGripPoints() {
     return this.collectGeometryPoints().map(point => point.clone())
+  }
+
+  /**
+   * Gets the object snap points for this multileader.
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    if (osnapMode === AcDbOsnapMode.Insertion) {
+      if (this.contentBasePosition) {
+        snapPoints.push(this.contentBasePosition)
+      } else if (this._mtextContent) {
+        snapPoints.push(this._mtextContent.anchorPoint)
+      } else if (this._blockContent?.position) {
+        snapPoints.push(this._blockContent.position)
+      }
+      return
+    }
+
+    this._leaders.forEach(leader => {
+      leader.leaderLines.forEach(line => {
+        const drawPoints = this.getLeaderLineDrawPoints(leader, line)
+        if (drawPoints.length === 0) return
+
+        switch (osnapMode) {
+          case AcDbOsnapMode.EndPoint:
+            snapPoints.push(...drawPoints)
+            break
+          case AcDbOsnapMode.MidPoint:
+          case AcDbOsnapMode.Nearest:
+          case AcDbOsnapMode.Perpendicular: {
+            const candidates: AcGePoint3d[] = []
+            for (let index = 0; index < drawPoints.length - 1; index++) {
+              const segmentSnaps: AcGePoint3d[] = []
+              acdbCollectLineSegmentOsnapPoints(
+                drawPoints[index],
+                drawPoints[index + 1],
+                osnapMode,
+                pickPoint,
+                segmentSnaps
+              )
+              candidates.push(...segmentSnaps)
+            }
+            if (osnapMode === AcDbOsnapMode.MidPoint) {
+              snapPoints.push(...candidates)
+            } else {
+              const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+              if (nearest) snapPoints.push(nearest)
+            }
+            break
+          }
+          default:
+            break
+        }
+      })
+    })
   }
 
   /**

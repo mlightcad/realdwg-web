@@ -322,6 +322,27 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
 
   /**
+   * Returns the nearest point on this spline to the given point.
+   *
+   * @param point - Query point in WCS.
+   * @param samples - Number of interior samples used by the underlying NURBS curve.
+   */
+  nearestPoint(point: AcGePoint3dLike, samples = 64): AcGePoint3d {
+    const nearest = this._nurbsCurve.nearestPoint(point, samples)
+    return new AcGePoint3d(nearest.x, nearest.y, nearest.z || 0)
+  }
+
+  /**
+   * Evaluates this spline at the given parameter value.
+   *
+   * @param t - Parameter along the knot vector.
+   */
+  evaluateAt(t: number): AcGePoint3d {
+    const point = this._nurbsCurve.point(t)
+    return new AcGePoint3d(point[0]!, point[1]!, point[2]!)
+  }
+
+  /**
    * Return the value of the control point at position index in the list of control points.
    * If index is negative or more than the number of control points in the spline, then point
    * is set to the last control point.

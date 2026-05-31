@@ -319,6 +319,21 @@ export class AcDbEllipse extends AcDbCurve {
   }
 
   /**
+   * Gets the grip points for this ellipse.
+   *
+   * Grip points are the center and the start/end parameter points (for open arcs).
+   *
+   * @returns Array of grip points: [center, startPoint, endPoint]
+   */
+  subGetGripPoints() {
+    const gripPoints = new Array<AcGePoint3d>()
+    gripPoints.push(this._geo.center)
+    gripPoints.push(this._geo.startPoint)
+    gripPoints.push(this._geo.endPoint)
+    return gripPoints
+  }
+
+  /**
    * Gets the object snap points for this ellipse or ellipse arc.
    *
    * Object snap points are precise points that can be used for positioning
@@ -332,7 +347,7 @@ export class AcDbEllipse extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
@@ -348,6 +363,10 @@ export class AcDbEllipse extends AcDbCurve {
           snapPoints.push(this._geo.midPoint)
         }
         break
+      case AcDbOsnapMode.Center:
+      case AcDbOsnapMode.Centroid:
+        snapPoints.push(this._geo.center)
+        break
       case AcDbOsnapMode.Quadrant:
         if (this.closed) {
           snapPoints.push(this._geo.getPointAtAngle(0))
@@ -355,6 +374,9 @@ export class AcDbEllipse extends AcDbCurve {
           snapPoints.push(this._geo.getPointAtAngle(Math.PI))
           snapPoints.push(this._geo.getPointAtAngle((Math.PI / 2) * 3))
         }
+        break
+      case AcDbOsnapMode.Nearest:
+        snapPoints.push(this._geo.nearestPoint(pickPoint))
         break
       default:
         break
