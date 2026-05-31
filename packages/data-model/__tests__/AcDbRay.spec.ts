@@ -102,6 +102,7 @@ describe('AcDbRay', () => {
   it('adds endpoint osnap for EndPoint mode and ignores unsupported modes', () => {
     const ray = new AcDbRay()
     ray.basePoint = new AcGePoint3d(9, 8, 7)
+    ray.unitDir = new AcGeVector3d(1, 0, 0)
     const endpointSnaps: AcGePoint3d[] = []
     const unsupportedSnaps: AcGePoint3d[] = []
 
@@ -120,6 +121,42 @@ describe('AcDbRay', () => {
 
     expect(endpointSnaps).toEqual([ray.basePoint])
     expect(unsupportedSnaps).toHaveLength(0)
+  })
+
+  it('computes nearest and perpendicular osnap points along the ray direction', () => {
+    const ray = new AcDbRay()
+    ray.basePoint = new AcGePoint3d(0, 0, 0)
+    ray.unitDir = new AcGeVector3d(1, 0, 0)
+
+    const nearestPoints: AcGePoint3d[] = []
+    ray.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(5, 3, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
+
+    const behindNearestPoints: AcGePoint3d[] = []
+    ray.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(-4, 2, 0),
+      new AcGePoint3d(),
+      behindNearestPoints
+    )
+    expect(behindNearestPoints).toHaveLength(1)
+    expect(behindNearestPoints[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    ray.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(2, 4, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
   })
 
   it('transforms base point and direction and returns itself', () => {

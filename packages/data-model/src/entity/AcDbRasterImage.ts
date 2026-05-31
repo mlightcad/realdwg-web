@@ -4,12 +4,14 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGeVector2d,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler, AcDbObjectId } from '../base'
+import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 
 /**
@@ -359,6 +361,25 @@ export class AcDbRasterImage extends AcDbEntity {
    */
   subGetGripPoints() {
     return this.boundaryPath()
+  }
+
+  /**
+   * Gets the object snap points for this raster image.
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    _pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    if (osnapMode === AcDbOsnapMode.Insertion) {
+      snapPoints.push(this._position)
+      return
+    }
+
+    if (osnapMode === AcDbOsnapMode.EndPoint) {
+      snapPoints.push(...this.boundaryPath())
+    }
   }
 
   /**

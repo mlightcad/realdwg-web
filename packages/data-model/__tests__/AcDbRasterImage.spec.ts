@@ -8,6 +8,7 @@ import {
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
 import { AcDbRasterImage, AcDbRasterImageClipBoundaryType } from '../src/entity'
+import { AcDbOsnapMode } from '../src/misc'
 import { AcDbRasterImageDef } from '../src/object/AcDbRasterImageDef'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -147,6 +148,32 @@ describe('AcDbRasterImage', () => {
     const clipped = image.subGetGripPoints()
     expect(clipped.length).toBe(4)
     expect(clipped[0].z).toBe(0)
+  })
+
+  it('computes insertion and endpoint osnap points', () => {
+    const { image } = setupInDatabase()
+    image.position = new AcGePoint3d(3, 4, 0)
+    image.width = 10
+    image.height = 8
+
+    const insertionSnaps: AcGePoint3d[] = []
+    image.subGetOsnapPoints(
+      AcDbOsnapMode.Insertion,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      insertionSnaps
+    )
+    expect(insertionSnaps).toHaveLength(1)
+    expect(insertionSnaps[0]).toMatchObject({ x: 3, y: 4, z: 0 })
+
+    const endPoints: AcGePoint3d[] = []
+    image.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endPoints
+    )
+    expect(endPoints.length).toBeGreaterThanOrEqual(4)
   })
 
   it('draws via renderer.lines when image data is absent and renderer.image when present', () => {

@@ -62,6 +62,24 @@ describe('AcDb2dVertex', () => {
     )
     expect(snapPoints).toHaveLength(1)
     expect(snapPoints[0]).toBe(vertex.position)
+
+    const nodeSnaps: AcGePoint3d[] = []
+    vertex.subGetOsnapPoints(
+      AcDbOsnapMode.Node,
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 1, 1),
+      nodeSnaps
+    )
+    expect(nodeSnaps).toHaveLength(1)
+
+    const unsupportedSnaps: AcGePoint3d[] = []
+    vertex.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 1, 1),
+      unsupportedSnaps
+    )
+    expect(unsupportedSnaps).toHaveLength(0)
   })
 
   it('transforms position and returns itself', () => {

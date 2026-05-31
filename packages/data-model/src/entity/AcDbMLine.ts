@@ -18,9 +18,14 @@ import {
   DEFAULT_LINE_TYPE,
   DEFAULT_MLINE_STYLE
 } from '../misc'
+import { AcDbOsnapMode } from '../misc'
 import { AcDbMlineStyle } from '../object'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbCollectLineSegmentOsnapPoints,
+  acdbPickNearestOsnapPoint
+} from './AcDbOsnapHelpers'
 
 /**
  * Defines MLINE justification relative to the style element offsets.
@@ -566,6 +571,53 @@ export class AcDbMLine extends AcDbEntity {
           ]
         }
       ]
+    }
+  }
+
+  /**
+   * Gets the object snap points for this MLINE reference path.
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    const path = [
+      this._startPosition,
+      ...this._segments.map(segment => segment.position)
+    ]
+    if (path.length === 0) return
+
+    switch (osnapMode) {
+      case AcDbOsnapMode.EndPoint:
+        snapPoints.push(...path)
+        break
+      case AcDbOsnapMode.MidPoint:
+      case AcDbOsnapMode.Nearest:
+      case AcDbOsnapMode.Perpendicular: {
+        const candidates: AcGePoint3d[] = []
+        for (let index = 0; index < path.length - 1; index++) {
+          const segmentSnaps: AcGePoint3d[] = []
+          acdbCollectLineSegmentOsnapPoints(
+            path[index],
+            path[index + 1],
+            osnapMode,
+            pickPoint,
+            segmentSnaps
+          )
+          candidates.push(...segmentSnaps)
+        }
+        if (osnapMode === AcDbOsnapMode.MidPoint) {
+          snapPoints.push(...candidates)
+        } else {
+          const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+          if (nearest) snapPoints.push(nearest)
+        }
+        break
+      }
+      default:
+        break
     }
   }
 

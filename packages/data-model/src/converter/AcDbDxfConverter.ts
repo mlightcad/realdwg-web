@@ -525,6 +525,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     if (header['$EXTMIN']) db.extmin = header['$EXTMIN']
     if (header['$INSUNITS'] != null) db.insunits = header['$INSUNITS']
     db.osmode = header['$OSMODE'] || 0
+    db.orthomode = header['$ORTHOMODE'] || 0
     db.pdmode = header['$PDMODE'] || 0
     db.pdsize = header['$PDSIZE'] || 0.0
     db.textstyle = header['$TEXTSTYLE'] || DEFAULT_TEXT_STYLE

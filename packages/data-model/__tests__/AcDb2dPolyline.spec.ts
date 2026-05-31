@@ -83,7 +83,7 @@ describe('AcDb2dPolyline', () => {
     expect(ext.max).toMatchObject({ x: 3, y: 2, z: 7 })
   })
 
-  it('returns grip points and osnap points for endpoint mode only', () => {
+  it('returns grip points and osnap points for supported modes', () => {
     const polyline = new AcDb2dPolyline(AcDbPoly2dType.SimplePoly, [
       { x: 0, y: 0, z: 0 },
       { x: 2, y: 0, z: 0 },
@@ -103,14 +103,60 @@ describe('AcDb2dPolyline', () => {
     )
     expect(endpointSnaps).toHaveLength(3)
 
-    const otherModeSnaps: AcGePoint3d[] = []
+    const midPoints: AcGePoint3d[] = []
     polyline.subGetOsnapPoints(
       AcDbOsnapMode.MidPoint,
       new AcGePoint3d(),
       new AcGePoint3d(),
-      otherModeSnaps
+      midPoints
     )
-    expect(otherModeSnaps).toHaveLength(0)
+    expect(midPoints).toHaveLength(2)
+    expect(midPoints[0]).toMatchObject({ x: 1, y: 0, z: 0 })
+    expect(midPoints[1]).toMatchObject({ x: 2, y: 1, z: 0 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(1, 1, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 1, y: 0, z: 0 })
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(1, 1, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 1, y: 0, z: 0 })
+
+    const unsupportedPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Center,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      unsupportedPoints
+    )
+    expect(unsupportedPoints).toHaveLength(0)
+  })
+
+  it('returns grip points at polyline elevation', () => {
+    const polyline = new AcDb2dPolyline(
+      AcDbPoly2dType.SimplePoly,
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 2, y: 0, z: 0 }
+      ],
+      5
+    )
+    const grips = polyline.subGetGripPoints()
+    expect(grips).toHaveLength(2)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 5 })
+    expect(grips[1]).toMatchObject({ x: 2, y: 0, z: 5 })
   })
 
   it('transforms geometry and flips bulges for mirrored transform', () => {

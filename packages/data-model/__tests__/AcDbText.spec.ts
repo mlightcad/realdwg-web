@@ -92,6 +92,14 @@ describe('AcDbText', () => {
     expect(snapPoints[0]).toMatchObject({ x: 3, y: 4, z: 5 })
   })
 
+  it('returns insertion point as grip point', () => {
+    const text = new AcDbText()
+    text.position = new AcGePoint3d(3, 4, 5)
+    const grips = text.subGetGripPoints()
+    expect(grips).toHaveLength(1)
+    expect(grips[0]).toBe(text.position)
+  })
+
   it('transforms text with normal scale and rotation updates', () => {
     const text = new AcDbText()
     text.position = new AcGePoint3d(1, 0, 0)

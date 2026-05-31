@@ -69,6 +69,15 @@ describe('AcDb3dVertex', () => {
     expect(snapPoints).toHaveLength(1)
     expect(snapPoints[0]).toBe(vertex.position)
     expect(snapPoints[0]).toMatchObject({ x: -1, y: 2.5, z: 3 })
+
+    const unsupportedSnaps: Array<{ x: number; y: number; z: number }> = []
+    vertex.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 1, z: 1 },
+      unsupportedSnaps
+    )
+    expect(unsupportedSnaps).toHaveLength(0)
   })
 
   it('transforms position by matrix and returns itself', () => {

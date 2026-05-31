@@ -463,6 +463,19 @@ export class AcDbSysVarManager {
       defaultValue: 0
     })
     /**
+     * Constrains cursor movement to the perpendicular (orthogonal locking).
+     * - `0`: Turns off Ortho mode
+     * - `1`: Turns on Ortho mode
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-CF142B68-675B-452F-B3A8-7831DDB71BD0-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ORTHOMODE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
      * Background color of the paper-space (layout) drawing area.
      * Default: RGB(255, 255, 255)
      */

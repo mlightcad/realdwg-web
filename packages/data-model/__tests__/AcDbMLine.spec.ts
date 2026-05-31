@@ -3,6 +3,7 @@ import { AcCmColor } from '@mlightcad/common'
 import { acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase, AcDbLinetypeTableRecord } from '../src/database'
 import { AcDbMLine, AcDbMLineJustification } from '../src/entity'
+import { AcDbOsnapMode } from '../src/misc'
 import { AcDbMlineStyle } from '../src/object'
 
 const createAciColor = (index: number) => {
@@ -68,6 +69,43 @@ const createBasicMline = (style: AcDbMlineStyle) => {
 }
 
 describe('AcDbMLine', () => {
+  it('computes osnap points on the reference path', () => {
+    const db = createDb()
+    const style = new AcDbMlineStyle()
+    style.styleName = 'OSNAP_STYLE'
+    style.elements = [
+      { offset: 0.5, color: createAciColor(3), lineType: 'BYLAYER' },
+      { offset: -0.5, color: createAciColor(5), lineType: 'BYLAYER' }
+    ]
+    db.objects.mlineStyle.setAt(style.styleName, style)
+
+    const mline = createBasicMline(style)
+    mline.startPosition = { x: 0, y: 0, z: 0 }
+
+    const endPoints: Array<{ x: number; y: number; z: number }> = []
+    mline.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      endPoints
+    )
+    expect(endPoints).toHaveLength(3)
+    expect(endPoints[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(endPoints[1]).toMatchObject({ x: 10, y: 0, z: 0 })
+    expect(endPoints[2]).toMatchObject({ x: 20, y: 0, z: 0 })
+
+    const midPoints: Array<{ x: number; y: number; z: number }> = []
+    mline.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      { x: 0, y: 0, z: 0 },
+      { x: 0, y: 0, z: 0 },
+      midPoints
+    )
+    expect(midPoints).toHaveLength(2)
+    expect(midPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
+    expect(midPoints[1]).toMatchObject({ x: 15, y: 0, z: 0 })
+  })
+
   it('ensures database default mline style exists when appending a new MLINE', () => {
     const db = createDb()
     db.cmlstyle = 'AUTO_MLINE_STYLE'

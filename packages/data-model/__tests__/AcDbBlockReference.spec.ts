@@ -144,6 +144,15 @@ describe('AcDbBlockReference', () => {
     expect(infiniteLoopGuardSnaps).toHaveLength(0)
   })
 
+  it('returns insertion point as grip point', () => {
+    createDb()
+    const insert = new AcDbBlockReference('*Model_Space')
+    insert.position = new AcGePoint3d(11, 12, 13)
+    const grips = insert.subGetGripPoints()
+    expect(grips).toHaveLength(1)
+    expect(grips[0]).toBe(insert.position)
+  })
+
   it('transforms pick point to block space before querying sub-entity osnap', () => {
     const db = createDb()
     const block = createNamedBlock(db, 'TEST_BLOCK')

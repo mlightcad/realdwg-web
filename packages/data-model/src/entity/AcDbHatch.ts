@@ -12,6 +12,7 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
@@ -24,6 +25,7 @@ import { AcDbDxfFiler } from '../base'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
+import { AcDbOsnapMode } from '../misc'
 import {
   DEFAULT_GRADIENT_HATCH_NAME,
   HATCH_PATTERN_SOLID,
@@ -32,6 +34,10 @@ import {
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbCollectPolyline2dSegmentOsnapPoints,
+  acdbPickNearestOsnapPoint
+} from './AcDbOsnapHelpers'
 
 /**
  * Defines the type of hatch pattern.
@@ -1069,6 +1075,127 @@ export class AcDbHatch extends AcDbEntity {
           ]
         }
       ]
+    }
+  }
+
+  /**
+   * Gets the object snap points for hatch boundary geometry.
+   */
+  subGetOsnapPoints(
+    osnapMode: AcDbOsnapMode,
+    pickPoint: AcGePoint3dLike,
+    _lastPoint: AcGePoint3dLike,
+    snapPoints: AcGePoint3dLike[]
+  ) {
+    const elevation = this._elevation
+    const nearestCandidates: AcGePoint3d[] = []
+
+    this._geo.loops.forEach(loop => {
+      if (loop instanceof AcGePolyline2d) {
+        const geo = loop
+        const vertexCount = geo.numberOfVertices
+        if (vertexCount === 0) return
+
+        switch (osnapMode) {
+          case AcDbOsnapMode.EndPoint:
+            for (let index = 0; index < vertexCount; index++) {
+              const vertex = geo.getPointAt(index)
+              snapPoints.push(new AcGePoint3d(vertex.x, vertex.y, elevation))
+            }
+            break
+          case AcDbOsnapMode.MidPoint:
+          case AcDbOsnapMode.Nearest:
+          case AcDbOsnapMode.Perpendicular: {
+            const segmentCount = loop.closed ? vertexCount : vertexCount - 1
+            for (let index = 0; index < segmentCount; index++) {
+              const segmentSnaps: AcGePoint3d[] = []
+              acdbCollectPolyline2dSegmentOsnapPoints(
+                geo.getPointAt(index),
+                geo.getPointAt((index + 1) % vertexCount),
+                geo.vertices[index]?.bulge,
+                elevation,
+                osnapMode,
+                pickPoint,
+                segmentSnaps
+              )
+              if (osnapMode === AcDbOsnapMode.MidPoint) {
+                snapPoints.push(...segmentSnaps)
+              } else {
+                nearestCandidates.push(...segmentSnaps)
+              }
+            }
+            break
+          }
+          default:
+            break
+        }
+        return
+      }
+
+      loop.curves.forEach(curve => {
+        if (curve instanceof AcGeLine2d) {
+          const segmentSnaps: AcGePoint3d[] = []
+          acdbCollectPolyline2dSegmentOsnapPoints(
+            curve.startPoint,
+            curve.endPoint,
+            undefined,
+            elevation,
+            osnapMode,
+            pickPoint,
+            segmentSnaps
+          )
+          if (osnapMode === AcDbOsnapMode.MidPoint) {
+            snapPoints.push(...segmentSnaps)
+          } else if (
+            osnapMode === AcDbOsnapMode.Nearest ||
+            osnapMode === AcDbOsnapMode.Perpendicular
+          ) {
+            nearestCandidates.push(...segmentSnaps)
+          } else {
+            snapPoints.push(...segmentSnaps)
+          }
+        } else if (curve instanceof AcGeCircArc2d) {
+          switch (osnapMode) {
+            case AcDbOsnapMode.EndPoint:
+              snapPoints.push(
+                new AcGePoint3d(
+                  curve.startPoint.x,
+                  curve.startPoint.y,
+                  elevation
+                ),
+                new AcGePoint3d(curve.endPoint.x, curve.endPoint.y, elevation)
+              )
+              break
+            case AcDbOsnapMode.MidPoint:
+              snapPoints.push(
+                new AcGePoint3d(curve.midPoint.x, curve.midPoint.y, elevation)
+              )
+              break
+            case AcDbOsnapMode.Nearest: {
+              const nearest = curve.nearestPoint({
+                x: pickPoint.x,
+                y: pickPoint.y
+              })
+              nearestCandidates.push(
+                new AcGePoint3d(nearest.x, nearest.y, elevation)
+              )
+              break
+            }
+            default:
+              break
+          }
+        }
+      })
+    })
+
+    if (
+      (osnapMode === AcDbOsnapMode.Nearest ||
+        osnapMode === AcDbOsnapMode.Perpendicular) &&
+      nearestCandidates.length > 0
+    ) {
+      const nearest = acdbPickNearestOsnapPoint(pickPoint, nearestCandidates)
+      snapPoints.length = 0
+      if (nearest) snapPoints.push(nearest)
     }
   }
 

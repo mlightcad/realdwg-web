@@ -75,6 +75,15 @@ describe('AcDbPoint', () => {
     expect(unsupportedModePoints).toHaveLength(0)
   })
 
+  it('returns position as grip point', () => {
+    createWorkingDb()
+    const point = new AcDbPoint()
+    point.position = { x: 7, y: 8, z: 9 }
+    const grips = point.subGetGripPoints()
+    expect(grips).toHaveLength(1)
+    expect(grips[0]).toBe(point.position)
+  })
+
   it('exposes geometry properties with editable accessors', () => {
     createWorkingDb()
     const point = new AcDbPoint()

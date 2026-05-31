@@ -492,6 +492,15 @@ export class AcDbText extends AcDbEntity {
   }
 
   /**
+   * Gets the grip points for this text entity.
+   *
+   * @returns Array containing the text insertion point.
+   */
+  subGetGripPoints() {
+    return [this._position]
+  }
+
+  /**
    * Gets the object snap points for this text.
    *
    * Object snap points are precise points that can be used for positioning

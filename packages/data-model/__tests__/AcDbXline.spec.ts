@@ -6,6 +6,7 @@ import {
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
 import { AcDbXline } from '../src/entity'
+import { AcDbOsnapMode } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -105,6 +106,42 @@ describe('AcDbXline', () => {
     expect(gripPoints).toHaveLength(1)
     expect(gripPoints[0]).toBe(xline.basePoint)
     expect(gripPoints[0]).toMatchObject({ x: 7, y: 8, z: 9 })
+  })
+
+  it('computes osnap points for endpoint, nearest, and perpendicular modes', () => {
+    const xline = new AcDbXline()
+    xline.basePoint = new AcGePoint3d(0, 0, 0)
+    xline.unitDir = new AcGeVector3d(1, 0, 0)
+
+    const endPoints: AcGePoint3d[] = []
+    xline.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endPoints
+    )
+    expect(endPoints).toHaveLength(1)
+    expect(endPoints[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    xline.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(-5, 4, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: -5, y: 0, z: 0 })
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    xline.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(2, 3, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
   })
 
   it('transforms itself and draws through renderer.lines', () => {

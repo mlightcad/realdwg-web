@@ -393,6 +393,15 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Gets the grip points for this block reference.
+   *
+   * @returns Array containing the block insertion point.
+   */
+  subGetGripPoints() {
+    return [this._position]
+  }
+
+  /**
    * Gets the object snap points for this block reference.
    *
    * Object snap points are precise points that can be used for positioning

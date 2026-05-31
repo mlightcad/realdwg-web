@@ -9,7 +9,7 @@ import {
   AcDbLinetypeTableRecord
 } from '../src/database'
 import { AcDbLine, AcDbMLeader } from '../src/entity'
-import { AcDbRenderingCache } from '../src/misc'
+import { AcDbOsnapMode, AcDbRenderingCache } from '../src/misc'
 import { AcDbMLeaderStyle } from '../src/object'
 
 const createWorkingDb = () => {
@@ -275,5 +275,37 @@ describe('AcDbMLeader arrowhead rendering', () => {
     mleader.worldDraw(renderer as never)
 
     expect(renderer.lines).toHaveBeenCalledTimes(2)
+  })
+
+  it('computes osnap points on leader lines and content insertion', () => {
+    const mleader = new AcDbMLeader()
+    mleader.contentBasePosition = new AcGePoint3d(10, 5, 0)
+    const leaderIndex = mleader.addLeader({
+      lastLeaderLinePoint: new AcGePoint3d(5, 0, 0),
+      lastLeaderLinePointSet: true
+    })
+    mleader.addLeaderLine(leaderIndex, [
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(5, 0, 0)
+    ])
+
+    const endPoints: AcGePoint3d[] = []
+    mleader.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endPoints
+    )
+    expect(endPoints.length).toBeGreaterThanOrEqual(2)
+
+    const insertionSnaps: AcGePoint3d[] = []
+    mleader.subGetOsnapPoints(
+      AcDbOsnapMode.Insertion,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      insertionSnaps
+    )
+    expect(insertionSnaps).toHaveLength(1)
+    expect(insertionSnaps[0]).toMatchObject({ x: 10, y: 5, z: 0 })
   })
 })

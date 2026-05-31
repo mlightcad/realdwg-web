@@ -119,12 +119,17 @@ export class AcDb3dVertex extends AcDbEntity {
    * @param snapPoints - Array to populate with snap points
    */
   subGetOsnapPoints(
-    _osnapMode: AcDbOsnapMode,
+    osnapMode: AcDbOsnapMode,
     _pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
-    snapPoints.push(this._position)
+    if (
+      osnapMode === AcDbOsnapMode.EndPoint ||
+      osnapMode === AcDbOsnapMode.Node
+    ) {
+      snapPoints.push(this._position)
+    }
   }
 
   /**
