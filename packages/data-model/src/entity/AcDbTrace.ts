@@ -13,8 +13,8 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
+import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a trace entity in AutoCAD.
