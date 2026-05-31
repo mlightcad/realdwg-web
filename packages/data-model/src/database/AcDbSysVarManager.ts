@@ -499,6 +499,46 @@ export class AcDbSysVarManager {
       defaultValue: 10
     })
     /**
+     * Stores additional angles for polar tracking and polar snap.
+     * Up to 10 angles separated by semicolons (;). Unlike POLARANG, values are
+     * absolute angles rather than increments. Only effective when POLARMODE bit 4 is on.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-73162BAB-C98D-4159-A653-E4C7D4CB38C3
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.POLARADDANG,
+      type: 'string',
+      isDbVar: false,
+      defaultValue: ''
+    })
+    /**
+     * Controls settings for polar and object snap tracking (bitcode sum):
+     * - Bit 0: `0` = measure polar angles from current UCS; `1` = from selected objects
+     * - Bit 2: `0` = track orthogonally only; `2` = use polar tracking in object snap tracking
+     * - Bit 4: `0` = do not use additional polar angles; `4` = use POLARADDANG angles
+     * - Bit 8: `0` = acquire tracking points automatically; `8` = press SHIFT to acquire
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-D91628CC-9975-4DBF-8D02-10B23A6F3ED5
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.POLARMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
+    /**
+     * Sets the polar angle increment for polar tracking alignment paths, in degrees.
+     * Common values: 90, 45, 30, 22.5, 18, 15, 10, and 5.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-0CF67F9E-F953-43D6-9227-0D56E0E693ED
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.POLARANG,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 90
+    })
+    /**
      * Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area.
      * - 0: Disables all Default, Edit, and Command mode shortcut menus.
      * - 1: Enables Default mode shortcut menus.
