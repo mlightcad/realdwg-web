@@ -161,6 +161,26 @@ describe('AcDbEllipse', () => {
     expect(nearestPoints).toHaveLength(1)
     expect(nearestPoints[0].x).toBeCloseTo(6, 5)
 
+    const tangentPoints: AcGePoint3d[] = []
+    openEllipse.subGetOsnapPoints(
+      AcDbOsnapMode.Tangent,
+      new AcGePoint3d(10, 10, 0),
+      new AcGePoint3d(),
+      tangentPoints
+    )
+    expect(tangentPoints.length).toBeGreaterThan(0)
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    openEllipse.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(10, 0, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0].x).toBeCloseTo(6, 5)
+    expect(perpendicularPoints[0].y).toBeCloseTo(0, 5)
+
     const unsupportedPoints: AcGePoint3d[] = []
     openEllipse.subGetOsnapPoints(
       AcDbOsnapMode.Insertion,

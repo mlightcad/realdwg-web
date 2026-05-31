@@ -181,11 +181,12 @@ describe('AcDbArc', () => {
     const perpendicularPoints: AcGePoint3d[] = []
     arc.subGetOsnapPoints(
       AcDbOsnapMode.Perpendicular,
-      new AcGePoint3d(9, 9, 0),
+      new AcGePoint3d(10, 0, 0),
       new AcGePoint3d(),
       perpendicularPoints
     )
-    expect(perpendicularPoints).toHaveLength(0)
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 5, y: 0, z: 0 })
 
     const tangentPoints: AcGePoint3d[] = []
     arc.subGetOsnapPoints(

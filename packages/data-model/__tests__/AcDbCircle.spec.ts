@@ -140,6 +140,16 @@ describe('AcDbCircle', () => {
     )
     expect(tangentPoints).toEqual([tangentA, tangentB])
 
+    const perpendicularPoints: AcGePoint3d[] = []
+    circle.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(6, 0, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
+
     const unsupportedPoints: AcGePoint3d[] = []
     circle.subGetOsnapPoints(
       AcDbOsnapMode.EndPoint,

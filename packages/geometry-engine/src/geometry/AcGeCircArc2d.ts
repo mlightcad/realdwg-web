@@ -550,6 +550,96 @@ export class AcGeCircArc2d extends AcGeCurve2d {
   }
 
   /**
+   * Returns perpendicular snap point(s) on this arc from the given point.
+   */
+  perpendicularPoints(point: AcGePoint2dLike): AcGePoint2d[] {
+    const p = new AcGePoint2d(point.x, point.y)
+    const dx = p.x - this.center.x
+    const dy = p.y - this.center.y
+    const dist = Math.hypot(dx, dy)
+    if (dist < 1e-12) return []
+
+    const nx = dx / dist
+    const ny = dy / dist
+    const candidates = [
+      new AcGePoint2d(
+        this.center.x + nx * this.radius,
+        this.center.y + ny * this.radius
+      ),
+      new AcGePoint2d(
+        this.center.x - nx * this.radius,
+        this.center.y - ny * this.radius
+      )
+    ]
+
+    const result: AcGePoint2d[] = []
+    const internalStart = this._getInternalAngle(this.startAngle)
+    const internalEnd = this._getInternalAngle(this.endAngle)
+
+    for (const candidate of candidates) {
+      const theta = Math.atan2(
+        candidate.y - this.center.y,
+        candidate.x - this.center.x
+      )
+      const publicAngle = this.clockwise
+        ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(theta))
+        : AcGeMathUtil.normalizeAngle(theta)
+      const internalAngle = this._getInternalAngle(publicAngle)
+      if (
+        this.closed ||
+        AcGeMathUtil.isBetweenAngle(
+          internalAngle,
+          internalStart,
+          internalEnd,
+          this.clockwise
+        )
+      ) {
+        result.push(candidate)
+      }
+    }
+
+    return result
+  }
+
+  /**
+   * Returns tangent snap point(s) from the given point to this arc.
+   */
+  tangentPoints(point: AcGePoint2dLike): AcGePoint2d[] {
+    const result: AcGePoint2d[] = []
+    const dx = point.x - this.center.x
+    const dy = point.y - this.center.y
+    const d = Math.hypot(dx, dy)
+    const r = this.radius
+    if (d < r) return result
+
+    const alpha = Math.acos(r / d)
+    const baseAngle = Math.atan2(dy, dx)
+    const angles = [baseAngle + alpha, baseAngle - alpha]
+    const internalStart = this._getInternalAngle(this.startAngle)
+    const internalEnd = this._getInternalAngle(this.endAngle)
+
+    for (const theta of angles) {
+      const publicAngle = this.clockwise
+        ? this._mirrorAngle(AcGeMathUtil.normalizeAngle(theta))
+        : AcGeMathUtil.normalizeAngle(theta)
+      const internalAngle = this._getInternalAngle(publicAngle)
+      if (
+        this.closed ||
+        AcGeMathUtil.isBetweenAngle(
+          internalAngle,
+          internalStart,
+          internalEnd,
+          this.clockwise
+        )
+      ) {
+        result.push(this.getPointAtAngle(publicAngle))
+      }
+    }
+
+    return result
+  }
+
+  /**
    * Divide this arc into the specified nubmer of points and return those points as an array of points.
    * @param numPoints Input the nubmer of points returned
    * @returns Return an array of points

@@ -92,6 +92,36 @@ describe('AcDbTrace', () => {
       otherSnaps
     )
     expect(otherSnaps).toHaveLength(0)
+
+    const midPoints: AcGePoint3d[] = []
+    trace.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(4)
+
+    const nearestPoints: AcGePoint3d[] = []
+    trace.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(0.5, -1, 0.5),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0].x).toBeCloseTo(0.5)
+    expect(nearestPoints[0].y).toBeCloseTo(-1)
+    expect(nearestPoints[0].z).toBeCloseTo(0.5)
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    trace.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(0.5, 10, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
   })
 
   it('orders DXF solid corners as a perimeter loop when drawing', () => {

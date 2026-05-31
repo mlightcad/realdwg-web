@@ -130,6 +130,16 @@ describe('AcDbPolyline', () => {
     expect(nearestPoints).toHaveLength(1)
     expect(nearestPoints[0]).toMatchObject({ x: 1, y: 0, z: 2 })
 
+    const perpendicularPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(1, 1, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 1, y: 0, z: 2 })
+
     const centerSnaps: AcGePoint3d[] = []
     polyline.subGetOsnapPoints(
       AcDbOsnapMode.Center,

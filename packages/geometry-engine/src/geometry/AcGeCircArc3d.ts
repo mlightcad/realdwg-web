@@ -409,6 +409,46 @@ export class AcGeCircArc3d extends AcGeCurve3d {
   }
 
   /**
+   * Returns perpendicular snap point(s) on this arc from the given point.
+   *
+   * The snap point lies where the line from the query point to the arc is
+   * perpendicular to the arc (i.e. aligned with the radius at that point).
+   */
+  perpendicularPoints(point: AcGePoint3dLike): AcGePoint3d[] {
+    const result: AcGePoint3d[] = []
+
+    const P = new AcGeVector3d(point.x, point.y, point.z || 0)
+    const C = this.center
+    const n = this.normal
+    const r = this.radius
+
+    const v = P.clone().sub(C)
+    const distToPlane = v.dot(n)
+    const Pp = P.clone().sub(n.clone().multiplyScalar(distToPlane))
+    const dVec = Pp.clone().sub(C)
+
+    if (dVec.lengthSq() < 1e-24) return result
+
+    dVec.normalize()
+    const candidates = [
+      C.clone().add(dVec.clone().multiplyScalar(r)),
+      C.clone().sub(dVec.clone().multiplyScalar(r))
+    ]
+
+    for (const candidate of candidates) {
+      const angle = this.getAngle(candidate.clone())
+      const t = AcGeMathUtil.normalizeAngle(angle - this.startAngle)
+      if (t >= 0 && t <= this.deltaAngle) {
+        result.push(
+          new AcGePoint3d(candidate.x, candidate.y, candidate.z || 0)
+        )
+      }
+    }
+
+    return result
+  }
+
+  /**
    * Returns the nearest tangent snap point, or null if none exists.
    */
   nearestTangentPoint(point: AcGePoint3dLike): AcGePoint3d | null {

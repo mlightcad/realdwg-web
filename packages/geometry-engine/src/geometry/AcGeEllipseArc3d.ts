@@ -5,6 +5,7 @@ import {
   AcGeMatrix3d,
   AcGePlane,
   AcGePoint3d,
+  AcGePoint3dLike,
   AcGePointLike,
   AcGeVector3d,
   AcGeVector3dLike
@@ -444,6 +445,90 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
     if (dEnd < bestDistSq && dEnd < dStart) return this.endPoint.clone()
 
     return best.clone()
+  }
+
+  /**
+   * Returns tangent snap point(s) from the given point to this ellipse arc.
+   */
+  tangentPoints(point: AcGePoint3dLike): AcGePoint3d[] {
+    const localP = this._projectPointToLocalPlane(point)
+    const angles = this._findSnapParameterAngles((qx, qy, cos, sin) => {
+      const tx = -this.majorAxisRadius * sin
+      const ty = this.minorAxisRadius * cos
+      return (qx - localP.x) * ty - (qy - localP.y) * tx
+    })
+    return angles.map(angle => this.getPointAtAngle(angle))
+  }
+
+  /**
+   * Returns perpendicular snap point(s) on this ellipse arc from the given point.
+   */
+  perpendicularPoints(point: AcGePoint3dLike): AcGePoint3d[] {
+    const localP = this._projectPointToLocalPlane(point)
+    const angles = this._findSnapParameterAngles((qx, qy, cos, sin) => {
+      const nx = this.minorAxisRadius * cos
+      const ny = this.majorAxisRadius * sin
+      return (qx - localP.x) * ny - (qy - localP.y) * nx
+    })
+    return angles.map(angle => this.getPointAtAngle(angle))
+  }
+
+  private _projectPointToLocalPlane(point: AcGePoint3dLike): {
+    x: number
+    y: number
+  } {
+    const query = new AcGePoint3d(point.x, point.y, point.z || 0)
+    const offset = new AcGeVector3d(query).sub(this.center)
+    const distToPlane = offset.dot(this.normal)
+    offset.sub(this.normal.clone().multiplyScalar(distToPlane))
+    return {
+      x: offset.dot(this.majorAxis),
+      y: offset.dot(this.minorAxis)
+    }
+  }
+
+  private _findSnapParameterAngles(
+    errorAt: (
+      qx: number,
+      qy: number,
+      cos: number,
+      sin: number
+    ) => number,
+    samples = 144
+  ): number[] {
+    const a = this.majorAxisRadius
+    const b = this.minorAxisRadius
+    const start = this.startAngle
+    const delta = this.deltaAngle
+    const angles: number[] = []
+
+    const evalError = (theta: number) => {
+      const cos = Math.cos(theta)
+      const sin = Math.sin(theta)
+      return errorAt(a * cos, b * sin, cos, sin)
+    }
+
+    let prevT = start
+    let prevE = evalError(prevT)
+    for (let i = 1; i <= samples; i++) {
+      const t = start + (delta * i) / samples
+      const e = evalError(t)
+      if (Math.abs(prevE) < 1e-10) angles.push(prevT)
+      if (prevE * e < 0) {
+        let lo = prevT
+        let hi = t
+        for (let j = 0; j < 32; j++) {
+          const mid = (lo + hi) / 2
+          if (evalError(lo) * evalError(mid) <= 0) hi = mid
+          else lo = mid
+        }
+        angles.push((lo + hi) / 2)
+      }
+      prevT = t
+      prevE = e
+    }
+
+    return angles
   }
 
   /**

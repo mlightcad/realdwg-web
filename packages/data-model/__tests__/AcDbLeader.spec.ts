@@ -238,6 +238,26 @@ describe('AcDbLeader', () => {
     expect(midPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
     expect(midPoints[1]).toMatchObject({ x: 4, y: 1.5, z: 0 })
 
+    const straightNearestPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(4, 2, 0),
+      new AcGePoint3d(),
+      straightNearestPoints
+    )
+    expect(straightNearestPoints).toHaveLength(1)
+    expect(straightNearestPoints[0]).toMatchObject({ x: 4, y: 2, z: 0 })
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    leader.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(4, 2, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 4, y: 2, z: 0 })
+
     leader.appendVertex(new AcGePoint3d(6, 1, 0))
     leader.appendVertex(new AcGePoint3d(8, 0, 0))
     leader.isSplined = true

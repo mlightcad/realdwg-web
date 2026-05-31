@@ -70,6 +70,16 @@ describe('AcDb3dVertex', () => {
     expect(snapPoints[0]).toBe(vertex.position)
     expect(snapPoints[0]).toMatchObject({ x: -1, y: 2.5, z: 3 })
 
+    const nodeSnaps: Array<{ x: number; y: number; z: number }> = []
+    vertex.subGetOsnapPoints(
+      AcDbOsnapMode.Node,
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 1, z: 1 },
+      nodeSnaps
+    )
+    expect(nodeSnaps).toHaveLength(1)
+    expect(nodeSnaps[0]).toBe(vertex.position)
+
     const unsupportedSnaps: Array<{ x: number; y: number; z: number }> = []
     vertex.subGetOsnapPoints(
       AcDbOsnapMode.MidPoint,

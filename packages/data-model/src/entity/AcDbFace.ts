@@ -10,6 +10,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
  * Represents a three-dimensional surface patch — specifically, a flat polygon that
@@ -201,17 +202,17 @@ export class AcDbFace extends AcDbEntity {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
-    switch (osnapMode) {
-      case AcDbOsnapMode.EndPoint:
-        snapPoints.push(...this._vertices)
-        break
-      default:
-        break
-    }
+    acdbCollectVertexPathOsnapPoints(
+      this._vertices,
+      true,
+      osnapMode,
+      pickPoint,
+      snapPoints
+    )
   }
 
   /**

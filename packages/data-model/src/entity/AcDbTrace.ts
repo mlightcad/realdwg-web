@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
@@ -252,17 +253,23 @@ export class AcDbTrace extends AcDbCurve {
    */
   subGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
-    _pickPoint: AcGePoint3dLike,
+    pickPoint: AcGePoint3dLike,
     _lastPoint: AcGePoint3dLike,
     snapPoints: AcGePoint3dLike[]
   ) {
-    switch (osnapMode) {
-      case AcDbOsnapMode.EndPoint:
-        snapPoints.push(...this._vertices)
-        break
-      default:
-        break
-    }
+    const perimeter = [
+      this._vertices[0],
+      this._vertices[1],
+      this._vertices[3],
+      this._vertices[2]
+    ]
+    acdbCollectVertexPathOsnapPoints(
+      perimeter,
+      true,
+      osnapMode,
+      pickPoint,
+      snapPoints
+    )
   }
 
   /**

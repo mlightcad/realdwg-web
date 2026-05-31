@@ -105,6 +105,26 @@ export function acdbCollectPolyline2dSegmentOsnapPoints(
         snapPoints.push(new AcGePoint3d(nearest.x, nearest.y, elevation))
         break
       }
+      case AcDbOsnapMode.Perpendicular: {
+        const perpPoints = arc.perpendicularPoints({
+          x: pickPoint.x,
+          y: pickPoint.y
+        })
+        perpPoints.forEach(point =>
+          snapPoints.push(new AcGePoint3d(point.x, point.y, elevation))
+        )
+        break
+      }
+      case AcDbOsnapMode.Tangent: {
+        const tangentPoints = arc.tangentPoints({
+          x: pickPoint.x,
+          y: pickPoint.y
+        })
+        tangentPoints.forEach(point =>
+          snapPoints.push(new AcGePoint3d(point.x, point.y, elevation))
+        )
+        break
+      }
       default:
         break
     }
@@ -118,4 +138,51 @@ export function acdbCollectPolyline2dSegmentOsnapPoints(
     pickPoint,
     snapPoints
   )
+}
+
+/**
+ * Collects object snap points along a 3D vertex path.
+ */
+export function acdbCollectVertexPathOsnapPoints(
+  vertices: readonly AcGePoint3dLike[],
+  closed: boolean,
+  osnapMode: AcDbOsnapMode,
+  pickPoint: AcGePoint3dLike,
+  snapPoints: AcGePoint3dLike[]
+) {
+  if (vertices.length === 0) return
+
+  switch (osnapMode) {
+    case AcDbOsnapMode.EndPoint:
+      vertices.forEach(vertex =>
+        snapPoints.push(new AcGePoint3d(vertex.x, vertex.y, vertex.z || 0))
+      )
+      break
+    case AcDbOsnapMode.MidPoint:
+    case AcDbOsnapMode.Nearest:
+    case AcDbOsnapMode.Perpendicular: {
+      const segmentCount = closed ? vertices.length : vertices.length - 1
+      const candidates: AcGePoint3d[] = []
+      for (let index = 0; index < segmentCount; index++) {
+        const segmentSnaps: AcGePoint3d[] = []
+        acdbCollectLineSegmentOsnapPoints(
+          vertices[index],
+          vertices[(index + 1) % vertices.length],
+          osnapMode,
+          pickPoint,
+          segmentSnaps
+        )
+        candidates.push(...segmentSnaps)
+      }
+      if (osnapMode === AcDbOsnapMode.MidPoint) {
+        snapPoints.push(...candidates)
+      } else {
+        const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+        if (nearest) snapPoints.push(nearest)
+      }
+      break
+    }
+    default:
+      break
+  }
 }

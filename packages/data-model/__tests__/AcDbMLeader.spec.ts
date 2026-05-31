@@ -307,5 +307,35 @@ describe('AcDbMLeader arrowhead rendering', () => {
     )
     expect(insertionSnaps).toHaveLength(1)
     expect(insertionSnaps[0]).toMatchObject({ x: 10, y: 5, z: 0 })
+
+    const midPoints: AcGePoint3d[] = []
+    mleader.subGetOsnapPoints(
+      AcDbOsnapMode.MidPoint,
+      new AcGePoint3d(2, 1, 0),
+      new AcGePoint3d(),
+      midPoints
+    )
+    expect(midPoints).toHaveLength(1)
+    expect(midPoints[0]).toMatchObject({ x: 2.5, y: 0, z: 0 })
+
+    const nearestPoints: AcGePoint3d[] = []
+    mleader.subGetOsnapPoints(
+      AcDbOsnapMode.Nearest,
+      new AcGePoint3d(2, 1, 0),
+      new AcGePoint3d(),
+      nearestPoints
+    )
+    expect(nearestPoints).toHaveLength(1)
+    expect(nearestPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
+
+    const perpendicularPoints: AcGePoint3d[] = []
+    mleader.subGetOsnapPoints(
+      AcDbOsnapMode.Perpendicular,
+      new AcGePoint3d(2, 1, 0),
+      new AcGePoint3d(),
+      perpendicularPoints
+    )
+    expect(perpendicularPoints).toHaveLength(1)
+    expect(perpendicularPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
   })
 })

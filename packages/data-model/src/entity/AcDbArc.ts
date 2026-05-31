@@ -16,6 +16,7 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
  * Represents an arc entity in AutoCAD.
@@ -535,9 +536,12 @@ export class AcDbArc extends AcDbCurve {
           snapPoints.push(projectedPoint)
         }
         break
-      case AcDbOsnapMode.Perpendicular:
-        // N/A for perpendicular snap
+      case AcDbOsnapMode.Perpendicular: {
+        const candidates = this._geo.perpendicularPoints(pickPoint)
+        const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
+        if (nearest) snapPoints.push(nearest)
         break
+      }
       case AcDbOsnapMode.Tangent: {
         const points = this._geo.tangentPoints(pickPoint)
         snapPoints.push(...points)
