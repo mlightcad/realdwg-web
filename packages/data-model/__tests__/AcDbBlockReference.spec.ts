@@ -331,6 +331,42 @@ describe('AcDbBlockReference', () => {
     expect(extents.max).toMatchObject({ x: 7, y: 9, z: 0 })
   })
 
+  it('skips invisible entities inside block definitions when drawing through cache', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'INV_BLK')
+    const visibleLine = new AcDbLine(
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 }
+    )
+    const invisibleLine = new AcDbLine(
+      { x: 0, y: 5, z: 0 },
+      { x: 10, y: 5, z: 0 }
+    )
+    invisibleLine.visibility = false
+    block.appendEntity(visibleLine)
+    block.appendEntity(invisibleLine)
+
+    const visibleDrawn = { id: 'visible-line' }
+    jest.spyOn(visibleLine, 'worldDraw').mockReturnValue(visibleDrawn as never)
+    const invisibleSpy = jest.spyOn(invisibleLine, 'worldDraw')
+
+    AcDbRenderingCache.instance.clear()
+    const renderer = {
+      group: (items: unknown[]) => ({ items })
+    }
+
+    const drawn = AcDbRenderingCache.instance.draw(
+      renderer as never,
+      block,
+      0,
+      [],
+      false
+    )
+
+    expect(invisibleSpy).not.toHaveBeenCalled()
+    expect(drawn).toEqual({ items: [visibleDrawn] })
+  })
+
   it('draws through cache for existing block and empty group for missing block', () => {
     const db = createDb()
     createNamedBlock(db, 'TEST_BLOCK')

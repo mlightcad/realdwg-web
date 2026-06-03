@@ -187,6 +187,9 @@ export class AcDbRenderingCache {
       } else {
         const entities = blockTableRecord.newIterator()
         for (const entity of entities) {
+          if (!entity.visibility) {
+            continue
+          }
           // If the color of this entity is 'byBlock', then store the original color of this entity color
           // and set the color of this entity to block's color. After renderering this entity, restore
           // its original color
@@ -236,6 +239,9 @@ export class AcDbRenderingCache {
     results: AcGiEntity[],
     renderer: AcGiRenderer
   ) {
+    if (!entity.visibility) {
+      return
+    }
     const object = entity.worldDraw(renderer)
     if (object) {
       this.attachEntityInfo(object, entity)

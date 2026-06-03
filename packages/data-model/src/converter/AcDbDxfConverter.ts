@@ -433,7 +433,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       let dbBlock = db.tables.blockTable.getAt(block.name)
       if (!dbBlock) {
         dbBlock = new AcDbBlockTableRecord()
-        dbBlock.objectId = block.handle
+        if (block.handle != null) {
+          dbBlock.objectId = String(block.handle)
+        }
         // dbBlock.ownerId = block.ownerHandle
         dbBlock.name = name
         dbBlock.origin.copy(block.position)
