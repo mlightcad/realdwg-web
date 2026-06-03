@@ -1,3 +1,6 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
@@ -280,5 +283,35 @@ describe('DXF read and parse regressions', () => {
     expect(targetDb.cmlscale).toBe(20)
     expect(targetDb.cmleaderstyle).toBe('ANNOTATION')
     expect(targetDb.textstyle).toBe('Standard')
+  })
+
+  it('loads block INSERT fixtures with invisible geometry in block definition', async () => {
+    const fixturesDir = join(
+      __dirname,
+      '../../../../cad-viewer/packages/cad-viewer-example/e2e/fixtures'
+    )
+    for (const fileName of [
+      'invisible-lwpolylines-in-block.dxf',
+      'visible-lwpolylines-in-block.dxf'
+    ]) {
+      const db = await readDxf(
+        readFileSync(join(fixturesDir, fileName), 'utf8')
+      )
+      const modelSpace = [...db.tables.blockTable.modelSpace.newIterator()]
+      expect(modelSpace).toHaveLength(1)
+      expect(modelSpace[0]).toBeInstanceOf(AcDbBlockReference)
+
+      const blockName =
+        fileName === 'invisible-lwpolylines-in-block.dxf'
+          ? 'INV_POLY_BLK'
+          : 'VIS_POLY_BLK'
+      const block = db.tables.blockTable.getAt(blockName)
+      expect(block).toBeTruthy()
+      const blockEntities = [...block!.newIterator()]
+      expect(blockEntities).toHaveLength(1)
+      expect(blockEntities[0].visibility).toBe(
+        fileName === 'visible-lwpolylines-in-block.dxf'
+      )
+    }
   })
 })

@@ -46,6 +46,49 @@ describe('AcDbEntityConverter', () => {
     expect(result?.layer).toBe('L1')
     expect(result?.objectId).toBe('10')
     expect(result?.ownerId).toBe('20')
+    // DXF group code 60: isVisible true means value 1 (invisible).
+    expect(result?.visibility).toBe(false)
+  })
+
+  it('maps DXF group code 60 (isVisible) to AcDbEntity.visibility for LWPOLYLINE', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const invisible = converter.convert({
+      type: 'LWPOLYLINE',
+      subclassMarker: 'AcDbPolyline',
+      numberOfVertices: 2,
+      flag: 0,
+      elevation: 0,
+      thickness: 0,
+      extrusionDirection: { x: 0, y: 0, z: 1 },
+      vertices: [
+        { id: 0, x: 0, y: 0, bulge: 0 },
+        { id: 1, x: 10, y: 0, bulge: 0 }
+      ],
+      layer: '0',
+      handle: 'A1',
+      isVisible: true
+    } as any)
+    expect(invisible).toBeInstanceOf(AcDbPolyline)
+    expect(invisible?.visibility).toBe(false)
+
+    const visible = converter.convert({
+      type: 'LWPOLYLINE',
+      subclassMarker: 'AcDbPolyline',
+      numberOfVertices: 2,
+      flag: 0,
+      elevation: 0,
+      thickness: 0,
+      extrusionDirection: { x: 0, y: 0, z: 1 },
+      vertices: [
+        { id: 0, x: 0, y: 0, bulge: 0 },
+        { id: 1, x: 10, y: 0, bulge: 0 }
+      ],
+      layer: '0',
+      handle: 'A2',
+      isVisible: false
+    } as any)
+    expect(visible?.visibility).toBe(true)
   })
 
   it('applies LWPOLYLINE constantWidth to vertex widths when vertex widths are absent', () => {
