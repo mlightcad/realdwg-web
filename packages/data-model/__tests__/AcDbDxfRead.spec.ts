@@ -286,10 +286,7 @@ describe('DXF read and parse regressions', () => {
   })
 
   it('loads block INSERT fixtures with invisible geometry in block definition', async () => {
-    const fixturesDir = join(
-      __dirname,
-      '../../../../cad-viewer/packages/cad-viewer-example/e2e/fixtures'
-    )
+    const fixturesDir = join(__dirname, 'fixtures')
     for (const fileName of [
       'invisible-lwpolylines-in-block.dxf',
       'visible-lwpolylines-in-block.dxf'
