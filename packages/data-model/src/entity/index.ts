@@ -85,6 +85,7 @@ export {
   AcDbRasterImageImageDisplayOpt
 } from './AcDbRasterImage'
 export { AcDbRay } from './AcDbRay'
+export { AcDbShape } from './AcDbShape'
 export { AcDbViewport } from './AcDbViewport'
 export { AcDbWipeout } from './AcDbWipeout'
 export { AcDbXline } from './AcDbXline'

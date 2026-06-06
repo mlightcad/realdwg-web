@@ -34,6 +34,7 @@ import {
   PointEntity,
   PolylineEntity,
   RayEntity,
+  ShapeEntity,
   SolidEntity,
   SplineEntity,
   TableEntity,
@@ -114,6 +115,7 @@ import {
   AcDbRasterImageClipBoundaryType,
   AcDbRay,
   AcDbRotatedDimension,
+  AcDbShape,
   AcDbSpline,
   AcDbTable,
   AcDbTableCell,
@@ -252,6 +254,8 @@ export class AcDbEntityConverter {
       return this.convertTable(entity as TableEntity)
     } else if (entity.type == 'TEXT') {
       return this.convertText(entity as TextEntity)
+    } else if (entity.type == 'SHAPE') {
+      return this.convertShape(entity as ShapeEntity)
     } else if (entity.type == 'SOLID') {
       return this.convertSolid(entity as SolidEntity)
     } else if (entity.type == 'VIEWPORT') {
@@ -452,6 +456,19 @@ export class AcDbEntityConverter {
   private convertPoint(point: PointEntity) {
     const dbEntity = new AcDbPoint()
     dbEntity.position = point.position
+    return dbEntity
+  }
+
+  private convertShape(shape: ShapeEntity) {
+    const dbEntity = new AcDbShape()
+    dbEntity.position.copy(shape.insertionPoint)
+    dbEntity.size = shape.size
+    dbEntity.name = shape.shapeName
+    dbEntity.rotation = AcGeMathUtil.degToRad(shape.rotation || 0)
+    dbEntity.widthFactor = shape.xScale ?? 1
+    dbEntity.oblique = AcGeMathUtil.degToRad(shape.obliqueAngle || 0)
+    dbEntity.thickness = shape.thickness ?? 0
+    dbEntity.normal.copy(shape.extrusionDirection ?? { x: 0, y: 0, z: 1 })
     return dbEntity
   }
 

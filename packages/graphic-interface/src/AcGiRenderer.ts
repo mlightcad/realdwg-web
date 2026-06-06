@@ -11,6 +11,7 @@ import { AcGiImageStyle } from './AcGiImageStyle'
 import { AcGiPointStyle } from './AcGiPointStyle'
 import { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
 import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle'
+import { AcGiShapeData } from './AcGiShapeData'
 
 /**
  * Font mappings.
@@ -91,6 +92,16 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
    * @returns Return an object which can be added to scene
    */
   mtext(mtext: AcGiMTextData, style: AcGiTextStyle, delay?: boolean): T
+
+  /**
+   * Draw one SHX shape glyph.
+   *
+   * @param shape Shape placement and glyph identity
+   * @param style Text style that references the SHX shape font
+   * @param delay When true, the renderer may defer heavy work and return a placeholder
+   * @returns Rendered entity for the scene graph
+   */
+  shape(shape: AcGiShapeData, style: AcGiTextStyle, delay?: boolean): T
 
   /**
    * Draw image
