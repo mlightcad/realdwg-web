@@ -15,6 +15,7 @@ export type {
 export { AcGiLineWeight } from './AcGiLineWeight'
 export type { AcGiPointStyle } from './AcGiPointStyle'
 export type { AcGiFontMapping, AcGiRenderer } from './AcGiRenderer'
+export type { AcGiShapeData } from './AcGiShapeData'
 export type { AcGiStyleType } from './AcGiStyleType'
 export type { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
 export {

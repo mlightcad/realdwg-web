@@ -10,7 +10,8 @@ import {
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
   AcDbPolyline,
-  AcDbRotatedDimension
+  AcDbRotatedDimension,
+  AcDbShape
 } from '../src/entity'
 
 describe('AcDbEntityConverter', () => {
@@ -312,5 +313,36 @@ describe('AcDbEntityConverter', () => {
     expect(mleader.leaders[0].leaderLines[0].leaderLineIndex).toBe(9)
     expect(mleader.leaders[0].leaderLines[0].breakPointIndexes).toEqual([0])
     expect(mleader.leaders[0].leaderLines[0].breaks[0].index).toBe(0)
+  })
+
+  it('converts dxf-json SHAPE entity', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'SHAPE',
+      subclassMarker: 'AcDbShape',
+      layer: '0',
+      handle: '19AAD3',
+      insertionPoint: { x: 100, y: 200, z: 0 },
+      size: 2.5,
+      shapeName: 'ARROW',
+      rotation: 45,
+      xScale: 1.5,
+      obliqueAngle: 10,
+      thickness: 0.5,
+      extrusionDirection: { x: 0, y: 0, z: 1 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbShape)
+    const shape = result as AcDbShape
+    expect(shape.type).toBe('Shape')
+    expect(shape.name).toBe('ARROW')
+    expect(shape.position).toMatchObject({ x: 100, y: 200, z: 0 })
+    expect(shape.size).toBe(2.5)
+    expect(shape.rotation).toBeCloseTo((45 * Math.PI) / 180)
+    expect(shape.widthFactor).toBe(1.5)
+    expect(shape.oblique).toBeCloseTo((10 * Math.PI) / 180)
+    expect(shape.thickness).toBe(0.5)
+    expect(shape.normal).toMatchObject({ x: 0, y: 0, z: 1 })
   })
 })

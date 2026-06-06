@@ -1,4 +1,4 @@
-import DxfParser, { ParsedDxf } from '@mlightcad/dxf-json'
+import { DxfParser, ParsedDxf } from '@mlightcad/dxf-json'
 
 // Please don't modify the following two lines to import from '../database' and
 // import from '../misc' so that treeshaking can include classes really needed.
