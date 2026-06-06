@@ -33,7 +33,8 @@ const createDefaultView = (): AcGiView => ({
   defaultLightingType: AcGiDefaultLightingType.ONE_DISTANT_LIGHT,
   brightness: 0,
   contrast: 0,
-  ambientColor: undefined
+  ambientColor: undefined,
+  aspectRatio: undefined
 })
 
 /**
@@ -291,5 +292,17 @@ export abstract class AcDbAbstractViewTableRecord extends AcDbSymbolTableRecord 
   }
   set ambientColor(value: number | undefined) {
     this._gsView.ambientColor = value
+  }
+
+  /**
+   * Gets or sets the view aspect ratio (view width / view height).
+   *
+   * Stored in the VPORT table as DXF group 41 for model-space saved views.
+   */
+  get aspectRatio() {
+    return this._gsView.aspectRatio
+  }
+  set aspectRatio(value: number | undefined) {
+    this._gsView.aspectRatio = value
   }
 }

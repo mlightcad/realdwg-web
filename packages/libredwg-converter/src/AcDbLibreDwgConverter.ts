@@ -357,6 +357,14 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (item.viewHeight) {
         record.gsView.viewHeight = item.viewHeight
       }
+      const aspectRatio = (item as { aspectRatio?: number }).aspectRatio
+      if (
+        aspectRatio != null &&
+        Number.isFinite(aspectRatio) &&
+        aspectRatio > 0
+      ) {
+        record.gsView.aspectRatio = aspectRatio
+      }
       if (item.viewTwistAngle) {
         record.gsView.viewTwistAngle = item.viewTwistAngle
       }
