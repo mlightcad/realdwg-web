@@ -9,9 +9,9 @@ import {
 import { AcGiEntity } from './AcGiEntity'
 import { AcGiImageStyle } from './AcGiImageStyle'
 import { AcGiPointStyle } from './AcGiPointStyle'
+import { AcGiShapeData } from './AcGiShapeData'
 import { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
 import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle'
-import { AcGiShapeData } from './AcGiShapeData'
 
 /**
  * Font mappings.
