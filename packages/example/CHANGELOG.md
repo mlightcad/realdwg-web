@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.2.2
+
+### Patch Changes
+
+- feat(data-model): add SHAPE entity support and honor DXF visibility in blocks
+- Updated dependencies
+  - @mlightcad/data-model@1.8.2
+  - @mlightcad/libredwg-converter@3.6.2
+
 ## 0.2.1
 
 ### Patch Changes

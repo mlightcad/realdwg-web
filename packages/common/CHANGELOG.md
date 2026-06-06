@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.5.2
+
+### Patch Changes
+
+- feat(data-model): add SHAPE entity support and honor DXF visibility in blocks
+
 ## 1.5.1
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.3.2
+
+### Patch Changes
+
+- feat(data-model): add SHAPE entity support and honor DXF visibility in blocks
+- Updated dependencies
+  - @mlightcad/common@1.5.2
+
 ## 3.3.1
 
 ### Patch Changes
