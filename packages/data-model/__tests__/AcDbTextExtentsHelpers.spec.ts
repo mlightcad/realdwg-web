@@ -1,4 +1,8 @@
-import { AcGeBox3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeBox3d,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
 import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
 import {

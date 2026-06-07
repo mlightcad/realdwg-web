@@ -6,6 +6,7 @@ export { AcDbRenderingCache } from './AcDbRenderingCache'
 export { AcDbCodePage, dwgCodePageToEncoding } from './AcDbCodePage'
 export {
   ACAD_APPID,
+  ACTIVE_VPORT_NAME,
   ByBlock,
   ByLayer,
   DEFAULT_GRADIENT_HATCH_NAME,

@@ -1,6 +1,7 @@
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base'
+import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
 import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
 
 /**
@@ -14,13 +15,24 @@ import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
  * @example
  * ```typescript
  * const viewportRecord = new AcDbViewportTableRecord();
- * viewportRecord.name = '*Active';
+ * viewportRecord.name = ACTIVE_VPORT_NAME;
  * viewportRecord.circleSides = 100;
  * viewportRecord.lowerLeftCorner = new AcGePoint2d(0, 0);
  * viewportRecord.upperRightCorner = new AcGePoint2d(1, 1);
  * ```
  */
 export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
+  /**
+   * Returns true if the specified name is the active viewport table record.
+   *
+   * AutoCAD stores the current model-space viewport configuration as `*Active`.
+   * DXF/DWG sources may emit different casing (`*ACTIVE`, `*active`, etc.), but
+   * the names compare case-insensitively.
+   */
+  static isActiveVportName(name: string) {
+    return name.toLowerCase() === ACTIVE_VPORT_NAME.toLowerCase()
+  }
+
   /** Number of sides used for circle tessellation */
   private _circleSides: number
   /** Lower left corner of the viewport window */

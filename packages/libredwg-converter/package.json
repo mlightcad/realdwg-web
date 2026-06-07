@@ -45,7 +45,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "^0.7.1"
+    "@mlightcad/libredwg-web": "^0.7.2"
   },
   "devDependencies": {
     "vite": "^5.2.10"
