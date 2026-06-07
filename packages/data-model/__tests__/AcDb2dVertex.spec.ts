@@ -45,6 +45,18 @@ describe('AcDb2dVertex', () => {
     expect(extents.max).toMatchObject({ x: 6, y: 7, z: 8 })
   })
 
+  it('updates geometricExtents when position changes', () => {
+    const vertex = new AcDb2dVertex()
+    vertex.position = { x: 1, y: 2, z: 3 }
+
+    expect(vertex.geometricExtents.min).toMatchObject({ x: 1, y: 2, z: 3 })
+
+    vertex.position = { x: 9, y: -4, z: 6 }
+
+    expect(vertex.geometricExtents.min).toMatchObject({ x: 9, y: -4, z: 6 })
+    expect(vertex.geometricExtents.max).toMatchObject({ x: 9, y: -4, z: 6 })
+  })
+
   it('returns one grip point and one osnap point at vertex position', () => {
     const vertex = new AcDb2dVertex()
     vertex.position = { x: 9, y: 10, z: 11 }

@@ -79,6 +79,23 @@ describe('AcDbPolyFaceMesh', () => {
     expect(grips[1]).toMatchObject({ x: 6, y: -5, z: 0 })
   })
 
+  it('updates geometricExtents when a vertex position changes', () => {
+    const mesh = new AcDbPolyFaceMesh(
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 0, z: 0 },
+        { x: 4, y: 3, z: 0 }
+      ],
+      [[1, 2, 3]]
+    )
+
+    expect(mesh.geometricExtents.max).toMatchObject({ x: 4, y: 3, z: 0 })
+
+    mesh.getVertexAt(1).position.set(10, 6, 2)
+
+    expect(mesh.geometricExtents.max).toMatchObject({ x: 10, y: 6, z: 2 })
+  })
+
   it('returns endpoint osnap points only for EndPoint mode', () => {
     const mesh = new AcDbPolyFaceMesh(
       [

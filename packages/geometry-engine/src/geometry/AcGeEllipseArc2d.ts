@@ -462,12 +462,7 @@ export class AcGeEllipseArc2d extends AcGeCurve2d {
 
   private _findSnapAngles(
     _localP: { x: number; y: number },
-    errorAt: (
-      qx: number,
-      qy: number,
-      cos: number,
-      sin: number
-    ) => number,
+    errorAt: (qx: number, qy: number, cos: number, sin: number) => number,
     samples = 144
   ): number[] {
     const a = this.majorAxisRadius

@@ -93,6 +93,31 @@ describe('AcDbEllipse', () => {
     expect(ellipse.normal.y).toBeCloseTo(1)
   })
 
+  it('returns geometricExtents and updates when center or radii change', () => {
+    createWorkingDb()
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(0, 0, 0),
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      5,
+      2,
+      0,
+      Math.PI / 2
+    )
+
+    expect(ellipse.geometricExtents.min.x).toBeCloseTo(0, 5)
+    expect(ellipse.geometricExtents.max.x).toBeCloseTo(5, 5)
+    expect(ellipse.geometricExtents.max.y).toBeCloseTo(2, 5)
+
+    ellipse.center = new AcGePoint3d(10, 20, 0)
+    ellipse.majorAxisRadius = 4
+    ellipse.minorAxisRadius = 1
+
+    expect(ellipse.geometricExtents.min).toMatchObject({ x: 10, y: 20, z: 0 })
+    expect(ellipse.geometricExtents.max.x).toBeCloseTo(14, 5)
+    expect(ellipse.geometricExtents.max.y).toBeCloseTo(21, 5)
+  })
+
   it('computes osnap points for supported modes', () => {
     createWorkingDb()
     const openEllipse = new AcDbEllipse(

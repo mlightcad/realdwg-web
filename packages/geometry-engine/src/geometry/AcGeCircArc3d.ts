@@ -439,9 +439,7 @@ export class AcGeCircArc3d extends AcGeCurve3d {
       const angle = this.getAngle(candidate.clone())
       const t = AcGeMathUtil.normalizeAngle(angle - this.startAngle)
       if (t >= 0 && t <= this.deltaAngle) {
-        result.push(
-          new AcGePoint3d(candidate.x, candidate.y, candidate.z || 0)
-        )
+        result.push(new AcGePoint3d(candidate.x, candidate.y, candidate.z || 0))
       }
     }
 

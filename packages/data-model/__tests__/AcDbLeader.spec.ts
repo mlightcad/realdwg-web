@@ -109,6 +109,18 @@ describe('AcDbLeader', () => {
     expect(splineExtents.isEmpty()).toBe(false)
   })
 
+  it('updates geometricExtents when a vertex is moved', () => {
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(4, 0, 0))
+
+    expect(leader.geometricExtents.max.x).toBeCloseTo(4)
+
+    leader.setVertexAt(1, new AcGePoint3d(4, 8, 0))
+
+    expect(leader.geometricExtents.max.y).toBeCloseTo(8)
+  })
+
   it('draws polyline/spline branches in subWorldDraw', () => {
     const rendererA = createRenderer()
     const leaderA = new AcDbLeader()

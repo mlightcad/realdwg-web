@@ -107,6 +107,20 @@ describe('AcDb3dPolyline', () => {
     expect(unsupportedPoints).toHaveLength(0)
   })
 
+  it('updates geometricExtents when vertices are transformed', () => {
+    const polyline = new AcDb3dPolyline(AcDbPoly3dType.SimplePoly, [
+      { x: 0, y: 0, z: 0 },
+      { x: 2, y: 0, z: 0 }
+    ])
+
+    expect(polyline.geometricExtents.max).toMatchObject({ x: 2, y: 0, z: 0 })
+
+    polyline.transformBy(new AcGeMatrix3d().makeTranslation(5, 3, 1))
+
+    expect(polyline.geometricExtents.min).toMatchObject({ x: 5, y: 3, z: 1 })
+    expect(polyline.geometricExtents.max).toMatchObject({ x: 7, y: 3, z: 1 })
+  })
+
   it('transforms vertices and returns itself for chaining', () => {
     const polyline = new AcDb3dPolyline(AcDbPoly3dType.SimplePoly, [
       { x: 0, y: 0, z: 0 },

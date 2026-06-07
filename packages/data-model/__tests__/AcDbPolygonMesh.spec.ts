@@ -79,6 +79,21 @@ describe('AcDbPolygonMesh', () => {
     expect(empty.geometricExtents.max).toMatchObject({ x: 0, y: 0, z: 0 })
   })
 
+  it('updates geometricExtents when a vertex position changes', () => {
+    const mesh = new AcDbPolygonMesh(2, 2, [
+      { x: 0, y: 0, z: 0 },
+      { x: 5, y: 0, z: 0 },
+      { x: 0, y: 3, z: 0 },
+      { x: 5, y: 3, z: 0 }
+    ])
+
+    expect(mesh.geometricExtents.max).toMatchObject({ x: 5, y: 3, z: 0 })
+
+    mesh.getVertexAt(1).position.set(10, 8, 4)
+
+    expect(mesh.geometricExtents.max).toMatchObject({ x: 10, y: 8, z: 4 })
+  })
+
   it('returns grip points and endpoint osnap points only', () => {
     const mesh = new AcDbPolygonMesh(1, 3, [
       { x: 0, y: 0, z: 0 },

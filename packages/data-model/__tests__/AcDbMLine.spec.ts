@@ -714,4 +714,28 @@ describe('AcDbMLine', () => {
 
     expect(renderer.lines).toHaveBeenCalledTimes(3)
   })
+
+  it('returns geometricExtents and updates when segment positions change', () => {
+    const db = createDb()
+    const style = new AcDbMlineStyle()
+    style.styleName = 'EXTENTS_STYLE'
+    style.elements = [
+      { offset: 0.5, color: createAciColor(3), lineType: 'BYLAYER' },
+      { offset: -0.5, color: createAciColor(5), lineType: 'BYLAYER' }
+    ]
+    db.objects.mlineStyle.setAt(style.styleName, style)
+
+    const mline = createBasicMline(style)
+    const before = mline.geometricExtents
+    expect(before.isEmpty()).toBe(false)
+    expect(before.max.x).toBeCloseTo(20)
+
+    const updatedSegments = mline.segments
+    updatedSegments[1].position = { x: 40, y: 10, z: 0 }
+    mline.segments = updatedSegments
+
+    const after = mline.geometricExtents
+    expect(after.max.x).toBeCloseTo(40)
+    expect(after.max.y).toBeGreaterThan(before.max.y)
+  })
 })

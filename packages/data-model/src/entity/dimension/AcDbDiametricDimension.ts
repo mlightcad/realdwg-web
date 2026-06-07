@@ -1,5 +1,4 @@
 import {
-  AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
@@ -221,8 +220,15 @@ export class AcDbDiametricDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    // TODO: Finish it
-    return new AcGeBox3d()
+    const points = [this.chordPoint, this.farChordPoint]
+    if (this.leaderLength > 0) {
+      const direction = this.farChordPoint.clone().sub(this.chordPoint)
+      if (direction.lengthSq() > 0) {
+        direction.normalize().multiplyScalar(this.leaderLength)
+        points.push(this.farChordPoint.clone().add(direction))
+      }
+    }
+    return this.getGeometricExtentsFromDimBlockOrPoints(points)
   }
 
   /**

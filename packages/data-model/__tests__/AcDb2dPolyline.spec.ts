@@ -83,6 +83,24 @@ describe('AcDb2dPolyline', () => {
     expect(ext.max).toMatchObject({ x: 3, y: 2, z: 7 })
   })
 
+  it('updates geometricExtents when elevation changes', () => {
+    const polyline = new AcDb2dPolyline(
+      AcDbPoly2dType.SimplePoly,
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 4, y: 3, z: 0 }
+      ],
+      1
+    )
+
+    expect(polyline.geometricExtents.min.z).toBe(1)
+
+    polyline.elevation = 9
+
+    expect(polyline.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 9 })
+    expect(polyline.geometricExtents.max).toMatchObject({ x: 4, y: 3, z: 9 })
+  })
+
   it('returns grip points and osnap points for supported modes', () => {
     const polyline = new AcDb2dPolyline(AcDbPoly2dType.SimplePoly, [
       { x: 0, y: 0, z: 0 },

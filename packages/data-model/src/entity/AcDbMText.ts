@@ -17,6 +17,12 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbCountMTextLines,
+  acdbEstimateMTextHeight,
+  acdbEstimatePlainTextWidth,
+  acdbExpandBoxByOrientedTextRect
+} from './AcDbTextExtentsHelpers'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.
@@ -347,8 +353,27 @@ export class AcDbMText extends AcDbEntity {
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
-    // TODO: Implement it correctly
-    return new AcGeBox3d()
+    const box = new AcGeBox3d()
+    const width =
+      this.width > 0
+        ? this.width
+        : acdbEstimatePlainTextWidth(this.contents, this.height)
+    const lineCount = acdbCountMTextLines(this.contents)
+    const height = acdbEstimateMTextHeight(
+      lineCount,
+      this.height,
+      this.lineSpacingFactor
+    )
+
+    return acdbExpandBoxByOrientedTextRect(
+      box,
+      this._location,
+      width,
+      height,
+      this.attachmentPoint,
+      this.rotation,
+      this.direction
+    )
   }
 
   /**

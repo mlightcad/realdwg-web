@@ -60,6 +60,22 @@ describe('AcDbShape', () => {
     expect(shape.styleName).toBe('STANDARD')
   })
 
+  it('returns geometricExtents and updates when position or size change', () => {
+    createWorkingDb()
+    const shape = new AcDbShape()
+    shape.position = { x: 10, y: 20, z: 0 }
+    shape.size = 4
+
+    expect(shape.geometricExtents.min).toMatchObject({ x: 8, y: 18, z: 0 })
+    expect(shape.geometricExtents.max).toMatchObject({ x: 12, y: 22, z: 0 })
+
+    shape.position = { x: 0, y: 0, z: 0 }
+    shape.size = 10
+
+    expect(shape.geometricExtents.min).toMatchObject({ x: -5, y: -5, z: 0 })
+    expect(shape.geometricExtents.max).toMatchObject({ x: 5, y: 5, z: 0 })
+  })
+
   it('returns insertion point for grips and osnap', () => {
     createWorkingDb()
     const shape = new AcDbShape()

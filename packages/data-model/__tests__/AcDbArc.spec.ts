@@ -62,6 +62,24 @@ describe('AcDbArc', () => {
     expect(typeof arc.closed).toBe('boolean')
   })
 
+  it('returns geometricExtents and updates when center or radius change', () => {
+    createWorkingDb()
+    const arc = new AcDbArc(new AcGePoint3d(0, 0, 0), 3, 0, Math.PI / 2)
+
+    expect(arc.geometricExtents.min.x).toBeCloseTo(0, 5)
+    expect(arc.geometricExtents.min.y).toBeCloseTo(0, 5)
+    expect(arc.geometricExtents.max.x).toBeCloseTo(3, 5)
+    expect(arc.geometricExtents.max.y).toBeCloseTo(3, 5)
+
+    arc.center = new AcGePoint3d(10, 10, 0)
+    arc.radius = 2
+
+    expect(arc.geometricExtents.min.x).toBeCloseTo(10, 5)
+    expect(arc.geometricExtents.min.y).toBeCloseTo(10, 5)
+    expect(arc.geometricExtents.max.x).toBeCloseTo(12, 5)
+    expect(arc.geometricExtents.max.y).toBeCloseTo(12, 5)
+  })
+
   it('exposes runtime properties and accessors', () => {
     createWorkingDb()
     const arc = new AcDbArc(new AcGePoint3d(0, 0, 0), 3, 0, Math.PI / 2)

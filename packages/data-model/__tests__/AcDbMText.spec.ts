@@ -69,6 +69,36 @@ describe('AcDbMText', () => {
     expect(mtext.geometricExtents).toBeInstanceOf(AcGeBox3d)
   })
 
+  it('returns geometricExtents and recomputes when location changes', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.contents = 'X'
+    mtext.height = 2
+    mtext.location = { x: 0, y: 0, z: 0 }
+
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(-2)
+    expect(mtext.geometricExtents.max.x).toBeCloseTo(2)
+
+    mtext.location = { x: 10, y: 10, z: 0 }
+
+    expect(mtext.geometricExtents.min.x).toBeCloseTo(10)
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(8)
+    expect(mtext.geometricExtents.max.x).toBeCloseTo(12)
+    expect(mtext.geometricExtents.max.y).toBeCloseTo(10)
+  })
+
+  it('includes multi-line height from line spacing factor in geometricExtents', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.contents = 'A\nB'
+    mtext.height = 2
+    mtext.lineSpacingFactor = 1
+    mtext.location = { x: 0, y: 0, z: 0 }
+
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(-4)
+    expect(mtext.geometricExtents.max.y).toBeCloseTo(0)
+  })
+
   it('returns insertion osnap point only for insertion mode', () => {
     createWorkingDb()
     const mtext = new AcDbMText()

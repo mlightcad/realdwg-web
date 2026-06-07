@@ -488,12 +488,7 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
   }
 
   private _findSnapParameterAngles(
-    errorAt: (
-      qx: number,
-      qy: number,
-      cos: number,
-      sin: number
-    ) => number,
+    errorAt: (qx: number, qy: number, cos: number, sin: number) => number,
     samples = 144
   ): number[] {
     const a = this.majorAxisRadius

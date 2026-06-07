@@ -353,6 +353,18 @@ describe('AcDbHatch', () => {
     expect(hatch.elevation).toBe(6)
   })
 
+  it('updates geometricExtents when elevation changes', () => {
+    const hatch = new AcDbHatch()
+    hatch.add(createRectLoop(0, 0, 10, 5))
+
+    expect(hatch.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 0 })
+
+    hatch.elevation = 12
+
+    expect(hatch.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 12 })
+    expect(hatch.geometricExtents.max).toMatchObject({ x: 10, y: 5, z: 12 })
+  })
+
   it('computes osnap points on hatch boundary loops', () => {
     const hatch = new AcDbHatch()
     hatch.add(createRectLoop(0, 0, 10, 5))
