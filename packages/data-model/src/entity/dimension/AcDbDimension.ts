@@ -488,6 +488,36 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Builds geometric extents from a dimension block when present, otherwise from
+   * the supplied WCS definition points and user-placed text position.
+   */
+  protected getGeometricExtentsFromDimBlockOrPoints(
+    points: AcGePoint3dLike[]
+  ): AcGeBox3d {
+    const blockExtents = this.getDimBlockGeometricExtents()
+    if (!blockExtents.isEmpty()) {
+      return blockExtents
+    }
+
+    const box = new AcGeBox3d()
+    for (const point of points) {
+      box.expandByPoint(point)
+    }
+    if (this.hasExplicitTextPosition()) {
+      box.expandByPoint(this.textPosition)
+    }
+    return box
+  }
+
+  /**
+   * Returns true when dimension text has been placed away from the default origin.
+   */
+  private hasExplicitTextPosition(): boolean {
+    const { x, y, z } = this.textPosition
+    return x !== 0 || y !== 0 || z !== 0
+  }
+
+  /**
    * Looks up the anonymous block referenced by `dimBlockId`.
    */
   protected getDimBlockTableRecord() {

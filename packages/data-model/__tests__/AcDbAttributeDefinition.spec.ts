@@ -1,6 +1,11 @@
+import { AcGePoint3d } from '@mlightcad/geometry-engine'
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase } from '../src/database'
-import { AcDbAttributeDefinition, AcDbMText } from '../src/entity'
+import {
+  AcDbAttributeDefinition,
+  AcDbMText,
+  AcDbTextVerticalMode
+} from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const setWorkingDb = () => {
@@ -128,5 +133,22 @@ describe('AcDbAttributeDefinition', () => {
 
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbAttributeDefinition())
+  })
+
+  it('returns geometricExtents and recomputes when position changes', () => {
+    setWorkingDb()
+    const attDef = new AcDbAttributeDefinition()
+    attDef.textString = 'TAG'
+    attDef.height = 2
+    attDef.verticalMode = AcDbTextVerticalMode.BASELINE
+    attDef.position = new AcGePoint3d(2, 3, 4)
+
+    expect(attDef.geometricExtents.min).toMatchObject({ x: 2, y: 3, z: 4 })
+    expect(attDef.geometricExtents.max.x).toBeCloseTo(8)
+
+    attDef.position = new AcGePoint3d(11, 12, 13)
+
+    expect(attDef.geometricExtents.min).toMatchObject({ x: 11, y: 12, z: 13 })
+    expect(attDef.geometricExtents.max.x).toBeCloseTo(17)
   })
 })

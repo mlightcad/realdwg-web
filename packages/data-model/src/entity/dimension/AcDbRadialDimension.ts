@@ -1,5 +1,4 @@
 import {
-  AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
@@ -323,8 +322,15 @@ export class AcDbRadialDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    // TODO: Finish it
-    return new AcGeBox3d()
+    const points = [this.center, this.chordPoint]
+    if (this.leaderLength > 0) {
+      const direction = this.chordPoint.clone().sub(this.center)
+      if (direction.lengthSq() > 0) {
+        direction.normalize().multiplyScalar(this.leaderLength)
+        points.push(this.chordPoint.clone().add(direction))
+      }
+    }
+    return this.getGeometricExtentsFromDimBlockOrPoints(points)
   }
 
   /**

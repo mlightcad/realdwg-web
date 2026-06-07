@@ -37,6 +37,18 @@ describe('AcDb3dVertex', () => {
     expect(extents.max).toMatchObject({ x: 1, y: 2, z: 3 })
   })
 
+  it('updates geometricExtents when position changes', () => {
+    const vertex = new AcDb3dVertex()
+    vertex.position = { x: 0, y: 0, z: 0 }
+
+    expect(vertex.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 0 })
+
+    vertex.position = { x: 5, y: -2, z: 7 }
+
+    expect(vertex.geometricExtents.min).toMatchObject({ x: 5, y: -2, z: 7 })
+    expect(vertex.geometricExtents.max).toMatchObject({ x: 5, y: -2, z: 7 })
+  })
+
   it('gets and sets vertexType', () => {
     const vertex = new AcDb3dVertex()
 

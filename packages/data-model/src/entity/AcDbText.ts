@@ -18,6 +18,10 @@ import { AcDbDxfFiler } from '../base'
 import { AcDbOsnapMode } from '../misc'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbEstimatePlainTextWidth,
+  acdbExpandBoxByOrientedTextRect
+} from './AcDbTextExtentsHelpers'
 
 /**
  * Defines the horizontal alignment mode for text entities.
@@ -487,8 +491,22 @@ export class AcDbText extends AcDbEntity {
    * ```
    */
   get geometricExtents(): AcGeBox3d {
-    // TODO: Implement it correctly
-    return new AcGeBox3d()
+    const box = new AcGeBox3d()
+    const { anchor, attachmentPoint } = this.resolveTextAnchor()
+
+    const width = acdbEstimatePlainTextWidth(
+      this.textString,
+      this.height,
+      this.widthFactor
+    )
+    return acdbExpandBoxByOrientedTextRect(
+      box,
+      anchor,
+      width,
+      this.height,
+      attachmentPoint,
+      this.rotation
+    )
   }
 
   /**
@@ -739,30 +757,7 @@ export class AcDbText extends AcDbEntity {
     // or MIDDLE/TOP/BOTTOM modes. Pick the right reference + the matching
     // attachment point so the renderer can compute the offset itself
     // from the real bbox of the laid-out glyphs.
-    let attachmentPoint = this.resolveAttachmentPoint()
-    let position: AcGePoint3d
-    if (attachmentPoint === AcGiMTextAttachmentPoint.BaselineLeft) {
-      // Default LEFT + BASELINE: `position` (group 10) is the anchor.
-      position = this._position
-    } else {
-      // Non-default alignment: anchor is in `alignmentPoint` (group 11).
-      // If group 11 was not propagated by the converter (still zero) or
-      // is the same as `position`, fall back to LEFT/BASELINE so the
-      // entity renders at a sensible spot instead of jumping to the
-      // world origin (0, 0).
-      const ap = this._alignmentPoint
-      const apIsUnset =
-        (ap.x === 0 && ap.y === 0 && ap.z === 0) ||
-        (ap.x === this._position.x &&
-          ap.y === this._position.y &&
-          ap.z === this._position.z)
-      if (apIsUnset) {
-        attachmentPoint = AcGiMTextAttachmentPoint.BaselineLeft
-        position = this._position
-      } else {
-        position = ap
-      }
-    }
+    const { anchor: position, attachmentPoint } = this.resolveTextAnchor()
     const mtextData: AcGiMTextData = {
       text: this.textString,
       height: this.height,
@@ -777,6 +772,39 @@ export class AcDbText extends AcDbEntity {
       attachmentPoint
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
+  }
+
+  /**
+   * Resolves the anchor point and attachment used for rendering and extents.
+   *
+   * For default LEFT + BASELINE, `position` (group 10) is the anchor.
+   * For other alignments, `alignmentPoint` (group 11) is used when set.
+   * When group 11 is missing, falls back to LEFT/BASELINE at `position`.
+   */
+  private resolveTextAnchor(): {
+    anchor: AcGePoint3d
+    attachmentPoint: AcGiMTextAttachmentPoint
+  } {
+    const attachmentPoint = this.resolveAttachmentPoint()
+
+    if (attachmentPoint === AcGiMTextAttachmentPoint.BaselineLeft) {
+      return { anchor: this._position, attachmentPoint }
+    }
+
+    const ap = this._alignmentPoint
+    const apIsUnset =
+      (ap.x === 0 && ap.y === 0 && ap.z === 0) ||
+      (ap.x === this._position.x &&
+        ap.y === this._position.y &&
+        ap.z === this._position.z)
+    if (apIsUnset) {
+      return {
+        anchor: this._position,
+        attachmentPoint: AcGiMTextAttachmentPoint.BaselineLeft
+      }
+    }
+
+    return { anchor: ap, attachmentPoint }
   }
 
   /**

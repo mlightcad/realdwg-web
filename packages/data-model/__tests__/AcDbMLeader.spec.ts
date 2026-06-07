@@ -339,3 +339,24 @@ describe('AcDbMLeader arrowhead rendering', () => {
     expect(perpendicularPoints[0]).toMatchObject({ x: 2, y: 0, z: 0 })
   })
 })
+
+describe('AcDbMLeader geometricExtents', () => {
+  it('returns geometricExtents and updates when leader vertices change', () => {
+    const db = createWorkingDb()
+    const mleader = createSimpleLeader(db)
+
+    const before = mleader.geometricExtents
+    expect(before.isEmpty()).toBe(false)
+    expect(before.min.x).toBeCloseTo(0)
+    expect(before.max.x).toBeCloseTo(5)
+
+    mleader.addLeaderLine(0, [
+      new AcGePoint3d(5, 0, 0),
+      new AcGePoint3d(5, 12, 0)
+    ])
+
+    const after = mleader.geometricExtents
+    expect(after.max.y).toBeCloseTo(12)
+    expect(after.max.y).toBeGreaterThan(before.max.y)
+  })
+})

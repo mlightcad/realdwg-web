@@ -2,6 +2,7 @@ import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
+  AcGePoint3d,
   AcGeQuaternion,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
@@ -388,8 +389,47 @@ export class AcDbTable extends AcDbBlockReference {
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
-    // TODO: Implement it
-    return new AcGeBox3d()
+    let blockTableRecord
+    try {
+      blockTableRecord = this.blockTableRecord
+    } catch {
+      blockTableRecord = undefined
+    }
+
+    if (blockTableRecord && blockTableRecord.newIterator().count > 0) {
+      const box = new AcGeBox3d()
+      for (const entity of blockTableRecord.newIterator()) {
+        box.union(entity.geometricExtents)
+      }
+      box.applyMatrix4(this.blockTransform)
+      return box
+    }
+
+    const totalWidth = this._columnWidth.reduce((sum, value) => sum + value, 0)
+    const totalHeight = this._rowHeight.reduce((sum, value) => sum + value, 0)
+    const box = new AcGeBox3d()
+
+    if (totalWidth === 0 && totalHeight === 0) {
+      box.expandByPoint(this.position)
+      return box
+    }
+
+    const quaternion = new AcGeQuaternion()
+    quaternion.setFromAxisAngle(AcGeVector3d.Z_AXIS, this.rotation)
+    _tmpMatrix.compose(this.position, quaternion, this.scaleFactors)
+
+    const localCorners = [
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(totalWidth, 0, 0),
+      new AcGePoint3d(totalWidth, -totalHeight, 0),
+      new AcGePoint3d(0, -totalHeight, 0)
+    ]
+
+    for (const corner of localCorners) {
+      box.expandByPoint(corner.applyMatrix4(_tmpMatrix))
+    }
+
+    return box
   }
 
   /**

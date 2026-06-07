@@ -49,6 +49,19 @@ describe('AcDbCircle', () => {
     expect(circle.radius).toBe(7)
   })
 
+  it('updates geometricExtents when center and radius change', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(1, 2, 3), 4)
+
+    expect(circle.geometricExtents.min).toMatchObject({ x: -3, y: -2, z: 3 })
+    expect(circle.geometricExtents.max).toMatchObject({ x: 5, y: 6, z: 3 })
+
+    circle.center = new AcGePoint3d(10, 20, 0)
+    circle.radius = 2
+
+    expect(circle.geometricExtents.min).toMatchObject({ x: 8, y: 18, z: 0 })
+    expect(circle.geometricExtents.max).toMatchObject({ x: 12, y: 22, z: 0 })
+  })
+
   it('returns grip points with center point', () => {
     const circle = new AcDbCircle(new AcGePoint3d(2, 3, 4), 5)
 

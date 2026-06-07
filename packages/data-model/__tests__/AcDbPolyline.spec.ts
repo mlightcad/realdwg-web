@@ -87,6 +87,20 @@ describe('AcDbPolyline', () => {
     expect(extents.max).toMatchObject({ x: 3, y: 2, z: 6 })
   })
 
+  it('updates geometricExtents when vertices and elevation change', () => {
+    const polyline = new AcDbPolyline()
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0))
+    polyline.addVertexAt(1, new AcGePoint2d(2, 0))
+
+    expect(polyline.geometricExtents.max).toMatchObject({ x: 2, y: 0, z: 0 })
+
+    polyline.addVertexAt(2, new AcGePoint2d(2, 5))
+    polyline.elevation = 3
+
+    expect(polyline.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 3 })
+    expect(polyline.geometricExtents.max).toMatchObject({ x: 2, y: 5, z: 3 })
+  })
+
   it('returns grip points and osnap points for supported modes', () => {
     const polyline = new AcDbPolyline()
     polyline.elevation = 2

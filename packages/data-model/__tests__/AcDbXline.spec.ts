@@ -52,6 +52,19 @@ describe('AcDbXline', () => {
     expect(extents.max).toMatchObject({ x: 21, y: 12, z: 8 })
   })
 
+  it('updates geometricExtents when basePoint changes', () => {
+    const xline = new AcDbXline()
+    xline.basePoint = new AcGePoint3d(0, 0, 0)
+    xline.unitDir = new AcGeVector3d(1, 0, 0)
+
+    expect(xline.geometricExtents.min).toMatchObject({ x: -10, y: 0, z: 0 })
+
+    xline.basePoint = new AcGePoint3d(20, 0, 0)
+
+    expect(xline.geometricExtents.min).toMatchObject({ x: 10, y: 0, z: 0 })
+    expect(xline.geometricExtents.max).toMatchObject({ x: 30, y: 0, z: 0 })
+  })
+
   it('exposes editable geometry properties via runtime accessors', () => {
     const xline = new AcDbXline()
     const geometryGroup = xline.properties.groups.find(

@@ -1,5 +1,4 @@
 import {
-  AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
@@ -130,8 +129,10 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    // TODO: Finish it
-    return new AcGeBox3d()
+    return this.getGeometricExtentsFromDimBlockOrPoints([
+      this.definingPoint,
+      this.leaderEndPoint
+    ])
   }
 
   /**

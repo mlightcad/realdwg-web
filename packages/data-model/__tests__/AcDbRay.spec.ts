@@ -51,6 +51,20 @@ describe('AcDbRay', () => {
     expect(extents.max).toMatchObject({ x: 1, y: 22, z: 13 })
   })
 
+  it('updates geometricExtents when basePoint changes', () => {
+    const ray = new AcDbRay()
+    ray.basePoint = new AcGePoint3d(0, 0, 0)
+    ray.unitDir = new AcGeVector3d(1, 0, 0)
+
+    expect(ray.geometricExtents.min).toMatchObject({ x: -10, y: 0, z: 0 })
+    expect(ray.geometricExtents.max).toMatchObject({ x: 10, y: 0, z: 0 })
+
+    ray.basePoint = new AcGePoint3d(5, 0, 0)
+
+    expect(ray.geometricExtents.min).toMatchObject({ x: -5, y: 0, z: 0 })
+    expect(ray.geometricExtents.max).toMatchObject({ x: 15, y: 0, z: 0 })
+  })
+
   it('exposes editable geometry properties and updates ray coordinates via accessors', () => {
     const ray = new AcDbRay()
     const geometryGroup = ray.properties.groups.find(

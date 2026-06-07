@@ -72,6 +72,21 @@ describe('AcDbViewport', () => {
     expect(giViewport.viewCenter).toMatchObject({ x: 1, y: 1, z: 0 })
   })
 
+  it('returns geometricExtents and recomputes when centerPoint changes', () => {
+    const viewport = new AcDbViewport()
+    viewport.width = 10
+    viewport.height = 6
+    viewport.centerPoint = new AcGePoint3d(10, 20, 0)
+
+    expect(viewport.geometricExtents.min).toMatchObject({ x: 5, y: 17, z: 0 })
+    expect(viewport.geometricExtents.max).toMatchObject({ x: 15, y: 23, z: 0 })
+
+    viewport.centerPoint = new AcGePoint3d(0, 0, 0)
+
+    expect(viewport.geometricExtents.min).toMatchObject({ x: -5, y: -3, z: 0 })
+    expect(viewport.geometricExtents.max).toMatchObject({ x: 5, y: 3, z: 0 })
+  })
+
   it('transforms center/size/viewHeight and returns self', () => {
     const viewport = new AcDbViewport()
     viewport.centerPoint = new AcGePoint3d(1, 2, 0)

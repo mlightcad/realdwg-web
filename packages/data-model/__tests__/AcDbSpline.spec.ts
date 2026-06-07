@@ -43,6 +43,24 @@ describe('AcDbSpline', () => {
     expect(spline.closed).toBe(true)
   })
 
+  it('updates geometricExtents when control points are rebuilt', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+    const beforeMaxX = spline.geometricExtents.max.x
+
+    spline.rebuild(
+      [
+        { x: 0, y: 0, z: 0 },
+        { x: 10, y: 0, z: 0 },
+        { x: 10, y: 5, z: 0 },
+        { x: 0, y: 5, z: 0 }
+      ],
+      knots
+    )
+
+    expect(spline.geometricExtents.max.x).toBeGreaterThan(beforeMaxX)
+    expect(spline.geometricExtents.max.y).toBeGreaterThan(2)
+  })
+
   it('supports fit-point constructor and rebuild overloads', () => {
     const fitPoints = [
       { x: 0, y: 0, z: 0 },

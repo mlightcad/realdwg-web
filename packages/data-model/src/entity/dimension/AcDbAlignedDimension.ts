@@ -324,7 +324,11 @@ export class AcDbAlignedDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    return this.getDimBlockGeometricExtents()
+    return this.getGeometricExtentsFromDimBlockOrPoints([
+      this.xLine1Point,
+      this.xLine2Point,
+      this.dimLinePoint
+    ])
   }
 
   /**

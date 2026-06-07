@@ -50,6 +50,19 @@ describe('AcDbPoint', () => {
     expect(extents.max).toMatchObject({ x: 7.5, y: -2, z: 9 })
   })
 
+  it('updates geometricExtents when position changes', () => {
+    createWorkingDb()
+    const point = new AcDbPoint()
+    point.position = { x: 1, y: 2, z: 3 }
+
+    expect(point.geometricExtents.min).toMatchObject({ x: 1, y: 2, z: 3 })
+
+    point.position = { x: 10, y: -5, z: 8 }
+
+    expect(point.geometricExtents.min).toMatchObject({ x: 10, y: -5, z: 8 })
+    expect(point.geometricExtents.max).toMatchObject({ x: 10, y: -5, z: 8 })
+  })
+
   it('adds osnap point only in Node mode', () => {
     createWorkingDb()
     const point = new AcDbPoint()

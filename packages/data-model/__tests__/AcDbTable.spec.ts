@@ -120,6 +120,21 @@ describe('AcDbTable', () => {
     expect(table.geometricExtents).toBeInstanceOf(AcGeBox3d)
   })
 
+  it('returns geometricExtents and recomputes when position changes', () => {
+    const table = new AcDbTable('TABLE_EXTENTS', 2, 2)
+    table.position = new AcGePoint3d(0, 0, 0)
+    table.setUniformRowHeight(10)
+    table.setUniformColumnWidth(20)
+
+    expect(table.geometricExtents.min).toMatchObject({ x: 0, y: -20, z: 0 })
+    expect(table.geometricExtents.max).toMatchObject({ x: 40, y: 0, z: 0 })
+
+    table.position = new AcGePoint3d(5, 5, 0)
+
+    expect(table.geometricExtents.min).toMatchObject({ x: 5, y: -15, z: 0 })
+    expect(table.geometricExtents.max).toMatchObject({ x: 45, y: 5, z: 0 })
+  })
+
   it('exposes editable runtime properties for table and geometry groups', () => {
     const table = new AcDbTable('TABLE_PROPERTIES', 2, 2)
     table.position = new AcGePoint3d(1, 2, 3)

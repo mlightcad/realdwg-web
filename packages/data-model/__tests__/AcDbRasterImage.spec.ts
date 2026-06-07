@@ -123,6 +123,22 @@ describe('AcDbRasterImage', () => {
     expect(extents.max.y).toBe(60)
   })
 
+  it('updates geometricExtents when position and size change', () => {
+    const { image } = setupInDatabase()
+    image.position = new AcGePoint3d(0, 0, 0)
+    image.width = 10
+    image.height = 10
+
+    expect(image.geometricExtents.max).toMatchObject({ x: 10, y: 10 })
+
+    image.position = new AcGePoint3d(5, 5, 0)
+    image.width = 20
+    image.height = 30
+
+    expect(image.geometricExtents.min).toMatchObject({ x: 5, y: 5 })
+    expect(image.geometricExtents.max).toMatchObject({ x: 25, y: 35 })
+  })
+
   it('returns grip points with rectangular boundary and clipping boundary', () => {
     const { image } = setupInDatabase()
     image.position = new AcGePoint3d(1, 2, 0)

@@ -1,5 +1,4 @@
 import {
-  AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePointLike
@@ -175,8 +174,12 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
    * @inheritdoc
    */
   get geometricExtents() {
-    // TODO: Finish it
-    return new AcGeBox3d()
+    return this.getGeometricExtentsFromDimBlockOrPoints([
+      this.xLine1Point,
+      this.xLine2Point,
+      this.centerPoint,
+      this.arcPoint
+    ])
   }
 
   /**

@@ -147,6 +147,20 @@ describe('AcDbFace', () => {
     expect(perpendicularPoints).toHaveLength(1)
   })
 
+  it('updates geometricExtents when a vertex changes', () => {
+    const face = new AcDbFace()
+    face.setVertexAt(0, { x: 0, y: 0, z: 0 })
+    face.setVertexAt(1, { x: 2, y: 0, z: 0 })
+    face.setVertexAt(2, { x: 2, y: 2, z: 0 })
+    face.setVertexAt(3, { x: 0, y: 2, z: 0 })
+
+    expect(face.geometricExtents.max).toMatchObject({ x: 2, y: 2, z: 0 })
+
+    face.setVertexAt(2, { x: 8, y: 6, z: 4 })
+
+    expect(face.geometricExtents.max).toMatchObject({ x: 8, y: 6, z: 4 })
+  })
+
   it('transforms vertices and draws visible edges via line segments', () => {
     const face = new AcDbFace()
     face.setVertexAt(0, { x: 0, y: 0, z: 0 })

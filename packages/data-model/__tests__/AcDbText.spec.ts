@@ -69,6 +69,37 @@ describe('AcDbText', () => {
     expect(text.geometricExtents).toBeInstanceOf(AcGeBox3d)
   })
 
+  it('returns geometricExtents and recomputes when position changes', () => {
+    const text = new AcDbText()
+    text.textString = 'AB'
+    text.height = 2
+    text.verticalMode = AcDbTextVerticalMode.BASELINE
+    text.position = new AcGePoint3d(10, 20, 0)
+
+    expect(text.geometricExtents.min).toMatchObject({ x: 10, y: 20, z: 0 })
+    expect(text.geometricExtents.max.x).toBeCloseTo(14)
+    expect(text.geometricExtents.max.y).toBeCloseTo(22)
+
+    text.position = new AcGePoint3d(0, 0, 0)
+
+    expect(text.geometricExtents.min).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(text.geometricExtents.max.x).toBeCloseTo(4)
+    expect(text.geometricExtents.max.y).toBeCloseTo(2)
+  })
+
+  it('uses baseline-left extents when center alignment lacks alignment point', () => {
+    const text = new AcDbText()
+    text.textString = 'AB'
+    text.height = 2
+    text.horizontalMode = AcDbTextHorizontalMode.CENTER
+    text.verticalMode = AcDbTextVerticalMode.BASELINE
+    text.position = new AcGePoint3d(10, 20, 0)
+
+    expect(text.geometricExtents.min).toMatchObject({ x: 10, y: 20, z: 0 })
+    expect(text.geometricExtents.max.x).toBeCloseTo(14)
+    expect(text.geometricExtents.max.y).toBeCloseTo(22)
+  })
+
   it('returns insertion osnap point only for insertion mode', () => {
     const text = new AcDbText()
     text.position = new AcGePoint3d(3, 4, 5)

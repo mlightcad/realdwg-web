@@ -188,8 +188,24 @@ export class AcDbViewport extends AcDbEntity {
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
-    // TODO: Implement it correctly
-    return new AcGeBox3d()
+    const halfWidth = this._width / 2
+    const halfHeight = this._height / 2
+    const box = new AcGeBox3d()
+    box.expandByPoint(
+      new AcGePoint3d(
+        this._centerPoint.x - halfWidth,
+        this._centerPoint.y - halfHeight,
+        this._centerPoint.z
+      )
+    )
+    box.expandByPoint(
+      new AcGePoint3d(
+        this._centerPoint.x + halfWidth,
+        this._centerPoint.y + halfHeight,
+        this._centerPoint.z
+      )
+    )
+    return box
   }
 
   /**

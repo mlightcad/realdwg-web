@@ -124,6 +124,20 @@ describe('AcDbTrace', () => {
     expect(perpendicularPoints).toHaveLength(1)
   })
 
+  it('updates geometricExtents when a corner point changes', () => {
+    const trace = new AcDbTrace()
+    trace.setPointAt(0, { x: 0, y: 0, z: 0 })
+    trace.setPointAt(1, { x: 4, y: 0, z: 0 })
+    trace.setPointAt(2, { x: 4, y: 3, z: 0 })
+    trace.setPointAt(3, { x: 0, y: 3, z: 0 })
+
+    expect(trace.geometricExtents.max).toMatchObject({ x: 4, y: 3, z: 0 })
+
+    trace.setPointAt(1, { x: 10, y: 0, z: 0 })
+
+    expect(trace.geometricExtents.max).toMatchObject({ x: 10, y: 3, z: 0 })
+  })
+
   it('orders DXF solid corners as a perimeter loop when drawing', () => {
     const trace = new AcDbTrace()
     trace.setPointAt(0, { x: 0, y: 0, z: 0 })

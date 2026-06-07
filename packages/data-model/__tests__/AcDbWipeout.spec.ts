@@ -104,4 +104,21 @@ describe('AcDbWipeout', () => {
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbWipeout())
   })
+
+  it('returns geometricExtents and updates when position and size change', () => {
+    createWorkingDb()
+    const wipeout = new AcDbWipeout()
+    wipeout.position = new AcGePoint3d(0, 0, 0)
+    wipeout.width = 10
+    wipeout.height = 10
+
+    expect(wipeout.geometricExtents.max).toMatchObject({ x: 10, y: 10 })
+
+    wipeout.position = new AcGePoint3d(5, 5, 0)
+    wipeout.width = 20
+    wipeout.height = 30
+
+    expect(wipeout.geometricExtents.min).toMatchObject({ x: 5, y: 5 })
+    expect(wipeout.geometricExtents.max).toMatchObject({ x: 25, y: 35 })
+  })
 })
