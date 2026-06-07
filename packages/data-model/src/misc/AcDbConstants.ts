@@ -73,6 +73,14 @@ export const ByLayer = 'ByLayer'
 export const ByBlock = 'ByBlock'
 
 /**
+ * Name of the active viewport table record in AutoCAD.
+ *
+ * This reserved name identifies the current viewport configuration in the
+ * VPORT symbol table.
+ */
+export const ACTIVE_VPORT_NAME = '*Active'
+
+/**
  * Application ID for MLightCAD used in dictionaries and XData registration.
  */
 export const MLIGHTCAD_APPID = 'mlightcad'

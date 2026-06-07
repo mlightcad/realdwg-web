@@ -200,6 +200,7 @@ export type {
 } from './entity'
 export {
   ACAD_APPID,
+  ACTIVE_VPORT_NAME,
   AcDbAngleUnits,
   AcDbCodePage,
   AcDbDataGenerator,

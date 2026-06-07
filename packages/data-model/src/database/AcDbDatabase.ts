@@ -17,6 +17,7 @@ import {
 import { AcDbEntity } from '../entity'
 import {
   ACAD_APPID,
+  ACTIVE_VPORT_NAME,
   AcDbAngleUnits,
   AcDbDataGenerator,
   AcDbFormatter,
@@ -1763,9 +1764,9 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.viewportTable.has('*Active')) {
+    if (!this.tables.viewportTable.has(ACTIVE_VPORT_NAME)) {
       const viewport = new AcDbViewportTableRecord()
-      viewport.name = '*Active'
+      viewport.name = ACTIVE_VPORT_NAME
       this.tables.viewportTable.add(viewport)
     }
 

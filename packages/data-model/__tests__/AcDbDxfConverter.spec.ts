@@ -6,6 +6,7 @@ import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
+import { ACTIVE_VPORT_NAME } from '../src/misc/AcDbConstants'
 
 class TestDxfConverter extends AcDbDxfConverter {
   parsePublic(data: ArrayBuffer, timeout?: number) {
@@ -184,7 +185,7 @@ describe('AcDbDxfConverter', () => {
           VPORT: {
             entries: [
               {
-                name: '*ACTIVE',
+                name: ACTIVE_VPORT_NAME,
                 standardFlag: 0,
                 center: { x: 100, y: 200 },
                 lowerLeftCorner: { x: 0, y: 0 },
@@ -199,7 +200,7 @@ describe('AcDbDxfConverter', () => {
       db
     )
 
-    const active = db.tables.viewportTable.getAt('*ACTIVE')
+    const active = db.tables.viewportTable.getAt(ACTIVE_VPORT_NAME)
 
     expect(active?.viewHeight).toBe(50)
     expect(active?.aspectRatio).toBe(1.6)
