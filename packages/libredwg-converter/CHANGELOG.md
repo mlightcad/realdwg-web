@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.6.3
+
+### Patch Changes
+
+- feat: geometricExtents for text, dimensions, table, and viewport; VPORT aspect ratio; case-insensitive VPORT lookup
+- Updated dependencies
+  - @mlightcad/data-model@1.8.3
+
 ## 3.6.2
 
 ### Patch Changes

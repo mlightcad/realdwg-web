@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.4.3
+
+### Patch Changes
+
+- feat: geometricExtents for text, dimensions, table, and viewport; VPORT aspect ratio; case-insensitive VPORT lookup
+- Updated dependencies
+  - @mlightcad/common@1.5.3
+  - @mlightcad/geometry-engine@3.3.3
+
 ## 3.4.2
 
 ### Patch Changes

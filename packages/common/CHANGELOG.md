@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.5.3
+
+### Patch Changes
+
+- feat: geometricExtents for text, dimensions, table, and viewport; VPORT aspect ratio; case-insensitive VPORT lookup
+
 ## 1.5.2
 
 ### Patch Changes
