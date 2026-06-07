@@ -35,6 +35,10 @@ class TestDxfConverter extends AcDbDxfConverter {
       checkOwner
     )
   }
+
+  processViewportsPublic(model: any, db: AcDbDatabase) {
+    return (this as any).processViewports(model, db)
+  }
 }
 
 describe('AcDbDxfConverter', () => {
@@ -167,5 +171,38 @@ describe('AcDbDxfConverter', () => {
     expect(attributes).toHaveLength(1)
     expect(attributes[0].ownerId).toBe('I1')
     expect(attributes[0].textString).toBe('OPTICAL MODULE SUPPORT')
+  })
+
+  it('maps VPORT aspectRatio into gsView.aspectRatio', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    const converter = new TestDxfConverter({ useWorker: false })
+
+    converter.processViewportsPublic(
+      {
+        tables: {
+          VPORT: {
+            entries: [
+              {
+                name: '*ACTIVE',
+                standardFlag: 0,
+                center: { x: 100, y: 200 },
+                lowerLeftCorner: { x: 0, y: 0 },
+                upperRightCorner: { x: 1, y: 1 },
+                viewHeight: 50,
+                aspectRatio: 1.6
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    const active = db.tables.viewportTable.getAt('*ACTIVE')
+
+    expect(active?.viewHeight).toBe(50)
+    expect(active?.aspectRatio).toBe(1.6)
+    expect(active?.gsView.aspectRatio).toBe(1.6)
   })
 })

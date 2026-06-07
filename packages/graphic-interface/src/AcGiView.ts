@@ -51,4 +51,6 @@ export interface AcGiView {
   brightness: number
   contrast: number
   ambientColor?: number
+  /** View width divided by view height (VPORT DXF group 41). */
+  aspectRatio?: number
 }

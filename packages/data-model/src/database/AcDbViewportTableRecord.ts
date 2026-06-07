@@ -253,6 +253,13 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbViewportTableRecord')
     filer.writeString(2, this.name)
+    filer.writeDouble(40, this.gsView.viewHeight)
+    if (
+      this.gsView.aspectRatio != null &&
+      Number.isFinite(this.gsView.aspectRatio)
+    ) {
+      filer.writeDouble(41, this.gsView.aspectRatio)
+    }
     filer.writeDouble(45, this.gsView.viewHeight)
     filer.writePoint2d(10, this.lowerLeftCorner)
     filer.writePoint2d(11, this.upperRightCorner)

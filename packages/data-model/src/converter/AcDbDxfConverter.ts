@@ -696,6 +696,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
           if (item.viewHeight) {
             record.gsView.viewHeight = item.viewHeight
           }
+          if (
+            item.aspectRatio != null &&
+            Number.isFinite(item.aspectRatio) &&
+            item.aspectRatio > 0
+          ) {
+            record.gsView.aspectRatio = item.aspectRatio
+          }
           if (item.viewTwistAngle) {
             record.gsView.viewTwistAngle = item.viewTwistAngle
           }
