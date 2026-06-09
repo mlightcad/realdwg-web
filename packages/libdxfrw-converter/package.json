@@ -1,6 +1,7 @@
 {
   "name": "@mlightcad/libdxfrw-converter",
   "version": "3.6.3",
+  "license": "GPL-2.0",
   "type": "module",
   "repository": {
     "type": "git",

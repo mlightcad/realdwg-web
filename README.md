@@ -158,3 +158,15 @@ The key classes in this module are as follows.
 - AcGiRenderer: Interface used to render entities to drawble objects.
 - ...
 
+## Contributing
+
+Contributions are welcome! Please open issues or pull requests for bug fixes, new features, or suggestions. For bug reports, providing a link to the problematic drawing will help in reproducing and fixing the issue.
+
+## License
+
+This project is generally licensed under the [MIT License](LICENSE). However, this license does not apply to the following packages contained within this repository:
+
+- @mlightcad/libredwg-converter
+- @mlightcad/libdxfrw-converter
+
+Due to upstream license inheritance (copyleft), these specific packages are subject to their original restrictive licenses (e.g., GPL/LGPL). Please refer to the individual sub-folder licenses for details.
