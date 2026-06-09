@@ -295,6 +295,33 @@ describe('AcDbHatch', () => {
     ])
   })
 
+  it('does not apply entity pattern angle when explicit definition lines exist', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+    hatch.patternAngle = Math.PI / 4
+    hatch.definitionLines.push({
+      angle: Math.PI / 4,
+      base: { x: 8812.5093594135, y: 10309.08680448488 },
+      offset: { x: -1.4142135624, y: 1.4142135624 },
+      dashLengths: []
+    })
+    hatch.add(createRectLoop(0, 0, 1, 1))
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+
+    hatch.subWorldDraw(renderer as never)
+
+    expect(hatch.patternAngle).toBeCloseTo(Math.PI / 4)
+    expect(renderer.subEntityTraits.fillType).toMatchObject({
+      patternAngle: 0,
+      definitionLines: hatch.definitionLines
+    })
+  })
+
   it('supports add(), geometricExtents and properties accessors', () => {
     const hatch = new AcDbHatch()
     const emptyExtents = hatch.geometricExtents
