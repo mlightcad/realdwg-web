@@ -1,5 +1,6 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math'
 import { AcGeGeometryUtil, AcGeMathUtil } from '../util'
+import { acGeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
 import { AcGeLoop2d } from './AcGeLoop2d'
 import { AcGePolyline2d } from './AcGePolyline2d'
 import { AcGeShape2d } from './AcGeShape2d'
@@ -161,7 +162,7 @@ export class AcGeArea2d extends AcGeShape2d {
       // Sets the number of points used for curve segmentation to 128
       const points = loop.getPoints(128) as AcGePoint2d[]
 
-      const loopArea = this.polygonArea(points)
+      const loopArea = acGeSignedPolygonArea2d(points)
 
       if (i === 0) {
         // outter loop
@@ -173,23 +174,6 @@ export class AcGeArea2d extends AcGeShape2d {
     }
 
     return totalArea
-  }
-
-  /**
-   * Calculate signed area of a polygon using Shoelace formula
-   */
-  private polygonArea(points: AcGePoint2d[]): number {
-    const count = points.length
-    if (count < 3) return 0
-
-    let area = 0
-    for (let i = 0, j = count - 1; i < count; j = i++) {
-      const p1 = points[j]
-      const p2 = points[i]
-      area += p1.x * p2.y - p2.x * p1.y
-    }
-
-    return area * 0.5
   }
 
   /**

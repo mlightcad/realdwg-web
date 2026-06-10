@@ -1,10 +1,10 @@
 import {
   AcGeBox3d,
+  acGeClosedPolygonArea3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike
-} from '@mlightcad/geometry-engine'
+  AcGePointLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base'
@@ -172,6 +172,26 @@ export class AcDbFace extends AcDbEntity {
    */
   get geometricExtents(): AcGeBox3d {
     return new AcGeBox3d().setFromPoints(this._vertices)
+  }
+
+  /**
+   * The area of this planar face. Degenerate faces return `0`.
+   */
+  get area(): number {
+    const points = [
+      this.getVertexAt(0),
+      this.getVertexAt(1),
+      this.getVertexAt(2)
+    ]
+    const fourth = this.getVertexAt(3)
+    if (
+      fourth.x !== points[2].x ||
+      fourth.y !== points[2].y ||
+      fourth.z !== points[2].z
+    ) {
+      points.push(fourth)
+    }
+    return acGeClosedPolygonArea3d(points)
   }
 
   /**

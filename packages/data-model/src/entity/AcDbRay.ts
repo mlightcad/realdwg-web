@@ -139,6 +139,11 @@ export class AcDbRay extends AcDbCurve {
     return false
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return 0
+  }
+
   /**
    * Gets the geometric extents (bounding box) of this ray.
    *

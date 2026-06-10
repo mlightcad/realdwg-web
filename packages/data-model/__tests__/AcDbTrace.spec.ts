@@ -216,4 +216,13 @@ describe('AcDbTrace', () => {
     expect(out).toContain('12\n7\n22\n8\n32\n9\n')
     expect(out).toContain('13\n10\n23\n11\n33\n12\n')
   })
+
+  it('computes quadrilateral area', () => {
+    const trace = new AcDbTrace()
+    trace.setPointAt(0, new AcGePoint3d(0, 0, 0))
+    trace.setPointAt(1, new AcGePoint3d(10, 0, 0))
+    trace.setPointAt(2, new AcGePoint3d(0, 5, 0))
+    trace.setPointAt(3, new AcGePoint3d(10, 5, 0))
+    expect(trace.area).toBeCloseTo(50, 8)
+  })
 })

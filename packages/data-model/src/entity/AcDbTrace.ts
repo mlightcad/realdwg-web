@@ -127,6 +127,15 @@ export class AcDbTrace extends AcDbCurve {
     return true
   }
 
+  /** @inheritdoc */
+  override get area(): number {
+    const polyline = new AcGePolyline2d(
+      AcDbTrace.boundaryPointsFromVertices(this._vertices),
+      true
+    )
+    return polyline.area
+  }
+
   /**
    * Gets the thickness of this trace.
    *

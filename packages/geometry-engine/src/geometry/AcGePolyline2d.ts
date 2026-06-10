@@ -1,4 +1,5 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math'
+import { acGeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
 import { offsetAcGePolyline2d } from './AcGePolyline2dOffset'
@@ -112,6 +113,15 @@ export class AcGePolyline2d<
       }
     }
     return length
+  }
+
+  /**
+   * The area enclosed by this polyline. Open polylines return `0`.
+   */
+  get area(): number {
+    if (!this._closed || this._vertices.length < 3) return 0
+    const points = this.getPoints(128) as AcGePoint2d[]
+    return acGeClosedPolygonArea2d(points)
   }
 
   /**

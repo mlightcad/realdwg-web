@@ -463,4 +463,17 @@ describe('AcDbPolyline', () => {
     }
     expect(minY).toBeLessThan(-5)
   })
+
+  it('computes area for closed polyline and returns 0 when open', () => {
+    const polyline = new AcDbPolyline()
+    polyline.closed = true
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0))
+    polyline.addVertexAt(1, new AcGePoint2d(10, 0))
+    polyline.addVertexAt(2, new AcGePoint2d(10, 5))
+    polyline.addVertexAt(3, new AcGePoint2d(0, 5))
+    expect(polyline.area).toBeCloseTo(50, 8)
+
+    polyline.closed = false
+    expect(polyline.area).toBe(0)
+  })
 })

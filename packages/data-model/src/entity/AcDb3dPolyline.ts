@@ -102,6 +102,11 @@ export class AcDb3dPolyline extends AcDbCurve {
     return this._geo.closed
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return 0
+  }
+
   /**
    * Sets whether this polyline is closed.
    *

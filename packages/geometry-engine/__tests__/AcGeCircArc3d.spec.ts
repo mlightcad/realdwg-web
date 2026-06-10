@@ -4,7 +4,8 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGeVector3d,
-  ORIGIN_POINT_3D
+  ORIGIN_POINT_3D,
+  TAU
 } from '../src'
 
 describe('Test AcGeCircArc3d', () => {
@@ -113,5 +114,21 @@ describe('Test AcGeCircArc3d', () => {
 
     closestSpy.mockRestore()
     errSpy.mockRestore()
+  })
+
+  it('computes circle area and returns 0 for open arc', () => {
+    const circle = new AcGeCircArc3d({ x: 0, y: 0, z: 0 }, 5, 0, TAU, {
+      x: 0,
+      y: 0,
+      z: 1
+    })
+    expect(circle.area).toBeCloseTo(Math.PI * 25, 8)
+
+    const arc = new AcGeCircArc3d({ x: 0, y: 0, z: 0 }, 5, 0, Math.PI / 2, {
+      x: 0,
+      y: 0,
+      z: 1
+    })
+    expect(arc.area).toBe(0)
   })
 })

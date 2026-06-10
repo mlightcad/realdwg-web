@@ -99,6 +99,17 @@ describe('Test AcGeEllipseArc3d', () => {
     expect(fullEllipse.midPoint).toBeInstanceOf(Object)
     expect(fullEllipse.area).toBeCloseTo(Math.PI * 6, 8)
 
+    const openArc = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      3,
+      2,
+      0,
+      Math.PI / 2
+    )
+    expect(openArc.area).toBe(0)
+
     const skewAxis = new AcGeVector3d(1, 1, 0).normalize()
     const skew = new AcGeEllipseArc3d(
       ORIGIN_POINT_3D,

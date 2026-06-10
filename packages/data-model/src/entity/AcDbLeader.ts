@@ -484,6 +484,11 @@ export class AcDbLeader extends AcDbCurve {
     // TODO: Not sure whether the leader really support setting value of property 'closed'
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return 0
+  }
+
   /**
    * Transforms this leader by the specified matrix.
    */

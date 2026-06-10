@@ -696,7 +696,7 @@ describe('geometry-engine public API coverage boost', () => {
     expect(circ3.endPoint).toBeInstanceOf(AcGePoint3d)
     expect(circ3.midPoint).toBeInstanceOf(AcGePoint3d)
     expect(circ3.length).toBeGreaterThan(0)
-    expect(circ3.area).toBeGreaterThan(0)
+    expect(circ3.area).toBe(0)
     const nearest = circ3.nearestPoint({ x: 10, y: 0, z: 0 })
     expect(nearest).toMatchObject({
       x: expect.any(Number),
@@ -773,7 +773,7 @@ describe('geometry-engine public API coverage boost', () => {
     expect(ellipse3.midPoint).toBeInstanceOf(AcGePoint3d)
     expect(ellipse3.isCircular).toBe(false)
     expect(ellipse3.length).toBeGreaterThan(0)
-    expect(ellipse3.area).toBeGreaterThan(0)
+    expect(ellipse3.area).toBe(0)
     expect(ellipse3.calculateBoundingBox()).toBeInstanceOf(AcGeBox3d)
     expect(ellipse3.closed).toBe(false)
     expect(ellipse3.getPoints(8).length).toBe(9)

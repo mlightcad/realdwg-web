@@ -309,4 +309,9 @@ describe('AcDbArc', () => {
     const arc = new AcDbArc(new AcGePoint3d(0, 0, 0), 2, 0, Math.PI)
     expect(arc.getOffsetCurves(-3)).toEqual([])
   })
+
+  it('returns 0 area for open arc', () => {
+    const arc = new AcDbArc(new AcGePoint3d(), 5, 0, Math.PI / 2)
+    expect(arc.area).toBe(0)
+  })
 })

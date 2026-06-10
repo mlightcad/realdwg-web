@@ -44,6 +44,12 @@ export abstract class AcDbCurve extends AcDbEntity {
   abstract get closed(): boolean
 
   /**
+   * The area enclosed by this curve. Returns `0` when the curve does not form a
+   * closed region.
+   */
+  abstract get area(): number
+
+  /**
    * Creates offset curves at the given signed distance, similar to ObjectARX
    * `AcDbCurve::getOffsetCurves`.
    *

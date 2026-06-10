@@ -271,4 +271,9 @@ describe('AcDbLine', () => {
     )
     expect(line.getOffsetSideAtPoint(new AcGePoint3d(5, -3, 0))).toBe(-1)
   })
+
+  it('returns 0 area', () => {
+    const line = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(10, 0, 0))
+    expect(line.area).toBe(0)
+  })
 })

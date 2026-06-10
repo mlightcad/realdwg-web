@@ -167,6 +167,11 @@ export class AcDbLine extends AcDbCurve {
     return false
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return 0
+  }
+
   /**
    * Returns the full property definition for this line entity, including
    * general group and geometry group.

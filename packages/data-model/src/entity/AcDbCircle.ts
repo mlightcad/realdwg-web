@@ -188,6 +188,11 @@ export class AcDbCircle extends AcDbCurve {
     return this._geo.closed
   }
 
+  /** @inheritdoc */
+  override get area(): number {
+    return this._geo.area
+  }
+
   /**
    * Gets the object snap points for this circle.
    *
@@ -355,7 +360,7 @@ export class AcDbCircle extends AcDbCurve {
               type: 'float',
               editable: false,
               accessor: {
-                get: () => this._geo.area
+                get: () => this.area
               }
             }
           ]

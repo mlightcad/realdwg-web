@@ -317,6 +317,11 @@ export class AcDbArc extends AcDbCurve {
     return this._geo.closed
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return this._geo.area
+  }
+
   /**
    * Returns the full property definition for this arc entity, including
    * general group and geometry group.
@@ -455,7 +460,7 @@ export class AcDbArc extends AcDbCurve {
               type: 'float',
               editable: false,
               accessor: {
-                get: () => this._geo.area
+                get: () => this.area
               }
             }
           ]

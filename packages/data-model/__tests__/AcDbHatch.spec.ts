@@ -645,4 +645,11 @@ describe('AcDbHatch', () => {
   it('clone creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbHatch())
   })
+
+  it('computes area with holes', () => {
+    const hatch = new AcDbHatch()
+    hatch.add(createRectLoop(0, 0, 10, 10))
+    hatch.add(createRectLoop(2, 2, 6, 6))
+    expect(hatch.area).toBeCloseTo(64, 8)
+  })
 })

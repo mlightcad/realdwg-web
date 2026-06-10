@@ -297,12 +297,11 @@ export class AcGeCircArc3d extends AcGeCurve3d {
   }
 
   /**
-   * The area of this arc
+   * The area enclosed by this curve. Open arcs return `0`.
    */
-  get area() {
-    return this.closed
-      ? Math.PI * this.radius * this.radius
-      : Math.abs(this.deltaAngle * this.radius * this.radius)
+  get area(): number {
+    if (!this.closed) return 0
+    return Math.PI * this.radius * this.radius
   }
 
   /**
