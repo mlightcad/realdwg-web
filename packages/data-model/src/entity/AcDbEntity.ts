@@ -644,6 +644,8 @@ export abstract class AcDbEntity extends AcDbObject {
    * never overidde this method.
    *
    * It executes the following logic:
+   * - Skips drawing when the entity's layer is not drawable under the database
+   *   {@link AcDbDatabase.drawNoPlotLayers} policy
    * - Handles traits (color, linetype, lineweight, transparency, etc.)
    * - Calls subWorldDraw() to do the actual geometry output
    *
@@ -655,6 +657,10 @@ export abstract class AcDbEntity extends AcDbObject {
    * @returns The rendered entity, or undefined if drawing failed
    */
   worldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
+    if (!this.database.isLayerDrawable(this.layer)) {
+      return undefined
+    }
+
     const traits = renderer.subEntityTraits
     traits.color = this.resolvedColor
     traits.rgbColor = this.rgbColor

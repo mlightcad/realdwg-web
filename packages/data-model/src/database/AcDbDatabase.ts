@@ -246,6 +246,16 @@ export interface AcDbOpenDatabaseOptions {
    * number, boolean, or string types.
    */
   sysVars?: Record<string, number | boolean | string>
+
+  /**
+   * Whether entities on non-plottable ("no-plot") layers are drawn.
+   *
+   * - `true` (default): desktop AutoCAD editor semantics — no-plot layers remain
+   *   visible on screen (Defpoints, viewport frames on `*-NPLT`, etc.).
+   * - `false`: web/publish viewer semantics (e.g. BIM 360 / ACC) — entities on
+   *   no-plot layers are omitted from display.
+   */
+  drawNoPlotLayers?: boolean
 }
 
 /**
@@ -381,6 +391,11 @@ export class AcDbDatabase extends AcDbObject {
   private _maxHandle: number
   /** Lazily created formatter for lengths, angles, and coordinates */
   private _formatter?: AcDbFormatter
+  /**
+   * When false, entities on non-plottable layers are not drawn (viewer semantics).
+   * Set from {@link AcDbOpenDatabaseOptions.drawNoPlotLayers} when opening a database.
+   */
+  private _drawNoPlotLayers = true
 
   /**
    * Events that can be triggered by the database.
@@ -925,6 +940,31 @@ export class AcDbDatabase extends AcDbObject {
    * database.lwdisplay = true;
    * ```
    */
+  /**
+   * Whether entities on non-plottable layers should be drawn.
+   *
+   * Configured via {@link AcDbOpenDatabaseOptions.drawNoPlotLayers} when the
+   * database is opened. Defaults to `true`.
+   */
+  get drawNoPlotLayers() {
+    return this._drawNoPlotLayers
+  }
+
+  /**
+   * Returns whether entities on the given layer should be drawn under the
+   * current {@link drawNoPlotLayers} setting.
+   *
+   * Layer off/freeze visibility is handled separately by the viewer; this only
+   * reflects the no-plot policy.
+   */
+  isLayerDrawable(layerName: string): boolean {
+    if (this._drawNoPlotLayers) {
+      return true
+    }
+    const layer = this.tables.layerTable.getAt(layerName)
+    return layer == null || layer.isPlottable
+  }
+
   set lwdisplay(value: boolean) {
     this.updateSysVar(
       AcDbSystemVariables.LWDISPLAY,
@@ -1388,6 +1428,7 @@ export class AcDbDatabase extends AcDbObject {
       )
 
     this.clear()
+    this._drawNoPlotLayers = options?.drawNoPlotLayers ?? true
 
     await converter.read(
       data,

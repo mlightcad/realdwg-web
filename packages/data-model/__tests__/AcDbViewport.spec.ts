@@ -5,7 +5,11 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
-import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
+import {
+  AcDbBlockTableRecord,
+  AcDbDatabase,
+  AcDbLayerTableRecord
+} from '../src/database'
 import { AcDbViewport } from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -117,43 +121,120 @@ describe('AcDbViewport', () => {
     expect(viewport.viewHeight).toBe(7)
   })
 
-  it('draws rectangle in paper space for active viewport only', () => {
-    const db = createDb()
-
-    const paperSpace = new AcDbBlockTableRecord()
-    paperSpace.name = '*Paper_Space0'
-    db.tables.blockTable.add(paperSpace)
-
-    const viewport = new AcDbViewport()
-    viewport.number = 2
-    viewport.centerPoint = new AcGePoint3d(10, 20, 0)
-    viewport.width = 8
-    viewport.height = 6
-    paperSpace.appendEntity(viewport)
-
-    const renderer = {
+  describe('subWorldDraw', () => {
+    const createRenderer = () => ({
       lines: jest.fn((points: AcGePoint3d[]) => ({ points })),
       group: jest.fn((children: unknown[]) => ({ children }))
+    })
+
+    const appendPaperSpaceViewport = (
+      db: AcDbDatabase,
+      attrs?: Partial<{
+        number: number
+        layer: string
+        centerPoint: AcGePoint3d
+        width: number
+        height: number
+      }>
+    ) => {
+      const paperSpace = new AcDbBlockTableRecord()
+      paperSpace.name = '*Paper_Space0'
+      db.tables.blockTable.add(paperSpace)
+
+      const viewport = new AcDbViewport()
+      viewport.number = attrs?.number ?? 2
+      viewport.layer = attrs?.layer ?? '0'
+      viewport.centerPoint =
+        attrs?.centerPoint ?? new AcGePoint3d(10, 20, 0)
+      viewport.width = attrs?.width ?? 8
+      viewport.height = attrs?.height ?? 6
+      paperSpace.appendEntity(viewport)
+      return viewport
     }
 
-    const drawn = viewport.subWorldDraw(renderer as never)
-    expect(renderer.lines).toHaveBeenCalledTimes(4)
-    expect(renderer.group).toHaveBeenCalledTimes(1)
-    expect(drawn).toBeDefined()
+    it('draws rectangle in paper space for active viewport only', () => {
+      const db = createDb()
+      const paperSpace = new AcDbBlockTableRecord()
+      paperSpace.name = '*Paper_Space0'
+      db.tables.blockTable.add(paperSpace)
 
-    const firstEdge = renderer.lines.mock.calls[0][0] as AcGePoint3d[]
-    expect(firstEdge[0]).toMatchObject({ x: 6, y: 17, z: 0 })
-    expect(firstEdge[1]).toMatchObject({ x: 14, y: 17, z: 0 })
+      const viewport = new AcDbViewport()
+      viewport.number = 2
+      viewport.centerPoint = new AcGePoint3d(10, 20, 0)
+      viewport.width = 8
+      viewport.height = 6
+      paperSpace.appendEntity(viewport)
 
-    const inactive = new AcDbViewport()
-    inactive.number = 1
-    paperSpace.appendEntity(inactive)
-    expect(inactive.subWorldDraw(renderer as never)).toBeUndefined()
+      const renderer = createRenderer()
 
-    const inModelSpace = new AcDbViewport()
-    inModelSpace.number = 2
-    db.tables.blockTable.modelSpace.appendEntity(inModelSpace)
-    expect(inModelSpace.subWorldDraw(renderer as never)).toBeUndefined()
+      const drawn = viewport.subWorldDraw(renderer as never)
+      expect(renderer.lines).toHaveBeenCalledTimes(4)
+      expect(renderer.group).toHaveBeenCalledTimes(1)
+      expect(drawn).toBeDefined()
+
+      const firstEdge = renderer.lines.mock.calls[0][0] as AcGePoint3d[]
+      expect(firstEdge[0]).toMatchObject({ x: 6, y: 17, z: 0 })
+      expect(firstEdge[1]).toMatchObject({ x: 14, y: 17, z: 0 })
+
+      const inactive = new AcDbViewport()
+      inactive.number = 1
+      paperSpace.appendEntity(inactive)
+      expect(inactive.subWorldDraw(renderer as never)).toBeUndefined()
+
+      const inModelSpace = new AcDbViewport()
+      inModelSpace.number = 2
+      db.tables.blockTable.modelSpace.appendEntity(inModelSpace)
+      expect(inModelSpace.subWorldDraw(renderer as never)).toBeUndefined()
+    })
+
+    it('still draws border on a non-plottable layer when called directly', () => {
+      const db = createDb()
+      ;(db as unknown as { _drawNoPlotLayers: boolean })._drawNoPlotLayers =
+        false
+      db.tables.layerTable.add(
+        new AcDbLayerTableRecord({ name: 'NPLT', isPlottable: false })
+      )
+
+      const viewport = appendPaperSpaceViewport(db, { layer: 'NPLT' })
+      const renderer = createRenderer()
+
+      expect(viewport.subWorldDraw(renderer as never)).toBeDefined()
+      expect(renderer.lines).toHaveBeenCalledTimes(4)
+      expect(renderer.group).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  describe('worldDraw', () => {
+    it('delegates no-plot suppression to AcDbEntity.worldDraw', () => {
+      const db = createDb()
+      ;(db as unknown as { _drawNoPlotLayers: boolean })._drawNoPlotLayers =
+        false
+      db.tables.layerTable.add(
+        new AcDbLayerTableRecord({ name: 'NPLT', isPlottable: false })
+      )
+
+      const paperSpace = new AcDbBlockTableRecord()
+      paperSpace.name = '*Paper_Space0'
+      db.tables.blockTable.add(paperSpace)
+
+      const viewport = new AcDbViewport()
+      viewport.number = 2
+      viewport.layer = 'NPLT'
+      viewport.centerPoint = new AcGePoint3d(10, 20, 0)
+      viewport.width = 8
+      viewport.height = 6
+      paperSpace.appendEntity(viewport)
+
+      const subWorldDraw = jest.spyOn(viewport, 'subWorldDraw')
+      const renderer = {
+        subEntityTraits: {},
+        lines: jest.fn((points: AcGePoint3d[]) => ({ points })),
+        group: jest.fn((children: unknown[]) => ({ children }))
+      }
+
+      expect(viewport.worldDraw(renderer as never)).toBeUndefined()
+      expect(subWorldDraw).not.toHaveBeenCalled()
+    })
   })
 
   it('writes viewport DXF fields and returns self', () => {
