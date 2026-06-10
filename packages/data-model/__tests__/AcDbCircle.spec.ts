@@ -280,4 +280,9 @@ describe('AcDbCircle', () => {
     const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 5)
     expect((circle.getOffsetCurves(3)[0] as AcDbCircle).radius).toBeCloseTo(8)
   })
+
+  it('computes area as πr²', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 5)
+    expect(circle.area).toBeCloseTo(Math.PI * 25, 8)
+  })
 })

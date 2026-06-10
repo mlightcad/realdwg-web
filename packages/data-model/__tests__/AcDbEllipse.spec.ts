@@ -394,4 +394,20 @@ describe('AcDbEllipse', () => {
     expect(result.majorAxisRadius).toBeCloseTo(12)
     expect(result.minorAxisRadius).toBeCloseTo(7)
   })
+
+  it('computes area for full ellipse and returns 0 for open arc', () => {
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(),
+      new AcGeVector3d(0, 0, 1),
+      new AcGeVector3d(3, 0, 0),
+      3,
+      2,
+      0,
+      Math.PI * 2
+    )
+    expect(ellipse.area).toBeCloseTo(Math.PI * 6, 8)
+
+    ellipse.endAngle = Math.PI / 2
+    expect(ellipse.area).toBe(0)
+  })
 })

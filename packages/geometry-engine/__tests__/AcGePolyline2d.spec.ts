@@ -239,4 +239,27 @@ describe('Test AcGePolyline2d', () => {
     const [result] = polyline.offset(1)
     expect(result.numberOfVertices).toBeGreaterThanOrEqual(4)
   })
+
+  it('computes area for closed polyline and returns 0 when open', () => {
+    const open = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 5 }
+      ],
+      false
+    )
+    expect(open.area).toBe(0)
+
+    const closed = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 5 },
+        { x: 0, y: 5 }
+      ],
+      true
+    )
+    expect(closed.area).toBeCloseTo(50, 8)
+  })
 })

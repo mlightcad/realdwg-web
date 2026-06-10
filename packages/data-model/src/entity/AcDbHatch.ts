@@ -938,10 +938,17 @@ export class AcDbHatch extends AcDbEntity {
     return areas.length > 0 ? areas : [this._geo]
   }
 
-  private getCalculatedAreaValue() {
+  private getCalculatedAreaValue(): number {
     const areas = this.buildAreasFromLoops()
     if (areas.length === 0) return 0
     return areas.reduce((sum, area) => sum + area.area, 0)
+  }
+
+  /**
+   * The area enclosed by this hatch, including holes.
+   */
+  get area(): number {
+    return this.getCalculatedAreaValue()
   }
 
   /**
@@ -1086,7 +1093,7 @@ export class AcDbHatch extends AcDbEntity {
               type: 'float',
               editable: false,
               accessor: {
-                get: () => this.getCalculatedAreaValue()
+                get: () => this.area
               }
             }
           ]

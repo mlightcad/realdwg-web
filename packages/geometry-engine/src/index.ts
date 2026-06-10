@@ -100,5 +100,10 @@ export {
   transformWcsPointToOcs,
   offsetPointByDirectionInXY,
   offsetSmoothedSampledPath,
-  offsetVertexPath
+  offsetVertexPath,
+  acGeClosedPolygonArea2d,
+  acGeClosedPolygonArea3d,
+  acGePolygonArea2d,
+  acGePolygonArea3d,
+  acGeSignedPolygonArea2d
 } from './util'

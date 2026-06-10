@@ -229,4 +229,13 @@ describe('AcDbFace', () => {
   it('clone creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbFace())
   })
+
+  it('computes triangle area', () => {
+    const face = new AcDbFace()
+    face.setVertexAt(0, new AcGePoint3d(0, 0, 0))
+    face.setVertexAt(1, new AcGePoint3d(4, 0, 0))
+    face.setVertexAt(2, new AcGePoint3d(0, 3, 0))
+    face.setVertexAt(3, new AcGePoint3d(0, 3, 0))
+    expect(face.area).toBeCloseTo(6, 8)
+  })
 })

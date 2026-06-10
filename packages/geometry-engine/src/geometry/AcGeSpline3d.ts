@@ -8,6 +8,7 @@ import {
   AcGePoint3dLike,
   AcGePointLike
 } from '../math'
+import { acGeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
 
@@ -443,6 +444,15 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
   set closed(value: boolean) {
     this.setClosed(value)
+  }
+
+  /**
+   * The area enclosed by this spline. Open splines return `0`.
+   */
+  get area(): number {
+    if (!this._closed) return 0
+    const points = this.getPoints(128)
+    return acGeClosedPolygonArea3d(points)
   }
 
   /**

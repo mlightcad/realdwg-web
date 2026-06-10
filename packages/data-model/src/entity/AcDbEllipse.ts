@@ -319,6 +319,11 @@ export class AcDbEllipse extends AcDbCurve {
     return this._geo.closed
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return this._geo.area
+  }
+
   /**
    * Gets the grip points for this ellipse.
    *
@@ -541,7 +546,7 @@ export class AcDbEllipse extends AcDbCurve {
               type: 'float',
               editable: false,
               accessor: {
-                get: () => this._geo.area
+                get: () => this.area
               }
             }
           ]

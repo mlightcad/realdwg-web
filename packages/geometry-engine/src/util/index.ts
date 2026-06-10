@@ -64,3 +64,10 @@ export {
   offsetVertexPath
 } from './AcGeCurveOffsetUtil'
 export { offsetSmoothedSampledPath } from './AcGeSampledCurveOffsetUtil'
+export {
+  acGeClosedPolygonArea2d,
+  acGeClosedPolygonArea3d,
+  acGePolygonArea2d,
+  acGePolygonArea3d,
+  acGeSignedPolygonArea2d
+} from './AcGePolygonAreaUtil'

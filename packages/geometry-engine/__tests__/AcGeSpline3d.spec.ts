@@ -810,4 +810,32 @@ describe('AcGeSpline3d', () => {
       })
     })
   })
+
+  describe('area', () => {
+    it('computes area for closed spline and returns 0 when open', () => {
+      const closed = new AcGeSpline3d(
+        [
+          new AcGePoint3d(0, 0, 0),
+          new AcGePoint3d(10, 0, 0),
+          new AcGePoint3d(10, 10, 0),
+          new AcGePoint3d(0, 10, 0)
+        ],
+        'Uniform',
+        3,
+        true
+      )
+      expect(closed.area).toBeGreaterThan(0)
+
+      const open = new AcGeSpline3d(
+        [
+          new AcGePoint3d(0, 0, 0),
+          new AcGePoint3d(10, 0, 0),
+          new AcGePoint3d(10, 5, 0),
+          new AcGePoint3d(20, 5, 0)
+        ],
+        'Uniform'
+      )
+      expect(open.area).toBe(0)
+    })
+  })
 })

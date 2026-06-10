@@ -93,6 +93,11 @@ export class AcDbPolyFaceMesh extends AcDbCurve {
     return false
   }
 
+  /** @inheritdoc */
+  get area(): number {
+    return 0
+  }
+
   /**
    * Sets whether this mesh is closed.
    */
