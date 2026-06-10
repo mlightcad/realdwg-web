@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.8.4
+
+### Patch Changes
+
+- feat: added drawNoPlotLayers policy for controlling no-plot layer visibility, fixed hatch pattern angle handling when explicit lines are defined, updated project license, and migrated npm publishing to Trusted Publishing via OIDC
+- Updated dependencies
+  - @mlightcad/common@1.5.4
+  - @mlightcad/geometry-engine@3.3.4
+  - @mlightcad/graphic-interface@3.4.4
+
 ## 1.8.3
 
 ### Patch Changes

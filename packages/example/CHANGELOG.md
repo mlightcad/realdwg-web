@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.2.4
+
+### Patch Changes
+
+- feat: added drawNoPlotLayers policy for controlling no-plot layer visibility, fixed hatch pattern angle handling when explicit lines are defined, updated project license, and migrated npm publishing to Trusted Publishing via OIDC
+- Updated dependencies
+  - @mlightcad/data-model@1.8.4
+  - @mlightcad/libredwg-converter@3.6.4
+
 ## 0.2.3
 
 ### Patch Changes

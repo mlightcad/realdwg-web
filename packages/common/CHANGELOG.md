@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.5.4
+
+### Patch Changes
+
+- feat: added drawNoPlotLayers policy for controlling no-plot layer visibility, fixed hatch pattern angle handling when explicit lines are defined, updated project license, and migrated npm publishing to Trusted Publishing via OIDC
+
 ## 1.5.3
 
 ### Patch Changes
