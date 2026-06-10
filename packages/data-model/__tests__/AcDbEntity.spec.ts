@@ -107,6 +107,49 @@ describe('AcDbEntity.dxfTypeName', () => {
   })
 })
 
+describe('AcDbEntity.worldDraw layer policy', () => {
+  let db: AcDbDatabase
+
+  beforeEach(() => {
+    db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+  })
+
+  it('skips subWorldDraw when drawNoPlotLayers is false and layer is non-plottable', () => {
+    ;(db as unknown as { _drawNoPlotLayers: boolean })._drawNoPlotLayers = false
+    db.tables.layerTable.add(
+      new AcDbLayerTableRecord({ name: 'NPLT', isPlottable: false })
+    )
+
+    const entity = new DummyEntity()
+    entity.layer = 'NPLT'
+    db.tables.blockTable.modelSpace.appendEntity(entity)
+
+    const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
+    const renderer = { subEntityTraits: {} } as never
+
+    expect(entity.worldDraw(renderer)).toBeUndefined()
+    expect(subWorldDraw).not.toHaveBeenCalled()
+  })
+
+  it('calls subWorldDraw when drawNoPlotLayers is true on a non-plottable layer', () => {
+    db.tables.layerTable.add(
+      new AcDbLayerTableRecord({ name: 'NPLT', isPlottable: false })
+    )
+
+    const entity = new DummyEntity()
+    entity.layer = 'NPLT'
+    db.tables.blockTable.modelSpace.appendEntity(entity)
+
+    const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
+    const renderer = { subEntityTraits: {} } as never
+
+    entity.worldDraw(renderer)
+    expect(subWorldDraw).toHaveBeenCalled()
+  })
+})
+
 describe('AcDbEntity.color resolution', () => {
   let db: AcDbDatabase
 
