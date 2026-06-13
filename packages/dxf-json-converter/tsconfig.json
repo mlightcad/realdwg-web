@@ -3,7 +3,13 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./lib",
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "moduleResolution": "bundler",
+    "paths": {
+      "@mlightcad/dxf-json/types": [
+        "../node_modules/@mlightcad/dxf-json/dist/esm/types/types-entry.d.ts"
+      ]
+    }
   },
   "include": [
     "src"

@@ -21,7 +21,7 @@ import {
   MLeaderStyleDXFObject,
   MLineStyleDXFObject,
   ParsedDxf
-} from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
 
 /**
  * Converts DXF objects to AcDbObject instances.

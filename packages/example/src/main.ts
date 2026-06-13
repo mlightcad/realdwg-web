@@ -1,8 +1,8 @@
 /**
  * @fileoverview Example web application entry point for DWG/DXF parsing and PAT preview.
  *
- * This module wires up the demo UI: file selection, main-thread vs web-worker parsing
- * benchmarks, layer/linetype inspection, DXF export, and hatch pattern (PAT) parsing
+ * This module wires up the demo UI: file selection, web-worker parsing,
+ * layer/linetype inspection, DXF export, and hatch pattern (PAT) parsing
  * with SVG previews.
  *
  * @module example/main
@@ -24,7 +24,6 @@ import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
 const fileInput = document.getElementById('fileInput') as HTMLInputElement
-const modeSelect = document.getElementById('modeSelect') as HTMLSelectElement
 const runButton = document.getElementById('runButton') as HTMLButtonElement
 const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
@@ -53,15 +52,6 @@ output.insertAdjacentElement('afterend', linetypePreviewPanel)
 linetypePreviewPanel.style.marginTop = '16px'
 linetypePreviewPanel.style.display = 'none'
 
-/**
- * Parsing execution mode selected in the demo UI.
- *
- * - `compare` — Parse the same file on the main thread and in a web worker, then report timings.
- * - `main` — Parse only on the main thread (DXF only; UI may freeze during parsing).
- * - `worker` — Parse only inside a dedicated web worker (required for DWG).
- */
-type ParseMode = 'compare' | 'main' | 'worker'
-
 let lastFile: File | null = null
 let lastBuffer: ArrayBuffer | null = null
 let lastParsedDatabase: AcDbDatabase | null = null
@@ -72,20 +62,16 @@ const patParser = new AcDbPatParser()
 /**
  * Registers DXF and DWG database converters with the global converter manager.
  *
- * Both converters share the same worker configuration. DXF supports main-thread parsing;
- * DWG parsing is worker-only and relies on the LibreDWG parser worker script.
- *
+ * Both converters run parsing in dedicated web workers for copyleft license isolation.
  * Registration failures are logged to the console but do not throw, so the demo can
  * continue with whichever converters succeeded.
- *
- * @param useWorker - When `true`, parsing runs in a web worker; when `false`, on the main thread.
  */
-const registerConverters = (useWorker: boolean) => {
+const registerConverters = () => {
   // Register DXF converter
   try {
     const converter = new AcDbDxfConverter({
       convertByEntityType: false,
-      useWorker,
+      useWorker: true,
       parserWorkerUrl: './assets/dxf-parser-worker.js'
     })
     AcDbDatabaseConverterManager.instance.register(AcDbFileType.DXF, converter)
@@ -93,11 +79,11 @@ const registerConverters = (useWorker: boolean) => {
     console.error('Failed to register dxf converter: ', error)
   }
 
-  // Register DWG converter (worker-only)
+  // Register DWG converter
   try {
     const converter = new AcDbLibreDwgConverter({
       convertByEntityType: false,
-      useWorker,
+      useWorker: true,
       parserWorkerUrl: './assets/libredwg-parser-worker.js'
     })
     AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, converter)
@@ -163,20 +149,18 @@ type ParseResult =
  * Parses a drawing buffer once using the configured converters and open options.
  *
  * Creates a fresh {@link AcDbDatabase}, assigns it as the host working database, and
- * measures wall-clock time for {@link AcDbDatabase.read}. Converters are (re)registered
- * on each call so worker vs main-thread mode can differ between invocations.
+ * measures wall-clock time for {@link AcDbDatabase.read}. Converters are registered
+ * on each call before parsing.
  *
  * @param buffer - Raw file bytes (DXF or DWG).
  * @param fileType - Format hint passed to the database reader.
- * @param useWorker - Whether to register and use worker-based converters.
  * @returns Parsed database with timing and layer info, or a skipped result if parsing is not attempted.
  */
 const parseOnce = async (
   buffer: ArrayBuffer,
-  fileType: AcDbFileType,
-  useWorker: boolean
+  fileType: AcDbFileType
 ): Promise<ParseResult> => {
-  registerConverters(useWorker)
+  registerConverters()
 
   const database = new AcDbDatabase()
   acdbHostApplicationServices().workingDatabase = database
@@ -195,23 +179,6 @@ const parseOnce = async (
     durationMs: end - start,
     layers: collectLayers(database)
   }
-}
-
-/**
- * Builds a short comparison message between main-thread and worker parse durations.
- *
- * @param mainMs - Elapsed time for main-thread parsing in milliseconds.
- * @param workerMs - Elapsed time for worker parsing in milliseconds.
- * @returns Sentence describing which side was faster and by what relative percentage.
- */
-const compareTimes = (mainMs: number, workerMs: number) => {
-  const diff = workerMs - mainMs
-  const percent = (Math.abs(diff) / Math.max(mainMs, 1)) * 100
-  if (diff === 0) return 'Worker and main thread are the same speed.'
-  if (diff < 0) {
-    return `Worker is ${percent.toFixed(1)}% faster than main thread.`
-  }
-  return `Worker is ${percent.toFixed(1)}% slower than main thread.`
 }
 
 /**
@@ -529,37 +496,11 @@ const applyPatSource = () => {
 }
 
 /**
- * Adjusts parse mode dropdown options for DWG vs DXF constraints.
- *
- * DWG parsing requires a web worker, so `compare` and `main` modes are disabled for DWG
- * files and the selection is forced to `worker` when necessary.
- *
- * @param fileType - Detected format of the currently selected file.
- */
-const updateModeOptions = (fileType: AcDbFileType) => {
-  const compareOption = modeSelect.querySelector(
-    'option[value="compare"]'
-  ) as HTMLOptionElement | null
-  const mainOption = modeSelect.querySelector(
-    'option[value="main"]'
-  ) as HTMLOptionElement | null
-
-  const disableMainThreadModes = fileType === AcDbFileType.DWG
-  if (compareOption) compareOption.disabled = disableMainThreadModes
-  if (mainOption) mainOption.disabled = disableMainThreadModes
-
-  if (disableMainThreadModes && modeSelect.value !== 'worker') {
-    modeSelect.value = 'worker'
-  }
-}
-
-/**
  * Main parse workflow triggered by file selection or the Run button.
  *
- * Validates that a file buffer is loaded, enforces worker mode for DWG, runs parsing
- * according to {@link ParseMode}, writes timing and layer output, refreshes linetype
- * previews, and updates export button state. UI controls are disabled for the duration
- * of parsing to prevent concurrent runs.
+ * Validates that a file buffer is loaded, parses via web worker, writes timing
+ * and layer output, refreshes linetype previews, and updates export button state.
+ * UI controls are disabled for the duration of parsing to prevent concurrent runs.
  */
 const runParse = async () => {
   if (!lastFile || !lastBuffer) {
@@ -568,7 +509,6 @@ const runParse = async () => {
     return
   }
 
-  let mode = modeSelect.value as ParseMode
   const fileType = getFileType(lastFile.name)
   const lines: string[] = []
   let parsedDatabase: AcDbDatabase | null = null
@@ -576,88 +516,25 @@ const runParse = async () => {
   lastParsedDatabase = null
   updateExportButton()
 
-  if (fileType === AcDbFileType.DWG && mode !== 'worker') {
-    mode = 'worker'
-    modeSelect.value = 'worker'
-    lines.push(
-      'Mode forced to worker because DWG parsing cannot run on main thread.'
-    )
-    lines.push('')
-  }
-
   runButton.disabled = true
-  modeSelect.disabled = true
   fileInput.disabled = true
   exportButton.disabled = true
 
   try {
-    setStatus('')
+    setStatus('Parsing in web worker.')
     lines.push(`File: ${lastFile.name}`)
-    lines.push(`Mode: ${mode}`)
+    lines.push('Mode: web worker')
     lines.push('')
 
-    if (mode === 'compare') {
-      setStatus('Parsing on main thread. The UI may freeze during this step.')
-      const mainResult = await parseOnce(lastBuffer.slice(0), fileType, false)
-      setStatus('Parsing in web worker.')
-      if (mainResult.skipped) {
-        lines.push(`Main thread: skipped (${mainResult.reason})`)
-      } else {
-        lines.push(`Main thread: ${formatMs(mainResult.durationMs)}`)
-      }
-
-      const workerResult = await parseOnce(lastBuffer.slice(0), fileType, true)
-      setStatus('')
-      if (workerResult.skipped) {
-        lines.push(`Worker: skipped (${workerResult.reason})`)
-      } else {
-        lines.push(`Worker: ${formatMs(workerResult.durationMs)}`)
-      }
-
-      if (
-        !mainResult.skipped &&
-        !workerResult.skipped &&
-        mainResult.durationMs != null &&
-        workerResult.durationMs != null
-      ) {
-        lines.push('')
-        lines.push(compareTimes(mainResult.durationMs, workerResult.durationMs))
-      }
-
-      lines.push('')
-      let layerSource: { count: number; names: string[] } | undefined
-      if (!workerResult.skipped) {
-        layerSource = workerResult.layers
-        parsedDatabase = workerResult.database
-      } else if (!mainResult.skipped) {
-        layerSource = mainResult.layers
-        parsedDatabase = mainResult.database
-      }
-      lines.push(...renderLayers(layerSource))
-    } else if (mode === 'main') {
-      setStatus('Parsing on main thread. The UI may freeze during this step.')
-      const result = await parseOnce(lastBuffer.slice(0), fileType, false)
-      setStatus('')
-      if (result.skipped) {
-        lines.push(`Main thread: skipped (${result.reason})`)
-      } else {
-        parsedDatabase = result.database
-        lines.push(`Main thread: ${formatMs(result.durationMs)}`)
-        lines.push('')
-        lines.push(...renderLayers(result.layers))
-      }
+    const result = await parseOnce(lastBuffer.slice(0), fileType)
+    setStatus('')
+    if (result.skipped) {
+      lines.push(`Worker: skipped (${result.reason})`)
     } else {
-      setStatus('Parsing in web worker.')
-      const result = await parseOnce(lastBuffer.slice(0), fileType, true)
-      setStatus('')
-      if (result.skipped) {
-        lines.push(`Worker: skipped (${result.reason})`)
-      } else {
-        parsedDatabase = result.database
-        lines.push(`Worker: ${formatMs(result.durationMs)}`)
-        lines.push('')
-        lines.push(...renderLayers(result.layers))
-      }
+      parsedDatabase = result.database
+      lines.push(`Worker: ${formatMs(result.durationMs)}`)
+      lines.push('')
+      lines.push(...renderLayers(result.layers))
     }
   } catch (error) {
     console.error(error)
@@ -668,7 +545,6 @@ const runParse = async () => {
     output.textContent = lines.join('\n')
     renderLinetypePreviews(lastParsedDatabase)
     runButton.disabled = false
-    modeSelect.disabled = false
     fileInput.disabled = false
     updateExportButton()
   }
@@ -680,7 +556,6 @@ fileInput.addEventListener('change', async () => {
   lastFile = file
   lastParsedDatabase = null
   renderLinetypePreviews(null)
-  updateModeOptions(getFileType(file.name))
   updateExportButton()
   output.textContent = 'Loading file...\n'
   lastBuffer = await file.arrayBuffer()

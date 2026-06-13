@@ -39,9 +39,10 @@
     "analyze:lib": "vite build --mode analyze --config vite.config.main.ts",
     "analyze:worker": "vite build --mode analyze --config vite.config.worker.ts",
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",
-    "build": "tsc && vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts",
-    "build:main": "vite build -c vite.config.main.ts",
+    "build": "tsc && vite build -c vite.config.main.ts && vite build -c vite.config.worker.ts && node ../../tools/verify-build.mjs verify-build.profile.json",
+    "build:main": "vite build -c vite.config.main.ts && node ../../tools/verify-build.mjs verify-build.profile.json --main-only",
     "build:worker": "vite build -c vite.config.worker.ts",
+    "verify:build": "node ../../tools/verify-build.mjs verify-build.profile.json",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix --quiet src/"
   },

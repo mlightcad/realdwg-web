@@ -58,9 +58,9 @@ const MODEL_SPACE = '*MODEL_SPACE'
 export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   constructor(config: AcDbDatabaseConverterConfig = {}) {
     super(config)
-    config.useWorker = true
-    if (!config.parserWorkerUrl) {
-      config.parserWorkerUrl = '/assets/libredwg-parser-worker.js'
+    this.config.useWorker = true
+    if (!this.config.parserWorkerUrl) {
+      this.config.parserWorkerUrl = '/assets/libredwg-parser-worker.js'
     }
   }
 

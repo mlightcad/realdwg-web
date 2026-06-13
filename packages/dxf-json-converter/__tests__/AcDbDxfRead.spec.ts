@@ -19,10 +19,28 @@ import {
 import { AcDbDxfConverter } from '../src/AcDbDxfConverter'
 import { AcDbDxfParser } from '../src/AcDbDxfParser'
 
+jest.mock('@mlightcad/data-model', () => {
+  const actual = jest.requireActual('@mlightcad/data-model')
+  const { AcDbDxfParser: Parser } = jest.requireActual('../src/AcDbDxfParser')
+  return {
+    ...actual,
+    createWorkerApi: () => ({
+      execute: async (data: ArrayBuffer) => ({
+        success: true,
+        data: new Parser().parse(data)
+      }),
+      destroy: () => {}
+    })
+  }
+})
+
 function registerDxfConverter() {
   AcDbDatabaseConverterManager.instance.register(
     AcDbFileType.DXF,
-    new AcDbDxfConverter({ useWorker: false })
+    new AcDbDxfConverter({
+      useWorker: true,
+      parserWorkerUrl: '/assets/dxf-parser-worker.js'
+    })
   )
 }
 

@@ -7,7 +7,6 @@ import {
   ACTIVE_VPORT_NAME,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
-import { AcDbDxfParser } from '../src/AcDbDxfParser'
 import { AcDbDxfConverter } from '../src/AcDbDxfConverter'
 
 class TestDxfConverter extends AcDbDxfConverter {
@@ -45,25 +44,18 @@ class TestDxfConverter extends AcDbDxfConverter {
 }
 
 describe('AcDbDxfConverter', () => {
-  it('sets default parser worker url in constructor', () => {
-    const config: Record<string, unknown> = {}
-    new AcDbDxfConverter(config as any)
-    expect(config.parserWorkerUrl).toBe('/assets/dxf-parser-worker.js')
+  it('sets default parser worker url and useWorker in constructor', () => {
+    const converter = new AcDbDxfConverter()
+    expect(converter.config.parserWorkerUrl).toBe('/assets/dxf-parser-worker.js')
+    expect(converter.config.useWorker).toBe(true)
   })
 
-  it('parses through AcDbDxfParser when worker disabled', async () => {
-    const parseSpy = jest
-      .spyOn(AcDbDxfParser.prototype, 'parse')
-      .mockReturnValue({ entities: [] } as any)
-
+  it('throws when worker parsing is not configured', async () => {
     const converter = new TestDxfConverter({ useWorker: false })
-    const result = await converter.parsePublic(new ArrayBuffer(0))
 
-    expect(result.model).toEqual({ entities: [] })
-    expect(result.data.unknownEntityCount).toBe(0)
-    expect(parseSpy).toHaveBeenCalled()
-
-    parseSpy.mockRestore()
+    await expect(converter.parsePublic(new ArrayBuffer(0))).rejects.toThrow(
+      'dxf converter can run in web worker only!'
+    )
   })
 
   it('collects fonts from style table, mtext and nested inserts', () => {

@@ -60,9 +60,8 @@ import {
   StyleTableEntry,
   TextEntity,
   VPortTableEntry
-} from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
 
-import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
 
@@ -83,8 +82,8 @@ import { AcDbObjectConverter } from './AcDbObjectConverter'
 export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   constructor(config: AcDbDatabaseConverterConfig = {}) {
     super(config)
-    if (!config.parserWorkerUrl) {
-      config.parserWorkerUrl = '/assets/dxf-parser-worker.js'
+    if (!this.config.parserWorkerUrl) {
+      this.config.parserWorkerUrl = '/assets/dxf-parser-worker.js'
     }
   }
 
@@ -122,14 +121,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         )
       }
     } else {
-      const parser = new AcDbDxfParser()
-      const result = parser.parse(data)
-      return {
-        model: result,
-        data: {
-          unknownEntityCount: 0
-        }
-      }
+      throw new Error('dxf converter can run in web worker only!')
     }
   }
 
