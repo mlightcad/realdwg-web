@@ -298,6 +298,106 @@ describe('DXF read and parse regressions', () => {
     expect(targetDb.textstyle).toBe('Standard')
   })
 
+  it('loads TEXT referencing STANDARD when STYLE table is missing', async () => {
+    const dxf = `0
+SECTION
+2
+HEADER
+9
+$ACADVER
+1
+AC1015
+9
+$TEXTSTYLE
+7
+STANDARD
+0
+ENDSEC
+0
+SECTION
+2
+TABLES
+0
+TABLE
+2
+LAYER
+70
+1
+0
+LAYER
+2
+0
+70
+0
+62
+7
+6
+CONTINUOUS
+0
+ENDTAB
+0
+TABLE
+2
+LTYPE
+70
+1
+0
+LTYPE
+2
+CONTINUOUS
+70
+0
+3
+Solid
+72
+65
+73
+0
+40
+0
+0
+ENDTAB
+0
+ENDSEC
+0
+SECTION
+2
+ENTITIES
+0
+TEXT
+8
+0
+10
+0
+20
+0
+30
+0
+40
+2.5
+1
+Hello
+7
+STANDARD
+0
+ENDSEC
+0
+EOF
+`
+
+    const db = await readDxf(dxf)
+    const texts = [
+      ...db.tables.blockTable.modelSpace.newIterator()
+    ] as AcDbText[]
+
+    expect(texts).toHaveLength(1)
+    expect(texts[0].styleName).toBe('STANDARD')
+
+    const renderer = { mtext: jest.fn(() => ({})) }
+    expect(() => texts[0].subWorldDraw(renderer as never)).not.toThrow()
+    expect(renderer.mtext).toHaveBeenCalled()
+  })
+
   it('loads block INSERT fixtures with invisible geometry in block definition', async () => {
     const fixturesDir = join(__dirname, 'fixtures')
     for (const fileName of [
