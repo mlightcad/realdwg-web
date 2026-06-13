@@ -1,7 +1,6 @@
 import {
   AcDbDatabase,
   AcDbDatabaseConverterManager,
-  AcDbDxfConverter,
   AcDbFileType,
   acdbHostApplicationServices,
   AcDbOpenDatabaseOptions,
@@ -11,6 +10,7 @@ import {
   AcDbPredefinedAcadIsoPat,
   AcDbPredefinedAcadPat
 } from '@mlightcad/data-model'
+import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
 const fileInput = document.getElementById('fileInput') as HTMLInputElement

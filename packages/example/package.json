@@ -41,6 +41,7 @@
   },
   "dependencies": {
     "@mlightcad/data-model": "workspace:*",
+    "@mlightcad/dxf-json-converter": "workspace:*",
     "@mlightcad/libredwg-converter": "workspace:*"
   },
   "devDependencies": {

@@ -1,10 +1,13 @@
-import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmColorMethod,
+  AcDbDatabase,
+  AcDbDxfFiler,
+  AcDbMLeaderStyle,
+  acdbHostApplicationServices
+} from '@mlightcad/data-model'
 
-import { AcDbObjectConverter } from '../src/converter/AcDbObjectConverter'
-import { AcDbDxfFiler } from '../src/base/AcDbDxfFiler'
-import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import { AcDbDatabase } from '../src/database/AcDbDatabase'
-import { AcDbMLeaderStyle } from '../src/object'
+import { AcDbObjectConverter } from '../src/AcDbObjectConverter'
 
 const createAciColor = (index: number) => {
   const color = new AcCmColor()

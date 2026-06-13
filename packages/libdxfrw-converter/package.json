@@ -41,7 +41,10 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {},
-  "devDependencies": {},
+  "devDependencies": {
+    "@mlightcad/data-model": "workspace:*",
+    "vite": "^5.2.10"
+  },
   "peerDependencies": {
     "@mlightcad/data-model": "workspace:*",
     "@mlightcad/libdxfrw-web": "0.0.9"

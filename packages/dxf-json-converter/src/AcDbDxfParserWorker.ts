@@ -1,8 +1,8 @@
 /// <reference lib="webworker" />
+import { AcDbBaseWorker } from '@mlightcad/data-model'
 import { ParsedDxf } from '@mlightcad/dxf-json'
 
-import { AcDbDxfParser } from '../AcDbDxfParser'
-import { AcDbBaseWorker } from './AcDbBaseWorker'
+import { AcDbDxfParser } from './AcDbDxfParser'
 
 /**
  * DXF parsing worker
@@ -15,4 +15,4 @@ class AcDbDxfParserWorker extends AcDbBaseWorker<ArrayBuffer, ParsedDxf> {
 }
 
 // Initialize the worker
-export const dxfParser = new AcDbDxfParserWorker()
+new AcDbDxfParserWorker()

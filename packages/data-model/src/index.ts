@@ -19,7 +19,6 @@ export type {
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
-  AcDbDxfConverter,
   AcDbRegenerator,
   AcDbWorkerApi,
   AcDbWorkerManager,

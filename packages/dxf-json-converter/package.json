@@ -1,6 +1,6 @@
 {
-  "name": "@mlightcad/libredwg-converter",
-  "version": "3.6.4",
+  "name": "@mlightcad/dxf-json-converter",
+  "version": "1.8.4",
   "license": "GPL-3.0",
   "type": "module",
   "repository": {
@@ -12,8 +12,7 @@
     "cad",
     "dwg",
     "dxf",
-    "libredwg",
-    "libredwg-web",
+    "dxf-json",
     "mlight",
     "mlightcad",
     "objectarx",
@@ -26,13 +25,13 @@
     "package.json"
   ],
   "sideEffects": false,
-  "main": "./dist/libredwg-converter.umd.cjs",
+  "main": "./dist/dxf-json-converter.umd.cjs",
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
     "types": "./lib/index.d.ts",
     "import": "./lib/index.js",
-    "require": "./dist/libredwg-converter.umd.cjs"
+    "require": "./dist/dxf-json-converter.umd.cjs"
   },
   "scripts": {
     "analyze": "pnpm run analyze:lib && pnpm run analyze:worker",
@@ -46,7 +45,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "^0.7.2"
+    "@mlightcad/dxf-json": "^1.2.2"
   },
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",

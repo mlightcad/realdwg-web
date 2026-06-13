@@ -1,22 +1,23 @@
-import { AcDbDxfConverter } from '../src/converter/AcDbDxfConverter'
 import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from '../src/database/AcDbDatabaseConverterManager'
 
 describe('AcDbDatabaseConverterManager', () => {
-  it('creates singleton instance with default dxf converter', () => {
+  it('creates singleton instance without default converters', () => {
     const manager = AcDbDatabaseConverterManager.instance
     expect(AcDbDatabaseConverterManager.createInstance()).toBe(manager)
-    expect(manager.get(AcDbFileType.DXF)).toBeInstanceOf(AcDbDxfConverter)
+    expect(manager.get(AcDbFileType.DXF)).toBeUndefined()
 
     const fileTypes = Array.from(manager.fileTypes)
-    expect(fileTypes).toContain(AcDbFileType.DXF)
+    expect(fileTypes).not.toContain(AcDbFileType.DXF)
   })
 
   it('registers and unregisters converters with events', () => {
     const manager = AcDbDatabaseConverterManager.instance
-    const custom = new AcDbDxfConverter()
+    const custom = {
+      read: jest.fn()
+    } as any
 
     const registered: string[] = []
     const unregistered: string[] = []

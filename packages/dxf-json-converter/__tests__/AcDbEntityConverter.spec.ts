@@ -1,18 +1,19 @@
-import { AcDbEntityConverter } from '../src/converter/AcDbEntitiyConverter'
-import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import {
   AcDbAlignedDimension,
   AcDbArc,
   AcDbCircle,
+  AcDbDatabase,
   AcDbLeader,
   AcDbMLeader,
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
   AcDbPolyline,
   AcDbRotatedDimension,
-  AcDbShape
-} from '../src/entity'
+  AcDbShape,
+  acdbHostApplicationServices
+} from '@mlightcad/data-model'
+
+import { AcDbEntityConverter } from '../src/AcDbEntitiyConverter'
 
 describe('AcDbEntityConverter', () => {
   it('returns null for unsupported type', () => {

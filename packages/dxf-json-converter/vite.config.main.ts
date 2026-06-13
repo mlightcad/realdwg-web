@@ -1,6 +1,7 @@
 import strip from 'vite-plugin-strip-comments'
 import { visualizer } from 'rollup-plugin-visualizer'
-import { defineConfig, type PluginOption } from 'vite'
+import { defineConfig, PluginOption } from 'vite'
+import peerDepsExternal from 'rollup-plugin-peer-deps-external'
 
 export default defineConfig(({ mode }) => {
   const plugins: PluginOption[] = [strip({ type: 'none' })]
@@ -8,6 +9,7 @@ export default defineConfig(({ mode }) => {
   if (mode === 'analyze') {
     plugins.push(visualizer())
   }
+  plugins.push(peerDepsExternal() as PluginOption)
 
   return {
     esbuild: {
@@ -18,15 +20,14 @@ export default defineConfig(({ mode }) => {
       emptyOutDir: false,
       outDir: 'dist',
       lib: {
-        entry: 'src/converter/worker/AcDbDxfParserWorker.ts',
-        fileName: 'dxf-parser-worker',
-        formats: ['es']
+        entry: 'src/index.ts',
+        name: 'dxf-json-converter',
+        fileName: 'dxf-json-converter',
+        formats: ['umd']
       },
       minify: 'esbuild',
       rollupOptions: {
-        external: [],
         output: {
-          inlineDynamicImports: true,
           compact: true
         }
       }

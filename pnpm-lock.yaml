@@ -107,9 +107,6 @@ importers:
       '@mlightcad/common':
         specifier: workspace:*
         version: link:../common
-      '@mlightcad/dxf-json':
-        specifier: ^1.2.0
-        version: 1.2.2
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
@@ -123,11 +120,27 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
 
+  packages/dxf-json-converter:
+    dependencies:
+      '@mlightcad/dxf-json':
+        specifier: ^1.2.0
+        version: 1.2.2
+    devDependencies:
+      '@mlightcad/data-model':
+        specifier: workspace:*
+        version: link:../data-model
+      vite:
+        specifier: ^5.2.10
+        version: 5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6)
+
   packages/example:
     dependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
         version: link:../data-model
+      '@mlightcad/dxf-json-converter':
+        specifier: workspace:*
+        version: link:../dxf-json-converter
       '@mlightcad/libredwg-converter':
         specifier: workspace:*
         version: link:../libredwg-converter
@@ -153,22 +166,26 @@ importers:
 
   packages/libdxfrw-converter:
     dependencies:
-      '@mlightcad/data-model':
-        specifier: workspace:*
-        version: link:../data-model
       '@mlightcad/libdxfrw-web':
         specifier: 0.0.9
         version: 0.0.9
-
-  packages/libredwg-converter:
-    dependencies:
+    devDependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
         version: link:../data-model
+      vite:
+        specifier: ^5.2.10
+        version: 5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6)
+
+  packages/libredwg-converter:
+    dependencies:
       '@mlightcad/libredwg-web':
         specifier: ^0.7.2
         version: 0.7.2
     devDependencies:
+      '@mlightcad/data-model':
+        specifier: workspace:*
+        version: link:../data-model
       vite:
         specifier: ^5.2.10
         version: 5.3.2(@types/node@20.14.9)(sass@1.83.0)(terser@5.31.6)
