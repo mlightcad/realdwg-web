@@ -1,4 +1,4 @@
-import { AcDbDxfParser } from '../src/converter/AcDbDxfParser'
+import { AcDbDxfParser } from '../src/AcDbDxfParser'
 
 describe('AcDbDxfParser', () => {
   it('parses minimal valid dxf content', () => {

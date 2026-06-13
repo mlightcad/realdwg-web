@@ -9,6 +9,7 @@ const config: Config = {
     "^@mlightcad/geometry-engine$": "<rootDir>/packages/geometry-engine/src/index.ts",
     "^@mlightcad/graphic-interface$": "<rootDir>/packages/graphic-interface/src/index.ts",
     "^@mlightcad/data-model$": "<rootDir>/packages/data-model/src/index.ts",
+    "^@mlightcad/dxf-json-converter$": "<rootDir>/packages/dxf-json-converter/src/index.ts",
   },
   transform: {
     "^.+\\.(ts|tsx)$": "ts-jest",

@@ -19,26 +19,44 @@ To support reading both DXF and DWG files (and potentially other formats in the 
 
 - Each file type (e.g., DXF, DWG) is associated with a converter class that knows how to parse and import that file format into the drawing database.
 - The `AcDbDatabaseConverterManager` maintains a registry of these converters, allowing you to register or unregister converters for specific file types at runtime.
-- By default, the DXF converter is registered. You can add your own DWG converter or replace existing ones as needed.
+- No converters are registered by default. Register the DXF and DWG converters from their respective packages before calling `AcDbDatabase.read()`.
 
-### Registering a Converter
+### Registering Converters
 
-To register a converter for a file type:
+Register DXF and DWG converters before reading files:
 
 ```ts
-import { AcDbDatabaseConverterManager, AcDbFileType } from '@mlightcad/data-model';
-import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter';
+import {
+  AcDbDatabaseConverterManager,
+  AcDbFileType
+} from '@mlightcad/data-model'
+import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
+import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
-const converter = new AcDbLibreDwgConverter({
+// DXF converter (GPL parser runs in a separate Web Worker)
+const dxfConverter = new AcDbDxfConverter({
+  convertByEntityType: false,
+  useWorker: true,
+  parserWorkerUrl: './assets/dxf-parser-worker.js'
+})
+AcDbDatabaseConverterManager.instance.register(
+  AcDbFileType.DXF,
+  dxfConverter
+)
+
+// DWG converter
+const dwgConverter = new AcDbLibreDwgConverter({
   convertByEntityType: false,
   useWorker: true,
   parserWorkerUrl: './assets/libredwg-parser-worker.js'
 })
 AcDbDatabaseConverterManager.instance.register(
   AcDbFileType.DWG,
-  converter
+  dwgConverter
 )
 ```
+
+Deploy `dxf-parser-worker.js` and `libredwg-parser-worker.js` from each converter package's `dist/` folder to a public URL (see [example vite config](./packages/example/vite.config.ts)).
 
 ### Unregistering a Converter
 
@@ -53,7 +71,7 @@ AcDbDatabaseConverterManager.instance.unregister(AcDbFileType.DWG);
 
 ### Getting a Converter
 
-To get the converter for a specific file type:
+To get the converter for a specific file type (returns `undefined` if not registered):
 
 ```ts
 const converter = AcDbDatabaseConverterManager.instance.get(AcDbFileType.DXF);
@@ -103,6 +121,12 @@ This module provides a DWG file converter for the RealDWG-Web ecosystem, enablin
 ### libredwg-converter (DWG file support)
 
 This module provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the drawing database. It is powered by the LibreDWG library compiled to WebAssembly and is designed to be registered with the converter manager for DWG file support.
+
+### dxf-json-converter (DXF file support)
+
+This module provides a DXF file converter for the RealDWG-Web ecosystem. It is based on [@mlightcad/dxf-json](https://www.npmjs.com/package/@mlightcad/dxf-json) and is designed to be registered with the converter manager for DXF file support.
+
+DXF parsing runs in a dedicated Web Worker bundle (`dxf-parser-worker.js`) so that the GPL-licensed parser can be loaded on demand and kept separate from the main application bundle. The main `@mlightcad/data-model` package does not depend on `dxf-json`.
 
 ## geometry-engine (AcGe classes in AutoCAD ObjectARX)
 
@@ -166,6 +190,7 @@ Contributions are welcome! Please open issues or pull requests for bug fixes, ne
 
 This project is generally licensed under the [MIT License](LICENSE). However, this license does not apply to the following packages contained within this repository:
 
+- @mlightcad/dxf-json-converter
 - @mlightcad/libredwg-converter
 - @mlightcad/libdxfrw-converter
 

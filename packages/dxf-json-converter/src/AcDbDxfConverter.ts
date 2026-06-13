@@ -1,4 +1,45 @@
-import { AcCmColor } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcDbAttribute,
+  AcDbBatchProcessing,
+  AcDbBlockReference,
+  AcDbBlockScaling,
+  AcDbBlockTableRecord,
+  AcDbConversionProgressCallback,
+  AcDbDatabase,
+  AcDbDatabaseConverter,
+  AcDbDatabaseConverterConfig,
+  AcDbDimStyleTableRecord,
+  AcDbDimStyleTableRecordAttrs,
+  AcDbDimTextHorizontal,
+  AcDbDimTextVertical,
+  AcDbDimVerticalJustification,
+  AcDbDimZeroSuppression,
+  AcDbDimZeroSuppressionAngular,
+  AcDbEntity,
+  AcDbLayerTableRecord,
+  AcDbLinetypeTableRecord,
+  AcDbObjectId,
+  AcDbSymbolTable,
+  AcDbSymbolTableRecord,
+  AcDbSystemVariables,
+  AcDbSysVarManager,
+  AcDbTextStyleTableRecord,
+  AcDbViewportTableRecord,
+  AcGiDefaultLightingType,
+  AcGiOrthographicType,
+  AcGiRenderMode,
+  ByLayer,
+  createWorkerApi,
+  DEFAULT_MLEADER_STYLE,
+  DEFAULT_MLINE_STYLE,
+  DEFAULT_TEXT_STYLE,
+  VPORT_FALLBACK_CENTER_2D,
+  VPORT_FALLBACK_LLC,
+  VPORT_FALLBACK_URC,
+  VPORT_FALLBACK_VIEW_DIR,
+  VPORT_FALLBACK_VIEW_TARGET
+} from '@mlightcad/data-model'
 import {
   BlockRecordTableEntry,
   CommonDxfEntity,
@@ -20,55 +61,10 @@ import {
   TextEntity,
   VPortTableEntry
 } from '@mlightcad/dxf-json'
-import {
-  AcGiDefaultLightingType,
-  AcGiOrthographicType,
-  AcGiRenderMode
-} from '@mlightcad/graphic-interface'
 
-import { AcDbObjectId } from '../base'
-import {
-  AcDbBlockScaling,
-  AcDbBlockTableRecord,
-  AcDbDatabase,
-  AcDbDatabaseConverterConfig,
-  AcDbDimStyleTableRecord,
-  AcDbDimStyleTableRecordAttrs,
-  AcDbDimTextHorizontal,
-  AcDbDimTextVertical,
-  AcDbDimVerticalJustification,
-  AcDbDimZeroSuppression,
-  AcDbDimZeroSuppressionAngular,
-  AcDbLayerTableRecord,
-  AcDbLinetypeTableRecord,
-  AcDbSymbolTable,
-  AcDbSymbolTableRecord,
-  AcDbSystemVariables,
-  AcDbSysVarManager,
-  AcDbTextStyleTableRecord,
-  AcDbViewportTableRecord
-} from '../database'
-import {
-  AcDbConversionProgressCallback,
-  AcDbDatabaseConverter
-} from '../database/AcDbDatabaseConverter'
-import { AcDbAttribute, AcDbBlockReference, AcDbEntity } from '../entity'
-import {
-  ByLayer,
-  DEFAULT_MLEADER_STYLE,
-  DEFAULT_MLINE_STYLE,
-  DEFAULT_TEXT_STYLE,
-  VPORT_FALLBACK_CENTER_2D,
-  VPORT_FALLBACK_LLC,
-  VPORT_FALLBACK_URC,
-  VPORT_FALLBACK_VIEW_DIR,
-  VPORT_FALLBACK_VIEW_TARGET
-} from '../misc'
-import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 import { AcDbDxfParser } from './AcDbDxfParser'
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
-import { createWorkerApi } from './worker'
 
 /**
  * Default database converter for DXF files.

@@ -1,77 +1,6 @@
-import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 import {
-  ArcEntity,
-  AttdefEntity,
-  AttributeEntity,
-  FaceEntity,
-  GradientHatchEntity,
-  HatchSolidFill,
-  SmoothType,
-  VertexFlag
-} from '@mlightcad/dxf-json'
-import { CircleEntity } from '@mlightcad/dxf-json'
-import {
-  ArcEdge,
-  BoundaryPathEdge,
-  EdgeBoundaryPath,
-  EllipseEdge,
-  HatchEntity,
-  LineEdge,
-  PolylineBoundaryPath,
-  SplineEdge
-} from '@mlightcad/dxf-json'
-import {
-  CommonDxfEntity,
-  EllipseEntity,
-  ImageEntity,
-  InsertEntity,
-  LeaderEntity,
-  LineEntity,
-  LWPolylineEntity,
-  MLineEntity,
-  MTextEntity,
-  MultiLeaderEntity,
-  PointEntity,
-  PolylineEntity,
-  RayEntity,
-  ShapeEntity,
-  SolidEntity,
-  SplineEntity,
-  TableEntity,
-  TextEntity,
-  ViewportEntity,
-  WipeoutEntity,
-  XLineEntity
-} from '@mlightcad/dxf-json'
-import {
-  AlignedDimensionEntity,
-  AngularDimensionEntity,
-  DimensionEntityCommon,
-  OrdinateDimensionEntity,
-  RadialDiameterDimensionEntity
-} from '@mlightcad/dxf-json'
-import {
-  AcGeBoundaryEdgeType,
-  AcGeCircArc2d,
-  AcGeEllipseArc2d,
-  AcGeLine2d,
-  AcGeLoop2d,
-  AcGeMathUtil,
-  AcGePoint2d,
-  AcGePoint3d,
-  AcGePoint3dLike,
-  AcGePolyline2d,
-  AcGeSpline3d,
-  AcGeVector2d,
-  AcGeVector3d,
-  transformOcsPointToWcs
-} from '@mlightcad/geometry-engine'
-import {
-  AcGiMTextAttachmentPoint,
-  AcGiMTextFlowDirection
-} from '@mlightcad/graphic-interface'
-
-import {
+  AcCmColor,
+  AcCmTransparency,
   AcDb2dPolyline,
   AcDb3dPolyline,
   AcDb3PointAngularDimension,
@@ -125,8 +54,75 @@ import {
   AcDbTrace,
   AcDbViewport,
   AcDbWipeout,
-  AcDbXline
-} from '../entity'
+  AcDbXline,
+  AcGeBoundaryEdgeType,
+  AcGeCircArc2d,
+  AcGeEllipseArc2d,
+  AcGeLine2d,
+  AcGeLoop2d,
+  AcGeMathUtil,
+  AcGePoint2d,
+  AcGePoint3d,
+  AcGePoint3dLike,
+  AcGePolyline2d,
+  AcGeSpline3d,
+  AcGeVector2d,
+  AcGeVector3d,
+  AcGiMTextAttachmentPoint,
+  AcGiMTextFlowDirection,
+  transformOcsPointToWcs
+} from '@mlightcad/data-model'
+import {
+  ArcEntity,
+  AttdefEntity,
+  AttributeEntity,
+  FaceEntity,
+  GradientHatchEntity,
+  HatchSolidFill,
+  SmoothType,
+  VertexFlag
+} from '@mlightcad/dxf-json'
+import { CircleEntity } from '@mlightcad/dxf-json'
+import {
+  ArcEdge,
+  BoundaryPathEdge,
+  EdgeBoundaryPath,
+  EllipseEdge,
+  HatchEntity,
+  LineEdge,
+  PolylineBoundaryPath,
+  SplineEdge
+} from '@mlightcad/dxf-json'
+import {
+  CommonDxfEntity,
+  EllipseEntity,
+  ImageEntity,
+  InsertEntity,
+  LeaderEntity,
+  LineEntity,
+  LWPolylineEntity,
+  MLineEntity,
+  MTextEntity,
+  MultiLeaderEntity,
+  PointEntity,
+  PolylineEntity,
+  RayEntity,
+  ShapeEntity,
+  SolidEntity,
+  SplineEntity,
+  TableEntity,
+  TextEntity,
+  ViewportEntity,
+  WipeoutEntity,
+  XLineEntity
+} from '@mlightcad/dxf-json'
+import {
+  AlignedDimensionEntity,
+  AngularDimensionEntity,
+  DimensionEntityCommon,
+  OrdinateDimensionEntity,
+  RadialDiameterDimensionEntity
+} from '@mlightcad/dxf-json'
 
 type ParsedMLeaderBreak = {
   index?: number

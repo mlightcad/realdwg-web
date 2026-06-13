@@ -1,12 +1,14 @@
-import { AcDbDxfParser } from '../src/converter/AcDbDxfParser'
-import { AcDbDxfConverter } from '../src/converter/AcDbDxfConverter'
-import { AcDbDxfFiler } from '../src/base/AcDbDxfFiler'
-import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
-import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../src/database/AcDbDatabase'
-import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
-import { ACTIVE_VPORT_NAME } from '../src/misc/AcDbConstants'
+import {
+  AcDbDatabase,
+  AcDbDxfFiler,
+  AcDbBlockReference,
+  AcDbBlockTableRecord,
+  AcDbLayerTableRecord,
+  ACTIVE_VPORT_NAME,
+  acdbHostApplicationServices
+} from '@mlightcad/data-model'
+import { AcDbDxfParser } from '../src/AcDbDxfParser'
+import { AcDbDxfConverter } from '../src/AcDbDxfConverter'
 
 class TestDxfConverter extends AcDbDxfConverter {
   parsePublic(data: ArrayBuffer, timeout?: number) {

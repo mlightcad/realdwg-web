@@ -9,7 +9,7 @@ export default defineConfig({
     viteStaticCopy({
       targets: [
         {
-          src: './node_modules/@mlightcad/data-model/dist/dxf-parser-worker.js',
+          src: './node_modules/@mlightcad/dxf-json-converter/dist/*-worker.js',
           dest: 'assets'
         },
         {

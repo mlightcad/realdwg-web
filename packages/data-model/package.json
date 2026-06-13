@@ -35,19 +35,16 @@
     "require": "./dist/data-model.cjs"
   },
   "scripts": {
-    "analyze": "pnpm run analyze:lib && pnpm run analyze:worker",
+    "analyze": "pnpm run analyze:lib",
     "analyze:lib": "vite build --mode analyze --config vite.config.main.ts",
-    "analyze:worker": "vite build --mode analyze --config vite.config.worker.ts",
     "clean": "rimraf dist lib tsconfig.tsbuildinfo",
-    "build": "tsc && pnpm run build:lib && pnpm run build:worker",
+    "build": "tsc && pnpm run build:lib",
     "build:lib": "vite build --config vite.config.main.ts",
-    "build:worker": "vite build --config vite.config.worker.ts",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
     "@mlightcad/common": "workspace:*",
-    "@mlightcad/dxf-json": "^1.2.2",
     "@mlightcad/geometry-engine": "workspace:*",
     "@mlightcad/graphic-interface": "workspace:*",
     "iconv-lite": "^0.7.0",

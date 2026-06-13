@@ -1,9 +1,9 @@
+import {
+  AcDbCodePage,
+  AcDbDwgVersion,
+  dwgCodePageToEncoding
+} from '@mlightcad/data-model'
 import { DxfParser, ParsedDxf } from '@mlightcad/dxf-json'
-
-// Please don't modify the following two lines to import from '../database' and
-// import from '../misc' so that treeshaking can include classes really needed.
-import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
-import { AcDbCodePage, dwgCodePageToEncoding } from '../misc/AcDbCodePage'
 
 /**
  * Extracts DXF version and code page from an ArrayBuffer containing the DXF data.

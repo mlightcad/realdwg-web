@@ -1,5 +1,4 @@
 export { AcDbBatchProcessing } from './AcDbBatchProcessing'
-export { AcDbDxfConverter } from './AcDbDxfConverter'
 export { AcDbRegenerator } from './AcDbRegenerator'
 export {
   AcDbBaseWorker,

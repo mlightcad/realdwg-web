@@ -1,4 +1,19 @@
-import { AcCmColor } from '@mlightcad/common'
+import { AcCmColor } from '@mlightcad/data-model'
+import {
+  AcDbBlockTableRecord,
+  AcDbLayout,
+  AcDbMLeaderStyle,
+  AcDbMlineStyle,
+  AcDbObject,
+  AcDbPlotPaperUnits,
+  AcDbPlotRotation,
+  AcDbPlotShadePlotResLevel,
+  AcDbPlotShadePlotType,
+  AcDbPlotStdScaleType,
+  AcDbPlotType,
+  AcDbRasterImageDef,
+  decodeMLeaderStyleRawColor
+} from '@mlightcad/data-model'
 import {
   CommonDXFObject,
   ImageDefDXFObject,
@@ -7,22 +22,6 @@ import {
   MLineStyleDXFObject,
   ParsedDxf
 } from '@mlightcad/dxf-json'
-
-import { AcDbObject } from '../base'
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { decodeMLeaderStyleRawColor } from '../misc'
-import {
-  AcDbLayout,
-  AcDbMLeaderStyle,
-  AcDbMlineStyle,
-  AcDbPlotPaperUnits,
-  AcDbPlotRotation,
-  AcDbPlotShadePlotResLevel,
-  AcDbPlotShadePlotType,
-  AcDbPlotStdScaleType,
-  AcDbPlotType,
-  AcDbRasterImageDef
-} from '../object'
 
 /**
  * Converts DXF objects to AcDbObject instances.

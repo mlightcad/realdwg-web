@@ -1,18 +1,30 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import {
+  AcDbAttribute,
+  AcDbAttributeDefinition,
+  AcDbBlockReference,
+  AcDbBlockTableRecord,
+  AcDbDatabase,
+  AcDbDatabaseConverterManager,
+  AcDbFileType,
+  AcDbLayout,
+  AcDbLine,
+  AcDbText,
+  AcGePoint3d,
+  acdbHostApplicationServices
+} from '@mlightcad/data-model'
 
-import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import { AcDbDxfParser } from '../src/converter/AcDbDxfParser'
-import { AcDbDatabase } from '../src/database/AcDbDatabase'
-import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
-import { AcDbAttribute } from '../src/entity/AcDbAttribute'
-import { AcDbAttributeDefinition } from '../src/entity/AcDbAttributeDefinition'
-import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
-import { AcDbLine } from '../src/entity/AcDbLine'
-import { AcDbText } from '../src/entity/AcDbText'
-import { AcDbLayout } from '../src/object/layout/AcDbLayout'
+import { AcDbDxfConverter } from '../src/AcDbDxfConverter'
+import { AcDbDxfParser } from '../src/AcDbDxfParser'
+
+function registerDxfConverter() {
+  AcDbDatabaseConverterManager.instance.register(
+    AcDbFileType.DXF,
+    new AcDbDxfConverter({ useWorker: false })
+  )
+}
 
 function toArrayBuffer(bytes: Uint8Array): ArrayBuffer {
   return bytes.buffer.slice(
@@ -54,6 +66,7 @@ function setWorkingDatabase(db: AcDbDatabase) {
 }
 
 async function readDxf(dxf: string) {
+  registerDxfConverter()
   const db = setWorkingDatabase(new AcDbDatabase())
   await db.read(encodeUtf8(dxf), {
     readOnly: true,
