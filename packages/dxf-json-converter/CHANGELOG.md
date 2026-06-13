@@ -1,6 +1,6 @@
 # @mlightcad/dxf-json-converter
 
-## 1.0.0
+## 1.8.4
 
 ### Major Changes
 

@@ -190,8 +190,51 @@ Contributions are welcome! Please open issues or pull requests for bug fixes, ne
 
 This project is generally licensed under the [MIT License](LICENSE). However, this license does not apply to the following packages contained within this repository:
 
-- @mlightcad/dxf-json-converter
-- @mlightcad/libredwg-converter
-- @mlightcad/libdxfrw-converter
+- `@mlightcad/dxf-json-converter` (GPL-3.0)
+- `@mlightcad/libredwg-converter` (GPL-3.0)
+- `@mlightcad/libdxfrw-converter` (GPL-2.0)
 
-Due to upstream license inheritance (copyleft), these specific packages are subject to their original restrictive licenses (e.g., GPL/LGPL). Please refer to the individual sub-folder licenses for details.
+These packages depend on upstream GPL-licensed parsers (`@mlightcad/dxf-json`, `@mlightcad/libredwg-web`, `@mlightcad/libdxfrw-web`). Please refer to each package's license for details.
+
+### GPL copyleft and Web Worker isolation
+
+The MIT-licensed core (`@mlightcad/data-model`, `@mlightcad/geometry-engine`, `@mlightcad/graphic-interface`, `@mlightcad/common`) does **not** depend on any GPL parser. GPL copyleft therefore does **not** automatically apply to your application merely because you use the RealDWG-Web SDK—**provided that GPL parser code runs only inside separate Web Worker bundles**.
+
+For `@mlightcad/dxf-json-converter` and `@mlightcad/libredwg-converter`, the recommended integration is:
+
+```ts
+const dxfConverter = new AcDbDxfConverter({
+  useWorker: true,
+  parserWorkerUrl: './assets/dxf-parser-worker.js'
+})
+
+const dwgConverter = new AcDbLibreDwgConverter({
+  useWorker: true,
+  parserWorkerUrl: './assets/libredwg-parser-worker.js'
+})
+```
+
+Deploy the worker scripts (`dxf-parser-worker.js`, `libredwg-parser-worker.js`) from each converter package's `dist/` folder as static assets (see [example vite config](./packages/example/vite.config.ts)).
+
+**How this limits copyleft propagation**
+
+| Component | License | Worker isolation |
+| --- | --- | --- |
+| Core SDK (`data-model`, etc.) | MIT | N/A — no GPL dependency |
+| `dxf-json-converter` / `libredwg-converter` (main bundle) | GPL | Orchestrates parsing; GPL parser execution stays in worker |
+| `dxf-parser-worker.js` / `libredwg-parser-worker.js` | GPL | Separate bundle; loaded at runtime; communicates via `postMessage` |
+| `libdxfrw-converter` | GPL-2.0 | **No** worker isolation — parser runs on the main thread |
+
+When `useWorker: true` is configured and the worker scripts are deployed separately:
+
+1. GPL parser code is bundled only into the worker scripts, not into your main application bundle.
+2. The worker and main thread exchange data through `postMessage` (file bytes in, parsed JSON model out)—a runtime boundary rather than static linking of GPL code into the MIT core.
+3. Your MIT-licensed application code can stay under MIT, while the GPL worker bundles remain separate distributable components that must comply with GPL on their own (source availability, license notice, etc.).
+
+**Important caveats**
+
+- **Worker scripts are still GPL.** You must satisfy GPL obligations for those bundles (e.g., provide corresponding source and license notices when you distribute them).
+- **DXF main-thread parsing does not isolate GPL code.** `@mlightcad/dxf-json-converter` can parse on the main thread when `useWorker: false`; that mode links GPL parser code into the same JavaScript context as your app. Use `useWorker: true` in production if you want worker-based isolation.
+- **DWG via LibreDWG is worker-only.** `@mlightcad/libredwg-converter` requires a Web Worker; it cannot run on the main thread.
+- **`@mlightcad/libdxfrw-converter` is different.** It does not provide a worker-based parser bundle; using it loads GPL libdxfrw code on the main thread. Prefer `@mlightcad/libredwg-converter` with worker mode if copyleft isolation matters for your deployment.
+- **This is an architectural description, not legal advice.** Interpretation of GPL in browser/Web Worker contexts may vary by jurisdiction and use case. Consult qualified legal counsel for your product if license compliance is critical.
