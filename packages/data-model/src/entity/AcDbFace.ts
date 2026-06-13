@@ -4,11 +4,12 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike} from '@mlightcad/geometry-engine'
+  AcGePointLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
-import { AcDbOsnapMode } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 

@@ -46,7 +46,9 @@ class TestDxfConverter extends AcDbDxfConverter {
 describe('AcDbDxfConverter', () => {
   it('sets default parser worker url and useWorker in constructor', () => {
     const converter = new AcDbDxfConverter()
-    expect(converter.config.parserWorkerUrl).toBe('/assets/dxf-parser-worker.js')
+    expect(converter.config.parserWorkerUrl).toBe(
+      '/assets/dxf-parser-worker.js'
+    )
     expect(converter.config.useWorker).toBe(true)
   })
 

@@ -20,14 +20,12 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
-import {
-  AcDbRenderingCache,
-  decodeMLeaderStyleRawColor,
-  DEFAULT_MLEADER_STYLE
-} from '../misc'
-import { AcDbOsnapMode } from '../misc'
-import { AcDbMLeaderStyle } from '../object'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { DEFAULT_MLEADER_STYLE } from '../misc/AcDbConstants'
+import { decodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
+import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import {

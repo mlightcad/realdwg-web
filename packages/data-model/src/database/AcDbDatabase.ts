@@ -8,21 +8,16 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import { AcDbRegenerator } from '../converter'
+import { AcDbRegenerator } from '../converter/AcDbRegenerator'
 import {
   AcDbConverterType,
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
-import { AcDbEntity } from '../entity'
+import { AcDbEntity } from '../entity/AcDbEntity'
 import {
   ACAD_APPID,
   ACTIVE_VPORT_NAME,
-  AcDbAngleUnits,
-  AcDbDataGenerator,
-  AcDbFormatter,
-  AcDbLinearUnits,
-  AcDbUnitsValue,
   ByBlock,
   ByLayer,
   DEFAULT_MLEADER_STYLE,
@@ -30,7 +25,12 @@ import {
   DEFAULT_LINE_TYPE,
   DEFAULT_TEXT_STYLE,
   MLIGHTCAD_APPID
-} from '../misc'
+} from '../misc/AcDbConstants'
+import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
+import { AcDbDataGenerator } from '../misc/AcDbDataGenerator'
+import { AcDbFormatter } from '../misc/AcDbFormatter'
+import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import { AcDbDictionary } from '../object/AcDbDictionary'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'

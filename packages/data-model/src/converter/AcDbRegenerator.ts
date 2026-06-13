@@ -1,9 +1,10 @@
-import { AcDbBlockTableRecord, AcDbDatabase } from '../database'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
+import { AcDbDatabase } from '../database/AcDbDatabase'
 import {
   AcDbConversionProgressCallback,
   AcDbDatabaseConverter
 } from '../database/AcDbDatabaseConverter'
-import { AcDbEntity } from '../entity'
+import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbBatchProcessing } from './AcDbBatchProcessing'
 
 /**

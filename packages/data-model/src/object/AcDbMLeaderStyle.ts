@@ -3,7 +3,7 @@ import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
-import { encodeMLeaderStyleRawColor } from '../misc'
+import { encodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
 
 /**
  * Represents the nongraphical MLEADERSTYLE object.

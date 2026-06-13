@@ -6,7 +6,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
-import { AcDbOsnapMode } from '../misc'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 
 function distSq3d(a: AcGePoint3dLike, b: AcGePoint3dLike): number {
   const dx = a.x - b.x

@@ -144,8 +144,7 @@ describe('AcDbViewport', () => {
       const viewport = new AcDbViewport()
       viewport.number = attrs?.number ?? 2
       viewport.layer = attrs?.layer ?? '0'
-      viewport.centerPoint =
-        attrs?.centerPoint ?? new AcGePoint3d(10, 20, 0)
+      viewport.centerPoint = attrs?.centerPoint ?? new AcGePoint3d(10, 20, 0)
       viewport.width = attrs?.width ?? 8
       viewport.height = attrs?.height ?? 6
       paperSpace.appendEntity(viewport)

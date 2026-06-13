@@ -1,6 +1,6 @@
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
 import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
 

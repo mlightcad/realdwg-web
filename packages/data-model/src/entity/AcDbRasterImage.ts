@@ -10,8 +10,9 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler, AcDbObjectId } from '../base'
-import { AcDbOsnapMode } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObjectId } from '../base/AcDbObject'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 

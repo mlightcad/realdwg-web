@@ -10,7 +10,7 @@ import {
   AcGiViewport
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
 
 /**

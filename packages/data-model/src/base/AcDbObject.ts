@@ -22,6 +22,13 @@ export function setAcDbHostApplicationServicesProvider(
   hostApplicationServicesProvider = provider
 }
 
+export function acdbGetWorkingDatabase(): AcDbDatabase {
+  if (hostApplicationServicesProvider) {
+    return hostApplicationServicesProvider().workingDatabase
+  }
+  throw new Error('The current working database must be set before using it!')
+}
+
 /**
  * Interface defining the attributes that can be associated with an AcDbObject.
  *

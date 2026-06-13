@@ -1,6 +1,6 @@
 import { defaults } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
 
 /**

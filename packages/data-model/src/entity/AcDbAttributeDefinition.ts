@@ -1,6 +1,6 @@
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbMText } from './AcDbMText'
 import { AcDbText } from './AcDbText'
 

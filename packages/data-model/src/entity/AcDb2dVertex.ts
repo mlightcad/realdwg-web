@@ -6,8 +6,8 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
-import { AcDbOsnapMode } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 
 export enum AcDb2dVertexType {

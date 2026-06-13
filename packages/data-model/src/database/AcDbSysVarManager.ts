@@ -7,16 +7,16 @@ import {
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
+import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
 import {
-  AcDbAngleUnits,
-  AcDbLinearUnits,
-  AcDbUnitsValue,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE
-} from '../misc'
+} from '../misc/AcDbConstants'
+import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 

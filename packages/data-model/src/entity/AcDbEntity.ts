@@ -12,9 +12,10 @@ import {
   AcGiStyleType
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
-import { AcDbOsnapMode, ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc'
+import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup

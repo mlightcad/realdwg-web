@@ -1,4 +1,4 @@
-import { AcDbObjectId } from '../base'
+import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
