@@ -1,5 +1,8 @@
 # @mlightcad/libdxfrw-converter
 
+[![License: GPL v2](https://img.shields.io/badge/License-GPLv2-blue.svg)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/libdxfrw-converter.svg)](https://www.npmjs.com/package/@mlightcad/libdxfrw-converter)
+
 The `libdxfrw-converter` package provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the AutoCAD-like drawing database structure. It is based on the [libdxfrw](https://github.com/LibreDWG/libdxfrw) library compiled to WebAssembly.
 
 ## Overview

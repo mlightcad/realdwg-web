@@ -1,5 +1,8 @@
 # @mlightcad/libredwg-converter
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/libredwg-converter.svg)](https://www.npmjs.com/package/@mlightcad/libredwg-converter)
+
 The `libredwg-converter` package provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the AutoCAD-like drawing database structure. It is based on the [LibreDWG](https://www.gnu.org/software/libredwg/) library compiled to WebAssembly.
 
 ## Overview

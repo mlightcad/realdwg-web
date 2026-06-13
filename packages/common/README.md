@@ -1,5 +1,8 @@
 # @mlightcad/common
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/common.svg)](https://www.npmjs.com/package/@mlightcad/common)
+
 The common package provides shared utilities and base classes that are used across the RealDWG-Web ecosystem. This package contains fundamental components for color management, event handling, logging, performance monitoring, and file loading operations.
 
 ## Overview

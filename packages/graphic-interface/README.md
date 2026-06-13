@@ -1,5 +1,8 @@
 # @mlightcad/graphic-interface
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/graphic-interface.svg)](https://www.npmjs.com/package/@mlightcad/graphic-interface)
+
 The graphic-interface package provides the graphics interface for controlling how AutoCAD entities are displayed on screen. This package offers a simplified API compared to AutoCAD ObjectARX's AcGi classes, making it more developer-friendly while maintaining the core functionality needed for rendering CAD entities.
 
 ## Overview

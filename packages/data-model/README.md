@@ -1,5 +1,8 @@
 # @mlightcad/data-model
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/data-model.svg)](https://www.npmjs.com/package/@mlightcad/data-model)
+
 The data-model package provides the core classes for interacting with AutoCAD's database and entities. This package mimics AutoCAD ObjectARX's AcDb (Database) classes and implements the drawing database structure that AutoCAD developers are familiar with.
 
 ## Overview

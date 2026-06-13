@@ -1,5 +1,8 @@
 # @mlightcad/dxf-json-converter
 
+[![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/dxf-json-converter.svg)](https://www.npmjs.com/package/@mlightcad/dxf-json-converter)
+
 The `dxf-json-converter` package provides a DXF file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DXF files into the AutoCAD-like drawing database structure. It is based on [@mlightcad/dxf-json](https://www.npmjs.com/package/@mlightcad/dxf-json).
 
 ## Overview

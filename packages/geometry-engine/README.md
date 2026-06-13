@@ -1,5 +1,8 @@
 # @mlightcad/geometry-engine
 
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![npm version](https://img.shields.io/npm/v/@mlightcad/geometry-engine.svg)](https://www.npmjs.com/package/@mlightcad/geometry-engine)
+
 The geometry-engine package provides comprehensive geometric entities, mathematical operations, and transformations for 2D and 3D space. This package mimics AutoCAD ObjectARX's AcGe (Geometry) classes and provides the mathematical foundation for CAD operations.
 
 ## Overview
