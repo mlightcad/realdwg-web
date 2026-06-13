@@ -27,6 +27,7 @@ export default defineConfig(({ mode }) => {
       },
       minify: 'esbuild',
       rollupOptions: {
+        external: ['@mlightcad/dxf-json'],
         output: {
           compact: true
         }

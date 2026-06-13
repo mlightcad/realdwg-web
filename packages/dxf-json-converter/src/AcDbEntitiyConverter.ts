@@ -81,8 +81,8 @@ import {
   HatchSolidFill,
   SmoothType,
   VertexFlag
-} from '@mlightcad/dxf-json'
-import { CircleEntity } from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
+import { CircleEntity } from '@mlightcad/dxf-json/types'
 import {
   ArcEdge,
   BoundaryPathEdge,
@@ -92,7 +92,7 @@ import {
   LineEdge,
   PolylineBoundaryPath,
   SplineEdge
-} from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
 import {
   CommonDxfEntity,
   EllipseEntity,
@@ -115,14 +115,14 @@ import {
   ViewportEntity,
   WipeoutEntity,
   XLineEntity
-} from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
 import {
   AlignedDimensionEntity,
   AngularDimensionEntity,
   DimensionEntityCommon,
   OrdinateDimensionEntity,
   RadialDiameterDimensionEntity
-} from '@mlightcad/dxf-json'
+} from '@mlightcad/dxf-json/types'
 
 type ParsedMLeaderBreak = {
   index?: number

@@ -3,7 +3,8 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./lib",
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    "moduleResolution": "bundler"
   },
   "include": [
     "src"

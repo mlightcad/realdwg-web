@@ -6,11 +6,13 @@ The `libredwg-converter` package provides a DWG file converter for the RealDWG-W
 
 This package implements a DWG file converter compatible with the RealDWG-Web data model. It allows you to register DWG file support in your application and convert DWG files into the in-memory drawing database.
 
+DWG parsing is provided through a dedicated Web Worker bundle (`libredwg-parser-worker.js`). **This converter is intended for Web Worker use only.** That restriction is not because parsing cannot run on the main thread in principle; it is a deliberate licensing choice. LibreDWG and its WebAssembly wrapper are copyleft (GPL), and loading them in a separate worker bundle helps keep that parser code apart from the main MIT-licensed application so license obligations are easier to manage.
+
 ## Key Features
 
 - **DWG File Support**: Read and convert DWG files to the drawing database
 - **Integration**: Designed to work with the RealDWG-Web data model and converter manager
-- **WebAssembly Powered**: Uses LibreDWG compiled to WASM for fast, browser-compatible parsing
+- **WebAssembly Powered**: Uses LibreDWG compiled to WASM, loaded in a Web Worker for license isolation
 
 ## Installation
 
@@ -20,7 +22,6 @@ npm install @mlightcad/libredwg-converter
 
 > **Peer dependencies:**
 > - `@mlightcad/data-model`
-> - `@mlightcad/libredwg-web`
 
 ## Usage Example
 
@@ -28,12 +29,14 @@ npm install @mlightcad/libredwg-converter
 import { AcDbDatabaseConverterManager, AcDbFileType } from '@mlightcad/data-model';
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter';
 
-// WASM module loading (async)
-import('@mlightcad/libredwg-web/wasm/libredwg-web').then(libredwgModule => {
-  const dwgConverter = new AcDbLibreDwgConverter(libredwgModule);
-  AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, dwgConverter);
+const dwgConverter = new AcDbLibreDwgConverter({
+  useWorker: true,
+  parserWorkerUrl: './assets/libredwg-parser-worker.js'
 });
+AcDbDatabaseConverterManager.instance.register(AcDbFileType.DWG, dwgConverter);
 ```
+
+Deploy `libredwg-parser-worker.js` from this package's `dist/` folder to a public URL accessible by your application.
 
 ## API
 
@@ -42,7 +45,7 @@ import('@mlightcad/libredwg-web/wasm/libredwg-web').then(libredwgModule => {
 ## Dependencies
 
 - **@mlightcad/data-model**: Drawing database and entity definitions
-- **@mlightcad/libredwg-web**: WASM wrapper for LibreDWG
+- **@mlightcad/libredwg-web**: WASM wrapper for LibreDWG, loaded in the worker bundle by design for license isolation
 
 ## API Documentation
 
@@ -50,4 +53,4 @@ For detailed API documentation, visit the [RealDWG-Web documentation](https://ml
 
 ## Contributing
 
-This package is part of the RealDWG-Web monorepo. Please refer to the main project README for contribution guidelines. 
+This package is part of the RealDWG-Web monorepo. Please refer to the main project README for contribution guidelines.

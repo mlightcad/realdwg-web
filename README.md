@@ -21,6 +21,8 @@ To support reading both DXF and DWG files (and potentially other formats in the 
 - The `AcDbDatabaseConverterManager` maintains a registry of these converters, allowing you to register or unregister converters for specific file types at runtime.
 - No converters are registered by default. Register the DXF and DWG converters from their respective packages before calling `AcDbDatabase.read()`.
 
+Both `@mlightcad/dxf-json-converter` and `@mlightcad/libredwg-converter` are designed to run their parsers in a Web Worker only. This is not a technical or architectural limitation of the converters themselves; it is a deliberate licensing choice. The upstream parsers are copyleft (GPL/LGPL), so keeping them in a separate worker bundle helps isolate that code from the main application and makes license compliance easier for MIT-licensed apps built on RealDWG-Web.
+
 ### Registering Converters
 
 Register DXF and DWG converters before reading files:
@@ -33,7 +35,7 @@ import {
 import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
-// DXF converter (GPL parser runs in a separate Web Worker)
+// DXF converter (GPL parser is loaded in a separate Web Worker for license isolation)
 const dxfConverter = new AcDbDxfConverter({
   convertByEntityType: false,
   useWorker: true,
@@ -44,7 +46,7 @@ AcDbDatabaseConverterManager.instance.register(
   dxfConverter
 )
 
-// DWG converter
+// DWG converter (copyleft parser is loaded in a separate Web Worker for license isolation)
 const dwgConverter = new AcDbLibreDwgConverter({
   convertByEntityType: false,
   useWorker: true,
@@ -122,11 +124,13 @@ This module provides a DWG file converter for the RealDWG-Web ecosystem, enablin
 
 This module provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the drawing database. It is powered by the LibreDWG library compiled to WebAssembly and is designed to be registered with the converter manager for DWG file support.
 
+DWG parsing is provided through a dedicated Web Worker bundle (`libredwg-parser-worker.js`). Worker-only usage is a licensing choice, not a platform constraint: it keeps the copyleft LibreDWG parser separate from the main application bundle so that MIT-licensed apps can integrate DWG support more safely.
+
 ### dxf-json-converter (DXF file support)
 
 This module provides a DXF file converter for the RealDWG-Web ecosystem. It is based on [@mlightcad/dxf-json](https://www.npmjs.com/package/@mlightcad/dxf-json) and is designed to be registered with the converter manager for DXF file support.
 
-DXF parsing runs in a dedicated Web Worker bundle (`dxf-parser-worker.js`) so that the GPL-licensed parser can be loaded on demand and kept separate from the main application bundle. The main `@mlightcad/data-model` package does not depend on `dxf-json`.
+DXF parsing is provided through a dedicated Web Worker bundle (`dxf-parser-worker.js`). Worker-only usage is a licensing choice, not a platform constraint: it keeps the GPL-licensed `@mlightcad/dxf-json` parser separate from the main application bundle. The main `@mlightcad/data-model` package does not depend on `dxf-json`.
 
 ## geometry-engine (AcGe classes in AutoCAD ObjectARX)
 
