@@ -82,8 +82,8 @@ import { AcDbObjectConverter } from './AcDbObjectConverter'
 export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   constructor(config: AcDbDatabaseConverterConfig = {}) {
     super(config)
-    if (!config.parserWorkerUrl) {
-      config.parserWorkerUrl = '/assets/dxf-parser-worker.js'
+    if (!this.config.parserWorkerUrl) {
+      this.config.parserWorkerUrl = '/assets/dxf-parser-worker.js'
     }
   }
 

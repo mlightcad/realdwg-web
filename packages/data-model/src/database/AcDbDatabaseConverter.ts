@@ -280,21 +280,21 @@ export interface AcDbDatabaseConverterConfig {
    */
   timeout?: number
   /**
-   * Whether to use web workers for computationally intensive tasks.
+   * Whether to use web workers for parser execution.
    *
-   * When set to `true`, the converter will attempt to use web workers
-   * for computationally intensive tasks, which can improve performance
-   * by offloading work to background threads and preventing UI blocking.
+   * When set to `true`, the converter uses a web worker for parsing, which
+   * keeps copyleft parser code out of the main bundle and avoids blocking
+   * the UI thread.
    *
-   * When set to `false`, all computationally intensive operations will be
-   * performed on the main thread.
+   * Copyleft converters (DXF/DWG) require worker parsing. Setting this to
+   * `false` is only meaningful for converters that still support main-thread
+   * parsing.
    *
-   * @default false
+   * @default true
    *
    * @example
    * ```typescript
    * const config: AcDbDatabaseConverterConfig = {
-   *   useWorker: true,
    *   parserWorkerUrl: '/assets/dxf-parser-worker.js'
    * };
    * ```
@@ -373,7 +373,10 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * ```
    */
   constructor(config: AcDbDatabaseConverterConfig = {}) {
-    this.config = config
+    this.config = {
+      useWorker: config.useWorker ?? true,
+      ...config
+    }
   }
 
   /**
