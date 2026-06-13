@@ -20,7 +20,13 @@
     "skipLibCheck": true,
     "downlevelIteration": true,
     "jsx": "react-jsx",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "baseUrl": ".",
+    "paths": {
+      "@mlightcad/dxf-json/types": [
+        "packages/dxf-json-converter/node_modules/@mlightcad/dxf-json/dist/esm/types/types-entry.d.ts"
+      ]
+    }
   },
   "ts-node": {
     "esm": true,
