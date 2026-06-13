@@ -21,16 +21,16 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
-import { AcDbOsnapMode } from '../misc'
 import {
   DEFAULT_GRADIENT_HATCH_NAME,
   HATCH_PATTERN_SOLID,
   HATCH_PATTERN_USER
 } from '../misc/AcDbConstants'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'

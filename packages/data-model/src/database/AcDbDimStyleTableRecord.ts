@@ -1,7 +1,7 @@
 import { defaults } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base'
-import { DEFAULT_TEXT_STYLE } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs

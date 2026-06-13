@@ -1,6 +1,6 @@
 import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 
 /**

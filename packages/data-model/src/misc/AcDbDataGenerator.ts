@@ -1,16 +1,14 @@
 import { AcCmColor } from '@mlightcad/common'
 import { AcGeLine2d, AcGeLoop2d } from '@mlightcad/geometry-engine'
 
-import {
-  AcDbBlockTableRecord,
-  AcDbDatabase,
-  AcDbDimStyleTableRecord,
-  AcDbLayerTableRecord,
-  AcDbLinetypeTableRecord,
-  AcDbTextStyleTableRecord
-} from '../database'
-import { AcDbHatch } from '../entity'
-import { AcDbLayout } from '../object'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
+import { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord'
+import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
+import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord'
+import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord'
+import { AcDbHatch } from '../entity/AcDbHatch'
+import { AcDbLayout } from '../object/layout/AcDbLayout'
 import { DEFAULT_TEXT_STYLE, HATCH_PATTERN_SOLID } from './AcDbConstants'
 
 export class AcDbDataGenerator {

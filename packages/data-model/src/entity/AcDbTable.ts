@@ -14,8 +14,8 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
-import type { AcDbBlockTableRecord } from '../database'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
 import { AcDbBlockReference } from './AcDbBlockReference'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 

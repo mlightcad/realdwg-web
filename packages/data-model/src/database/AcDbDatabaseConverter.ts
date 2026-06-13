@@ -6,8 +6,8 @@ import {
   AcCmTaskScheduler
 } from '@mlightcad/common'
 
-import { AcDbRenderingCache } from '../misc'
-import { AcDbDatabase } from './AcDbDatabase'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
+import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSysVarManager } from './AcDbSysVarManager'
 
 /**

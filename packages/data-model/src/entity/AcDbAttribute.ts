@@ -1,4 +1,4 @@
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import {
   AcDbAttributeFlags,
   AcDbAttributeMTextFlag

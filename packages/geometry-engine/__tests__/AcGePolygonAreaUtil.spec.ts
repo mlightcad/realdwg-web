@@ -19,7 +19,12 @@ describe('AcGePolygonAreaUtil', () => {
 
   it('returns 0 for open or degenerate loops', () => {
     expect(acGeClosedPolygonArea2d([])).toBe(0)
-    expect(acGeClosedPolygonArea2d([{ x: 0, y: 0 }, { x: 1, y: 0 }])).toBe(0)
+    expect(
+      acGeClosedPolygonArea2d([
+        { x: 0, y: 0 },
+        { x: 1, y: 0 }
+      ])
+    ).toBe(0)
   })
 
   it('computes 3D planar polygon area', () => {

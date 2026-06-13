@@ -9,8 +9,11 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler, AcDbObjectId } from '../base'
-import { AcDbObjectIterator, AcDbOsnapMode, AcDbRenderingCache } from '../misc'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbObjectId } from '../base/AcDbObject'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
 import { AcDbAttribute } from './AcDbAttribute'
 import { AcDbEntity } from './AcDbEntity'
 import {

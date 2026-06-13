@@ -1,6 +1,6 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'

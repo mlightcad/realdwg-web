@@ -1,7 +1,6 @@
 import { AcCmEventManager } from '@mlightcad/common'
 
-import { acdbHostApplicationServices } from '../../base/AcDbHostApplicationServices'
-import { AcDbObjectId } from '../../base/AcDbObject'
+import { acdbGetWorkingDatabase, AcDbObjectId } from '../../base/AcDbObject'
 import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord'
 import { AcDbDatabase } from '../../database/AcDbDatabase'
 import { AcDbLayout } from './AcDbLayout'
@@ -266,7 +265,7 @@ export class AcDbLayoutManager {
   }
 
   private getWorkingDatabase(db?: AcDbDatabase) {
-    return db || acdbHostApplicationServices().workingDatabase
+    return db || acdbGetWorkingDatabase()
   }
 
   private setCurrentLayoutInternal(

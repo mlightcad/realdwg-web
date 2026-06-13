@@ -11,15 +11,15 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import {
   ByBlock,
   ByLayer,
   DEFAULT_LINE_TYPE,
   DEFAULT_MLINE_STYLE
-} from '../misc'
-import { AcDbOsnapMode } from '../misc'
-import { AcDbMlineStyle } from '../object'
+} from '../misc/AcDbConstants'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import {

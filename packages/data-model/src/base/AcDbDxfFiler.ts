@@ -9,7 +9,7 @@ import {
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
-import type { AcDbDatabase } from '../database'
+import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
 import { AcDbResultBuffer } from './AcDbResultBuffer'
 

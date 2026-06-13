@@ -1,4 +1,4 @@
-import { DEFAULT_TEXT_STYLE } from '../misc'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
 import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
