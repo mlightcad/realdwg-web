@@ -1,5 +1,16 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.0
+
+### Minor Changes
+
+- feat: adds area support on curve, hatch, and geometry classes, extracts DXF conversion into the standalone @mlightcad/dxf-json-converter package, and documents GPL Web Worker isolation with example JSDoc
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.9.0
+
 ## 3.6.4
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @mlightcad/geometry-engine
 
+## 3.4.0
+
+### Minor Changes
+
+- feat: adds area support on curve, hatch, and geometry classes, extracts DXF conversion into the standalone @mlightcad/dxf-json-converter package, and documents GPL Web Worker isolation with example JSDoc
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.6.0
+
 ## 3.3.4
 
 ### Patch Changes

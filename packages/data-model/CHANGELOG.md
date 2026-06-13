@@ -1,5 +1,18 @@
 # @mlightcad/data-model
 
+## 1.9.0
+
+### Minor Changes
+
+- feat: adds area support on curve, hatch, and geometry classes, extracts DXF conversion into the standalone @mlightcad/dxf-json-converter package, and documents GPL Web Worker isolation with example JSDoc
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.6.0
+  - @mlightcad/geometry-engine@3.4.0
+  - @mlightcad/graphic-interface@3.5.0
+
 ## 1.8.4
 
 ### Patch Changes

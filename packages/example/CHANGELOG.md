@@ -1,5 +1,18 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.0
+
+### Minor Changes
+
+- feat: adds area support on curve, hatch, and geometry classes, extracts DXF conversion into the standalone @mlightcad/dxf-json-converter package, and documents GPL Web Worker isolation with example JSDoc
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.9.0
+  - @mlightcad/dxf-json-converter@1.9.0
+  - @mlightcad/libredwg-converter@3.7.0
+
 ## 0.2.4
 
 ### Patch Changes
