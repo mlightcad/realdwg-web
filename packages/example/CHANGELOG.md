@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.1
+
+### Patch Changes
+
+- fix(data-model): break circular deps via direct imports and add CJS bundle test (#106)
+- Updated dependencies
+  - @mlightcad/data-model@1.9.1
+  - @mlightcad/dxf-json-converter@1.9.1
+  - @mlightcad/libredwg-converter@3.7.1
+
 ## 0.3.0
 
 ### Minor Changes

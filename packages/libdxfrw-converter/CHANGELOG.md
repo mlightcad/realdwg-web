@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.1
+
+### Patch Changes
+
+- fix(data-model): break circular deps via direct imports and add CJS bundle test (#106)
+- Updated dependencies
+  - @mlightcad/data-model@1.9.1
+
 ## 3.7.0
 
 ### Minor Changes

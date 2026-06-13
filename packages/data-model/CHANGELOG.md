@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.1
+
+### Patch Changes
+
+- fix(data-model): break circular deps via direct imports and add CJS bundle test (#106)
+- Updated dependencies
+  - @mlightcad/common@1.6.1
+  - @mlightcad/geometry-engine@3.4.1
+  - @mlightcad/graphic-interface@3.5.1
+
 ## 1.9.0
 
 ### Minor Changes

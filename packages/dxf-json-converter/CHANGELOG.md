@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.1
+
+### Patch Changes
+
+- fix(data-model): break circular deps via direct imports and add CJS bundle test (#106)
+- Updated dependencies
+  - @mlightcad/data-model@1.9.1
+
 ## 1.9.0
 
 ### Major Changes
@@ -15,5 +23,3 @@
 
 - Updated dependencies
   - @mlightcad/data-model@1.9.0
-
-

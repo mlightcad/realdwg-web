@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.1
+
+### Patch Changes
+
+- fix(data-model): break circular deps via direct imports and add CJS bundle test (#106)
+
 ## 1.6.0
 
 ### Minor Changes
