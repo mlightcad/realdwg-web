@@ -1,3 +1,13 @@
+/**
+ * @fileoverview Example web application entry point for DWG/DXF parsing and PAT preview.
+ *
+ * This module wires up the demo UI: file selection, main-thread vs web-worker parsing
+ * benchmarks, layer/linetype inspection, DXF export, and hatch pattern (PAT) parsing
+ * with SVG previews.
+ *
+ * @module example/main
+ */
+
 import {
   AcDbDatabase,
   AcDbDatabaseConverterManager,
@@ -43,6 +53,13 @@ output.insertAdjacentElement('afterend', linetypePreviewPanel)
 linetypePreviewPanel.style.marginTop = '16px'
 linetypePreviewPanel.style.display = 'none'
 
+/**
+ * Parsing execution mode selected in the demo UI.
+ *
+ * - `compare` — Parse the same file on the main thread and in a web worker, then report timings.
+ * - `main` — Parse only on the main thread (DXF only; UI may freeze during parsing).
+ * - `worker` — Parse only inside a dedicated web worker (required for DWG).
+ */
 type ParseMode = 'compare' | 'main' | 'worker'
 
 let lastFile: File | null = null
@@ -52,6 +69,17 @@ let lastDownloadUrl: string | null = null
 const patSvgRenderer = new AcDbPatSvgRenderer()
 const patParser = new AcDbPatParser()
 
+/**
+ * Registers DXF and DWG database converters with the global converter manager.
+ *
+ * Both converters share the same worker configuration. DXF supports main-thread parsing;
+ * DWG parsing is worker-only and relies on the LibreDWG parser worker script.
+ *
+ * Registration failures are logged to the console but do not throw, so the demo can
+ * continue with whichever converters succeeded.
+ *
+ * @param useWorker - When `true`, parsing runs in a web worker; when `false`, on the main thread.
+ */
 const registerConverters = (useWorker: boolean) => {
   // Register DXF converter
   try {
@@ -78,13 +106,31 @@ const registerConverters = (useWorker: boolean) => {
   }
 }
 
+/**
+ * Infers the CAD file type from a file name extension.
+ *
+ * @param fileName - Original file name, with or without path segments.
+ * @returns {@link AcDbFileType.DWG} when the extension is `.dwg` (case-insensitive); otherwise {@link AcDbFileType.DXF}.
+ */
 const getFileType = (fileName: string) => {
   const extension = fileName.split('.').pop()?.toLocaleLowerCase()
   return extension === 'dwg' ? AcDbFileType.DWG : AcDbFileType.DXF
 }
 
+/**
+ * Formats a duration in milliseconds for display in the output panel.
+ *
+ * @param value - Elapsed time in milliseconds.
+ * @returns Human-readable string with two decimal places, e.g. `"123.45 ms"`.
+ */
 const formatMs = (value: number) => `${value.toFixed(2)} ms`
 
+/**
+ * Collects layer table metadata from an opened database.
+ *
+ * @param database - Parsed drawing database whose layer table will be iterated.
+ * @returns Layer count and an ordered list of layer names.
+ */
 const collectLayers = (database: AcDbDatabase) => {
   const layers = database.tables.layerTable.newIterator()
   const names: string[] = []
@@ -97,6 +143,13 @@ const collectLayers = (database: AcDbDatabase) => {
   }
 }
 
+/**
+ * Outcome of a single parse attempt.
+ *
+ * Uses a discriminated union on `skipped`:
+ * - When `skipped` is `true`, parsing did not produce a database and `reason` explains why.
+ * - When `skipped` is `false`, parsing succeeded and timing, layer summary, and the database are available.
+ */
 type ParseResult =
   | { skipped: true; reason: string }
   | {
@@ -106,6 +159,18 @@ type ParseResult =
       layers: { count: number; names: string[] }
     }
 
+/**
+ * Parses a drawing buffer once using the configured converters and open options.
+ *
+ * Creates a fresh {@link AcDbDatabase}, assigns it as the host working database, and
+ * measures wall-clock time for {@link AcDbDatabase.read}. Converters are (re)registered
+ * on each call so worker vs main-thread mode can differ between invocations.
+ *
+ * @param buffer - Raw file bytes (DXF or DWG).
+ * @param fileType - Format hint passed to the database reader.
+ * @param useWorker - Whether to register and use worker-based converters.
+ * @returns Parsed database with timing and layer info, or a skipped result if parsing is not attempted.
+ */
 const parseOnce = async (
   buffer: ArrayBuffer,
   fileType: AcDbFileType,
@@ -132,6 +197,13 @@ const parseOnce = async (
   }
 }
 
+/**
+ * Builds a short comparison message between main-thread and worker parse durations.
+ *
+ * @param mainMs - Elapsed time for main-thread parsing in milliseconds.
+ * @param workerMs - Elapsed time for worker parsing in milliseconds.
+ * @returns Sentence describing which side was faster and by what relative percentage.
+ */
 const compareTimes = (mainMs: number, workerMs: number) => {
   const diff = workerMs - mainMs
   const percent = (Math.abs(diff) / Math.max(mainMs, 1)) * 100
@@ -142,22 +214,47 @@ const compareTimes = (mainMs: number, workerMs: number) => {
   return `Worker is ${percent.toFixed(1)}% slower than main thread.`
 }
 
+/**
+ * Updates the global status line shown above the parse output.
+ *
+ * @param message - Status text; pass an empty string to clear the line.
+ */
 const setStatus = (message: string) => {
   status.textContent = message
 }
 
+/**
+ * Derives the download file name for a DXF export from the original upload name.
+ *
+ * Replaces the last extension segment with `.dxf`, or appends `.dxf` when no extension exists.
+ *
+ * @param fileName - Original uploaded file name.
+ * @returns Suggested export file name ending in `.dxf`.
+ */
 const getExportFileName = (fileName: string) => {
   const suffixIndex = fileName.lastIndexOf('.')
   const baseName = suffixIndex >= 0 ? fileName.slice(0, suffixIndex) : fileName
   return `${baseName}.dxf`
 }
 
+/**
+ * Shows or hides the DXF export button based on current session state.
+ *
+ * The button is visible when a file has been selected and enabled only when a database
+ * has been successfully parsed and is available for export.
+ */
 const updateExportButton = () => {
   const shouldShow = lastFile != null
   exportButton.hidden = !shouldShow
   exportButton.disabled = !shouldShow || lastParsedDatabase == null
 }
 
+/**
+ * Formats layer table summary lines for the text output area.
+ *
+ * @param layerInfo - Layer count and names from {@link collectLayers}; omit to return an empty array.
+ * @returns Lines suitable for joining into the `<pre>` output, including a header and bullet list.
+ */
 const renderLayers = (layerInfo?: { count: number; names: string[] }) => {
   if (!layerInfo) return []
   const lines = [`Layers (${layerInfo.count})`]
@@ -165,6 +262,14 @@ const renderLayers = (layerInfo?: { count: number; names: string[] }) => {
   return lines
 }
 
+/**
+ * Renders SVG previews for every linetype record in the parsed database.
+ *
+ * Clears and hides the preview panel when `database` is null. Otherwise builds a grid of
+ * rows with linetype name/comments and inline SVG from {@link AcDbLinetypeTableRecord.toPreviewSvgString}.
+ *
+ * @param database - Parsed drawing database, or `null` to reset the panel.
+ */
 const renderLinetypePreviews = (database: AcDbDatabase | null) => {
   linetypePreviewPanel.innerHTML = ''
   if (!database) {
@@ -228,16 +333,37 @@ const renderLinetypePreviews = (database: AcDbDatabase | null) => {
   linetypePreviewPanel.style.display = 'block'
 }
 
+/**
+ * Updates the PAT section status line.
+ *
+ * @param message - Status text shown below the PAT controls.
+ */
 const setPatStatus = (message: string) => {
   patStatus.textContent = message
 }
 
+/**
+ * Removes all rendered PAT pattern rows from the preview table container.
+ */
 const clearPatPreview = () => {
   patTableOutput.innerHTML = ''
 }
 
+/**
+ * Source of hatch pattern (PAT) definitions in the demo.
+ *
+ * - `predefined-acad` — Built-in `acad.pat` patterns shipped with the data model.
+ * - `predefined-acadiso` — Built-in ISO `acadiso.pat` patterns.
+ * - `file` — User-selected local `.pat` file loaded via the file input.
+ */
 type PatSource = 'predefined-acad' | 'predefined-acadiso' | 'file'
 
+/**
+ * Resolves a built-in PAT document for predefined sources.
+ *
+ * @param source - Selected PAT source; must not be `'file'`.
+ * @returns The corresponding {@link AcDbPatDocument}, or `null` when the source is `'file'`.
+ */
 const getPredefinedPatDocument = (
   source: PatSource
 ): AcDbPatDocument | null => {
@@ -246,6 +372,14 @@ const getPredefinedPatDocument = (
   return null
 }
 
+/**
+ * Builds an HTML table listing each pattern's JSON definition and SVG preview.
+ *
+ * Each row shows pretty-printed pattern metadata and a rasterized SVG thumbnail produced
+ * by {@link AcDbPatSvgRenderer.renderPattern}. No-op when the document contains zero patterns.
+ *
+ * @param patDocument - Parsed or predefined PAT document to display.
+ */
 const renderPatTable = (patDocument: AcDbPatDocument) => {
   patTableOutput.innerHTML = ''
   if (patDocument.patterns.length === 0) return
@@ -326,11 +460,22 @@ const renderPatTable = (patDocument: AcDbPatDocument) => {
   patTableOutput.appendChild(table)
 }
 
+/**
+ * Parses raw PAT file text and loads the result into the preview UI.
+ *
+ * @param text - Full contents of a `.pat` file.
+ */
 const parsePatText = (text: string) => {
   const parsed = patParser.parse(text)
   loadPatDocument(parsed, 'Local PAT file')
 }
 
+/**
+ * Displays a PAT document in the table and updates the PAT status summary.
+ *
+ * @param patDocument - Document whose patterns and issues will be summarized.
+ * @param sourceLabel - Human-readable label for the pattern source (file name or built-in id).
+ */
 const loadPatDocument = (patDocument: AcDbPatDocument, sourceLabel: string) => {
   renderPatTable(patDocument)
 
@@ -344,6 +489,11 @@ const loadPatDocument = (patDocument: AcDbPatDocument, sourceLabel: string) => {
   setPatStatus(summaryParts.join(' | '))
 }
 
+/**
+ * Enables or disables PAT file controls based on the selected {@link PatSource}.
+ *
+ * File input and parse button are active only when source is `'file'`.
+ */
 const updatePatSourceUi = () => {
   const source = patSourceSelect.value as PatSource
   const isFileSource = source === 'file'
@@ -351,6 +501,12 @@ const updatePatSourceUi = () => {
   parsePatButton.disabled = !isFileSource
 }
 
+/**
+ * Applies the current PAT source selection: loads predefined documents or prompts for a file.
+ *
+ * For built-in sources, immediately renders the corresponding document. For `'file'`, clears
+ * the preview and instructs the user to upload and parse a local PAT file.
+ */
 const applyPatSource = () => {
   const source = patSourceSelect.value as PatSource
   updatePatSourceUi()
@@ -372,6 +528,14 @@ const applyPatSource = () => {
   loadPatDocument(predefined, sourceLabel)
 }
 
+/**
+ * Adjusts parse mode dropdown options for DWG vs DXF constraints.
+ *
+ * DWG parsing requires a web worker, so `compare` and `main` modes are disabled for DWG
+ * files and the selection is forced to `worker` when necessary.
+ *
+ * @param fileType - Detected format of the currently selected file.
+ */
 const updateModeOptions = (fileType: AcDbFileType) => {
   const compareOption = modeSelect.querySelector(
     'option[value="compare"]'
@@ -389,6 +553,14 @@ const updateModeOptions = (fileType: AcDbFileType) => {
   }
 }
 
+/**
+ * Main parse workflow triggered by file selection or the Run button.
+ *
+ * Validates that a file buffer is loaded, enforces worker mode for DWG, runs parsing
+ * according to {@link ParseMode}, writes timing and layer output, refreshes linetype
+ * previews, and updates export button state. UI controls are disabled for the duration
+ * of parsing to prevent concurrent runs.
+ */
 const runParse = async () => {
   if (!lastFile || !lastBuffer) {
     output.textContent = 'Please select a DWG or DXF file first.'
