@@ -78,6 +78,7 @@ export {
 } from './AcDbText'
 export { AcDbTrace } from './AcDbTrace'
 export { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+export { AcDbProxyEntity } from './AcDbProxyEntity'
 export { AcDbPoint } from './AcDbPoint'
 export {
   AcDbRasterImage,

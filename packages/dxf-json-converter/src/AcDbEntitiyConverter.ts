@@ -39,6 +39,7 @@ import {
   AcDbPolyFaceMesh,
   AcDbPolygonMesh,
   AcDbPolyline,
+  AcDbProxyEntity,
   AcDbRadialDimension,
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
@@ -70,6 +71,7 @@ import {
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
+  hexStringsToBytes,
   transformOcsPointToWcs
 } from '@mlightcad/data-model'
 import {
@@ -117,6 +119,7 @@ import {
   XLineEntity
 } from '@mlightcad/dxf-json/types'
 import {
+  AcadProxyEntity,
   AlignedDimensionEntity,
   AngularDimensionEntity,
   DimensionEntityCommon,
@@ -262,8 +265,33 @@ export class AcDbEntityConverter {
       return this.convertXline(entity as XLineEntity)
     } else if (entity.type == 'INSERT') {
       return this.convertBlockReference(entity as InsertEntity)
+    } else if (entity.type == 'ACAD_PROXY_ENTITY') {
+      return this.convertProxyEntity(entity as AcadProxyEntity)
     }
     return null
+  }
+
+  /**
+   * Converts a DXF ACAD_PROXY_ENTITY to an AcDbProxyEntity.
+   */
+  private convertProxyEntity(entity: AcadProxyEntity): AcDbProxyEntity {
+    const proxy = new AcDbProxyEntity()
+    proxy.proxyEntityClassId = entity.proxyEntityClassId
+    if (entity.originalDxfName) {
+      proxy.originalDxfName = entity.originalDxfName
+    }
+    if (entity.objectDrawingFormat != null) {
+      proxy.graphicsMetafileType = entity.objectDrawingFormat
+    }
+    if (entity.applicationEntityClassId != null) {
+      proxy.originalClassName = String(entity.applicationEntityClassId)
+    }
+    if (entity.graphicsData) {
+      const bytes = hexStringsToBytes([entity.graphicsData])
+      const size = entity.graphicsDataSize ?? bytes.length
+      proxy.setProxyGraphic(bytes.subarray(0, size))
+    }
+    return proxy
   }
 
   /**

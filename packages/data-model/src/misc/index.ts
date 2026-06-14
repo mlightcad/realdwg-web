@@ -57,6 +57,19 @@ export {
   AcDbPredefinedAcadIsoPat,
   AcDbPredefinedAcadPat
 } from './pat'
+export {
+  AcDbProxyGraphic,
+  AcDbProxyGraphicType,
+  ACDB_PROXY_GRAPHIC_CHUNK_SIZE,
+  loadAcDbProxyGraphicFromDxf
+} from './proxyGraphic'
+export {
+  AcDbProxyGraphicBitStream,
+  AcDbProxyGraphicByteStream,
+  AcDbProxyGraphicEndOfBufferError,
+  bytesToHexString,
+  hexStringsToBytes
+} from './proxyGraphic'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,
