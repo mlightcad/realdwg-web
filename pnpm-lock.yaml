@@ -120,8 +120,8 @@ importers:
   packages/dxf-json-converter:
     dependencies:
       '@mlightcad/dxf-json':
-        specifier: ^1.2.3
-        version: 1.2.3
+        specifier: ^1.2.4
+        version: 1.2.4
     devDependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
@@ -1403,8 +1403,8 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@mlightcad/dxf-json@1.2.3':
-    resolution: {integrity: sha512-xnCXpt6xerJJKEt9YBPWo2V6rDMeVDULoRY5eAi6PnmuGFBEtu0tgj8PVa56PxO9FqIN1Ngtw5mdsZAvH1JX/A==}
+  '@mlightcad/dxf-json@1.2.4':
+    resolution: {integrity: sha512-pPPJiwjimfjsgNNjigOjUcGprXds02l/QIita5Dg1E/Yx20c81KvyE0w0diQkpUpmEuFIzAOAyHr5psDlPYSkQ==}
 
   '@mlightcad/libdxfrw-web@0.0.9':
     resolution: {integrity: sha512-6fqGbjKWwI93cq8vwpXiFdAzWfdJjcIlLuAYwUvgTcEjx5jPvbd+tkzY7mX2/a8iMm/b/auGVzkgf1wxezHYIw==}
@@ -6352,7 +6352,7 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mlightcad/dxf-json@1.2.3':
+  '@mlightcad/dxf-json@1.2.4':
     dependencies:
       '@fxts/core': 1.26.0
 
