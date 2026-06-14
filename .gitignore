@@ -7,6 +7,10 @@ lib
 tmp
 tsconfig.tsbuildinfo
 
+# mlightcad private parser and converter packages
+mlightcad-parser
+mlightcad-converter
+
 # dependencies
 node_modules
 
