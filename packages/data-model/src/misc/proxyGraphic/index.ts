@@ -1,3 +1,9 @@
+/**
+ * Proxy-entity graphics decoding utilities.
+ *
+ * This module exposes the binary stream readers, command-type enum, parser, and
+ * DXF import/export helpers used by {@link AcDbProxyEntity}.
+ */
 export {
   AcDbProxyGraphic,
   AcDbProxyGraphicType,

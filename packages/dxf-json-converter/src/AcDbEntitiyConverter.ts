@@ -71,8 +71,8 @@ import {
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
-  transformOcsPointToWcs,
-  hexStringsToBytes
+  hexStringsToBytes,
+  transformOcsPointToWcs
 } from '@mlightcad/data-model'
 import {
   ArcEntity,
@@ -119,9 +119,9 @@ import {
   XLineEntity
 } from '@mlightcad/dxf-json/types'
 import {
+  AcadProxyEntity,
   AlignedDimensionEntity,
   AngularDimensionEntity,
-  AcadProxyEntity,
   DimensionEntityCommon,
   OrdinateDimensionEntity,
   RadialDiameterDimensionEntity
