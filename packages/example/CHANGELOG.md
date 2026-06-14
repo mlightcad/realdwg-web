@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.2
+
+### Patch Changes
+
+- feat: add AcDbProxyEntity with proxy graphic decoding
+- Updated dependencies
+  - @mlightcad/data-model@1.9.2
+  - @mlightcad/dxf-json-converter@1.9.2
+  - @mlightcad/libredwg-converter@3.7.2
+
 ## 0.3.1
 
 ### Patch Changes

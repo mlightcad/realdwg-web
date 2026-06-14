@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.2
+
+### Patch Changes
+
+- feat: add AcDbProxyEntity with proxy graphic decoding
+- Updated dependencies
+  - @mlightcad/data-model@1.9.2
+
 ## 3.7.1
 
 ### Patch Changes

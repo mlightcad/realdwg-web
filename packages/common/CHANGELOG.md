@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.2
+
+### Patch Changes
+
+- feat: add AcDbProxyEntity with proxy graphic decoding
+
 ## 1.6.1
 
 ### Patch Changes

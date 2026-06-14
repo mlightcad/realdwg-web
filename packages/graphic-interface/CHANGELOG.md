@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.5.2
+
+### Patch Changes
+
+- feat: add AcDbProxyEntity with proxy graphic decoding
+- Updated dependencies
+  - @mlightcad/common@1.6.2
+  - @mlightcad/geometry-engine@3.4.2
+
 ## 3.5.1
 
 ### Patch Changes

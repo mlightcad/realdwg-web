@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.2
+
+### Patch Changes
+
+- feat: add AcDbProxyEntity with proxy graphic decoding
+- Updated dependencies
+  - @mlightcad/data-model@1.9.2
+
 ## 1.9.1
 
 ### Patch Changes
