@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+- Updated dependencies
+  - @mlightcad/data-model@1.9.3
+  - @mlightcad/dxf-json-converter@1.9.3
+  - @mlightcad/libredwg-converter@3.7.3
+
 ## 0.3.2
 
 ### Patch Changes

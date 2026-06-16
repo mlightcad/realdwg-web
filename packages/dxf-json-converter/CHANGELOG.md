@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+- Updated dependencies
+  - @mlightcad/data-model@1.9.3
+
 ## 1.9.2
 
 ### Patch Changes

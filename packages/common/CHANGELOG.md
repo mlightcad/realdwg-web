@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+
 ## 1.6.2
 
 ### Patch Changes

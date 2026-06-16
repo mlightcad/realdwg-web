@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.7.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+- Updated dependencies
+  - @mlightcad/data-model@1.9.3
+
 ## 3.7.2
 
 ### Patch Changes

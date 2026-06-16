@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+- Updated dependencies
+  - @mlightcad/common@1.6.3
+  - @mlightcad/geometry-engine@3.4.3
+  - @mlightcad/graphic-interface@3.5.3
+
 ## 1.9.2
 
 ### Patch Changes

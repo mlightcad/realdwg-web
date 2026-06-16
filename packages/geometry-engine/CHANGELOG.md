@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.4.3
+
+### Patch Changes
+
+- feat: support proxy entity for dwg file
+- Updated dependencies
+  - @mlightcad/common@1.6.3
+
 ## 3.4.2
 
 ### Patch Changes
