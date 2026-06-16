@@ -38,6 +38,7 @@ import {
   AcDbPolyFaceMesh,
   AcDbPolygonMesh,
   AcDbPolyline,
+  AcDbProxyEntity,
   AcDbRadialDimension,
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
@@ -67,8 +68,8 @@ import {
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
-  transformOcsPointToWcs
-} from '@mlightcad/data-model'
+  hexStringsToBytes,
+  transformOcsPointToWcs} from '@mlightcad/data-model'
 import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
@@ -99,6 +100,7 @@ import type {
   DwgPolyline2dEntity,
   DwgPolyline3dEntity,
   DwgPolylineBoundaryPath,
+  DwgProxyEntity,
   DwgRadialDiameterDimensionEntity,
   DwgRayEntity,
   DwgSolidEntity,
@@ -232,8 +234,33 @@ export class AcDbEntityConverter {
       return this.convertXline(entity as DwgXlineEntity)
     } else if (entity.type == 'INSERT') {
       return this.convertBlockReference(entity as DwgInsertEntity)
+    } else if (entity.type == 'ACAD_PROXY_ENTITY') {
+      return this.convertProxyEntity(entity as DwgProxyEntity)
     }
     return null
+  }
+
+  /**
+   * Converts a DWG ACAD_PROXY_ENTITY to an AcDbProxyEntity.
+   */
+  private convertProxyEntity(entity: DwgProxyEntity): AcDbProxyEntity {
+    const proxy = new AcDbProxyEntity()
+    proxy.proxyEntityClassId = entity.proxyEntityClassId
+    if (entity.originalDxfName) {
+      proxy.originalDxfName = entity.originalDxfName
+    }
+    if (entity.objectDrawingFormat != null) {
+      proxy.graphicsMetafileType = entity.objectDrawingFormat
+    }
+    if (entity.applicationEntityClassId != null) {
+      proxy.originalClassName = String(entity.applicationEntityClassId)
+    }
+    if (entity.graphicsData) {
+      const bytes = hexStringsToBytes([entity.graphicsData])
+      const size = entity.graphicsDataSize ?? bytes.length
+      proxy.setProxyGraphic(bytes.subarray(0, size))
+    }
+    return proxy
   }
 
   private convertFace(face: Dwg3dFaceEntity) {

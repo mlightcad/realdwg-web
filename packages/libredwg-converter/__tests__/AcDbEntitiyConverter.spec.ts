@@ -5,6 +5,7 @@ import {
   AcDbCircle,
   AcDbDatabase,
   AcDbHatch,
+  AcDbProxyEntity,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
 
@@ -71,6 +72,34 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(dbArc.startPoint).toMatchObject({ x: -2, y: 2, z: 0 })
     expect(dbArc.endPoint).toMatchObject({ x: -1, y: 3, z: 0 })
     expect(dbCircle.center).toMatchObject({ x: -1, y: 2, z: 0 })
+  })
+
+  it('converts ACAD_PROXY_ENTITY with graphics data to AcDbProxyEntity', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'ACAD_PROXY_ENTITY',
+      subclassMarker: 'AcDbProxyEntity',
+      originalDxfName: 'AECC_TIN_SURFACE',
+      proxyEntityClassId: 498,
+      applicationEntityClassId: 500,
+      graphicsDataSize: 4,
+      graphicsData: '01020304',
+      entityDataSize: 0,
+      objectDrawingFormat: 29,
+      originalDataFormat: 0,
+      layer: '0',
+      handle: 'A1'
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbProxyEntity)
+    const proxy = result as AcDbProxyEntity
+    expect(proxy.type).toBe('ProxyEntity')
+    expect(proxy.originalDxfName).toBe('AECC_TIN_SURFACE')
+    expect(proxy.proxyEntityClassId).toBe(498)
+    expect(proxy.graphicsMetafileType).toBe(29)
+    expect(proxy.originalClassName).toBe('500')
+    expect(proxy.proxyGraphic).toEqual(new Uint8Array([0x01, 0x02, 0x03, 0x04]))
   })
 
   describe('ATTRIB common attribute propagation (issue #183 follow-up)', () => {
