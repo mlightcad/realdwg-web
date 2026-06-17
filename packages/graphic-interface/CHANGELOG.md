@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.5.4
+
+### Patch Changes
+
+- feat: upgrade libredwg-web to v0.7.4 to fix some issues on parsing dwg files
+- Updated dependencies
+  - @mlightcad/common@1.6.4
+  - @mlightcad/geometry-engine@3.4.4
+
 ## 3.5.3
 
 ### Patch Changes

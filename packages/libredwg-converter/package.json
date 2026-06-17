@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/libredwg-converter",
-  "version": "3.7.3",
+  "version": "3.7.4",
   "license": "GPL-3.0",
   "type": "module",
   "repository": {
@@ -47,7 +47,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "^0.7.3"
+    "@mlightcad/libredwg-web": "^0.7.4"
   },
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",

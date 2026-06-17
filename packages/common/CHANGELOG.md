@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.4
+
+### Patch Changes
+
+- feat: upgrade libredwg-web to v0.7.4 to fix some issues on parsing dwg files
+
 ## 1.6.3
 
 ### Patch Changes

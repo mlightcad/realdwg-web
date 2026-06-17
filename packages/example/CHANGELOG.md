@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.4
+
+### Patch Changes
+
+- feat: upgrade libredwg-web to v0.7.4 to fix some issues on parsing dwg files
+- Updated dependencies
+  - @mlightcad/libredwg-converter@3.7.4
+  - @mlightcad/data-model@1.9.4
+  - @mlightcad/dxf-json-converter@1.9.4
+
 ## 0.3.3
 
 ### Patch Changes
