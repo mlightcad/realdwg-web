@@ -1,7 +1,14 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcCmColor } from '@mlightcad/common'
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase } from '../src/database'
-import { AcDbAttribute, AcDbMText, AcDbTextVerticalMode } from '../src/entity'
+import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
+import {
+  AcDbAttribute,
+  AcDbBlockReference,
+  AcDbMText,
+  AcDbTextVerticalMode
+} from '../src/entity'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const setWorkingDb = () => {
@@ -160,5 +167,53 @@ describe('AcDbAttribute', () => {
 
     expect(attribute.geometricExtents.min).toMatchObject({ x: 8, y: 9, z: 10 })
     expect(attribute.geometricExtents.max.x).toBeCloseTo(10)
+  })
+
+  it('resolves ByBlock color from the owning INSERT, not CECOLOR', () => {
+    const db = setWorkingDb()
+    const viewportLayer = new AcDbLayerTableRecord()
+    viewportLayer.name = 'Viewport'
+    viewportLayer.color = new AcCmColor()
+    viewportLayer.color.setForeground()
+    db.tables.layerTable.add(viewportLayer)
+
+    const insert = new AcDbBlockReference('BLOCK')
+    insert.layer = 'Viewport'
+    db.tables.blockTable.modelSpace.appendEntity(insert)
+
+    const attribute = new AcDbAttribute()
+    attribute.color.setByBlock()
+    insert.appendAttributes(attribute)
+
+    expect(attribute.database).toBe(db)
+    expect(attribute.resolvedColor.isForeground).toBe(true)
+  })
+
+  it('resolves ByLayer color from the attribute layer, not the INSERT layer', () => {
+    const db = setWorkingDb()
+    const viewportLayer = new AcDbLayerTableRecord()
+    viewportLayer.name = 'Viewport'
+    viewportLayer.color = new AcCmColor()
+    viewportLayer.color.setForeground()
+    db.tables.layerTable.add(viewportLayer)
+
+    const cartoucheLayer = new AcDbLayerTableRecord()
+    cartoucheLayer.name = 'CARTOUCHE'
+    cartoucheLayer.color = new AcCmColor()
+    cartoucheLayer.color.colorIndex = 40
+    db.tables.layerTable.add(cartoucheLayer)
+
+    const insert = new AcDbBlockReference('BLOCK')
+    insert.layer = 'Viewport'
+    db.tables.blockTable.modelSpace.appendEntity(insert)
+
+    const attribute = new AcDbAttribute()
+    attribute.layer = 'CARTOUCHE'
+    attribute.color.setByLayer()
+    insert.appendAttributes(attribute)
+
+    expect(attribute.database).toBe(db)
+    expect(attribute.resolvedColor.colorIndex).toBe(40)
+    expect(attribute.resolvedColor.isForeground).toBe(false)
   })
 })

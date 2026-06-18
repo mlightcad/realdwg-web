@@ -157,6 +157,13 @@ export abstract class AcDbEntity extends AcDbObject {
    * Resolved color applied on this entity. It will resolve layer colors and block colors as needed.
    */
   get resolvedColor() {
+    return this.resolveStandardColor()
+  }
+
+  /**
+   * Default ByLayer / ByBlock colour resolution for entities without an INSERT owner.
+   */
+  protected resolveStandardColor() {
     let color = this.color
     if (color.isByLayer) {
       const layerColor = this.getLayerColor()
@@ -178,8 +185,8 @@ export abstract class AcDbEntity extends AcDbObject {
           }
         }
       }
-      // Block reference entity needs to override this method to resolve ByBlock
-      // against INSERT-level inherited traits.
+      // Nested block ByBlock colours are applied during block rendering. Attributes
+      // override this method to resolve ByBlock against their owning INSERT.
     }
     return color
   }

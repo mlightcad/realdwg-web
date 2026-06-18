@@ -459,7 +459,7 @@ export abstract class AcDbDimension extends AcDbEntity {
       const group = AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
-        this.rgbColor,
+        this.resolvedColor,
         [],
         false,
         matrix,
