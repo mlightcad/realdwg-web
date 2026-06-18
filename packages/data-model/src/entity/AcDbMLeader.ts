@@ -1701,7 +1701,6 @@ export class AcDbMLeader extends AcDbEntity {
     const entities: AcGiEntity[] = []
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
-    const originalRgbColor = traits.rgbColor
     const originalLineType = traits.lineType
     const originalLineWeight = traits.lineWeight
     const leaderLineColor = this.getResolvedLeaderLineColor()
@@ -1715,8 +1714,7 @@ export class AcDbMLeader extends AcDbEntity {
       this.applyColorTraits(
         traits,
         leaderLineColor,
-        originalColor,
-        originalRgbColor
+        originalColor
       )
       this.applyLineTraits(traits, leaderLineStyle, leaderLineWeight)
       this._leaders.forEach(leader => {
@@ -1739,7 +1737,7 @@ export class AcDbMLeader extends AcDbEntity {
       this.contentType === AcDbMLeaderContentType.MTextContent &&
       mtextContent
     ) {
-      this.applyColorTraits(traits, textColor, originalColor, originalRgbColor)
+      this.applyColorTraits(traits, textColor, originalColor)
       const textHeight = this.getResolvedTextHeight()
       const mtextData: AcGiMTextData = {
         text: mtextContent.text,
@@ -1758,7 +1756,6 @@ export class AcDbMLeader extends AcDbEntity {
     }
 
     traits.color = originalColor
-    traits.rgbColor = originalRgbColor
     traits.lineType = originalLineType
     traits.lineWeight = originalLineWeight
     if (entities.length === 0) return undefined
@@ -2618,15 +2615,12 @@ export class AcDbMLeader extends AcDbEntity {
   private applyColorTraits(
     traits: AcGiRenderer['subEntityTraits'],
     color: AcCmColor | undefined,
-    originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number
+    originalColor: AcGiRenderer['subEntityTraits']['color']
   ) {
     traits.color = originalColor
-    traits.rgbColor = originalRgbColor
     if (!color) return
 
     traits.color = color
-    traits.rgbColor = this.resolveColorToRgb(color)
   }
 
   /**
@@ -2648,21 +2642,5 @@ export class AcDbMLeader extends AcDbEntity {
     if (lineWeight != null) {
       traits.lineWeight = lineWeight
     }
-  }
-
-  /**
-   * Converts an `AcCmColor` to resolved RGB for rendering.
-   *
-   * @param color Source color definition.
-   * @returns Resolved RGB integer color.
-   */
-  private resolveColorToRgb(color: AcCmColor) {
-    if (color.isByLayer) {
-      const layerColor = this.getLayerColor()
-      if (layerColor?.RGB != null) return layerColor.RGB
-      return this.rgbColor
-    }
-    if (color.isByBlock) return this.rgbColor
-    return color.RGB ?? this.rgbColor
   }
 }

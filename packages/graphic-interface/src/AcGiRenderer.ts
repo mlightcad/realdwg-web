@@ -6,6 +6,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
+import { AcGiContext } from './AcGiContext'
 import { AcGiEntity } from './AcGiEntity'
 import { AcGiImageStyle } from './AcGiImageStyle'
 import { AcGiPointStyle } from './AcGiPointStyle'
@@ -26,6 +27,12 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
    * (color, layer, linetype, etc.) settings of the current geometry.
    */
   get subEntityTraits(): AcGiSubEntityTraits
+
+  /**
+   * Draw-time context for resolving semantic trait colors (for example ACI 7
+   * foreground) into pixel RGB values.
+   */
+  get context(): AcGiContext
 
   /**
    * Create one group

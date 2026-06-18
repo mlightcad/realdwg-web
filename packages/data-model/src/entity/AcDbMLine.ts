@@ -636,7 +636,6 @@ export class AcDbMLine extends AcDbEntity {
     const elementCount = this.getRenderableElementCount(mlineStyle)
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
-    const originalRgbColor = traits.rgbColor
     const originalLineType = traits.lineType
     const originalFillType = traits.fillType
     const originalDrawOrder = traits.drawOrder
@@ -644,7 +643,6 @@ export class AcDbMLine extends AcDbEntity {
     const fillArea = this.createFillArea(mlineStyle, elementCount)
     if (fillArea) {
       traits.color = originalColor
-      traits.rgbColor = originalRgbColor
       this.applyFillTraits(mlineStyle, traits)
       traits.fillType = {
         solidFill: true,
@@ -663,7 +661,6 @@ export class AcDbMLine extends AcDbEntity {
     } else {
       for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
         traits.color = originalColor
-        traits.rgbColor = originalRgbColor
         traits.lineType = originalLineType
         this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
         const points = this.getElementPath(elementIndex, mlineStyle)
@@ -677,12 +674,10 @@ export class AcDbMLine extends AcDbEntity {
         mlineStyle,
         elementCount,
         originalColor,
-        originalRgbColor,
         originalLineType
       )
     }
     traits.color = originalColor
-    traits.rgbColor = originalRgbColor
     traits.lineType = originalLineType
     traits.fillType = originalFillType
     traits.drawOrder = originalDrawOrder
@@ -1294,7 +1289,6 @@ export class AcDbMLine extends AcDbEntity {
    * @param mlineStyle Resolved style object, if available.
    * @param elementCount Renderable style element count.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    */
   private appendStyleDrivenJointAndCapEntities(
@@ -1303,7 +1297,6 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle | undefined,
     elementCount: number,
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType']
   ) {
     if (!mlineStyle || elementCount < 2) return
@@ -1314,7 +1307,6 @@ export class AcDbMLine extends AcDbEntity {
         mlineStyle,
         elementCount,
         originalColor,
-        originalRgbColor,
         originalLineType
       )
     )
@@ -1324,7 +1316,6 @@ export class AcDbMLine extends AcDbEntity {
         mlineStyle,
         elementCount,
         originalColor,
-        originalRgbColor,
         originalLineType
       )
     )
@@ -1337,7 +1328,6 @@ export class AcDbMLine extends AcDbEntity {
    * @param mlineStyle Resolved style object.
    * @param elementCount Renderable style element count.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    * @returns Drawn joint entities.
    */
@@ -1346,7 +1336,6 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle,
     elementCount: number,
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType']
   ) {
     if (
@@ -1387,7 +1376,6 @@ export class AcDbMLine extends AcDbEntity {
         this.applyElementDrawTraits(
           traits,
           originalColor,
-          originalRgbColor,
           originalLineType,
           mlineStyle,
           points[i].elementIndex
@@ -1406,7 +1394,6 @@ export class AcDbMLine extends AcDbEntity {
    * @param mlineStyle Resolved style object.
    * @param elementCount Renderable style element count.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    * @returns Drawn cap entities.
    */
@@ -1415,7 +1402,6 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle,
     elementCount: number,
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType']
   ) {
     if (this.closed || this._segments.length <= 0) return []
@@ -1428,7 +1414,6 @@ export class AcDbMLine extends AcDbEntity {
         mlineStyle,
         elementCount,
         originalColor,
-        originalRgbColor,
         originalLineType
       )
     )
@@ -1439,7 +1424,6 @@ export class AcDbMLine extends AcDbEntity {
         mlineStyle,
         elementCount,
         originalColor,
-        originalRgbColor,
         originalLineType
       )
     )
@@ -1454,7 +1438,6 @@ export class AcDbMLine extends AcDbEntity {
    * @param mlineStyle Resolved style object.
    * @param elementCount Renderable style element count.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    * @returns Drawn one-side cap entities.
    */
@@ -1464,7 +1447,6 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle,
     elementCount: number,
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType']
   ) {
     if (side === 'start' && this.suppressStartCaps) return []
@@ -1494,7 +1476,6 @@ export class AcDbMLine extends AcDbEntity {
         this.applyElementDrawTraits(
           traits,
           originalColor,
-          originalRgbColor,
           originalLineType,
           mlineStyle,
           points[i].elementIndex
@@ -1516,7 +1497,6 @@ export class AcDbMLine extends AcDbEntity {
         capDirection,
         traits,
         originalColor,
-        originalRgbColor,
         originalLineType,
         mlineStyle
       )
@@ -1536,7 +1516,6 @@ export class AcDbMLine extends AcDbEntity {
           capDirection,
           traits,
           originalColor,
-          originalRgbColor,
           originalLineType,
           mlineStyle
         )
@@ -1587,7 +1566,6 @@ export class AcDbMLine extends AcDbEntity {
    * @param capDirection Outward cap direction.
    * @param traits Mutable renderer traits.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    * @param mlineStyle Resolved style object.
    * @returns Arc entity, or `undefined` when arc cannot be constructed.
@@ -1600,7 +1578,6 @@ export class AcDbMLine extends AcDbEntity {
     capDirection: AcGeVector3d,
     traits: AcGiRenderer['subEntityTraits'],
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType'],
     mlineStyle: AcDbMlineStyle
   ) {
@@ -1636,7 +1613,6 @@ export class AcDbMLine extends AcDbEntity {
     this.applyElementDrawTraits(
       traits,
       originalColor,
-      originalRgbColor,
       originalLineType,
       mlineStyle,
       side === 'end' ? endPointPair.elementIndex : startPointPair.elementIndex
@@ -1649,7 +1625,6 @@ export class AcDbMLine extends AcDbEntity {
    *
    * @param traits Mutable renderer traits.
    * @param originalColor Original trait color.
-   * @param originalRgbColor Original trait RGB.
    * @param originalLineType Original trait linetype.
    * @param mlineStyle Resolved style object.
    * @param elementIndex Style element index.
@@ -1657,13 +1632,11 @@ export class AcDbMLine extends AcDbEntity {
   private applyElementDrawTraits(
     traits: AcGiRenderer['subEntityTraits'],
     originalColor: AcGiRenderer['subEntityTraits']['color'],
-    originalRgbColor: number,
     originalLineType: AcGiRenderer['subEntityTraits']['lineType'],
     mlineStyle: AcDbMlineStyle,
     elementIndex: number
   ) {
     traits.color = originalColor
-    traits.rgbColor = originalRgbColor
     traits.lineType = originalLineType
     this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
   }
@@ -1744,7 +1717,6 @@ export class AcDbMLine extends AcDbEntity {
     if (styleElement.color.isByBlock || styleElement.color.isByLayer) return
 
     traits.color = styleElement.color.clone()
-    traits.rgbColor = styleElement.color.RGB ?? this.rgbColor
   }
 
   /**
@@ -1762,7 +1734,6 @@ export class AcDbMLine extends AcDbEntity {
     if (!fillColor || fillColor.isByBlock || fillColor.isByLayer) return
 
     traits.color = fillColor.clone()
-    traits.rgbColor = fillColor.RGB ?? this.rgbColor
   }
 
   /**

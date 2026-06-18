@@ -1,4 +1,4 @@
-import { AcCmColor, AcCmColorMethod, AcCmColorUtil } from '@mlightcad/common'
+import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeCircArc3d,
@@ -359,7 +359,6 @@ export class AcDbProxyGraphic {
     const traits = renderer.subEntityTraits
     const previousTraits = {
       color: traits.color.clone(),
-      rgbColor: traits.rgbColor,
       lineType: traits.lineType,
       lineTypeScale: traits.lineTypeScale,
       lineWeight: traits.lineWeight,
@@ -390,7 +389,6 @@ export class AcDbProxyGraphic {
     }
 
     traits.color = previousTraits.color
-    traits.rgbColor = previousTraits.rgbColor
     traits.lineType = previousTraits.lineType
     traits.lineTypeScale = previousTraits.lineTypeScale
     traits.lineWeight = previousTraits.lineWeight
@@ -518,21 +516,15 @@ export class AcDbProxyGraphic {
     traits.lineWeight = this._lineweight
 
     if (this._rgbColor != null) {
-      traits.rgbColor = this._rgbColor
       traits.color = new AcCmColor(AcCmColorMethod.ByColor, this._rgbColor)
     } else if (this._colorIndex === 256) {
       traits.color = new AcCmColor(AcCmColorMethod.ByLayer)
-      traits.rgbColor =
-        AcCmColorUtil.getColorByIndex(7) ??
-        traits.rgbColor
     } else if (this._colorIndex === 0) {
       traits.color = new AcCmColor(AcCmColorMethod.ByBlock)
+    } else if (this._colorIndex === 7) {
+      traits.color = new AcCmColor(AcCmColorMethod.ByACI, 7)
     } else {
-      const rgb = AcCmColorUtil.getColorByIndex(this._colorIndex)
       traits.color = new AcCmColor(AcCmColorMethod.ByACI, this._colorIndex)
-      if (rgb != null) {
-        traits.rgbColor = rgb
-      }
     }
 
     traits.lineType = {
