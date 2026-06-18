@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.5
+
+### Patch Changes
+
+- feat: fix rendering and color resolution: resolve sub-entity RGB at draw time via AcGiContext and correctly compute ByBlock/ByLayer attribute colors from owning INSERT, improving consistency of block and entity display
+- Updated dependencies
+  - @mlightcad/common@1.6.5
+  - @mlightcad/geometry-engine@3.4.5
+  - @mlightcad/graphic-interface@3.5.5
+
 ## 1.9.4
 
 ### Patch Changes

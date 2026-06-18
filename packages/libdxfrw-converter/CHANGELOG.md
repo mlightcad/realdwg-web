@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.5
+
+### Patch Changes
+
+- feat: fix rendering and color resolution: resolve sub-entity RGB at draw time via AcGiContext and correctly compute ByBlock/ByLayer attribute colors from owning INSERT, improving consistency of block and entity display
+- Updated dependencies
+  - @mlightcad/data-model@1.9.5
+
 ## 3.7.4
 
 ### Patch Changes

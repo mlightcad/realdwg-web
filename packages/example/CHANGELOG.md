@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.5
+
+### Patch Changes
+
+- feat: fix rendering and color resolution: resolve sub-entity RGB at draw time via AcGiContext and correctly compute ByBlock/ByLayer attribute colors from owning INSERT, improving consistency of block and entity display
+- Updated dependencies
+  - @mlightcad/data-model@1.9.5
+  - @mlightcad/dxf-json-converter@1.9.5
+  - @mlightcad/libredwg-converter@3.7.5
+
 ## 0.3.4
 
 ### Patch Changes
