@@ -14,6 +14,17 @@ export type {
 } from './AcGiLineStyle'
 export { AcGiLineWeight } from './AcGiLineWeight'
 export type { AcGiPointStyle } from './AcGiPointStyle'
+export {
+  ACGI_DARK_THEME_FOREGROUND,
+  ACGI_LIGHT_THEME_FOREGROUND,
+  ACGI_MODEL_SPACE_BACKGROUND,
+  DEFAULT_ACGI_CONTEXT,
+  acgiBuildContext,
+  acgiIsLightBackground,
+  acgiResolveSubEntityTraitsRgb,
+  acgiResolveSubEntityTraitsRgbFromBackground
+} from './AcGiContext'
+export type { AcGiContext } from './AcGiContext'
 export type { AcGiFontMapping, AcGiRenderer } from './AcGiRenderer'
 export type { AcGiShapeData } from './AcGiShapeData'
 export type { AcGiStyleType } from './AcGiStyleType'

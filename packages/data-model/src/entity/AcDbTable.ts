@@ -667,9 +667,14 @@ export class AcDbTable extends AcDbBlockReference {
     const entities = blockTableRecord.newIterator()
     for (const entity of entities) {
       let object: AcGiEntity | undefined
-      if (entity.color.isByBlock && this.rgbColor) {
+      if (entity.color.isByBlock) {
         _tmpColor.copy(entity.color)
-        entity.color.setRGBValue(this.rgbColor)
+        const tableColor = this.resolvedColor
+        if (tableColor.isForeground) {
+          entity.color.setForeground()
+        } else if (tableColor.RGB != null) {
+          entity.color.setRGBValue(tableColor.RGB)
+        }
         object = entity.worldDraw(renderer)
         entity.color.copy(_tmpColor)
       } else {

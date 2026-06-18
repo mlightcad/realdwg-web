@@ -66,7 +66,6 @@ describe('AcDbProxyGraphic', () => {
     const renderer = {
       subEntityTraits: {
         color: { clone: () => ({}) },
-        rgbColor: 0xffffff,
         lineType: { name: 'Continuous', definitionLines: [] },
         lineTypeScale: 1,
         lineWeight: -3,
@@ -120,7 +119,6 @@ describe('AcDbProxyEntity', () => {
     const renderer = {
       subEntityTraits: {
         color: { clone: () => ({}) },
-        rgbColor: 0xffffff,
         lineType: { name: 'Continuous', definitionLines: [] },
         lineTypeScale: 1,
         lineWeight: -3,

@@ -1,6 +1,6 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
-import { AcGiLineWeight } from '@mlightcad/graphic-interface'
+import { AcGiLineWeight, AcGiSubEntityTraits, DEFAULT_ACGI_CONTEXT, acgiResolveSubEntityTraitsRgb } from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices } from '../src/base'
 import {
@@ -21,9 +21,9 @@ const createWorkingDb = () => {
 
 const createRenderer = () => {
   const renderer = {
+    context: DEFAULT_ACGI_CONTEXT,
     subEntityTraits: {
-      color: undefined,
-      rgbColor: 0,
+      color: new AcCmColor(),
       lineType: {
         type: 'UserSpecified',
         name: 'CONTINUOUS',
@@ -201,11 +201,19 @@ describe('AcDbMLeader arrowhead rendering', () => {
     const lineRgbLog: number[] = []
     let mtextRgb = -1
     renderer.lines.mockImplementation((points: unknown[]) => {
-      lineRgbLog.push(renderer.subEntityTraits.rgbColor)
+      lineRgbLog.push(
+        acgiResolveSubEntityTraitsRgb(
+          renderer.subEntityTraits as unknown as AcGiSubEntityTraits,
+          renderer.context
+        )
+      )
       return { kind: 'lines', points }
     })
     renderer.mtext.mockImplementation(() => {
-      mtextRgb = renderer.subEntityTraits.rgbColor
+      mtextRgb = acgiResolveSubEntityTraitsRgb(
+        renderer.subEntityTraits as unknown as AcGiSubEntityTraits,
+        renderer.context
+      )
       return { kind: 'mtext' }
     })
 

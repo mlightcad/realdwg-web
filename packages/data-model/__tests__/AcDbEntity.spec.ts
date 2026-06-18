@@ -181,7 +181,6 @@ describe('AcDbEntity.color resolution', () => {
 
     expect(line.color.isByBlock).toBe(true)
     expect(line.resolvedColor.RGB).toBe(0x336699)
-    expect(line.rgbColor).toBe(0x336699)
   })
 
   it('resolves ByBlock through current layer when CECOLOR is ByLayer', () => {
@@ -198,7 +197,6 @@ describe('AcDbEntity.color resolution', () => {
     line.color.setByBlock()
 
     expect(line.resolvedColor.RGB).toBe(0x112233)
-    expect(line.rgbColor).toBe(0x112233)
   })
 
   it('resolves ByLayer against the entity layer color', () => {
@@ -215,7 +213,6 @@ describe('AcDbEntity.color resolution', () => {
     line.color.setByLayer()
 
     expect(line.resolvedColor.RGB).toBe(0xaa5500)
-    expect(line.rgbColor).toBe(0xaa5500)
   })
 })
 

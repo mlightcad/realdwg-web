@@ -178,7 +178,6 @@ describe('AcDbMLine', () => {
     baseColor.colorIndex = 2
     const traits = {
       color: baseColor,
-      rgbColor: 0x123456,
       fillType: {
         solidFill: false,
         patternAngle: 0,
@@ -225,7 +224,6 @@ describe('AcDbMLine', () => {
       }
     ])
     expect(traits.color).toBe(baseColor)
-    expect(traits.rgbColor).toBe(0x123456)
     expect(traits.fillType).toMatchObject({
       solidFill: false,
       patternAngle: 0
@@ -252,7 +250,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         fillType: {
           solidFill: false,
           patternAngle: 0,
@@ -313,7 +310,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         lineType: originalLineType,
         fillType: {
           solidFill: false,
@@ -363,7 +359,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         lineType: {
           type: 'UserSpecified' as const,
           name: 'Continuous',
@@ -456,7 +451,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         lineType: {
           type: 'UserSpecified' as const,
           name: 'Continuous',
@@ -515,7 +509,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         lineType: {
           type: 'UserSpecified' as const,
           name: 'Continuous',
@@ -576,7 +569,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         fillType: {
           solidFill: false,
           patternAngle: 0,
@@ -637,7 +629,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         fillType: {
           solidFill: false,
           patternAngle: 0,
@@ -697,7 +688,6 @@ describe('AcDbMLine', () => {
     const renderer = {
       subEntityTraits: {
         color: new AcCmColor(),
-        rgbColor: 0xffffff,
         fillType: {
           solidFill: false,
           patternAngle: 0,

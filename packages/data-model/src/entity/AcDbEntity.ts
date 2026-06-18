@@ -192,26 +192,6 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
-   * Gets the RGB color of this entity.
-   *
-   * This method handles the conversion of color indices (including ByLayer and ByBlock)
-   * to actual RGB colors. It resolves layer colors and block colors as needed.
-   *
-   * @returns The RGB color value as a number
-   *
-   * @example
-   * ```typescript
-   * const rgbColor = entity.rgbColor;
-   * console.log(`RGB: ${rgbColor.toString(16)}`);
-   * ```
-   */
-  get rgbColor() {
-    const color = this.resolvedColor
-    const rgb = color.RGB
-    return rgb != null ? rgb : 0xffffff
-  }
-
-  /**
    * Gets the name of the line type referenced by this entity.
    *
    * @returns The linetype name
@@ -671,7 +651,6 @@ export abstract class AcDbEntity extends AcDbObject {
 
     const traits = renderer.subEntityTraits
     traits.color = this.resolvedColor
-    traits.rgbColor = this.rgbColor
     traits.lineType = this.lineStyle
     traits.lineTypeScale = this.linetypeScale
     traits.lineWeight = this.lineWeight

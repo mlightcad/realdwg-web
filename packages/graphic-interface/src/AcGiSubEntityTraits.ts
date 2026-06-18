@@ -10,14 +10,10 @@ import { AcGiLineWeight } from './AcGiLineWeight'
  */
 export interface AcGiSubEntityTraits {
   /**
-   * The RGB color.
-   * It resolves layer colors and block colors as needed and converts color index
-   * to actual RGB color.
-   */
-  rgbColor: number
-
-  /**
-   * Color of the entity.
+   * Resolved semantic color of the sub-entity.
+   *
+   * Use {@link acgiResolveSubEntityTraitsRgb} with {@link AcGiRenderer.context} to obtain
+   * the pixel RGB value at draw time (including ACI 7 foreground handling).
    */
   color: AcCmColor
 
