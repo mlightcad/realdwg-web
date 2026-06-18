@@ -104,11 +104,14 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
    * Draw one SHX shape glyph.
    *
    * @param shape Shape placement and glyph identity
-   * @param style Text style that references the SHX shape font
+   * @param style Optional text style that references the SHX shape font. When omitted,
+   * `null`, or `undefined`, the renderer resolves the glyph by collecting every shape
+   * definition file from the text style table and searching them for the shape specified
+   * in {@link shape}.
    * @param delay When true, the renderer may defer heavy work and return a placeholder
    * @returns Rendered entity for the scene graph
    */
-  shape(shape: AcGiShapeData, style: AcGiTextStyle, delay?: boolean): T
+  shape(shape: AcGiShapeData, style?: AcGiTextStyle, delay?: boolean): T
 
   /**
    * Draw image

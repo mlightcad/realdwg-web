@@ -69,7 +69,8 @@ import {
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
   hexStringsToBytes,
-  transformOcsPointToWcs} from '@mlightcad/data-model'
+  transformOcsPointToWcs
+} from '@mlightcad/data-model'
 import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,

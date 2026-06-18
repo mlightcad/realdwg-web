@@ -635,6 +635,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * - Skips drawing when the entity's layer is not drawable under the database
    *   {@link AcDbDatabase.drawNoPlotLayers} policy
    * - Handles traits (color, linetype, lineweight, transparency, etc.)
+   * - Sets {@link AcGiRenderer.context} database for draw-time database lookups
    * - Calls subWorldDraw() to do the actual geometry output
    *
    * @param renderer - The renderer to use for drawing
@@ -660,6 +661,7 @@ export abstract class AcDbEntity extends AcDbObject {
     if ('thickness' in this) {
       traits.thickness = this.thickness as number
     }
+    renderer.context.database = this.database
     const drawable = this.subWorldDraw(renderer, delay)
     this.attachEntityInfo(drawable)
     return drawable

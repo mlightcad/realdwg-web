@@ -10,6 +10,10 @@ import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
  * within a drawing database. Text styles define the appearance and properties
  * of text entities, including font, size, and other formatting options.
  *
+ * The STYLE table may also contain unnamed shape file definition entries
+ * ({@link AcDbTextStyleTableRecord.isShapeFile}). Use {@link shapeFiles}
+ * to access those entries separately from named text styles.
+ *
  * @example
  * ```typescript
  * const textStyleTable = new AcDbTextStyleTable(database);
@@ -32,22 +36,10 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
     super(db)
   }
 
-  /**
-   * Gets all fonts used in text styles.
-   *
-   * This method iterates through all text style table records and extracts
-   * the font names from both the primary font file and big font file.
-   * Font names are normalized by removing file extensions and converting to lowercase.
-   *
-   * @returns Array of unique font names used in text styles
-   *
-   * @example
-   * ```typescript
-   * const fonts = textStyleTable.fonts;
-   * console.log('Available fonts:', fonts);
-   * // Output: ['arial', 'times', 'calibri', ...]
-   * ```
-   */
+  protected override get dxfEntryCount() {
+    return this._recordsById.size
+  }
+
   /**
    * Resolves a text style table record using AutoCAD-style fallbacks.
    *
@@ -94,6 +86,54 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
     return this.newIterator().next().value ?? undefined
   }
 
+  /**
+   * Gets all shape file definition records stored in the STYLE table.
+   *
+   * Shape definitions are STYLE entries with {@link AcDbTextStyleTableRecord.isShapeFile}
+   * set (standard flag bit 1). They typically have an empty name and describe SHX shape
+   * files used by complex linetypes and similar features—not text styles.
+   *
+   * These records are stored by object id only and are not returned by name-based lookup
+   * ({@link getAt}) or the default {@link newIterator} iteration.
+   *
+   * @returns All shape file definition records in this table
+   *
+   * @example
+   * ```typescript
+   * for (const shape of textStyleTable.shapeFileRecords) {
+   *   console.log('Shape file:', shape.fileName);
+   * }
+   * ```
+   */
+  get shapeFiles(): AcDbTextStyleTableRecord[] {
+    return this.newIterator(true)
+      .toArray()
+      .filter(record => record.isShapeFile)
+  }
+
+  /**
+   * Gets the unique font file names referenced by named text styles in this table.
+   *
+   * Iterates {@link newIterator named text style records} only—shape file definitions
+   * ({@link shapeFiles}) are excluded.
+   *
+   * For each record, both {@link AcDbTextStyleTableRecord.fileName | fileName} (primary
+   * font / SHX file, DXF group 3) and
+   * {@link AcDbTextStyleTableRecord.bigFontFileName | bigFontFileName} (big-font file
+   * for CJK and similar, DXF group 4) are collected when non-empty.
+   *
+   * Each file name is normalized before deduplication:
+   * - File extension is stripped (e.g. `Arial.ttf` → `arial`)
+   * - Result is lowercased
+   *
+   * @returns Sorted order is not guaranteed; array contains each normalized name at most once
+   *
+   * @example
+   * ```typescript
+   * const fonts = textStyleTable.fonts;
+   * // ['arial', 'gbcbig', 'simhei']
+   * ```
+   */
   get fonts() {
     const fonts = new Set<string>()
     const setFontName = (fontFileName: string) => {
@@ -108,8 +148,7 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
       }
     }
 
-    const iterator = this.newIterator()
-    for (const item of iterator) {
+    for (const item of this.newIterator()) {
       setFontName(item.fileName)
       setFontName(item.bigFontFileName)
     }

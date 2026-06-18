@@ -1711,11 +1711,7 @@ export class AcDbMLeader extends AcDbEntity {
     if (
       this.getResolvedLeaderLineType() !== AcDbMLeaderLineType.InvisibleLeader
     ) {
-      this.applyColorTraits(
-        traits,
-        leaderLineColor,
-        originalColor
-      )
+      this.applyColorTraits(traits, leaderLineColor, originalColor)
       this.applyLineTraits(traits, leaderLineStyle, leaderLineWeight)
       this._leaders.forEach(leader => {
         leader.leaderLines.forEach(line => {

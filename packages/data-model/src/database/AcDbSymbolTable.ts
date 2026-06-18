@@ -77,7 +77,9 @@ export class AcDbSymbolTable<
     this.database.commitObjectHandle(record, id => this.hasId(id))
 
     const normalizedName = this.normalizeName(record.name)
-    this._recordsByName.set(normalizedName, record)
+    if (normalizedName) {
+      this._recordsByName.set(normalizedName, record)
+    }
     this._recordsById.set(record.objectId, record)
   }
 
@@ -237,6 +239,8 @@ export class AcDbSymbolTable<
   /**
    * Creates an iterator object that can be used to iterate over the records in the table.
    *
+   * @param iterateById - When true, iterate all records by object id (includes unnamed entries).
+   *   When false (default), iterate named records only.
    * @returns An iterator object that can be used to iterate over the records
    *
    * @example
@@ -247,8 +251,10 @@ export class AcDbSymbolTable<
    * }
    * ```
    */
-  newIterator(): AcDbObjectIterator<RecordType> {
-    return new AcDbObjectIterator(this._recordsByName)
+  newIterator(iterateById = false): AcDbObjectIterator<RecordType> {
+    return new AcDbObjectIterator(
+      iterateById ? this._recordsById : this._recordsByName
+    )
   }
 
   /**
@@ -269,6 +275,16 @@ export class AcDbSymbolTable<
   }
 
   /**
+   * Entry count written to DXF group code 70 for this symbol table.
+   *
+   * Defaults to {@link numEntries}. Subclasses may override when unnamed records
+   * are stored only in {@link _recordsById}.
+   */
+  protected get dxfEntryCount() {
+    return this.numEntries
+  }
+
+  /**
    * Writes DXF fields for this object.
    *
    * @param filer - DXF output writer.
@@ -279,7 +295,7 @@ export class AcDbSymbolTable<
     filer.writeSubclassMarker('AcDbSymbolTable')
     // DXF common symbol table group code 70: maximum number of entries.
     // We emit the current count, which matches typical DXF output behavior.
-    filer.writeInt16(70, this.numEntries)
+    filer.writeInt16(70, this.dxfEntryCount)
     return this
   }
 }

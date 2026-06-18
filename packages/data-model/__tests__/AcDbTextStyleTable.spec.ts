@@ -49,6 +49,39 @@ describe('AcDbTextStyleTable', () => {
     expect(table.fonts).toEqual([])
   })
 
+  it('returns shape file definition records separately from text styles', () => {
+    const db = new AcDbDatabase()
+    const table = db.tables.textStyleTable
+    const makeStyle = (
+      name: string,
+      font: string,
+      standardFlag = 0
+    ): AcGiTextStyle =>
+      ({
+        name,
+        standardFlag,
+        fixedTextHeight: 0,
+        widthFactor: 1,
+        obliqueAngle: 0,
+        textGenerationFlag: 0,
+        lastHeight: 0,
+        font,
+        bigFont: '',
+        extendedFont: ''
+      }) as AcGiTextStyle
+
+    const textStyle = new AcDbTextStyleTableRecord(makeStyle('Standard', 'txt'))
+    const shapeDef = new AcDbTextStyleTableRecord(makeStyle('', 'ltypeshp', 1))
+
+    table.add(textStyle)
+    table.add(shapeDef)
+
+    expect(table.shapeFiles).toEqual([shapeDef])
+    expect(table.shapeFiles[0]?.fileName).toBe('ltypeshp')
+    expect(table.fonts).toEqual(['txt'])
+    expect(table.getAt('')).toBeUndefined()
+  })
+
   it('resolveAt creates and returns the default style when the table is empty', () => {
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db

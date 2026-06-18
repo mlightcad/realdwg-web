@@ -79,7 +79,8 @@ describe('AcDbProxyGraphic', () => {
     const result = parser.worldDraw(renderer as never)
     expect(result).toBe(groupResult)
     expect(renderer.lines).toHaveBeenCalledTimes(1)
-    const points = (renderer.lines as jest.Mock).mock.calls[0][0] as AcGePoint3d[]
+    const points = (renderer.lines as jest.Mock).mock
+      .calls[0][0] as AcGePoint3d[]
     expect(points).toHaveLength(2)
     expect(points[0]).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(points[1]).toMatchObject({ x: 10, y: 0, z: 0 })

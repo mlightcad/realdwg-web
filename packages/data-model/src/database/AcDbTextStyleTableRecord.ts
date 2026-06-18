@@ -21,8 +21,6 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
 export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   /** The text style configuration */
   private _textStyle: AcGiTextStyle
-  /** Whether text drawn with this style is vertical */
-  private _isVertical: boolean
 
   /**
    * Creates a new AcDbTextStyleTableRecord instance.
@@ -45,7 +43,6 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
     this._textStyle.font = this.getFileNameWithoutExtension(
       this._textStyle.font || this._textStyle.extendedFont || this.name
     )
-    this._isVertical = false
   }
 
   /**
@@ -144,6 +141,8 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
   /**
    * Gets or sets whether text drawn with this text style is drawn vertically.
    *
+   * Maps to standard flag bit 4 in group code 70.
+   *
    * @returns True if text is drawn vertically, false otherwise
    *
    * @example
@@ -155,10 +154,41 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   get isVertical() {
-    return this._isVertical
+    return (this._textStyle.standardFlag & 4) === 4
   }
   set isVertical(value: boolean) {
-    this._isVertical = value
+    if (value) {
+      this._textStyle.standardFlag |= 4
+    } else {
+      this._textStyle.standardFlag &= ~4
+    }
+  }
+
+  /**
+   * Gets or sets whether this entry describes a shape file definition rather than a text style.
+   *
+   * When true, the record represents a shape file definition in the STYLE table
+   * (standard flag bit 1) and typically has an empty name.
+   *
+   * @returns True if this entry is a shape file definition, false otherwise
+   *
+   * @example
+   * ```typescript
+   * if (record.isShapeFile) {
+   *   console.log('Shape file definition:', record.fileName);
+   * }
+   * record.isShapeFile = true;
+   * ```
+   */
+  get isShapeFile() {
+    return (this._textStyle.standardFlag & 1) === 1
+  }
+  set isShapeFile(value: boolean) {
+    if (value) {
+      this._textStyle.standardFlag |= 1
+    } else {
+      this._textStyle.standardFlag &= ~1
+    }
   }
 
   /**
@@ -258,10 +288,7 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
     filer.writeDouble(40, this.textSize)
     filer.writeDouble(41, this.xScale)
     filer.writeAngle(50, this.obliquingAngle)
-    filer.writeInt16(
-      71,
-      this.isVertical ? 4 : this.textStyle.textGenerationFlag
-    )
+    filer.writeInt16(71, this.textStyle.textGenerationFlag)
     filer.writeDouble(42, this.priorSize)
     filer.writeString(3, this.fileName)
     filer.writeString(4, this.bigFontFileName)
