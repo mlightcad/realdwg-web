@@ -439,6 +439,7 @@ export {
   ACGI_DARK_THEME_FOREGROUND,
   ACGI_LIGHT_THEME_FOREGROUND,
   ACGI_MODEL_SPACE_BACKGROUND,
+  ACGI_PAPER_SPACE_BACKGROUND,
   DEFAULT_ACGI_CONTEXT,
   AcGiLineWeight,
   AcGiMTextAttachmentPoint,
@@ -447,6 +448,8 @@ export {
   AcGiRenderMode,
   AcGiViewport,
   acgiBuildContext,
+  acgiContrastingForegroundColor,
+  acgiForegroundColorForBackground,
   acgiIsLightBackground,
   acgiResolveSubEntityTraitsRgb,
   acgiResolveSubEntityTraitsRgbFromBackground

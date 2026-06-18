@@ -26,6 +26,9 @@ export const ACGI_DARK_THEME_FOREGROUND = 0xffffff
 /** ACI-7 foreground on a light canvas background. */
 export const ACGI_LIGHT_THEME_FOREGROUND = 0x000000
 
+/** AutoCAD paper-space default background: RGB(255, 255, 255). */
+export const ACGI_PAPER_SPACE_BACKGROUND = 0xffffff
+
 /** ITU-R BT.601 luma threshold used by {@link acgiIsLightBackground}. */
 const ACGI_LIGHT_BACKGROUND_LUMA_THRESHOLD = 128
 
@@ -61,6 +64,25 @@ export function acgiBuildContext(
     backgroundIsDark: !acgiIsLightBackground(backgroundColor),
     fallbackRgb: 0xffffff
   }
+}
+
+/**
+ * ACI-7 foreground that contrasts with a light or dark UI theme flag.
+ */
+export function acgiContrastingForegroundColor(isLight: boolean): number {
+  return isLight ? ACGI_LIGHT_THEME_FOREGROUND : ACGI_DARK_THEME_FOREGROUND
+}
+
+/**
+ * ACI-7 foreground that contrasts with the canvas background.
+ */
+export function acgiForegroundColorForBackground(
+  backgroundColor: number
+): number {
+  const context = acgiBuildContext(backgroundColor)
+  return context.backgroundIsDark
+    ? context.foregroundOnDark
+    : context.foregroundOnLight
 }
 
 /**
