@@ -7,6 +7,11 @@ import { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
  * resolution must happen in the renderer with this context rather than on traits.
  */
 export interface AcGiContext {
+  /**
+   * Database being drawn. Runtime type is `AcDbDatabase` (data-model); typed as
+   * `unknown` here so graphic-interface does not depend on data-model.
+   */
+  database: unknown
   /** RGB used when the resolved color is foreground (ACI 7) on a dark background. */
   foregroundOnDark: number
   /** RGB used when the resolved color is foreground (ACI 7) on a light background. */
@@ -34,6 +39,7 @@ const ACGI_LIGHT_BACKGROUND_LUMA_THRESHOLD = 128
 
 /** Default draw context matching a dark AutoCAD model-space background. */
 export const DEFAULT_ACGI_CONTEXT: AcGiContext = {
+  database: undefined,
   foregroundOnDark: ACGI_DARK_THEME_FOREGROUND,
   foregroundOnLight: ACGI_LIGHT_THEME_FOREGROUND,
   backgroundIsDark: true,
@@ -56,9 +62,11 @@ export function acgiIsLightBackground(color: number): boolean {
  * Builds draw-time {@link AcGiContext} from the current canvas background.
  */
 export function acgiBuildContext(
-  backgroundColor: number = ACGI_MODEL_SPACE_BACKGROUND
+  backgroundColor: number = ACGI_MODEL_SPACE_BACKGROUND,
+  database?: unknown
 ): AcGiContext {
   return {
+    database,
     foregroundOnDark: ACGI_DARK_THEME_FOREGROUND,
     foregroundOnLight: ACGI_LIGHT_THEME_FOREGROUND,
     backgroundIsDark: !acgiIsLightBackground(backgroundColor),

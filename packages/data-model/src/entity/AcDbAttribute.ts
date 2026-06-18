@@ -10,7 +10,9 @@ import { AcDbText } from './AcDbText'
 function isBlockReferenceOwner(
   owner: unknown
 ): owner is AcDbEntity & { blockTableRecord: unknown } {
-  return owner != null && typeof owner === 'object' && 'blockTableRecord' in owner
+  return (
+    owner != null && typeof owner === 'object' && 'blockTableRecord' in owner
+  )
 }
 
 /**

@@ -2032,7 +2032,7 @@ export class AcDbDatabase extends AcDbObject {
       filer,
       'STYLE',
       this.tables.textStyleTable,
-      this.tables.textStyleTable.newIterator(),
+      this.tables.textStyleTable.newIterator(true),
       'STYLE'
     )
     this.writeDxfTable(

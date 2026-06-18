@@ -1,4 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
+import { DEFAULT_ACGI_CONTEXT } from '@mlightcad/graphic-interface'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
@@ -127,7 +128,10 @@ describe('AcDbEntity.worldDraw layer policy', () => {
     db.tables.blockTable.modelSpace.appendEntity(entity)
 
     const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
-    const renderer = { subEntityTraits: {} } as never
+    const renderer = {
+      subEntityTraits: {},
+      context: { ...DEFAULT_ACGI_CONTEXT }
+    } as never
 
     expect(entity.worldDraw(renderer)).toBeUndefined()
     expect(subWorldDraw).not.toHaveBeenCalled()
@@ -142,11 +146,15 @@ describe('AcDbEntity.worldDraw layer policy', () => {
     entity.layer = 'NPLT'
     db.tables.blockTable.modelSpace.appendEntity(entity)
 
+    const renderer = {
+      subEntityTraits: {},
+      context: { ...DEFAULT_ACGI_CONTEXT }
+    }
     const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
-    const renderer = { subEntityTraits: {} } as never
 
-    entity.worldDraw(renderer)
+    entity.worldDraw(renderer as never)
     expect(subWorldDraw).toHaveBeenCalled()
+    expect(renderer.context.database).toBe(db)
   })
 })
 

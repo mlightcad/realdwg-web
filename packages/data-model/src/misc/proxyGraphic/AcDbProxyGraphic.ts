@@ -658,10 +658,8 @@ export class AcDbProxyGraphic {
    * @param data - Chunk payload where any non-zero value enables fill.
    */
   private readAttributeFill(data: Uint8Array) {
-    this._fill = new DataView(data.buffer, data.byteOffset, 4).getUint32(
-      0,
-      true
-    ) !== 0
+    this._fill =
+      new DataView(data.buffer, data.byteOffset, 4).getUint32(0, true) !== 0
   }
 
   /**
@@ -670,10 +668,7 @@ export class AcDbProxyGraphic {
    * @param data - Chunk payload containing a packed true-color dword.
    */
   private readAttributeTrueColor(data: Uint8Array) {
-    const raw = new DataView(data.buffer, data.byteOffset, 4).getUint32(
-      0,
-      true
-    )
+    const raw = new DataView(data.buffer, data.byteOffset, 4).getUint32(0, true)
     const decoded = decodeProxyGraphicRawColor(raw)
     this._rgbColor = decoded.rgb
     if (decoded.colorIndex != null) {
@@ -687,10 +682,7 @@ export class AcDbProxyGraphic {
    * @param data - Chunk payload containing a raw lineweight value.
    */
   private readAttributeLineweight(data: Uint8Array) {
-    const lw = new DataView(data.buffer, data.byteOffset, 4).getUint32(
-      0,
-      true
-    )
+    const lw = new DataView(data.buffer, data.byteOffset, 4).getUint32(0, true)
     if (lw > MAX_VALID_LINEWEIGHT) {
       this._lineweight = (lw - 0x100000000) as AcGiLineWeight
     } else {
@@ -777,12 +769,20 @@ export class AcDbProxyGraphic {
    * @param entities - Accumulator for emitted drawable entities.
    * @param data - Chunk payload.
    */
-  private drawCircle(renderer: AcGiRenderer, entities: AcGiEntity[], data: Uint8Array) {
+  private drawCircle(
+    renderer: AcGiRenderer,
+    entities: AcGiEntity[],
+    data: Uint8Array
+  ) {
     const bs = new AcDbProxyGraphicByteStream(data)
     const center = bs.readVertex()
     const radius = bs.readFloat()
     const normalVec = this.transformVector(bs.readVertex())
-    let centerPoint = pointFromLike({ x: center[0], y: center[1], z: center[2] })
+    let centerPoint = pointFromLike({
+      x: center[0],
+      y: center[1],
+      z: center[2]
+    })
     if (!normalVec.equals(Z_AXIS)) {
       centerPoint = transformWcsPointToOcs(centerPoint, normalVec)
     }
@@ -956,7 +956,10 @@ export class AcDbProxyGraphic {
       const pdsize = this._database?.pdsize ?? 0
       this.pushEntity(
         entities,
-        renderer.point(vertices[0], { displayMode: pdmode, displaySize: pdsize })
+        renderer.point(vertices[0], {
+          displayMode: pdmode,
+          displaySize: pdsize
+        })
       )
       return
     }
@@ -975,7 +978,11 @@ export class AcDbProxyGraphic {
    * @param entities - Accumulator for emitted drawable entities.
    * @param data - Chunk payload.
    */
-  private drawPolygon(renderer: AcGiRenderer, entities: AcGiEntity[], data: Uint8Array) {
+  private drawPolygon(
+    renderer: AcGiRenderer,
+    entities: AcGiEntity[],
+    data: Uint8Array
+  ) {
     const { vertices } = this.loadVertices(data, false)
     if (vertices.length < 2) return
     if (this._fill) {
@@ -1046,7 +1053,11 @@ export class AcDbProxyGraphic {
 
     const rawVertices = bs.readRawDouble(2) as [number, number]
     const vertices: AcGePoint3d[] = [
-      this.transformPoint({ x: rawVertices[0], y: rawVertices[1], z: elevation })
+      this.transformPoint({
+        x: rawVertices[0],
+        y: rawVertices[1],
+        z: elevation
+      })
     ]
     let prev = rawVertices
     for (let i = 1; i < numPoints; i++) {
@@ -1073,7 +1084,11 @@ export class AcDbProxyGraphic {
    * @param entities - Accumulator for emitted drawable entities.
    * @param data - Chunk payload containing vertices and face index lists.
    */
-  private drawShell(renderer: AcGiRenderer, entities: AcGiEntity[], data: Uint8Array) {
+  private drawShell(
+    renderer: AcGiRenderer,
+    entities: AcGiEntity[],
+    data: Uint8Array
+  ) {
     const bs = new AcDbProxyGraphicByteStream(data)
     const totalVertexCount = bs.readLong()
     const vertices: AcGePoint3d[] = []
@@ -1125,11 +1140,9 @@ export class AcDbProxyGraphic {
     const insert = this.transformPoint(bs.readVertex())
     const normal = this.transformVector(bs.readVertex())
     const textDirection = this.transformVector(bs.readVertex())
-    const [height, widthFactor, obliqueAngle] = bs.readStruct<[number, number, number]>([
-      8,
-      8,
-      8
-    ])
+    const [height, widthFactor, obliqueAngle] = bs.readStruct<
+      [number, number, number]
+    >([8, 8, 8])
     const text = unicode
       ? bs.readPaddedUnicodeString()
       : bs.readPaddedString(this._encoding)
@@ -1168,11 +1181,9 @@ export class AcDbProxyGraphic {
       : bs.readPaddedString(this._encoding)
     bs.readSignedLong()
     bs.readSignedLong()
-    const [height, widthFactor, obliqueAngle] = bs.readStruct<[number, number, number]>([
-      8,
-      8,
-      8
-    ])
+    const [height, widthFactor, obliqueAngle] = bs.readStruct<
+      [number, number, number]
+    >([8, 8, 8])
     bs.readFloat()
     this.drawTextPrimitive(renderer, entities, {
       insert,
@@ -1212,7 +1223,10 @@ export class AcDbProxyGraphic {
       obliqueAngle: number
     }
   ) {
-    const rotation = Math.atan2(options.textDirection.y, options.textDirection.x)
+    const rotation = Math.atan2(
+      options.textDirection.y,
+      options.textDirection.x
+    )
     const mtextData: AcGiMTextData = {
       text: options.text,
       height: options.height,

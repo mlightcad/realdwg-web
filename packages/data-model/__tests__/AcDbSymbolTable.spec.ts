@@ -68,6 +68,32 @@ describe('AcDbSymbolTable', () => {
     expect(table.numEntries).toBe(0)
   })
 
+  it('skips unnamed records in name lookup but keeps them by id', () => {
+    const db = setupWorkingDatabase()
+    const table = new AcDbSymbolTable<AcDbSymbolTableRecord>(db)
+    const named = new AcDbSymbolTableRecord({ name: 'Standard' })
+    const unnamed = new AcDbSymbolTableRecord({ name: '' })
+    named.objectId = 'named-id'
+    unnamed.objectId = 'unnamed-id'
+
+    table.add(named)
+    table.add(unnamed)
+
+    expect(table.numEntries).toBe(1)
+    expect(table.has('')).toBe(false)
+    expect(table.hasId('unnamed-id')).toBe(true)
+    expect(table.getIdAt('unnamed-id')).toBe(unnamed)
+    expect(Array.from(table.newIterator()).map(item => item.name)).toEqual([
+      'Standard'
+    ])
+    expect(
+      Array.from(table.newIterator(true)).map(item => item.objectId)
+    ).toEqual(['named-id', 'unnamed-id'])
+
+    expect(table.removeId('unnamed-id')).toBe(true)
+    expect(table.hasId('unnamed-id')).toBe(false)
+  })
+
   it('applies normalized names when subclass overrides normalizeName', () => {
     const db = new AcDbDatabase()
     const table = new LowercaseSymbolTable(db)

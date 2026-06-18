@@ -1,6 +1,11 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
-import { AcGiLineWeight, AcGiSubEntityTraits, DEFAULT_ACGI_CONTEXT, acgiResolveSubEntityTraitsRgb } from '@mlightcad/graphic-interface'
+import {
+  AcGiLineWeight,
+  AcGiSubEntityTraits,
+  DEFAULT_ACGI_CONTEXT,
+  acgiResolveSubEntityTraitsRgb
+} from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices } from '../src/base'
 import {

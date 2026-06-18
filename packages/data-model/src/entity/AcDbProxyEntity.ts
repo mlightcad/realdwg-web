@@ -1,4 +1,8 @@
-import { AcGeBox3d, AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeBox3d,
+  AcGeMatrix3d,
+  AcGePoint3d
+} from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -346,10 +350,7 @@ export class AcDbProxyEntity extends AcDbEntity {
       filer.writeInt32(160, this._proxyGraphic.length)
       let index = 0
       while (index < this._proxyGraphic.length) {
-        const chunk = this._proxyGraphic.subarray(
-          index,
-          index + 127
-        )
+        const chunk = this._proxyGraphic.subarray(index, index + 127)
         filer.writeString(310, bytesToHexString(chunk))
         index += 127
       }

@@ -262,11 +262,7 @@ export class AcDbProxyGraphicBitStream {
    * @param dxfversion - Drawing version string. Defaults to `'AC1015'`.
    * @param encoding - Single-byte text encoding. Defaults to `'cp1252'`.
    */
-  constructor(
-    buffer: Bytes,
-    dxfversion = 'AC1015',
-    encoding = 'cp1252'
-  ) {
+  constructor(buffer: Bytes, dxfversion = 'AC1015', encoding = 'cp1252') {
     this._buffer = toBufferView(buffer)
     this.dxfversion = dxfversion
     this.encoding = encoding
@@ -307,7 +303,7 @@ export class AcDbProxyGraphicBitStream {
   readBits(count: number) {
     const index = this._bitIndex
     const nextBitIndex = index + count
-    if (((nextBitIndex - 1) >> 3) >= this._buffer.length) {
+    if ((nextBitIndex - 1) >> 3 >= this._buffer.length) {
       throw new AcDbProxyGraphicEndOfBufferError()
     }
     this._bitIndex = nextBitIndex
@@ -382,7 +378,7 @@ export class AcDbProxyGraphicBitStream {
       return (s2 << 8) + s1
     }
     const bytes = this.readAlignedBytes(2)
-    return bytes[1] << 8 | bytes[0]
+    return (bytes[1] << 8) | bytes[0]
   }
 
   /**
@@ -409,12 +405,7 @@ export class AcDbProxyGraphicBitStream {
       return (l4 << 24) + (l3 << 16) + (l2 << 8) + l1
     }
     const bytes = this.readAlignedBytes(4)
-    return (
-      (bytes[3] << 24) +
-      (bytes[2] << 16) +
-      (bytes[1] << 8) +
-      bytes[0]
-    )
+    return (bytes[3] << 24) + (bytes[2] << 16) + (bytes[1] << 8) + bytes[0]
   }
 
   /**
@@ -424,9 +415,7 @@ export class AcDbProxyGraphicBitStream {
    */
   readSignedLong() {
     const value = this.readUnsignedLong()
-    return value & 0x80000000
-      ? -((~value & 0xffffffff) + 1)
-      : value
+    return value & 0x80000000 ? -((~value & 0xffffffff) + 1) : value
   }
 
   /**
@@ -527,10 +516,7 @@ export class AcDbProxyGraphicBitStream {
    * @param defaultValue - Fallback double used for default-encoded values.
    * @returns A single value or an array of values.
    */
-  readBitDoubleDefault(
-    count = 1,
-    defaultValue = 0
-  ): number | number[] {
+  readBitDoubleDefault(count = 1, defaultValue = 0): number | number[] {
     const defaultBytes = new Uint8Array(8)
     new DataView(defaultBytes.buffer).setFloat64(0, defaultValue, true)
 

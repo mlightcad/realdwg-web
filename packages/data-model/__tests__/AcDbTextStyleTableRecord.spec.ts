@@ -19,4 +19,52 @@ describe('AcDbTextStyleTableRecord', () => {
         } as AcGiTextStyle)
     )
   })
+
+  it('tracks shape file definitions via standard flag bit 1', () => {
+    const record = new AcDbTextStyleTableRecord({
+      name: '',
+      standardFlag: 0,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font: 'ltypeshp',
+      bigFont: ''
+    } as AcGiTextStyle)
+
+    expect(record.isShapeFile).toBe(false)
+
+    record.isShapeFile = true
+    expect(record.isShapeFile).toBe(true)
+    expect(record.textStyle.standardFlag).toBe(1)
+
+    record.isShapeFile = false
+    expect(record.isShapeFile).toBe(false)
+    expect(record.textStyle.standardFlag).toBe(0)
+  })
+
+  it('tracks vertical text via standard flag bit 4', () => {
+    const record = new AcDbTextStyleTableRecord({
+      name: 'Vertical',
+      standardFlag: 0,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font: 'txt',
+      bigFont: ''
+    } as AcGiTextStyle)
+
+    expect(record.isVertical).toBe(false)
+
+    record.isVertical = true
+    expect(record.isVertical).toBe(true)
+    expect(record.textStyle.standardFlag).toBe(4)
+
+    record.isVertical = false
+    expect(record.isVertical).toBe(false)
+    expect(record.textStyle.standardFlag).toBe(0)
+  })
 })
