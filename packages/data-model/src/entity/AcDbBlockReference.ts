@@ -251,6 +251,23 @@ export class AcDbBlockReference extends AcDbEntity {
   appendAttributes(attrib: AcDbAttribute) {
     this._attribs.set(attrib.objectId, attrib)
     attrib.ownerId = this.objectId
+    this.syncAttributeDatabases()
+  }
+
+  /**
+   * Propagates this INSERT's database association to all attached attributes.
+   *
+   * @internal
+   */
+  syncAttributeDatabases() {
+    try {
+      const db = this.database
+      this._attribs.forEach(attrib => {
+        attrib.database = db
+      })
+    } catch {
+      // INSERT not yet associated with a database.
+    }
   }
 
   /**
@@ -732,7 +749,7 @@ export class AcDbBlockReference extends AcDbEntity {
       const block = AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
-        this.rgbColor,
+        this.resolvedColor,
         attribs,
         true,
         matrix,

@@ -342,6 +342,14 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   set database(db: AcDbDatabase) {
+    this.assignDatabase(db)
+  }
+
+  /**
+   * Associates this object with a database. Subclasses may override {@link database}
+   * and call this helper to avoid `super` setter restrictions.
+   */
+  protected assignDatabase(db: AcDbDatabase) {
     this._database = db
   }
 

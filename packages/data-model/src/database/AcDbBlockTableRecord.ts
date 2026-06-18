@@ -270,6 +270,13 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
       this.database.commitObjectHandle(item, id => this._entities.has(id))
       item.resolveEffectiveProperties()
       this._entities.set(item.objectId, item)
+      if (
+        item.dxfTypeName === 'INSERT' &&
+        'syncAttributeDatabases' in item &&
+        typeof item.syncAttributeDatabases === 'function'
+      ) {
+        item.syncAttributeDatabases()
+      }
     }
 
     if (Array.isArray(entity)) {

@@ -3,8 +3,15 @@ import {
   AcDbAttributeFlags,
   AcDbAttributeMTextFlag
 } from './AcDbAttributeDefinition'
+import { AcDbEntity } from './AcDbEntity'
 import { AcDbMText } from './AcDbMText'
 import { AcDbText } from './AcDbText'
+
+function isBlockReferenceOwner(
+  owner: unknown
+): owner is AcDbEntity & { blockTableRecord: unknown } {
+  return owner != null && typeof owner === 'object' && 'blockTableRecord' in owner
+}
 
 /**
  * Represents an attribute entity attached to a block reference (INSERT).
@@ -22,6 +29,24 @@ export class AcDbAttribute extends AcDbText {
 
   override get dxfTypeName() {
     return 'ATTRIB'
+  }
+
+  /**
+   * Resolves ByBlock color against the owning INSERT, not CECOLOR.
+   *
+   * AutoCAD attributes inherit block-reference traits for ByBlock color. When
+   * the INSERT sits on a layer such as `Viewport` with ACI 7, attribute text
+   * must follow that foreground colour (inverted on paper) rather than the
+   * current-entity colour sysvar.
+   */
+  override get resolvedColor() {
+    if (this.color.isByBlock) {
+      const owner = this.database?.tables.blockTable.getEntityById(this.ownerId)
+      if (isBlockReferenceOwner(owner)) {
+        return owner.resolvedColor
+      }
+    }
+    return this.resolveStandardColor()
   }
 
   /**

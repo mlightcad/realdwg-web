@@ -17,8 +17,9 @@ import { AcDbEntity } from '../entity/AcDbEntity'
  * @example
  * ```typescript
  * const cache = AcDbRenderingCache.instance;
- * const key = cache.createKey('MyBlock', 0xFF0000);
- * const renderedEntity = cache.draw(renderer, blockRecord, 0xFF0000);
+ * const color = new AcCmColor().setRGBValue(0xFF0000);
+ * const key = cache.createKey('MyBlock', color);
+ * const renderedEntity = cache.draw(renderer, blockRecord, color);
  * ```
  */
 export class AcDbRenderingCache {
@@ -60,17 +61,22 @@ export class AcDbRenderingCache {
    * Creates a cache key by combining the block name and color.
    *
    * @param name - The block name
-   * @param color - The color value
+   * @param color - The resolved block color
    * @returns A unique key for the cache entry
    *
    * @example
    * ```typescript
-   * const key = cache.createKey('MyBlock', 0xFF0000);
-   * // Returns: "MyBlock_16711680"
+   * const color = new AcCmColor().setRGBValue(0xFF0000);
+   * const key = cache.createKey('MyBlock', color);
+   * // Returns: "MyBlock_RGB:255,0,0"
    * ```
    */
-  createKey(name: string, color: number) {
-    return `${name}_${color}`
+  createKey(name: string, color: AcCmColor) {
+    let colorKey = color.toString()
+    if (!colorKey && color.isByColor) {
+      colorKey = `RGB:${color.red},${color.green},${color.blue}`
+    }
+    return `${name}_${colorKey}`
   }
 
   /**
@@ -151,7 +157,7 @@ export class AcDbRenderingCache {
    *
    * @param renderer - The renderer to use for drawing
    * @param blockTableRecord - The block table record to draw
-   * @param color - The color to use for rendering
+   * @param blockColor - The resolved color to use for rendering
    * @param cache - Whether to cache the rendering result (default: true)
    * @param transform - Optional transformation matrix to apply
    * @param normal - Optional normal vector
@@ -162,7 +168,7 @@ export class AcDbRenderingCache {
    * const renderedEntity = cache.draw(
    *   renderer,
    *   blockRecord,
-   *   0xFF0000,
+   *   new AcCmColor().setRGBValue(0xFF0000),
    *   true,
    *   transform,
    *   normal
@@ -172,7 +178,7 @@ export class AcDbRenderingCache {
   draw(
     renderer: AcGiRenderer,
     blockTableRecord: AcDbBlockTableRecord,
-    color: number,
+    blockColor: AcCmColor,
     attributes: AcGiEntity[] = [],
     cache: boolean = true,
     transform?: AcGeMatrix3d,
@@ -180,7 +186,8 @@ export class AcDbRenderingCache {
   ) {
     const results: AcGiEntity[] = []
     if (blockTableRecord != null) {
-      const key = this.createKey(blockTableRecord.name, color)
+      const blockRgb = blockColor.RGB ?? 0
+      const key = this.createKey(blockTableRecord.name, blockColor)
       let block: AcGiEntity | undefined
       if (this.has(key)) {
         block = this.get(key)
@@ -193,9 +200,13 @@ export class AcDbRenderingCache {
           // If the color of this entity is 'byBlock', then store the original color of this entity color
           // and set the color of this entity to block's color. After renderering this entity, restore
           // its original color
-          if (entity.color.isByBlock && color) {
+          if (entity.color.isByBlock) {
             _tmpColor.copy(entity.color)
-            entity.color.setRGBValue(color)
+            if (blockColor.isForeground) {
+              entity.color.setForeground()
+            } else {
+              entity.color.setRGBValue(blockRgb)
+            }
             this.addEntity(entity, results, renderer)
             entity.color.copy(_tmpColor)
           } else {

@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -62,12 +63,10 @@ describe('AcDbBlockReference', () => {
     db.tables.blockTable.modelSpace.appendEntity(blockRef)
 
     const attr1 = new AcDbAttribute()
-    attr1.database = db
     attr1.tag = 'A1'
     attr1.textString = 'v1'
 
     const attr2 = new AcDbAttribute()
-    attr2.database = db
     attr2.tag = 'A2'
     attr2.textString = 'v2'
 
@@ -79,6 +78,23 @@ describe('AcDbBlockReference', () => {
     expect(attrs.map(a => a.tag)).toEqual(['A1', 'A2'])
     expect(attr1.ownerId).toBe(blockRef.objectId)
     expect(attr2.ownerId).toBe(blockRef.objectId)
+    expect(attr1.database).toBe(db)
+    expect(attr2.database).toBe(db)
+  })
+
+  it('propagates database to attributes appended before INSERT is committed', () => {
+    const db = createDb()
+    createNamedBlock(db, 'TEST_BLOCK')
+
+    const blockRef = new AcDbBlockReference('TEST_BLOCK')
+    const attr = new AcDbAttribute()
+    attr.tag = 'A1'
+    blockRef.appendAttributes(attr)
+
+    db.tables.blockTable.modelSpace.appendEntity(blockRef)
+
+    expect(attr.database).toBe(db)
+    expect(attr.ownerId).toBe(blockRef.objectId)
   })
 
   it('computes blockTransform with base-point compensation', () => {
@@ -375,13 +391,43 @@ describe('AcDbBlockReference', () => {
     const drawn = AcDbRenderingCache.instance.draw(
       renderer as never,
       block,
-      0,
+      new AcCmColor(),
       [],
       false
     )
 
     expect(invisibleSpy).not.toHaveBeenCalled()
     expect(drawn).toEqual({ items: [visibleDrawn] })
+  })
+
+  it('applies black block color to ByBlock entities inside block definitions', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'BYBLOCK_BLK')
+    const line = new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 })
+    line.color.setByBlock()
+    block.appendEntity(line)
+
+    const colorsDuringDraw: number[] = []
+    jest.spyOn(line, 'worldDraw').mockImplementation(() => {
+      colorsDuringDraw.push(line.color.RGB ?? -1)
+      return { id: 'line' } as never
+    })
+
+    AcDbRenderingCache.instance.clear()
+    const renderer = {
+      group: (items: unknown[]) => ({ items })
+    }
+
+    AcDbRenderingCache.instance.draw(
+      renderer as never,
+      block,
+      new AcCmColor().setRGBValue(0x000000),
+      [],
+      false
+    )
+
+    expect(colorsDuringDraw).toEqual([0x000000])
+    expect(line.color.isByBlock).toBe(true)
   })
 
   it('draws through cache for existing block and empty group for missing block', () => {

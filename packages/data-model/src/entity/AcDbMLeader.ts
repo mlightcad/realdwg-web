@@ -2177,7 +2177,7 @@ export class AcDbMLeader extends AcDbEntity {
     return AcDbRenderingCache.instance.draw(
       renderer,
       blockTableRecord,
-      this.rgbColor,
+      this.resolvedColor,
       [],
       true,
       transform,
