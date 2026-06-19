@@ -1,8 +1,73 @@
-import { AcGePoint2d } from '@mlightcad/geometry-engine'
+import { AcGeBox2d, AcGePoint2d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
 import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
+
+/** Reject saved views zoomed out more than this factor vs drawing EXTMIN/EXTMAX. */
+const MAX_VIEW_TO_EXTENT_RATIO = 2
+
+/** Max distance from drawing-extent center as a fraction of the larger span. */
+const MAX_VIEW_CENTER_OFFSET_RATIO = 0.45
+
+/** Max model-space view span when EXTMIN/EXTMAX are unavailable. */
+const MAX_VIEW_SPAN_WITHOUT_EXTENTS = 1e5
+
+type VportAspectRatioSource = {
+  aspectRatio?: number
+  gsView?: { aspectRatio?: number }
+}
+
+function readVportAspectRatio(
+  vport: AcDbViewportTableRecord
+): number | undefined {
+  const source = vport as AcDbViewportTableRecord & VportAspectRatioSource
+  const aspectRatio = source.aspectRatio ?? source.gsView?.aspectRatio
+  return Number.isFinite(aspectRatio) ? aspectRatio : undefined
+}
+
+function resolveViewAspectRatio(
+  vport: AcDbViewportTableRecord,
+  canvasAspectRatio: number
+): number {
+  if (Number.isFinite(canvasAspectRatio) && canvasAspectRatio > 0) {
+    return canvasAspectRatio
+  }
+  const storedAspect = readVportAspectRatio(vport)
+  if (storedAspect != null && storedAspect > 0) {
+    return storedAspect
+  }
+  return 1
+}
+
+function intersectionArea(viewBox: AcGeBox2d, drawingExtents: AcGeBox2d): number {
+  const minX = Math.max(viewBox.min.x, drawingExtents.min.x)
+  const minY = Math.max(viewBox.min.y, drawingExtents.min.y)
+  const maxX = Math.min(viewBox.max.x, drawingExtents.max.x)
+  const maxY = Math.min(viewBox.max.y, drawingExtents.max.y)
+  if (minX >= maxX || minY >= maxY) {
+    return 0
+  }
+  return (maxX - minX) * (maxY - minY)
+}
+
+function viewCenter(viewBox: AcGeBox2d) {
+  return {
+    x: (viewBox.min.x + viewBox.max.x) / 2,
+    y: (viewBox.min.y + viewBox.max.y) / 2
+  }
+}
+
+function hasMeaningfulDrawingExtents(
+  drawingExtents?: AcGeBox2d
+): drawingExtents is AcGeBox2d {
+  if (!drawingExtents || drawingExtents.isEmpty()) {
+    return false
+  }
+  const spanX = drawingExtents.max.x - drawingExtents.min.x
+  const spanY = drawingExtents.max.y - drawingExtents.min.y
+  return spanX > 0 && spanY > 0
+}
 
 /**
  * Represents a viewport table record in AutoCAD.
@@ -253,6 +318,145 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
   }
   set backgroundObjectId(value: string | undefined) {
     this._backgroundObjectId = value
+  }
+
+  /**
+   * Builds the model-space WCS view rectangle from this VPORT record.
+   *
+   * AutoCAD stores:
+   * - view center in groups 10/20 (mapped to `centerPoint`)
+   * - view height in group 40/45 (`viewHeight`)
+   * - aspect ratio in group 41 (`gsView.aspectRatio`) — the AutoCAD graphics
+   *   window width/height at save time, not the model-space view on its own
+   *
+   * View width = view height × aspect ratio. The viewer uses the current canvas
+   * aspect ratio so DWG/DXF exports of the same drawing frame identically even
+   * when group 41 differs.
+   */
+  modelViewBox(canvasAspectRatio: number): AcGeBox2d | undefined {
+    const center = this.centerPoint
+    const viewHeight = this.viewHeight
+
+    if (
+      !Number.isFinite(center.x) ||
+      !Number.isFinite(center.y) ||
+      !Number.isFinite(viewHeight) ||
+      viewHeight <= 0
+    ) {
+      return undefined
+    }
+
+    const aspectRatio = resolveViewAspectRatio(this, canvasAspectRatio)
+
+    const viewWidth = viewHeight * aspectRatio
+    const halfHeight = viewHeight / 2
+    const halfWidth = viewWidth / 2
+
+    return new AcGeBox2d()
+      .expandByPoint({
+        x: center.x - halfWidth,
+        y: center.y - halfHeight
+      })
+      .expandByPoint({
+        x: center.x + halfWidth,
+        y: center.y + halfHeight
+      })
+  }
+
+  /**
+   * Returns whether a VPORT-derived view box is sane enough to frame the drawing
+   * on open. Rejects stale saves that are zoomed far beyond the sheet (common
+   * when `$EXTMIN`/`$EXTMAX` reflect the title block but `*ACTIVE` still stores
+   * a huge `view height`) or panned to a corner with no real geometry.
+   */
+  static isModelViewBoxUsable(
+    viewBox: AcGeBox2d,
+    drawingExtents: AcGeBox2d
+  ): boolean {
+    if (viewBox.isEmpty() || drawingExtents.isEmpty()) {
+      return false
+    }
+
+    const viewSpanX = viewBox.max.x - viewBox.min.x
+    const viewSpanY = viewBox.max.y - viewBox.min.y
+    const extSpanX = drawingExtents.max.x - drawingExtents.min.x
+    const extSpanY = drawingExtents.max.y - drawingExtents.min.y
+
+    if (viewSpanX <= 0 || viewSpanY <= 0 || extSpanX <= 0 || extSpanY <= 0) {
+      return false
+    }
+
+    if (
+      viewSpanX > extSpanX * MAX_VIEW_TO_EXTENT_RATIO ||
+      viewSpanY > extSpanY * MAX_VIEW_TO_EXTENT_RATIO
+    ) {
+      return false
+    }
+
+    const centerOffsetLimit =
+      Math.max(extSpanX, extSpanY) * MAX_VIEW_CENTER_OFFSET_RATIO
+    const viewCenterPoint = viewCenter(viewBox)
+    const extentCenterPoint = viewCenter(drawingExtents)
+    const centerDistance = Math.hypot(
+      viewCenterPoint.x - extentCenterPoint.x,
+      viewCenterPoint.y - extentCenterPoint.y
+    )
+    if (centerDistance > centerOffsetLimit) {
+      return false
+    }
+
+    const viewArea = viewSpanX * viewSpanY
+    const overlap = intersectionArea(viewBox, drawingExtents)
+    if (overlap <= 0 || overlap / viewArea < 0.25) {
+      return false
+    }
+
+    return true
+  }
+
+  /**
+   * Returns the model-space view box from this record when structurally valid
+   * and plausible for the given drawing extents.
+   */
+  resolveModelViewBox(
+    canvasAspectRatio: number,
+    drawingExtents?: AcGeBox2d
+  ): AcGeBox2d | undefined {
+    const viewBox = this.modelViewBox(canvasAspectRatio)
+    if (!viewBox || !AcDbViewportTableRecord.isModelViewBoxStructurallyValid(viewBox)) {
+      return undefined
+    }
+    if (hasMeaningfulDrawingExtents(drawingExtents)) {
+      if (!AcDbViewportTableRecord.isModelViewBoxUsable(viewBox, drawingExtents)) {
+        return undefined
+      }
+    } else if (!AcDbViewportTableRecord.isModelViewBoxPlausibleWithoutExtents(viewBox)) {
+      return undefined
+    }
+    return viewBox
+  }
+
+  private static isModelViewBoxStructurallyValid(viewBox: AcGeBox2d): boolean {
+    if (viewBox.isEmpty()) {
+      return false
+    }
+
+    const viewSpanX = viewBox.max.x - viewBox.min.x
+    const viewSpanY = viewBox.max.y - viewBox.min.y
+    return (
+      Number.isFinite(viewSpanX) &&
+      Number.isFinite(viewSpanY) &&
+      viewSpanX > 0 &&
+      viewSpanY > 0
+    )
+  }
+
+  private static isModelViewBoxPlausibleWithoutExtents(
+    viewBox: AcGeBox2d
+  ): boolean {
+    const viewSpanX = viewBox.max.x - viewBox.min.x
+    const viewSpanY = viewBox.max.y - viewBox.min.y
+    return Math.max(viewSpanX, viewSpanY) <= MAX_VIEW_SPAN_WITHOUT_EXTENTS
   }
 
   /**
