@@ -1,5 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
-import { DEFAULT_ACGI_CONTEXT } from '@mlightcad/graphic-interface'
+import { DEFAULT_ACGI_CONTEXT, AcGiContext } from '@mlightcad/graphic-interface'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
@@ -130,7 +130,7 @@ describe('AcDbEntity.worldDraw layer policy', () => {
     const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
     const renderer = {
       subEntityTraits: {},
-      context: { ...DEFAULT_ACGI_CONTEXT }
+      context: new AcGiContext({ ...DEFAULT_ACGI_CONTEXT })
     } as never
 
     expect(entity.worldDraw(renderer)).toBeUndefined()
@@ -148,7 +148,7 @@ describe('AcDbEntity.worldDraw layer policy', () => {
 
     const renderer = {
       subEntityTraits: {},
-      context: { ...DEFAULT_ACGI_CONTEXT }
+      context: new AcGiContext({ ...DEFAULT_ACGI_CONTEXT })
     }
     const subWorldDraw = jest.spyOn(entity, 'subWorldDraw')
 

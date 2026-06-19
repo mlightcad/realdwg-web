@@ -12,8 +12,8 @@ export interface AcGiSubEntityTraits {
   /**
    * Resolved semantic color of the sub-entity.
    *
-   * Use {@link acgiResolveSubEntityTraitsRgb} with {@link AcGiRenderer.context} to obtain
-   * the pixel RGB value at draw time (including ACI 7 foreground handling).
+   * Use {@link AcGiContext.resolveSubEntityTraitsRgb} with {@link AcGiRenderer.context}
+   * to obtain the pixel RGB value at draw time (including ACI 7 foreground handling).
    */
   color: AcCmColor
 

@@ -440,6 +440,7 @@ export {
   ACGI_LIGHT_THEME_FOREGROUND,
   ACGI_MODEL_SPACE_BACKGROUND,
   ACGI_PAPER_SPACE_BACKGROUND,
+  AcGiContext,
   DEFAULT_ACGI_CONTEXT,
   AcGiLineWeight,
   AcGiMTextAttachmentPoint,
@@ -447,17 +448,14 @@ export {
   AcGiOrthographicType,
   AcGiRenderMode,
   AcGiViewport,
-  acgiBuildContext,
   acgiContrastingForegroundColor,
   acgiForegroundColorForBackground,
   acgiIsLightBackground,
-  acgiResolveSubEntityTraitsRgb,
   acgiResolveSubEntityTraitsRgbFromBackground
 } from '@mlightcad/graphic-interface'
 export type {
   AcGiArrowStyle,
   AcGiBaseLineStyle,
-  AcGiContext,
   AcGiEntity,
   AcGiFontMapping,
   AcGiHatchGradientStyle,

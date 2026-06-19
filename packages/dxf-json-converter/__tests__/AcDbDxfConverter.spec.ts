@@ -92,6 +92,33 @@ describe('AcDbDxfConverter', () => {
     )
   })
 
+  it('collects shape-definition fonts from the style table', () => {
+    const converter = new TestDxfConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      tables: {
+        STYLE: {
+          entries: [
+            {
+              name: '',
+              font: 'tecosymbol.shx',
+              standardFlag: 1
+            },
+            {
+              name: 'pipe',
+              font: 'romans.shx',
+              bigFont: 'hztxt.shx',
+              standardFlag: 0
+            }
+          ]
+        }
+      },
+      entities: [{ type: 'SHAPE', shapeName: '_GV_', insertionPoint: { x: 0, y: 0, z: 0 }, size: 0.01 }],
+      blocks: {}
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['tecosymbol']))
+  })
+
   it('preserves default table ownership when DXF table metadata omits owner ids', () => {
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db
