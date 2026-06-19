@@ -1,3 +1,5 @@
+import { AcGeBox2d } from '@mlightcad/geometry-engine'
+
 import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
@@ -47,5 +49,24 @@ export class AcDbViewportTable extends AcDbSymbolTable<AcDbViewportTableRecord> 
       return ACTIVE_VPORT_NAME
     }
     return name.toUpperCase()
+  }
+
+  /**
+   * Returns the model-space VPORT table record AutoCAD saves as `*Active`.
+   */
+  getActiveVport(): AcDbViewportTableRecord | undefined {
+    return this.getAt(ACTIVE_VPORT_NAME)
+  }
+
+  /**
+   * Returns the initial model-space view box from VPORT `*ACTIVE`, if present
+   * and usable.
+   */
+  getActiveVportBox(
+    canvasAspectRatio: number,
+    drawingExtents?: AcGeBox2d
+  ): AcGeBox2d | undefined {
+    const vport = this.getActiveVport()
+    return vport?.resolveModelViewBox(canvasAspectRatio, drawingExtents)
   }
 }
