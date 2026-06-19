@@ -19,15 +19,14 @@ export {
   ACGI_LIGHT_THEME_FOREGROUND,
   ACGI_MODEL_SPACE_BACKGROUND,
   ACGI_PAPER_SPACE_BACKGROUND,
+  AcGiContext,
   DEFAULT_ACGI_CONTEXT,
-  acgiBuildContext,
   acgiContrastingForegroundColor,
   acgiForegroundColorForBackground,
   acgiIsLightBackground,
-  acgiResolveSubEntityTraitsRgb,
   acgiResolveSubEntityTraitsRgbFromBackground
 } from './AcGiContext'
-export type { AcGiContext } from './AcGiContext'
+export type { AcGiContextOptions } from './AcGiContext'
 export type { AcGiFontMapping, AcGiRenderer } from './AcGiRenderer'
 export type { AcGiShapeData } from './AcGiShapeData'
 export type { AcGiStyleType } from './AcGiStyleType'

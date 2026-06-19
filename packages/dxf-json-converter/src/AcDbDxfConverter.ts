@@ -171,6 +171,19 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     })
 
     const fonts: Set<string> = new Set<string>()
+    // Collect shape file definitions from the TEXT STYLE TABLE (standardFlag bit 0 = isShapeFile).
+    // SHAPE entities render glyph codes from these .shx shape fonts, so they must be included
+    // in the font list even when no text entity references the style directly.
+    dxf.tables.STYLE?.entries.forEach(style => {
+      if (style.standardFlag & 1) {
+        if (style.font) {
+          const fontName = getFontName(style.font)
+          if (fontName) {
+            fonts.add(fontName)
+          }
+        }
+      }
+    })
     this.getFontsInBlock(dxf.entities, dxf.blocks, styleMap, fonts)
     return Array.from(fonts)
   }

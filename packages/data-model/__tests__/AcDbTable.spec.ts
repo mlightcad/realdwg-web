@@ -1,6 +1,7 @@
 import { AcGeBox3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
+  AcGiContext,
   AcGiMTextAttachmentPoint,
   AcGiRenderer,
   DEFAULT_ACGI_CONTEXT
@@ -30,7 +31,7 @@ const createGiEntity = () => {
 const createRenderer = () => {
   const traits: Record<string, unknown> = {}
   return {
-    context: { ...DEFAULT_ACGI_CONTEXT },
+    context: new AcGiContext({ ...DEFAULT_ACGI_CONTEXT }),
     subEntityTraits: traits,
     lines: jest.fn(() => createGiEntity()),
     circularArc: jest.fn(() => createGiEntity()),

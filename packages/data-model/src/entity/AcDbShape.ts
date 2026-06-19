@@ -477,12 +477,12 @@ export class AcDbShape extends AcDbEntity {
     delay?: boolean
   ): AcGiEntity | undefined {
     const textStyle = this.getTextStyle()
-    const style: AcGiTextStyle = {
+    const style: AcGiTextStyle | undefined = textStyle ? {
       ...textStyle,
       widthFactor: this.widthFactor,
       // MText renderer stores oblique in degrees on the text style.
       obliqueAngle: (this.oblique * 180) / Math.PI
-    }
+    } : undefined
 
     const shapeData: AcGiShapeData = {
       name: this._name.trim() || undefined,
@@ -499,13 +499,18 @@ export class AcDbShape extends AcDbEntity {
 
   /**
    * Gets the text style that references the SHX font for this shape.
+   *
+   * When {@link styleName} is empty, returns `undefined` so renderers search
+   * shape-file definition entries in the STYLE table instead of falling back to
+   * `$TEXTSTYLE` (which is for TEXT/MTEXT, not SHAPE entities).
    */
-  protected getTextStyle(): AcGiTextStyle {
-    const style = this.database.tables.textStyleTable.resolveAt(this.styleName)
-    if (!style) {
-      throw new Error('No valid text style found in text style table.')
+  protected getTextStyle(): AcGiTextStyle | undefined {
+    const trimmed = this.styleName.trim()
+    if (!trimmed) {
+      return undefined
     }
-    return style.textStyle
+    const style = this.database.tables.textStyleTable.resolveAt(trimmed)
+    return style?.textStyle
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

@@ -139,6 +139,28 @@ describe('AcDbShape', () => {
     expectDetachedClone(() => new AcDbShape())
   })
 
+  it('passes undefined text style when styleName is empty', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    db.textstyle = 'pipe'
+    acdbHostApplicationServices().workingDatabase = db
+
+    const shape = new AcDbShape()
+    shape.database = db
+    shape.name = '_GV_'
+    shape.size = 0.01
+    shape.position = new AcGePoint3d(100, 200, 0)
+
+    const renderer = {
+      shape: jest.fn(() => ({ objectId: 'S1' }))
+    } as unknown as { shape: jest.Mock }
+
+    shape.subWorldDraw(renderer as never)
+
+    const [, textStyle] = renderer.shape.mock.calls[0]
+    expect(textStyle).toBeUndefined()
+  })
+
   it('renders via renderer.shape with shape glyph metadata', () => {
     const db = new AcDbDatabase()
     db.createDefaultData()

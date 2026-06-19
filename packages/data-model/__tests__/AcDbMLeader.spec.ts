@@ -3,8 +3,7 @@ import { AcGePoint3d } from '@mlightcad/geometry-engine'
 import {
   AcGiLineWeight,
   AcGiSubEntityTraits,
-  DEFAULT_ACGI_CONTEXT,
-  acgiResolveSubEntityTraitsRgb
+  DEFAULT_ACGI_CONTEXT
 } from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices } from '../src/base'
@@ -207,17 +206,15 @@ describe('AcDbMLeader arrowhead rendering', () => {
     let mtextRgb = -1
     renderer.lines.mockImplementation((points: unknown[]) => {
       lineRgbLog.push(
-        acgiResolveSubEntityTraitsRgb(
-          renderer.subEntityTraits as unknown as AcGiSubEntityTraits,
-          renderer.context
+        renderer.context.resolveSubEntityTraitsRgb(
+          renderer.subEntityTraits as unknown as AcGiSubEntityTraits
         )
       )
       return { kind: 'lines', points }
     })
     renderer.mtext.mockImplementation(() => {
-      mtextRgb = acgiResolveSubEntityTraitsRgb(
-        renderer.subEntityTraits as unknown as AcGiSubEntityTraits,
-        renderer.context
+      mtextRgb = renderer.context.resolveSubEntityTraitsRgb(
+        renderer.subEntityTraits as unknown as AcGiSubEntityTraits
       )
       return { kind: 'mtext' }
     })
