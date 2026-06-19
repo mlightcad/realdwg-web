@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.6
+
+### Patch Changes
+
+- feat: refactor AcGiContext into a class, fix SHAPE font resolution, and add STYLE table shape file support with draw-time database context handling
+- Updated dependencies
+  - @mlightcad/common@1.6.6
+  - @mlightcad/geometry-engine@3.4.6
+  - @mlightcad/graphic-interface@3.5.6
+
 ## 1.9.5
 
 ### Patch Changes

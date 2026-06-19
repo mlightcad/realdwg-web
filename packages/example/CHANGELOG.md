@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.6
+
+### Patch Changes
+
+- feat: refactor AcGiContext into a class, fix SHAPE font resolution, and add STYLE table shape file support with draw-time database context handling
+- Updated dependencies
+  - @mlightcad/data-model@1.9.6
+  - @mlightcad/dxf-json-converter@1.9.6
+  - @mlightcad/libredwg-converter@3.7.6
+
 ## 0.3.5
 
 ### Patch Changes
