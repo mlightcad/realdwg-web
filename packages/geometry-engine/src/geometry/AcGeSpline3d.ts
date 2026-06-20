@@ -11,6 +11,12 @@ import {
 import { acGeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
+import {
+  isNonZeroDirection,
+  normalizeSplineWeights,
+  resolveControlPointSplineDegree,
+  resolveFitPointSplineDegree
+} from './AcGeSplineUtil'
 
 export class AcGeSpline3d extends AcGeCurve3d {
   private _nurbsCurve: AcGeNurbsCurve
@@ -589,5 +595,191 @@ export class AcGeSpline3d extends AcGeCurve3d {
 
     // Create spline using the constructor with fit points, degree, and closed=true
     return new AcGeSpline3d(fitPoints, parameterization, degree, true)
+  }
+
+  /**
+   * Creates a 3D spline geometry from control points, knots, and optional weights.
+   *
+   * This factory is intended for robust deserialization: it normalizes degree and
+   * weights from imperfect source data and returns `null` instead of throwing when
+   * the NURBS definition is invalid.
+   *
+   * @param controlPoints - Control vertices defining the curve shape
+   * @param knots - Full knot vector for the spline
+   * @param weights - Optional per-control-point weights; ignored when the array length
+   *   does not match `controlPoints.length`
+   * @param declaredDegree - Degree from the source file; when less than 1, derived from
+   *   `knots.length - controlPoints.length - 1`, then clamped to `[1, controlPoints.length - 1]`
+   * @param closed - Whether the spline forms a closed loop
+   * @returns A spline geometry, or `null` if construction fails
+   */
+  static fromControlPoints(
+    controlPoints: AcGePoint3dLike[],
+    knots: number[],
+    weights: number[] | undefined,
+    declaredDegree: number | undefined,
+    closed: boolean
+  ): AcGeSpline3d | null {
+    if (controlPoints.length < 2 || knots.length < 2) {
+      return null
+    }
+
+    const degree = resolveControlPointSplineDegree(
+      declaredDegree,
+      controlPoints.length,
+      knots.length
+    )
+    if (controlPoints.length < degree + 1) {
+      return null
+    }
+
+    try {
+      return new AcGeSpline3d(
+        controlPoints,
+        knots,
+        normalizeSplineWeights(weights, controlPoints.length),
+        degree,
+        closed
+      )
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Creates a 3D spline geometry that interpolates fit points.
+   *
+   * Knots and control points are generated from the fit data. Non-zero start/end
+   * tangents constrain the curve ends; zero-length tangents are ignored. Degree is
+   * clamped so that `fitPoints.length + tangentCount >= degree + 1`.
+   *
+   * @param fitPoints - Points the spline should pass through
+   * @param knotParam - Knot parameterization (`'Uniform'`, `'Chord'`, or `'SqrtChord'`)
+   * @param declaredDegree - Requested degree from the source file; defaults to 3 when
+   *   missing or less than 1, then clamped to fit the available fit/tangent data
+   * @param closed - Whether the spline forms a closed loop
+   * @param startTangent - Optional start tangent direction; ignored when zero-length
+   * @param endTangent - Optional end tangent direction; ignored when zero-length
+   * @returns A spline geometry, or `null` if construction fails
+   */
+  static fromFitPoints(
+    fitPoints: AcGePoint3dLike[],
+    knotParam: AcGeKnotParameterizationType,
+    declaredDegree: number | undefined,
+    closed: boolean,
+    startTangent?: AcGePoint3dLike | null,
+    endTangent?: AcGePoint3dLike | null
+  ): AcGeSpline3d | null {
+    if (fitPoints.length < 2) {
+      return null
+    }
+
+    const hasStartTangent = isNonZeroDirection(startTangent)
+    const hasEndTangent = isNonZeroDirection(endTangent)
+    const tangentCount = (hasStartTangent ? 1 : 0) + (hasEndTangent ? 1 : 0)
+    const degree = resolveFitPointSplineDegree(
+      declaredDegree,
+      fitPoints.length,
+      tangentCount
+    )
+
+    if (fitPoints.length + tangentCount < degree + 1) {
+      return null
+    }
+
+    try {
+      if (hasStartTangent || hasEndTangent) {
+        return new AcGeSpline3d(
+          fitPoints,
+          knotParam,
+          degree,
+          closed,
+          hasStartTangent ? startTangent! : undefined,
+          hasEndTangent ? endTangent! : undefined
+        )
+      }
+
+      return new AcGeSpline3d(fitPoints, knotParam, degree, closed)
+    } catch {
+      return null
+    }
+  }
+
+  /**
+   * Creates a 3D spline geometry from parsed DWG/DXF spline-edge data.
+   *
+   * Used for hatch boundary paths, proxy-graphics edges, and similar structures where
+   * spline data is embedded as a lightweight edge record rather than a full SPLINE
+   * entity. Control-point data is preferred; fit data is used when control points are
+   * absent. Fit-point edges always use `'Uniform'` knot parameterization and are
+   * treated as open curves.
+   *
+   * @param spline - Parsed spline-edge payload from a DWG/DXF reader
+   * @param spline.numberOfControlPoints - Count of control points in the edge record
+   * @param spline.numberOfKnots - Count of knots in the edge record
+   * @param spline.numberOfFitData - Count of fit points in the edge record
+   * @param spline.degree - Optional declared degree
+   * @param spline.controlPoints - Control vertices, optionally with per-point `weight`
+   * @param spline.knots - Knot values for the control-point representation
+   * @param spline.fitDatum - Fit points when the edge is defined by fit data
+   * @param spline.startTangent - Optional start tangent for fit-data edges
+   * @param spline.endTangent - Optional end tangent for fit-data edges
+   * @returns A spline geometry, or `null` when neither representation can be built
+   */
+  static fromDwgSplineEdge(spline: {
+    numberOfControlPoints: number
+    numberOfKnots: number
+    numberOfFitData: number
+    degree?: number
+    controlPoints: Array<{ x: number; y: number; z?: number; weight?: number | null }>
+    knots: number[]
+    fitDatum: Array<{ x: number; y: number; z?: number }>
+    startTangent?: { x: number; y: number; z?: number } | null
+    endTangent?: { x: number; y: number; z?: number } | null
+  }): AcGeSpline3d | null {
+    if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
+      const controlPoints = spline.controlPoints.map(item => ({
+        x: item.x,
+        y: item.y,
+        z: item.z ?? 0
+      }))
+      let hasWeights = true
+      const weights = spline.controlPoints.map(item => {
+        if (item.weight == null) hasWeights = false
+        return item.weight || 1
+      })
+      return AcGeSpline3d.fromControlPoints(
+        controlPoints,
+        spline.knots,
+        hasWeights ? weights : undefined,
+        spline.degree,
+        false
+      )
+    }
+
+    if (spline.numberOfFitData > 0) {
+      const fitPoints = spline.fitDatum.map(item => ({
+        x: item.x,
+        y: item.y,
+        z: item.z ?? 0
+      }))
+      return AcGeSpline3d.fromFitPoints(
+        fitPoints,
+        'Uniform',
+        spline.degree,
+        false,
+        AcGeSpline3d.toPoint3dLike(spline.startTangent),
+        AcGeSpline3d.toPoint3dLike(spline.endTangent)
+      )
+    }
+
+    return null
+  }
+
+  private static toPoint3dLike(
+    point?: { x: number; y: number; z?: number } | null
+  ): AcGePoint3dLike | undefined {
+    if (!point) return undefined
+    return { x: point.x, y: point.y, z: point.z ?? 0 }
   }
 }

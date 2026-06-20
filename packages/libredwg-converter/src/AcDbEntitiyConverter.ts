@@ -119,6 +119,7 @@ import type {
   DwgXlineEntity
 } from '@mlightcad/libredwg-web'
 
+
 type ParsedMLeaderBreak = {
   index?: number
   start: AcGePoint3dLike
@@ -301,29 +302,8 @@ export class AcDbEntityConverter {
   }
 
   private convertSpline(spline: DwgSplineEntity) {
-    // Catch error to construct spline because it maybe one spline in one block.
-    // If don't catch the error, the block conversion may be interruptted.
-    try {
-      if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-        return new AcDbSpline(
-          spline.controlPoints,
-          spline.knots,
-          spline.weights,
-          spline.degree,
-          !!(spline.flag & 0x01)
-        )
-      } else if (spline.numberOfFitPoints > 0) {
-        return new AcDbSpline(
-          spline.fitPoints,
-          'Uniform',
-          spline.degree,
-          !!(spline.flag & 0x01)
-        )
-      }
-    } catch (error) {
-      console.log(`Failed to convert spline with error: ${error}`)
-    }
-    return null
+    // One invalid spline must not interrupt block conversion.
+    return AcDbSpline.fromDwgSpline(spline)
   }
 
   private convertPoint(point: DwgPointEntity) {
@@ -607,38 +587,11 @@ export class AcDbEntityConverter {
               )
             )
           } else if (edge.type == 4) {
-            const spline = edge as DwgSplineEdge
-            if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-              const controlPoints: AcGePoint3dLike[] = spline.controlPoints.map(
-                item => {
-                  return {
-                    x: item.x,
-                    y: item.y,
-                    z: 0
-                  }
-                }
-              )
-              let hasWeights = true
-              const weights: number[] = spline.controlPoints.map(item => {
-                if (item.weight == null) hasWeights = false
-                return item.weight || 1
-              })
-              edges.push(
-                new AcGeSpline3d(
-                  controlPoints,
-                  spline.knots,
-                  hasWeights ? weights : undefined
-                )
-              )
-            } else if (spline.numberOfFitData > 0) {
-              const fitPoints: AcGePoint3dLike[] = spline.fitDatum.map(item => {
-                return {
-                  x: item.x,
-                  y: item.y,
-                  z: 0
-                }
-              })
-              edges.push(new AcGeSpline3d(fitPoints, 'Uniform'))
+            const splineEdge = AcGeSpline3d.fromDwgSplineEdge(
+              edge as DwgSplineEdge
+            )
+            if (splineEdge) {
+              edges.push(splineEdge)
             }
           }
         })

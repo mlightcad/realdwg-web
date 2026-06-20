@@ -15,6 +15,38 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbPolyline } from './AcDbPolyline'
 
+function resolveSplineKnotParameterization(
+  flag: number
+): AcGeKnotParameterizationType {
+  if (flag & 2048) return 'SqrtChord'
+  if (flag & 1024) return 'Chord'
+  return 'Uniform'
+}
+
+function createAcDbSplineFromGeo(geo: AcGeSpline3d, closed: boolean): AcDbSpline | null {
+  try {
+    return new AcDbSpline(
+      geo.controlPoints,
+      geo.knots,
+      normalizeSplineWeights(geo.weights, geo.controlPoints.length),
+      geo.degree,
+      closed
+    )
+  } catch {
+    return null
+  }
+}
+
+function normalizeSplineWeights(
+  weights: number[] | undefined,
+  controlPointCount: number
+): number[] | undefined {
+  if (!weights || weights.length !== controlPointCount) {
+    return undefined
+  }
+  return weights
+}
+
 /**
  * Represents a spline entity in AutoCAD.
  *
@@ -48,6 +80,175 @@ export class AcDbSpline extends AcDbCurve {
 
   override get dxfTypeName() {
     return 'SPLINE'
+  }
+
+  /**
+   * Creates a spline entity from control points, knots, and optional weights.
+   *
+   * Unlike the constructor, this factory tolerates imperfect DWG/DXF data: it derives
+   * a valid degree when `declaredDegree` is missing or zero, clamps degree to the
+   * available control points, and returns `null` instead of throwing when the input
+   * cannot produce a valid NURBS curve.
+   *
+   * @param controlPoints - Control vertices in World Coordinate System (WCS) coordinates
+   * @param knots - Full knot vector for the spline
+   * @param weights - Optional per-control-point weights; ignored when the array length
+   *   does not match `controlPoints.length`
+   * @param declaredDegree - Degree from the source file; when less than 1, derived from
+   *   `knots.length - controlPoints.length - 1`, then clamped to `[1, controlPoints.length - 1]`
+   * @param closed - Whether the spline forms a closed loop
+   * @returns A new spline entity, or `null` if construction fails
+   *
+   * @example
+   * ```typescript
+   * const spline = AcDbSpline.fromControlPoints(
+   *   [
+   *     { x: 0, y: 0, z: 0 },
+   *     { x: 1, y: 1, z: 0 },
+   *     { x: 2, y: 0, z: 0 },
+   *     { x: 3, y: 1, z: 0 }
+   *   ],
+   *   [0, 0, 0, 0, 1, 1, 1, 1],
+   *   undefined,
+   *   0,
+   *   false
+   * );
+   * ```
+   */
+  static fromControlPoints(
+    controlPoints: AcGePoint3dLike[],
+    knots: number[],
+    weights: number[] | undefined,
+    declaredDegree: number | undefined,
+    closed: boolean
+  ): AcDbSpline | null {
+    const geo = AcGeSpline3d.fromControlPoints(
+      controlPoints,
+      knots,
+      weights,
+      declaredDegree,
+      closed
+    )
+    return geo ? createAcDbSplineFromGeo(geo, closed) : null
+  }
+
+  /**
+   * Creates a spline entity that interpolates fit points.
+   *
+   * Knots and control points are computed internally from the fit data. Start and end
+   * tangents are applied only when they are non-zero direction vectors. Degree is
+   * clamped so that `fitPoints.length + tangentCount >= degree + 1`.
+   *
+   * @param fitPoints - Points the spline should pass through, in WCS coordinates
+   * @param knotParam - Knot parameterization (`'Uniform'`, `'Chord'`, or `'SqrtChord'`)
+   * @param declaredDegree - Requested degree from the source file; defaults to 3 when
+   *   missing or less than 1, then clamped to fit the available fit/tangent data
+   * @param closed - Whether the spline forms a closed loop
+   * @param startTangent - Optional start tangent direction; ignored when zero-length
+   * @param endTangent - Optional end tangent direction; ignored when zero-length
+   * @returns A new spline entity, or `null` if construction fails
+   *
+   * @example
+   * ```typescript
+   * const spline = AcDbSpline.fromFitPoints(
+   *   [{ x: 0, y: 0, z: 0 }, { x: 10, y: 0, z: 0 }],
+   *   'Uniform',
+   *   3,
+   *   false,
+   *   { x: 1, y: 0, z: 0 },
+   *   { x: 1, y: 0, z: 0 }
+   * );
+   * ```
+   */
+  static fromFitPoints(
+    fitPoints: AcGePoint3dLike[],
+    knotParam: AcGeKnotParameterizationType,
+    declaredDegree: number | undefined,
+    closed: boolean,
+    startTangent?: AcGePoint3dLike | null,
+    endTangent?: AcGePoint3dLike | null
+  ): AcDbSpline | null {
+    const geo = AcGeSpline3d.fromFitPoints(
+      fitPoints,
+      knotParam,
+      declaredDegree,
+      closed,
+      startTangent,
+      endTangent
+    )
+    return geo ? createAcDbSplineFromGeo(geo, closed) : null
+  }
+
+  /**
+   * Creates a spline entity from parsed DWG/DXF SPLINE fields.
+   *
+   * This is the preferred entry point for file converters. Control-point data is tried
+   * first; when that fails (for example, too few control points for the knot vector),
+   * fit-point data is used as a fallback.
+   *
+   * The `flag` field encodes spline properties from group code 70:
+   * - bit 0 (`0x01`): closed spline
+   * - bit 1 (`0x02`): periodic
+   * - bit 2 (`0x04`): rational (weights are passed separately via `weights`)
+   * - bit 10 (`1024`): Chord knot parameterization for fit splines
+   * - bit 11 (`2048`): SqrtChord knot parameterization for fit splines
+   * - when neither Chord nor SqrtChord is set: Uniform knot parameterization
+   *
+   * @param spline - Parsed SPLINE entity payload from a DWG/DXF reader
+   * @param spline.flag - SPLINE flags (group code 70)
+   * @param spline.degree - Declared degree (group code 71)
+   * @param spline.numberOfControlPoints - Count of control points (group code 73)
+   * @param spline.numberOfKnots - Count of knots (group code 72)
+   * @param spline.numberOfFitPoints - Count of fit points (group code 74)
+   * @param spline.controlPoints - Control vertices (group codes 10/20/30)
+   * @param spline.knots - Knot values (group code 40)
+   * @param spline.weights - Optional weights (group code 41)
+   * @param spline.fitPoints - Fit points (group codes 11/21/31)
+   * @param spline.startTangent - Optional start tangent (group codes 12/22/32)
+   * @param spline.endTangent - Optional end tangent (group codes 13/23/33)
+   * @returns A new spline entity, or `null` when neither control nor fit data can be used
+   */
+  static fromDwgSpline(spline: {
+    flag: number
+    degree?: number
+    numberOfControlPoints: number
+    numberOfKnots: number
+    numberOfFitPoints: number
+    controlPoints: AcGePoint3dLike[]
+    knots: number[]
+    weights?: number[]
+    fitPoints: AcGePoint3dLike[]
+    startTangent?: AcGePoint3dLike | null
+    endTangent?: AcGePoint3dLike | null
+  }): AcDbSpline | null {
+    const closed = !!(spline.flag & 0x01)
+    const knotParam = resolveSplineKnotParameterization(spline.flag)
+
+    if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
+      const fromControlPoints = AcDbSpline.fromControlPoints(
+        spline.controlPoints,
+        spline.knots,
+        spline.weights,
+        spline.degree,
+        closed
+      )
+      if (fromControlPoints) {
+        return fromControlPoints
+      }
+    }
+
+    if (spline.numberOfFitPoints > 0) {
+      return AcDbSpline.fromFitPoints(
+        spline.fitPoints,
+        knotParam,
+        spline.degree,
+        closed,
+        spline.startTangent,
+        spline.endTangent
+      )
+    }
+
+    return null
   }
 
   /** The underlying geometric spline object */

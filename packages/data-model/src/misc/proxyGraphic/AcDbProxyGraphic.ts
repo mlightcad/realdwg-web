@@ -574,6 +574,12 @@ export class AcDbProxyGraphic {
     if (this._matrices.length > 0) {
       transformed.transformDirection(this._matrices[this._matrices.length - 1])
     }
+    if (
+      !Number.isFinite(transformed.lengthSq()) ||
+      transformed.lengthSq() < 1e-24
+    ) {
+      return Z_AXIS.clone()
+    }
     return transformed.normalize()
   }
 
@@ -848,7 +854,18 @@ export class AcDbProxyGraphic {
       y: center[1],
       z: center[2]
     })
-    const refVec = this.transformVector(startVec).normalize()
+    const rawStart = vectorFromLike({
+      x: startVec[0],
+      y: startVec[1],
+      z: startVec[2]
+    })
+    if (this._matrices.length > 0) {
+      rawStart.transformDirection(this._matrices[this._matrices.length - 1])
+    }
+    const refVec =
+      Number.isFinite(rawStart.lengthSq()) && rawStart.lengthSq() >= 1e-24
+        ? rawStart.normalize()
+        : getOcsReferenceVector(normalVec)
     const startAngle = 0
     const endAngle = sweepAngle
     const arc = new AcGeCircArc3d(
