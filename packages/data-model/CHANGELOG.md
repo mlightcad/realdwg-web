@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.8
+
+### Patch Changes
+
+- feat: improve SPLINE conversion with tolerant factory methods
+- Updated dependencies
+  - @mlightcad/common@1.6.8
+  - @mlightcad/geometry-engine@3.4.8
+  - @mlightcad/graphic-interface@3.5.8
+
 ## 1.9.7
 
 ### Patch Changes

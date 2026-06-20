@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.8
+
+### Patch Changes
+
+- feat: improve SPLINE conversion with tolerant factory methods
+- Updated dependencies
+  - @mlightcad/data-model@1.9.8
+  - @mlightcad/dxf-json-converter@1.9.8
+  - @mlightcad/libredwg-converter@3.7.8
+
 ## 0.3.7
 
 ### Patch Changes

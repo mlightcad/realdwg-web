@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.5.8
+
+### Patch Changes
+
+- feat: improve SPLINE conversion with tolerant factory methods
+- Updated dependencies
+  - @mlightcad/common@1.6.8
+  - @mlightcad/geometry-engine@3.4.8
+
 ## 3.5.7
 
 ### Patch Changes

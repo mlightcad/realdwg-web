@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.8
+
+### Patch Changes
+
+- feat: improve SPLINE conversion with tolerant factory methods
+
 ## 1.6.7
 
 ### Patch Changes

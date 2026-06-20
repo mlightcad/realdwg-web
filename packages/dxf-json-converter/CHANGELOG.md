@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.8
+
+### Patch Changes
+
+- feat: improve SPLINE conversion with tolerant factory methods
+- Updated dependencies
+  - @mlightcad/data-model@1.9.8
+
 ## 1.9.7
 
 ### Patch Changes
