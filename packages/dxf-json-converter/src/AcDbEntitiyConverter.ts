@@ -71,6 +71,7 @@ import {
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
+  decodeMLeaderStyleRawColor,
   hexStringsToBytes,
   transformOcsPointToWcs
 } from '@mlightcad/data-model'
@@ -914,7 +915,11 @@ export class AcDbEntityConverter {
     dbEntity.propertyOverrideFlag = mleader.propertyOverrideFlag
     dbEntity.leaderLineType = (mleader.leaderLineType ??
       AcDbMLeaderLineType.StraightLeader) as AcDbMLeaderLineType
-    dbEntity.leaderLineColor = mleader.leaderLineColor
+    if (mleader.leaderLineColor != null) {
+      dbEntity.leaderLineColor = decodeMLeaderStyleRawColor(
+        mleader.leaderLineColor
+      )
+    }
     dbEntity.leaderLineTypeId = mleader.leaderLineTypeId
     dbEntity.leaderLineWeight = mleader.leaderLineWeight
     dbEntity.landingEnabled = mleader.landingEnabled
@@ -927,13 +932,21 @@ export class AcDbEntityConverter {
     dbEntity.textRightAttachmentType = mleader.textRightAttachmentType
     dbEntity.textAngleType = mleader.textAngleType
     dbEntity.textAlignmentType = mleader.textAlignmentType
-    dbEntity.textColor = mleader.textColor
+    if (mleader.textColor != null) {
+      dbEntity.textColor = decodeMLeaderStyleRawColor(mleader.textColor)
+    }
     dbEntity.textFrameEnabled = mleader.textFrameEnabled
     dbEntity.landingGap = mleader.landingGap
     dbEntity.textAttachment = mleader.textAttachment
     dbEntity.textFlowDirection = mleader.textFlowDirection
-    dbEntity.blockContentId = mleader.blockContentId
-    dbEntity.blockContentColor = mleader.blockContentColor
+    if (this.isValidHandleId(mleader.blockContentId)) {
+      dbEntity.blockContentId = mleader.blockContentId
+    }
+    if (mleader.blockContentColor != null) {
+      dbEntity.blockContentColor = decodeMLeaderStyleRawColor(
+        mleader.blockContentColor
+      )
+    }
     dbEntity.blockContentRotation = mleader.blockContentRotation
     dbEntity.blockContentConnectionType = mleader.blockContentConnectionType
     dbEntity.annotativeScaleEnabled = mleader.annotativeScaleEnabled
@@ -950,7 +963,11 @@ export class AcDbEntityConverter {
     dbEntity.topTextAttachmentDirection = mleader.topTextAttachmentDirection
     dbEntity.contentScale = mleader.contentScale
     dbEntity.textLineSpacingStyle = mleader.textLineSpacingStyle
-    dbEntity.textBackgroundColor = mleader.textBackgroundColor
+    if (mleader.textBackgroundColor != null) {
+      dbEntity.textBackgroundColor = decodeMLeaderStyleRawColor(
+        mleader.textBackgroundColor
+      )
+    }
     dbEntity.textBackgroundScaleFactor = mleader.textBackgroundScaleFactor
     dbEntity.textBackgroundTransparency = mleader.textBackgroundTransparency
     dbEntity.textBackgroundColorOn = mleader.textBackgroundColorOn
@@ -1020,12 +1037,7 @@ export class AcDbEntityConverter {
         'textStyleName',
         'textStyle'
       ]) ??
-      this.readString(raw, [
-        'textStyleName',
-        'textStyle',
-        'styleName',
-        'textStyleId'
-      ])
+      this.readString(raw, ['textStyleName', 'textStyle', 'styleName'])
     if (textStyleName) dbEntity.textStyleName = textStyleName
 
     const textHeight =
@@ -1084,7 +1096,7 @@ export class AcDbEntityConverter {
       'textAttachmentPoint',
       'attachmentPoint'
     ])
-    if (textAttachmentPoint != null) {
+    if (textAttachmentPoint != null && textAttachmentPoint !== 0) {
       dbEntity.textAttachmentPoint =
         textAttachmentPoint as unknown as AcGiMTextAttachmentPoint
     }
@@ -1133,25 +1145,32 @@ export class AcDbEntityConverter {
         string,
         unknown
       >
-      dbEntity.blockContent = {
-        blockContentId: mleader.blockContent.blockContentId,
-        normal: this.readPoint(blockRecord, ['normal']),
-        position: mleader.blockContent.position,
-        scale: this.readPoint(blockRecord, ['scale']),
-        rotation: this.readNumber(blockRecord, ['rotation']),
-        color: this.readNumber(blockRecord, ['color']),
-        transformationMatrix: Array.isArray(
-          mleader.blockContent.transformationMatrix
-        )
-          ? mleader.blockContent.transformationMatrix
+      const blockContentId = mleader.blockContent.blockContentId
+      if (this.isValidHandleId(blockContentId)) {
+        const rawBlockColor = this.readNumber(blockRecord, ['color'])
+        dbEntity.blockContent = {
+          blockContentId,
+          normal: this.readPoint(blockRecord, ['normal']),
+          position: mleader.blockContent.position,
+          scale: this.readPoint(blockRecord, ['scale']),
+          rotation: this.readNumber(blockRecord, ['rotation']),
+          color:
+            rawBlockColor != null
+              ? decodeMLeaderStyleRawColor(rawBlockColor)
+              : undefined,
+          transformationMatrix: Array.isArray(
+            mleader.blockContent.transformationMatrix
+          )
+            ? mleader.blockContent.transformationMatrix
           : []
+        }
       }
-    } else if (mleader.blockContentId) {
+    } else if (this.isValidHandleId(mleader.blockContentId)) {
       dbEntity.blockContent = {
         blockContentId: mleader.blockContentId,
         scale: mleader.blockContentScale,
         rotation: mleader.blockContentRotation,
-        color: mleader.blockContentColor,
+        color: dbEntity.blockContentColor,
         transformationMatrix: []
       }
     }
@@ -1460,6 +1479,10 @@ export class AcDbEntityConverter {
     if (entity.transparency != null) {
       dbEntity.transparency = AcCmTransparency.deserialize(entity.transparency)
     }
+  }
+
+  private isValidHandleId(id: string | undefined): id is string {
+    return id != null && id !== '' && id !== '0'
   }
 
   private readNumber(source: Record<string, unknown>, names: string[]) {

@@ -192,8 +192,8 @@ describe('AcDbMLeader arrowhead rendering', () => {
     mleader.textLocation = new AcGePoint3d(5, 2, 0)
 
     // Simulate DXF payload that writes entity raw color fields as ByBlock.
-    mleader.leaderLineColor = (0xc1 << 24) >> 0
-    mleader.textColor = (0xc1 << 24) >> 0
+    mleader.leaderLineColor = new AcCmColor().setByBlock()
+    mleader.textColor = new AcCmColor().setByBlock()
 
     const style = new AcDbMLeaderStyle()
     style.leaderLineColor = new AcCmColor(AcCmColorMethod.ByColor, 0xff0000)
@@ -223,6 +223,22 @@ describe('AcDbMLeader arrowhead rendering', () => {
 
     expect(lineRgbLog[0]).toBe(0xff0000)
     expect(mtextRgb).toBe(0x00aa00)
+  })
+
+  it('forwards the delay flag to nested MText rendering', () => {
+    const db = createWorkingDb()
+    const mleader = createSimpleLeader(db)
+    mleader.contents = 'Delayed text'
+    mleader.textLocation = new AcGePoint3d(5, 2, 0)
+
+    const renderer = createRenderer()
+    mleader.worldDraw(renderer as never, true)
+
+    expect(renderer.mtext).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'Delayed text' }),
+      expect.anything(),
+      true
+    )
   })
 
   it('applies style leader linetype id and lineweight to rendered leader line', () => {

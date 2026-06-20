@@ -100,8 +100,12 @@ export function decodeMLeaderStyleRawColor(rawColor: number) {
       color.setRGBValue(rawColor & 0xffffff)
       break
     default:
-      // Compatibility fallback for generators that output plain ACI (0..256).
-      if (rawColor >= 0 && rawColor <= 256) {
+      // Plain ACI from libredwg index-only exports (legacy) and other producers.
+      if (rawColor === 256) {
+        color.setByLayer()
+      } else if (rawColor === 0) {
+        color.setByBlock()
+      } else if (rawColor > 0 && rawColor < 256) {
         color.colorIndex = rawColor
       }
       break

@@ -22,7 +22,6 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { DEFAULT_MLEADER_STYLE } from '../misc/AcDbConstants'
-import { decodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
@@ -189,7 +188,7 @@ export interface AcDbMLeaderBlockContentLike {
   position?: AcGePoint3dLike
   scale?: AcGeVector3dLike
   rotation?: number
-  color?: number
+  color?: AcCmColor
   transformationMatrix?: number[]
 }
 
@@ -203,7 +202,7 @@ export interface AcDbMLeaderBlockContent {
   position?: AcGePoint3d
   scale: AcGeVector3d
   rotation: number
-  color?: number
+  color?: AcCmColor
   transformationMatrix: number[]
 }
 
@@ -265,7 +264,7 @@ export class AcDbMLeader extends AcDbEntity {
   private _version?: number
   private _leaderStyleId?: string
   private _propertyOverrideFlag?: number
-  private _leaderLineColor?: number
+  private _leaderLineColor?: AcCmColor
   private _leaderLineTypeId?: string
   private _leaderLineWeight?: number
   private _landingEnabled?: boolean
@@ -276,13 +275,13 @@ export class AcDbMLeader extends AcDbEntity {
   private _textRightAttachmentType?: number
   private _textAngleType?: number
   private _textAlignmentType?: number
-  private _textColor?: number
+  private _textColor?: AcCmColor
   private _textFrameEnabled?: boolean
   private _landingGap?: number
   private _textAttachment?: number
   private _textFlowDirection?: number
   private _blockContentId?: string
-  private _blockContentColor?: number
+  private _blockContentColor?: AcCmColor
   private _blockContentScale?: AcGeVector3d
   private _blockContentRotation?: number
   private _blockContentConnectionType?: number
@@ -297,7 +296,7 @@ export class AcDbMLeader extends AcDbEntity {
   private _contentBasePosition?: AcGePoint3d
   private _textAnchor?: AcGePoint3d
   private _textLineSpacingStyle?: number
-  private _textBackgroundColor?: number
+  private _textBackgroundColor?: AcCmColor
   private _textBackgroundScaleFactor?: number
   private _textBackgroundTransparency?: number
   private _textBackgroundColorOn?: boolean
@@ -495,8 +494,8 @@ export class AcDbMLeader extends AcDbEntity {
   get leaderLineColor() {
     return this._leaderLineColor
   }
-  set leaderLineColor(value: number | undefined) {
-    this._leaderLineColor = value
+  set leaderLineColor(value: AcCmColor | undefined) {
+    this._leaderLineColor = value?.clone()
   }
 
   /**
@@ -605,8 +604,8 @@ export class AcDbMLeader extends AcDbEntity {
   get textColor() {
     return this._textColor
   }
-  set textColor(value: number | undefined) {
-    this._textColor = value
+  set textColor(value: AcCmColor | undefined) {
+    this._textColor = value?.clone()
   }
 
   /**
@@ -665,8 +664,8 @@ export class AcDbMLeader extends AcDbEntity {
   get blockContentColor() {
     return this._blockContentColor
   }
-  set blockContentColor(value: number | undefined) {
-    this._blockContentColor = value
+  set blockContentColor(value: AcCmColor | undefined) {
+    this._blockContentColor = value?.clone()
   }
 
   /**
@@ -817,8 +816,8 @@ export class AcDbMLeader extends AcDbEntity {
   get textBackgroundColor() {
     return this._textBackgroundColor
   }
-  set textBackgroundColor(value: number | undefined) {
-    this._textBackgroundColor = value
+  set textBackgroundColor(value: AcCmColor | undefined) {
+    this._textBackgroundColor = value?.clone()
   }
 
   /**
@@ -1188,7 +1187,7 @@ export class AcDbMLeader extends AcDbEntity {
           position: this._blockContent.position?.clone(),
           scale: this._blockContent.scale.clone(),
           rotation: this._blockContent.rotation,
-          color: this._blockContent.color,
+          color: this._blockContent.color?.clone(),
           transformationMatrix: [...this._blockContent.transformationMatrix]
         }
       : undefined
@@ -1208,7 +1207,7 @@ export class AcDbMLeader extends AcDbEntity {
       position: value.position ? this.createPoint(value.position) : undefined,
       scale: new AcGeVector3d(value.scale ?? { x: 1, y: 1, z: 1 }),
       rotation: value.rotation ?? 0,
-      color: value.color,
+      color: value.color?.clone(),
       transformationMatrix: value.transformationMatrix
         ? [...value.transformationMatrix]
         : []
@@ -1697,7 +1696,7 @@ export class AcDbMLeader extends AcDbEntity {
    * @param renderer Graphics renderer used to create draw entities.
    * @returns A single entity, an entity group, or undefined when nothing is drawable.
    */
-  subWorldDraw(renderer: AcGiRenderer): AcGiEntity | undefined {
+  subWorldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
     const entities: AcGiEntity[] = []
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
@@ -1746,9 +1745,9 @@ export class AcDbMLeader extends AcDbEntity {
         drawingDirection: this.textDrawingDirection,
         lineSpaceFactor: this.textLineSpacingFactor
       }
-      // MLeader draws multiple primitives as a group. Delayed MText rendering is
-      // only scheduled for top-level entities, so render nested MText eagerly.
-      entities.push(renderer.mtext(mtextData, this.getTextStyle(), false))
+      // Nested MText must follow the same delay flag as top-level MTEXT so the
+      // viewer can finish geometry asynchronously in worker render mode.
+      entities.push(renderer.mtext(mtextData, this.getTextStyle(), delay))
     }
 
     traits.color = originalColor
@@ -2395,12 +2394,18 @@ export class AcDbMLeader extends AcDbEntity {
       ? textStyleTable.getIdAt(styleIdFromStyle)?.name
       : undefined
 
-    if (this.textStyleName) return this.textStyleName
-
-    const directStyle = this.textStyleId
-      ? textStyleTable.getIdAt(this.textStyleId)
+    const styleNameFromEntityId = this.textStyleId
+      ? textStyleTable.getIdAt(this.textStyleId)?.name
       : undefined
-    if (directStyle?.name) return directStyle.name
+
+    if (this.textStyleName) {
+      const byName = textStyleTable.getAt(this.textStyleName)
+      if (byName?.name) return byName.name
+      const byId = textStyleTable.getIdAt(this.textStyleName)
+      if (byId?.name) return byId.name
+    }
+
+    if (styleNameFromEntityId) return styleNameFromEntityId
 
     return styleNameFromStyleId
   }
@@ -2546,14 +2551,10 @@ export class AcDbMLeader extends AcDbEntity {
    * @returns Effective color used for rendering and trait application.
    */
   private getResolvedComponentColor(
-    rawEntityColor: number | undefined,
+    entityColor: AcCmColor | undefined,
     styleColor: AcCmColor | undefined,
     overrideFlagMask: number
   ) {
-    const entityColor =
-      rawEntityColor != null
-        ? decodeMLeaderStyleRawColor(rawEntityColor)
-        : undefined
     if (!entityColor) return styleColor
 
     const overrideEnabled = this.isPropertyOverrideEnabled(overrideFlagMask)
