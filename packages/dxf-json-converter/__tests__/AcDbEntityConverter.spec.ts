@@ -292,6 +292,7 @@ describe('AcDbEntityConverter', () => {
     expect(mleader.version).toBe(2)
     expect(mleader.leaderStyleId).toBe('STYLE')
     expect(mleader.leaderLineType).toBe(AcDbMLeaderLineType.StraightLeader)
+    expect(mleader.leaderLineColor?.isByLayer).toBe(true)
     expect(mleader.textHeight).toBe(4)
     expect(mleader.landingEnabled).toBe(true)
     expect(mleader.textFrameEnabled).toBe(true)

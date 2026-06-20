@@ -6,6 +6,7 @@ import {
   AcDbDatabase,
   AcDbHatch,
   AcDbProxyEntity,
+  AcDbShape,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
 
@@ -233,5 +234,58 @@ describe('libredwg AcDbEntityConverter', () => {
       expect(hatch.color.colorIndex).toBe(7)
       expect(hatch.color.isForeground).toBe(true)
     })
+  })
+
+  it('converts libredwg SHAPE entity', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'SHAPE',
+      subclassMarker: 'AcDbShape',
+      layer: '0',
+      handle: '19AAD3',
+      insertionPoint: { x: 100, y: 200, z: 0 },
+      size: 2.5,
+      shapeNumber: 42,
+      styleName: 'TECOGISSHAPE0',
+      rotation: Math.PI / 4,
+      xScale: 1.5,
+      obliqueAngle: Math.PI / 18,
+      thickness: 0.5,
+      extrusionDirection: { x: 0, y: 0, z: 1 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbShape)
+    const shape = result as AcDbShape
+    expect(shape.type).toBe('Shape')
+    expect(shape.shapeNumber).toBe(42)
+    expect(shape.styleName).toBe('TECOGISSHAPE0')
+    expect(shape.position).toMatchObject({ x: 100, y: 200, z: 0 })
+    expect(shape.size).toBe(2.5)
+    expect(shape.rotation).toBeCloseTo(Math.PI / 4)
+    expect(shape.widthFactor).toBe(1.5)
+    expect(shape.oblique).toBeCloseTo(Math.PI / 18)
+    expect(shape.thickness).toBe(0.5)
+    expect(shape.normal).toMatchObject({ x: 0, y: 0, z: 1 })
+  })
+
+  it('converts libredwg SHAPE OCS insertion point into WCS when extrusion points to -Z', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'SHAPE',
+      subclassMarker: 'AcDbShape',
+      insertionPoint: { x: 1, y: 2, z: 0 },
+      size: 1,
+      shapeNumber: 1,
+      rotation: 0,
+      xScale: 1,
+      obliqueAngle: 0,
+      thickness: 0,
+      extrusionDirection: { x: 0, y: 0, z: -1 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbShape)
+    expect((result as AcDbShape).position).toMatchObject({ x: -1, y: 2, z: 0 })
   })
 })

@@ -30,6 +30,7 @@ import {
   AcGiRenderMode,
   ByLayer,
   createWorkerApi,
+  DEFAULT_MLEADER_STYLE,
   DEFAULT_TEXT_STYLE,
   VPORT_FALLBACK_CENTER_2D,
   VPORT_FALLBACK_LLC,
@@ -45,10 +46,12 @@ import {
   DwgEntity,
   DwgInsertEntity,
   DwgMTextEntity,
+  DwgMultiLeaderEntity,
   DwgTextEntity
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
+import { AcDbObjectConverter } from './AcDbObjectConverter'
 
 const MODEL_SPACE = '*MODEL_SPACE'
 
@@ -127,12 +130,21 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     })
 
     const fonts: Set<string> = new Set<string>()
+    // Shape styles (standardFlag bit 0) define SHX shape fonts used by SHAPE entities.
+    dwg.tables.STYLE.entries.forEach(style => {
+      if (style.standardFlag & 1) {
+        const fontName = getFontName(style.font)
+        if (fontName) {
+          fonts.add(fontName)
+        }
+      }
+    })
     this.getFontsInBlock(dwg.entities, blockMap, styleMap, fonts)
     return Array.from(fonts)
   }
 
   /**
-   * Iterate entities in model space to get fonts used by text, mtext and insert entities
+   * Iterate entities in model space to get fonts used by text, mtext, shape and insert entities
    */
   private getFontsInBlock(
     entities: DwgEntity[],
@@ -153,26 +165,18 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         const text = entity as DwgTextEntity
         const fontNames = styleMap.get(text.styleName)
         fontNames?.forEach(name => fonts.add(name))
+      } else if (entity.type == 'SHAPE') {
+        const shape = entity as DwgEntity & { styleName?: string }
+        const fontNames = shape.styleName
+          ? styleMap.get(shape.styleName)
+          : undefined
+        fontNames?.forEach(name => fonts.add(name))
       } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-        const mleader = entity as DwgEntity & Record<string, unknown>
-        const textContent = mleader.textContent as
-          | Record<string, unknown>
-          | undefined
-        const text =
-          typeof textContent?.text === 'string' ? textContent.text : ''
+        const mleader = entity as DwgMultiLeaderEntity
+        const text = mleader.textContent ?? ''
         ;[...text.matchAll(regex)].forEach(match => {
           fonts.add(match[1].toLowerCase())
         })
-        const styleName =
-          typeof textContent?.styleName === 'string'
-            ? textContent.styleName
-            : typeof mleader.textStyleName === 'string'
-              ? mleader.textStyleName
-              : typeof mleader.styleName === 'string'
-                ? mleader.styleName
-                : undefined
-        const fontNames = styleName ? styleMap.get(styleName) : undefined
-        fontNames?.forEach(name => fonts.add(name))
       } else if (entity.type == 'INSERT') {
         const insert = entity as DwgInsertEntity
         const block = blockMap.get(insert.name)
@@ -560,6 +564,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.pdmode = header.PDMODE ?? 0
     db.pdsize = header.PDSIZE ?? 0.0
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
+    const cmleaderStyle =
+      this.normalizeHeaderStringValue(
+        (header as { CMLEADERSTYLE?: string }).CMLEADERSTYLE
+      ) ?? DEFAULT_MLEADER_STYLE
+    db.cmleaderstyle = cmleaderStyle
   }
 
   private processCommonTableEntryAttrs(
@@ -576,6 +585,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   protected processObjects(model: DwgDatabase, db: AcDbDatabase) {
     this.processLayouts(model, db)
     this.processImageDefs(model, db)
+    this.processMLeaderStyles(model, db)
   }
 
   private processLayouts(model: DwgDatabase, db: AcDbDatabase) {
@@ -629,6 +639,18 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     })
   }
 
+  private processMLeaderStyles(model: DwgDatabase, db: AcDbDatabase) {
+    const mleaderStyles = model.objects.MLEADERSTYLE
+    if (!mleaderStyles?.length) return
+
+    const mleaderStyleDict = db.objects.mleaderStyle
+    const objectConverter = new AcDbObjectConverter()
+    mleaderStyles.forEach(style => {
+      const dbStyle = objectConverter.convertMLeaderStyle(style)
+      mleaderStyleDict.setAt(dbStyle.objectId, dbStyle)
+    })
+  }
+
   private processCommonObjectAttrs(
     object: DwgCommonObject,
     dbObject: AcDbObject
@@ -669,5 +691,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
   private isModelSpace(name: string) {
     return name && name.toUpperCase() == MODEL_SPACE
+  }
+
+  private normalizeHeaderStringValue(value: unknown) {
+    if (typeof value !== 'string') return undefined
+    const trimmed = value.trim()
+    return trimmed.length > 0 ? trimmed : undefined
   }
 }
