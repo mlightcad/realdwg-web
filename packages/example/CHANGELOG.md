@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.7
+
+### Patch Changes
+
+- feat: improve LibreDWG converter with enhanced MLeader conversion and SHAPE entity support, and restore initial view from \*ACTIVE VPORT with added sanity checks for robustness
+- Updated dependencies
+  - @mlightcad/data-model@1.9.7
+  - @mlightcad/dxf-json-converter@1.9.7
+  - @mlightcad/libredwg-converter@3.7.7
+
 ## 0.3.6
 
 ### Patch Changes

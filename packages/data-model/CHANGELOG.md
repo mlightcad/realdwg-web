@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.7
+
+### Patch Changes
+
+- feat: improve LibreDWG converter with enhanced MLeader conversion and SHAPE entity support, and restore initial view from \*ACTIVE VPORT with added sanity checks for robustness
+- Updated dependencies
+  - @mlightcad/common@1.6.7
+  - @mlightcad/geometry-engine@3.4.7
+  - @mlightcad/graphic-interface@3.5.7
+
 ## 1.9.6
 
 ### Patch Changes

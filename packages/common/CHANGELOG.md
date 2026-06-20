@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.7
+
+### Patch Changes
+
+- feat: improve LibreDWG converter with enhanced MLeader conversion and SHAPE entity support, and restore initial view from \*ACTIVE VPORT with added sanity checks for robustness
+
 ## 1.6.6
 
 ### Patch Changes
