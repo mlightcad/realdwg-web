@@ -251,17 +251,26 @@ export class AcGeMatrix3d {
    * @returns Return this matrix
    */
   setFromExtrusionDirection(extrusion: AcGeVector3d) {
-    if (!DEFAULT_TOL.equalPoint3d(extrusion, AcGeVector3d.Z_AXIS)) {
+    const length = Math.hypot(extrusion.x, extrusion.y, extrusion.z)
+    if (!Number.isFinite(length) || length < 1e-12) {
+      this.identity()
+      return this
+    }
+    const normal =
+      Math.abs(length - 1) > 1e-6
+        ? extrusion.clone().multiplyScalar(1 / length)
+        : extrusion
+    if (!DEFAULT_TOL.equalPoint3d(normal, AcGeVector3d.Z_AXIS)) {
       const xAxis = new AcGeVector3d(1, 0, 0)
       if (
-        Math.abs(extrusion.x) < 1.0 / 64.0 &&
-        Math.abs(extrusion.y) < 1.0 / 64.0
+        Math.abs(normal.x) < 1.0 / 64.0 &&
+        Math.abs(normal.y) < 1.0 / 64.0
       ) {
-        xAxis.crossVectors(AcGeVector3d.Y_AXIS, extrusion).normalize()
+        xAxis.crossVectors(AcGeVector3d.Y_AXIS, normal).normalize()
       } else {
-        xAxis.crossVectors(AcGeVector3d.Z_AXIS, extrusion).normalize()
+        xAxis.crossVectors(AcGeVector3d.Z_AXIS, normal).normalize()
       }
-      const yAxis = extrusion.clone().cross(xAxis).normalize()
+      const yAxis = normal.clone().cross(xAxis).normalize()
       this.set(
         xAxis.x,
         xAxis.y,
@@ -271,9 +280,9 @@ export class AcGeMatrix3d {
         yAxis.y,
         yAxis.z,
         0,
-        extrusion.x,
-        extrusion.y,
-        extrusion.z,
+        normal.x,
+        normal.y,
+        normal.z,
         0,
         0,
         0,
