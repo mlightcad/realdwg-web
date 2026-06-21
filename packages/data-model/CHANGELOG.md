@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.10
+
+### Patch Changes
+
+- feat: support reading AcDb2LineAngularDimension and add DWGNAME system variable
+- Updated dependencies
+  - @mlightcad/common@1.6.10
+  - @mlightcad/geometry-engine@3.4.10
+  - @mlightcad/graphic-interface@3.5.10
+
 ## 1.9.9
 
 ### Patch Changes

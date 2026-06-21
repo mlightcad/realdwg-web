@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.10
+
+### Patch Changes
+
+- feat: support reading AcDb2LineAngularDimension and add DWGNAME system variable
+
 ## 1.6.9
 
 ### Patch Changes

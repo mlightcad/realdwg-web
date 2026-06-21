@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.10
+
+### Patch Changes
+
+- feat: support reading AcDb2LineAngularDimension and add DWGNAME system variable
+- Updated dependencies
+  - @mlightcad/dxf-json-converter@1.9.10
+  - @mlightcad/libredwg-converter@3.7.10
+  - @mlightcad/data-model@1.9.10
+
 ## 0.3.9
 
 ### Patch Changes

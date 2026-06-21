@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.10
+
+### Patch Changes
+
+- feat: support reading AcDb2LineAngularDimension and add DWGNAME system variable
+- Updated dependencies
+  - @mlightcad/data-model@1.9.10
+
 ## 3.7.9
 
 ### Patch Changes
