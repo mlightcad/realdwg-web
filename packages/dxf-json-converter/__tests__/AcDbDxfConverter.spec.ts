@@ -92,6 +92,34 @@ describe('AcDbDxfConverter', () => {
     )
   })
 
+  it('collects fonts for entities with missing style via $TEXTSTYLE fallback', () => {
+    const converter = new TestDxfConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      header: { $TEXTSTYLE: 'Standard' },
+      tables: {
+        STYLE: {
+          entries: [
+            {
+              name: 'Standard',
+              font: 'txt.shx'
+            },
+            {
+              name: 'Named',
+              font: 'simplex.shx'
+            }
+          ]
+        }
+      },
+      entities: [
+        { type: 'MTEXT', text: 'Hello' },
+        { type: 'TEXT', styleName: 'Named' }
+      ],
+      blocks: {}
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['txt', 'simplex']))
+  })
+
   it('collects shape-definition fonts from the style table', () => {
     const converter = new TestDxfConverter({ useWorker: false })
     const fonts = converter.getFontsPublic({

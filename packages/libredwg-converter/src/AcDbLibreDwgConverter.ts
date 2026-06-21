@@ -29,6 +29,10 @@ import {
   AcGiOrthographicType,
   AcGiRenderMode,
   ByLayer,
+  addInlineMTextFonts,
+  addResolvedStyleFonts,
+  buildStyleFontMap,
+  collectShapeDefinitionFonts,
   createWorkerApi,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -102,44 +106,28 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
    * @returns Returns all of fonts used by entities in model space and paper space
    */
   protected getFonts(dwg: DwgDatabase) {
-    // Build block map. The key is block name.
     const blockMap: Map<string, DwgBlockRecordTableEntry> = new Map()
     dwg.tables.BLOCK_RECORD.entries.forEach(btr => {
       blockMap.set(btr.name, btr)
     })
 
-    // Build text style map. The key is text style name, and the value is font name list.
-    const styleMap = new Map<string, string[]>()
-    const getFontName = (fontFileName: string) => {
-      if (fontFileName) {
-        const lastDotIndex = fontFileName.lastIndexOf('.')
-        if (lastDotIndex >= 0) {
-          return fontFileName.substring(0, lastDotIndex).toLowerCase()
-        } else {
-          return fontFileName.toLowerCase()
-        }
-      }
-    }
-    dwg.tables.STYLE.entries.forEach(style => {
-      const fontNames: string[] = []
-      let fontName = getFontName(style.font)
-      if (fontName) fontNames.push(fontName)
-      fontName = getFontName(style.bigFont)
-      if (fontName) fontNames.push(fontName)
-      styleMap.set(style.name, fontNames)
-    })
-
-    const fonts: Set<string> = new Set<string>()
-    // Shape styles (standardFlag bit 0) define SHX shape fonts used by SHAPE entities.
-    dwg.tables.STYLE.entries.forEach(style => {
-      if (style.standardFlag & 1) {
-        const fontName = getFontName(style.font)
-        if (fontName) {
-          fonts.add(fontName)
-        }
-      }
-    })
-    this.getFontsInBlock(dwg.entities, blockMap, styleMap, fonts)
+    const styleEntries = dwg.tables.STYLE.entries.map(style => ({
+      name: style.name,
+      font: style.font,
+      bigFont: style.bigFont,
+      extendedFont: (style as { extendedFont?: string }).extendedFont,
+      standardFlag: style.standardFlag
+    }))
+    const styleMap = buildStyleFontMap(styleEntries)
+    const fonts = new Set<string>(collectShapeDefinitionFonts(styleEntries))
+    const textStyleVar = dwg.header?.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
+    this.getFontsInBlock(
+      dwg.entities,
+      blockMap,
+      styleMap,
+      fonts,
+      textStyleVar
+    )
     return Array.from(fonts)
   }
 
@@ -150,38 +138,54 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     entities: DwgEntity[],
     blockMap: Map<string, DwgBlockRecordTableEntry>,
     styleMap: Map<string, string[]>,
-    fonts: Set<string>
+    fonts: Set<string>,
+    textStyleVar: string
   ) {
-    const regex = /\\f(.*?)\|/g
     entities.forEach(entity => {
       if (entity.type == 'MTEXT') {
         const mtext = entity as DwgMTextEntity
-        ;[...mtext.text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
-        const fontNames = styleMap.get(mtext.styleName)
-        fontNames?.forEach(name => fonts.add(name))
-      } else if (entity.type == 'TEXT') {
+        addInlineMTextFonts(mtext.text, fonts)
+        addResolvedStyleFonts(
+          mtext.styleName,
+          styleMap,
+          textStyleVar,
+          fonts
+        )
+      } else if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
         const text = entity as DwgTextEntity
-        const fontNames = styleMap.get(text.styleName)
-        fontNames?.forEach(name => fonts.add(name))
+        addResolvedStyleFonts(
+          text.styleName,
+          styleMap,
+          textStyleVar,
+          fonts
+        )
       } else if (entity.type == 'SHAPE') {
         const shape = entity as DwgEntity & { styleName?: string }
-        const fontNames = shape.styleName
-          ? styleMap.get(shape.styleName)
-          : undefined
-        fontNames?.forEach(name => fonts.add(name))
+        addResolvedStyleFonts(shape.styleName, styleMap, textStyleVar, fonts)
       } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-        const mleader = entity as DwgMultiLeaderEntity
-        const text = mleader.textContent ?? ''
-        ;[...text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
+        const mleader = entity as DwgMultiLeaderEntity & Record<string, unknown>
+        const text =
+          typeof mleader.textContent === 'string' ? mleader.textContent : ''
+        addInlineMTextFonts(text, fonts)
+        const styleName =
+          typeof mleader.textStyleName === 'string'
+            ? mleader.textStyleName
+            : typeof mleader.styleName === 'string'
+              ? mleader.styleName
+              : undefined
+        addResolvedStyleFonts(styleName, styleMap, textStyleVar, fonts)
       } else if (entity.type == 'INSERT') {
         const insert = entity as DwgInsertEntity
         const block = blockMap.get(insert.name)
-        if (block)
-          this.getFontsInBlock(block.entities, blockMap, styleMap, fonts)
+        if (block) {
+          this.getFontsInBlock(
+            block.entities,
+            blockMap,
+            styleMap,
+            fonts,
+            textStyleVar
+          )
+        }
       }
     })
   }

@@ -25,6 +25,18 @@ export {
   VPORT_FALLBACK_VIEW_DIR,
   VPORT_FALLBACK_VIEW_TARGET
 } from './AcDbConstants'
+export {
+  addInlineMTextFonts,
+  addResolvedStyleFonts,
+  buildStyleFontMap,
+  collectInlineMTextFonts,
+  collectShapeDefinitionFonts,
+  collectStyleEntryFontNames,
+  MTEXT_INLINE_FONT_PATTERN,
+  normalizeFontFileName,
+  resolveStyleFontNames
+} from './AcDbFontUtil'
+export type { AcDbStyleFontSource } from './AcDbFontUtil'
 export { AcDbDataGenerator } from './AcDbDataGenerator'
 export { AcDbDimArrowType } from './AcDbDimArrowType'
 export {

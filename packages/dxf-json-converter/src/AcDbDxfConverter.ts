@@ -31,6 +31,10 @@ import {
   AcGiRenderMode,
   ByLayer,
   createWorkerApi,
+  addInlineMTextFonts,
+  addResolvedStyleFonts,
+  buildStyleFontMap,
+  collectShapeDefinitionFonts,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -141,50 +145,20 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected getFonts(dxf: ParsedDxf) {
-    // Build text style map. The key is text style name, and the value is font name list.
-    const styleMap = new Map<string, string[]>()
-    const getFontName = (fontFileName: string) => {
-      if (fontFileName) {
-        const lastDotIndex = fontFileName.lastIndexOf('.')
-        if (lastDotIndex >= 0) {
-          return fontFileName.substring(0, lastDotIndex).toLowerCase()
-        } else {
-          return fontFileName.toLowerCase()
-        }
-      }
-    }
-    dxf.tables.STYLE?.entries.forEach(style => {
-      const fontNames: string[] = []
-      if (style.font) {
-        const fontName = getFontName(style.font)
-        if (fontName) fontNames.push(fontName)
-      }
-      if (style.bigFont) {
-        const fontName = getFontName(style.bigFont)
-        if (fontName) fontNames.push(fontName)
-      }
-      if (style.extendedFont) {
-        const fontName = getFontName(style.extendedFont)
-        if (fontName) fontNames.push(fontName)
-      }
-      styleMap.set(style.name, fontNames)
-    })
-
-    const fonts: Set<string> = new Set<string>()
-    // Collect shape file definitions from the TEXT STYLE TABLE (standardFlag bit 0 = isShapeFile).
-    // SHAPE entities render glyph codes from these .shx shape fonts, so they must be included
-    // in the font list even when no text entity references the style directly.
-    dxf.tables.STYLE?.entries.forEach(style => {
-      if (style.standardFlag & 1) {
-        if (style.font) {
-          const fontName = getFontName(style.font)
-          if (fontName) {
-            fonts.add(fontName)
-          }
-        }
-      }
-    })
-    this.getFontsInBlock(dxf.entities, dxf.blocks, styleMap, fonts)
+    const styleEntries = dxf.tables.STYLE?.entries ?? []
+    const styleMap = buildStyleFontMap(styleEntries)
+    const fonts = new Set<string>(
+      collectShapeDefinitionFonts(styleEntries)
+    )
+    const textStyleVar =
+      (dxf.header?.['$TEXTSTYLE'] as string | undefined) || DEFAULT_TEXT_STYLE
+    this.getFontsInBlock(
+      dxf.entities,
+      dxf.blocks,
+      styleMap,
+      fonts,
+      textStyleVar
+    )
     return Array.from(fonts)
   }
 
@@ -209,42 +183,50 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     entities: CommonDxfEntity[],
     blockMap: Record<string, DxfBlock>,
     styleMap: Map<string, string[]>,
-    fonts: Set<string>
+    fonts: Set<string>,
+    textStyleVar: string
   ) {
-    const regex = /\\f(.*?)\|/g
     entities.forEach(entity => {
       if (entity.type == 'MTEXT') {
         const mtext = entity as MTextEntity
-        const text = mtext.text
-        ;[...text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
-        const fontNames = styleMap.get(mtext.styleName)
-        fontNames?.forEach(name => fonts.add(name))
-      } else if (entity.type == 'TEXT') {
+        addInlineMTextFonts(mtext.text, fonts)
+        addResolvedStyleFonts(
+          mtext.styleName,
+          styleMap,
+          textStyleVar,
+          fonts
+        )
+      } else if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
         const text = entity as TextEntity
-        const fontNames = styleMap.get(text.styleName)
-        fontNames?.forEach(name => fonts.add(name))
+        addResolvedStyleFonts(
+          text.styleName,
+          styleMap,
+          textStyleVar,
+          fonts
+        )
       } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
         const mleader = entity as MultiLeaderEntity & Record<string, unknown>
         const text =
           typeof mleader.textContent === 'string' ? mleader.textContent : ''
-        ;[...text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
+        addInlineMTextFonts(text, fonts)
         const styleName =
           typeof mleader.textStyleName === 'string'
             ? mleader.textStyleName
             : typeof mleader.styleName === 'string'
               ? mleader.styleName
               : undefined
-        const fontNames = styleName ? styleMap.get(styleName) : undefined
-        fontNames?.forEach(name => fonts.add(name))
+        addResolvedStyleFonts(styleName, styleMap, textStyleVar, fonts)
       } else if (entity.type == 'INSERT') {
         const insert = entity as InsertEntity
         const block = blockMap[insert.name]
         if (block && block.entities)
-          this.getFontsInBlock(block.entities, blockMap, styleMap, fonts)
+          this.getFontsInBlock(
+            block.entities,
+            blockMap,
+            styleMap,
+            fonts,
+            textStyleVar
+          )
       }
     })
   }
