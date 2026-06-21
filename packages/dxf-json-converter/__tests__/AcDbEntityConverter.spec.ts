@@ -1,4 +1,5 @@
 import {
+  AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
   AcDbCircle,
@@ -375,5 +376,37 @@ describe('AcDbEntityConverter', () => {
     expect(proxy.graphicsMetafileType).toBe(29)
     expect(proxy.originalClassName).toBe('500')
     expect(proxy.proxyGraphic).toEqual(new Uint8Array([0x01, 0x02, 0x03, 0x04]))
+  })
+
+  it('converts AcDb2LineAngularDimension entities', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'DIMENSION',
+      subclassMarker: 'AcDb2LineAngularDimension',
+      handle: '1D3C',
+      ownerBlockRecordSoftId: '18',
+      layer: '08',
+      name: '*D62',
+      styleName: 'INTE$2',
+      text: '<>',
+      textPoint: { x: 144.2555221096907, y: 96.83120801079416, z: 0 },
+      measurement: 0.2094395102393174,
+      centerPoint: { x: 146.7393775963113, y: 71.91271404808635, z: 0 },
+      subDefinitionPoint1: {
+        x: 146.7393775963113,
+        y: 62.55271404808642,
+        z: 0
+      },
+      subDefinitionPoint2: {
+        x: 146.7393775963113,
+        y: 71.91271404808635,
+        z: 0
+      },
+      definitionPoint: { x: 134.602182830033, y: 129.0137259901237, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDb3PointAngularDimension)
+    expect((result as AcDb3PointAngularDimension).dimBlockId).toBe('*D62')
   })
 })

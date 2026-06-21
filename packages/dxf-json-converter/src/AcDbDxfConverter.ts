@@ -371,9 +371,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         }
         // dbBlock.ownerId = block.ownerHandle
         dbBlock.name = name
-        dbBlock.origin.copy(block.position)
         db.tables.blockTable.add(dbBlock)
       }
+      // processBlockTables may create the record first without a base point.
+      // Always sync origin from the BLOCKS section before expanding entities.
+      dbBlock.origin.copy(block.position)
       if (block.entities) {
         // Process entities in user-defined blocks
         this.processEntitiesInBlock(block.entities, dbBlock)

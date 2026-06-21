@@ -1197,6 +1197,29 @@ export class AcDbEntityConverter {
       )
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
+    } else if (dimension.subclassMarker == 'AcDb2LineAngularDimension') {
+      const entity = dimension as AngularDimensionEntity
+      const centerPoint =
+        entity.centerPoint ??
+        entity.subDefinitionPoint2 ??
+        entity.definitionPoint
+      const arcPoint = entity.definitionPoint ?? entity.subDefinitionPoint2
+      if (
+        !centerPoint ||
+        !entity.subDefinitionPoint1 ||
+        !entity.subDefinitionPoint2 ||
+        !arcPoint
+      ) {
+        return null
+      }
+      const dbEntity = new AcDb3PointAngularDimension(
+        centerPoint,
+        entity.subDefinitionPoint1,
+        entity.subDefinitionPoint2,
+        arcPoint
+      )
+      this.processDimensionCommonAttrs(dimension, dbEntity)
+      return dbEntity
     } else if (dimension.subclassMarker == 'AcDbOrdinateDimension') {
       const entity = dimension as OrdinateDimensionEntity
       const dbEntity = new AcDbOrdinateDimension(

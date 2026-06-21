@@ -1106,6 +1106,30 @@ export class AcDbEntityConverter {
       )
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
+    } else if (dimension.subclassMarker == 'AcDb2LineAngularDimension') {
+      const entity = dimension as DwgAngularDimensionEntity & {
+        arcPoint?: DwgAngularDimensionEntity['arcPoint']
+      }
+      const arcPoint =
+        entity.definitionPoint ?? entity.arcPoint ?? entity.subDefinitionPoint2
+      const vertexPoint =
+        entity.centerPoint ?? entity.subDefinitionPoint2 ?? entity.subDefinitionPoint1
+      const centerPoint = vertexPoint ?? arcPoint
+      const subDefinitionPoint1 =
+        entity.subDefinitionPoint1 ?? vertexPoint ?? arcPoint
+      const subDefinitionPoint2 =
+        entity.subDefinitionPoint2 ?? vertexPoint ?? arcPoint
+      if (!arcPoint || !entity.name) {
+        return null
+      }
+      const dbEntity = new AcDb3PointAngularDimension(
+        centerPoint,
+        subDefinitionPoint1,
+        subDefinitionPoint2,
+        arcPoint
+      )
+      this.processDimensionCommonAttrs(dimension, dbEntity)
+      return dbEntity
     } else if (dimension.subclassMarker == 'AcDbOrdinateDimension') {
       const entity = dimension as DwgOrdinateDimensionEntity
       const dbEntity = new AcDbOrdinateDimension(

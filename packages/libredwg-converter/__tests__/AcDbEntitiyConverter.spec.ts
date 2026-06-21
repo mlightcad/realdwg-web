@@ -1,4 +1,5 @@
 import {
+  AcDb3PointAngularDimension,
   AcDbArc,
   AcDbAttribute,
   AcDbBlockReference,
@@ -287,5 +288,35 @@ describe('libredwg AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDbShape)
     expect((result as AcDbShape).position).toMatchObject({ x: -1, y: 2, z: 0 })
+  })
+
+  it('converts AcDb2LineAngularDimension entities with sparse libredwg fields', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'DIMENSION',
+      subclassMarker: 'AcDb2LineAngularDimension',
+      handle: '1D3C',
+      ownerBlockRecordSoftId: '18',
+      layer: '08',
+      name: '*D64',
+      styleName: 'INTE$2',
+      text: '<>',
+      textPoint: { x: 144.2555221096907, y: 96.83120801079416, z: 0 },
+      measurement: 0.2094395102393174,
+      definitionPoint: {
+        x: 134.60218283003303,
+        y: 129.01372599012376,
+        z: 0
+      },
+      arcPoint: {
+        x: 134.60218283003303,
+        y: 129.01372599012376,
+        z: 0
+      }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDb3PointAngularDimension)
+    expect((result as AcDb3PointAngularDimension).dimBlockId).toBe('*D64')
   })
 })

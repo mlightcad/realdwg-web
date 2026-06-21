@@ -41,6 +41,10 @@ class TestDxfConverter extends AcDbDxfConverter {
   processViewportsPublic(model: any, db: AcDbDatabase) {
     return (this as any).processViewports(model, db)
   }
+
+  processBlocksPublic(model: any, db: AcDbDatabase) {
+    return this.processBlocks(model, db)
+  }
 }
 
 describe('AcDbDxfConverter', () => {
@@ -256,5 +260,37 @@ describe('AcDbDxfConverter', () => {
     expect(active?.viewHeight).toBe(50)
     expect(active?.aspectRatio).toBe(1.6)
     expect(active?.gsView.aspectRatio).toBe(1.6)
+  })
+
+  it('syncs block base points from the BLOCKS section onto existing records', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const block = new AcDbBlockTableRecord()
+    block.objectId = 'FF9'
+    block.name = '*U40'
+    db.tables.blockTable.add(block)
+
+    expect(block.origin.x).toBe(0)
+    expect(block.origin.y).toBe(0)
+
+    const converter = new TestDxfConverter({ useWorker: false })
+    converter.processBlocksPublic(
+      {
+        blocks: {
+          '*U40': {
+            name: '*U40',
+            handle: 'FF9',
+            position: { x: 129.7483812685847, y: 191.3692592886388, z: 0 },
+            entities: []
+          }
+        },
+        entities: []
+      },
+      db
+    )
+
+    expect(block.origin.x).toBeCloseTo(129.7483812685847)
+    expect(block.origin.y).toBeCloseTo(191.3692592886388)
   })
 })
