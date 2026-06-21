@@ -19,12 +19,17 @@ export type {
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
+  AcDbFontNameCollector,
   AcDbRegenerator,
   AcDbWorkerApi,
   AcDbWorkerManager,
   createWorkerApi
 } from './converter'
 export type {
+  AcDbFontNameCollectorAdapter,
+  AcDbFontNameCollectorEntityFontInfo,
+  AcDbFontNameCollectorOptions,
+  AcDbFontNameCollectorStyleEntry,
   AcDbWorkerConfig,
   AcDbWorkerInstance,
   AcDbWorkerMessage,
@@ -206,15 +211,6 @@ export {
   AcDbDataGenerator,
   AcDbDimArrowType,
   AcDbFormatter,
-  addInlineMTextFonts,
-  addResolvedStyleFonts,
-  buildStyleFontMap,
-  collectInlineMTextFonts,
-  collectShapeDefinitionFonts,
-  collectStyleEntryFontNames,
-  MTEXT_INLINE_FONT_PATTERN,
-  normalizeFontFileName,
-  resolveStyleFontNames,
   AcDbLinearUnits,
   AcDbObjectIterator,
   AcDbOsnapMode,
@@ -275,8 +271,7 @@ export type {
   AcDbPatLine,
   AcDbPatParseIssue,
   AcDbPatPattern,
-  AcDbPatPreviewOptions,
-  AcDbStyleFontSource
+  AcDbPatPreviewOptions
 } from './misc'
 export {
   AcDbDictionary,

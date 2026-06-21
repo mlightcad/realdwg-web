@@ -17,6 +17,7 @@ import {
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
+  AcDbFontNameCollector,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
   AcDbObjectId,
@@ -31,10 +32,6 @@ import {
   AcGiRenderMode,
   ByLayer,
   createWorkerApi,
-  addInlineMTextFonts,
-  addResolvedStyleFonts,
-  buildStyleFontMap,
-  collectShapeDefinitionFonts,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -49,7 +46,6 @@ import {
   CommonDxfEntity,
   CommonDxfTableEntry,
   DimStylesTableEntry,
-  DxfBlock,
   DxfTable,
   ImageDefDXFObject,
   InsertEntity,
@@ -145,89 +141,43 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected getFonts(dxf: ParsedDxf) {
-    const styleEntries = dxf.tables.STYLE?.entries ?? []
-    const styleMap = buildStyleFontMap(styleEntries)
-    const fonts = new Set<string>(
-      collectShapeDefinitionFonts(styleEntries)
-    )
-    const textStyleVar =
-      (dxf.header?.['$TEXTSTYLE'] as string | undefined) || DEFAULT_TEXT_STYLE
-    this.getFontsInBlock(
-      dxf.entities,
-      dxf.blocks,
-      styleMap,
-      fonts,
-      textStyleVar
-    )
-    return Array.from(fonts)
-  }
-
-  /**
-   * Iterates through entities in a block to get fonts used by text, MText, and insert entities.
-   *
-   * This is a helper method that recursively processes entities to extract font information
-   * from text-based entities and block references.
-   *
-   * @param entities - Array of DXF entities to process
-   * @param blockMap - Map of block definitions
-   * @param styleMap - Map of text styles to font names
-   * @param fonts - Set to collect font names
-   *
-   * @example
-   * ```typescript
-   * const fonts = new Set<string>();
-   * converter.getFontsInBlock(entities, blocks, styleMap, fonts);
-   * ```
-   */
-  private getFontsInBlock(
-    entities: CommonDxfEntity[],
-    blockMap: Record<string, DxfBlock>,
-    styleMap: Map<string, string[]>,
-    fonts: Set<string>,
-    textStyleVar: string
-  ) {
-    entities.forEach(entity => {
-      if (entity.type == 'MTEXT') {
-        const mtext = entity as MTextEntity
-        addInlineMTextFonts(mtext.text, fonts)
-        addResolvedStyleFonts(
-          mtext.styleName,
-          styleMap,
-          textStyleVar,
-          fonts
-        )
-      } else if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
-        const text = entity as TextEntity
-        addResolvedStyleFonts(
-          text.styleName,
-          styleMap,
-          textStyleVar,
-          fonts
-        )
-      } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-        const mleader = entity as MultiLeaderEntity & Record<string, unknown>
-        const text =
-          typeof mleader.textContent === 'string' ? mleader.textContent : ''
-        addInlineMTextFonts(text, fonts)
-        const styleName =
-          typeof mleader.textStyleName === 'string'
-            ? mleader.textStyleName
-            : typeof mleader.styleName === 'string'
-              ? mleader.styleName
-              : undefined
-        addResolvedStyleFonts(styleName, styleMap, textStyleVar, fonts)
-      } else if (entity.type == 'INSERT') {
-        const insert = entity as InsertEntity
-        const block = blockMap[insert.name]
-        if (block && block.entities)
-          this.getFontsInBlock(
-            block.entities,
-            blockMap,
-            styleMap,
-            fonts,
-            textStyleVar
-          )
-      }
+    const blocks = dxf.blocks ?? {}
+    return new AcDbFontNameCollector({
+      styles: dxf.tables.STYLE?.entries ?? [],
+      textStyleVar:
+        (dxf.header?.['$TEXTSTYLE'] as string | undefined) || DEFAULT_TEXT_STYLE
+    }).collect(dxf.entities, {
+      getEntityFontInfo: (entity: CommonDxfEntity) => {
+        if (entity.type == 'MTEXT') {
+          const mtext = entity as MTextEntity
+          return {
+            styleName: mtext.styleName,
+            formattedText: mtext.text,
+            resolveStyle: true
+          }
+        }
+        if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
+          const text = entity as TextEntity
+          return { styleName: text.styleName, resolveStyle: true }
+        }
+        if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+          const mleader = entity as MultiLeaderEntity & Record<string, unknown>
+          const text =
+            typeof mleader.textContent === 'string' ? mleader.textContent : ''
+          const styleName =
+            typeof mleader.textStyleName === 'string'
+              ? mleader.textStyleName
+              : typeof mleader.styleName === 'string'
+                ? mleader.styleName
+                : undefined
+          return { styleName, formattedText: text, resolveStyle: true }
+        }
+        if (entity.type == 'INSERT') {
+          return { blockName: (entity as InsertEntity).name }
+        }
+        return null
+      },
+      getBlockEntities: (blockName: string) => blocks[blockName]?.entities
     })
   }
 
