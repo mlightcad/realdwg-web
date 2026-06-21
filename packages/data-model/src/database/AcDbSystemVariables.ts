@@ -52,6 +52,13 @@ export const AcDbSystemVariables = {
   DYNMODE: 'DYNMODE',
   /** Controls display of prompts in Dynamic Input tooltips. */
   DYNPROMPT: 'DYNPROMPT',
+  /**
+   * Name of the current drawing file, including extension (for example `Drawing1.dwg`).
+   * Does not include the directory path. Read-only; updated when a drawing is opened or saved.
+   *
+   * @see https://help.autodesk.com/view/ACD/2023/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-A89861EF-5F4F-46C6-A1DB-9D985A3858C9-htm.html
+   */
+  DWGNAME: 'DWGNAME',
   /** Upper-right corner of the model-space drawing extents. */
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */

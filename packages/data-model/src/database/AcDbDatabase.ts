@@ -256,6 +256,13 @@ export interface AcDbOpenDatabaseOptions {
    *   no-plot layers are omitted from display.
    */
   drawNoPlotLayers?: boolean
+
+  /**
+   * File name of the drawing being opened, including extension (for example `Plan.dwg`).
+   *
+   * When provided, updates the read-only **DWGNAME** system variable for this database.
+   */
+  fileName?: string
 }
 
 /**
@@ -312,6 +319,9 @@ export interface AcDbCreateDefaultDataOptions {
  * ```
  */
 export class AcDbDatabase extends AcDbObject {
+  /** Sequence counter for default unsaved drawing names (Drawing1.dwg, Drawing2.dwg, ...). */
+  private static _unsavedDrawingSequence = 0
+
   /** Version of the database */
   private _version: AcDbDwgVersion
   /** Angle base for the database */
@@ -396,6 +406,8 @@ export class AcDbDatabase extends AcDbObject {
    * Set from {@link AcDbOpenDatabaseOptions.drawNoPlotLayers} when opening a database.
    */
   private _drawNoPlotLayers = true
+  /** Current drawing file name (**DWGNAME**), including extension. */
+  private _dwgname: string
 
   /**
    * Events that can be triggered by the database.
@@ -429,6 +441,8 @@ export class AcDbDatabase extends AcDbObject {
    */
   constructor() {
     super({ objectId: '0' })
+    AcDbDatabase._unsavedDrawingSequence += 1
+    this._dwgname = `Drawing${AcDbDatabase._unsavedDrawingSequence}.dwg`
     this._version = new AcDbDwgVersion('AC1014')
     this._angbase = 0
     this._angdir = 0
@@ -951,6 +965,39 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Name of the current drawing file (**DWGNAME**), including extension.
+   *
+   * Read-only through the system-variable API; updated when a drawing is opened
+   * or via {@link setDwgName} after save.
+   *
+   * @see https://help.autodesk.com/view/ACD/2023/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-A89861EF-5F4F-46C6-A1DB-9D985A3858C9-htm.html
+   */
+  get dwgname(): string {
+    return this._dwgname
+  }
+
+  /**
+   * Updates **DWGNAME** after opening or saving a drawing.
+   *
+   * @param value - Drawing file name, including extension.
+   */
+  setDwgName(value: string): void {
+    const normalized = value.trim()
+    if (!normalized) {
+      return
+    }
+
+    this.updateSysVar(
+      AcDbSystemVariables.DWGNAME,
+      this._dwgname,
+      normalized,
+      nextValue => {
+        this._dwgname = nextValue
+      }
+    )
+  }
+
+  /**
    * Returns whether entities on the given layer should be drawn under the
    * current {@link drawNoPlotLayers} setting.
    *
@@ -1429,6 +1476,9 @@ export class AcDbDatabase extends AcDbObject {
 
     this.clear()
     this._drawNoPlotLayers = options?.drawNoPlotLayers ?? true
+    if (options?.fileName) {
+      this.setDwgName(options.fileName)
+    }
 
     await converter.read(
       data,
@@ -1539,6 +1589,9 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     const fileName = this.getFileNameFromUri(url)
+    if (fileName) {
+      this.setDwgName(fileName)
+    }
     const fileExtension = fileName.toLowerCase().split('.').pop()
     if (fileExtension === 'dwg') {
       // DWG files are binary, convert to ArrayBuffer
