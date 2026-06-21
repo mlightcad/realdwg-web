@@ -1,5 +1,6 @@
 import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 
+import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbSystemVariables } from '../src/database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../src/database/AcDbSysVarManager'
@@ -183,5 +184,29 @@ describe('AcDbSysVarManager', () => {
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'
     )
+  })
+
+  it('exposes read-only DWGNAME on the working database', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    const manager = AcDbSysVarManager.instance()
+    const workingDb = acdbHostApplicationServices().workingDatabase
+
+    expect(workingDb.dwgname).toMatch(/^Drawing\d+\.dwg$/)
+    expect(manager.getVar(AcDbSystemVariables.DWGNAME, workingDb)).toBe(
+      workingDb.dwgname
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.DWGNAME)).toBe(
+      'Drawing1.dwg'
+    )
+
+    workingDb.setDwgName('Floor Plan.dwg')
+    expect(manager.getVar(AcDbSystemVariables.DWGNAME, workingDb)).toBe(
+      'Floor Plan.dwg'
+    )
+
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.DWGNAME, 'Other.dwg', workingDb)
+    ).toThrow('System variable dwgname is read-only!')
   })
 })

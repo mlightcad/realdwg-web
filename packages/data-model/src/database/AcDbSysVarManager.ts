@@ -61,6 +61,9 @@ export interface AcDbSysVarDescriptor {
 
   /** Optional default value */
   defaultValue?: AcDbSysVarType
+
+  /** When true, the variable cannot be changed via setVar. */
+  readOnly?: boolean
 }
 
 /**
@@ -250,6 +253,20 @@ export class AcDbSysVarManager {
       type: 'boolean',
       isDbVar: false,
       defaultValue: true
+    })
+    /**
+     * Stores the name of the current drawing, including its file extension.
+     * Read-only; synchronized with the active {@link AcDbDatabase} (for example
+     * {@link acdbHostApplicationServices | workingDatabase}).
+     *
+     * @see https://help.autodesk.com/view/ACD/2023/ENU/?caas=caas/documentation/ACD/2014/ENU/files/GUID-A89861EF-5F4F-46C6-A1DB-9D985A3858C9-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.DWGNAME,
+      type: 'string',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: 'Drawing1.dwg'
     })
     /**
      * Suppresses the display of grips when the initial selection set includes
@@ -643,6 +660,9 @@ export class AcDbSysVarManager {
     name = this.normalizeName(name)
     const descriptor = this.getDescriptor(name)
     if (descriptor) {
+      if (descriptor.readOnly) {
+        throw new Error(`System variable ${name} is read-only!`)
+      }
       const oldVal = this.getVar(name, db)
       if (descriptor.type === 'transparency') {
         const tmp = this.parseTransparency(value)
