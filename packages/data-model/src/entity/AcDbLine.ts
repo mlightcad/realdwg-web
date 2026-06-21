@@ -3,7 +3,8 @@ import {
   AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike
+  AcGePoint3dLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -11,6 +12,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 
 /**
  * Represents a line entity in AutoCAD.
@@ -290,6 +292,31 @@ export class AcDbLine extends AcDbCurve {
     gripPoints.push(this.startPoint)
     gripPoints.push(this.endPoint)
     return gripPoints
+  }
+
+  /**
+   * Moves grip points for this line.
+   *
+   * Index 0 moves the midpoint and translates the whole line. Indices 1 and 2
+   * move the start and end points respectively.
+   */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      switch (index) {
+        case 0:
+          this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+          break
+        case 1:
+          this.startPoint.add(offset)
+          break
+        case 2:
+          this.endPoint.add(offset)
+          break
+        default:
+          break
+      }
+    })
+    return this
   }
 
   /**

@@ -27,6 +27,9 @@ import {
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
 } from '../AcDbEntityProperties'
+import {
+  acdbForEachGripIndex
+} from '../AcDbGripHelpers'
 
 /**
  * Defines the line spacing style for dimension text.
@@ -515,6 +518,44 @@ export abstract class AcDbDimension extends AcDbEntity {
   private hasExplicitTextPosition(): boolean {
     const { x, y, z } = this.textPosition
     return x !== 0 || y !== 0 || z !== 0
+  }
+
+  /**
+   * Collects dimension-specific definition grip points in WCS coordinates.
+   *
+   * Subclasses override this to expose their editable definition points,
+   * matching AutoCAD `AcDbDimension::getGripPoints` behavior.
+   */
+  protected collectDimensionDefinitionGripPoints(): AcGePoint3d[] {
+    return []
+  }
+
+  /**
+   * Gets the grip points for this dimension.
+   *
+   * Returns definition points together with the dimension text position.
+   *
+   * @returns Array of grip points as 3D points
+   */
+  subGetGripPoints() {
+    return this.collectDimensionDefinitionGripPoints().concat([
+      this.textPosition
+    ])
+  }
+
+  /**
+   * Moves dimension definition and text grip points by the given offset.
+   */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const definitionPoints = this.collectDimensionDefinitionGripPoints()
+    acdbForEachGripIndex(indices, index => {
+      if (index >= 0 && index < definitionPoints.length) {
+        definitionPoints[index].add(offset)
+      } else if (index === definitionPoints.length) {
+        this.textPosition.add(offset)
+      }
+    })
+    return this
   }
 
   /**

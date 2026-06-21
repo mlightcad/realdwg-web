@@ -17,6 +17,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 
 /**
  * Represents a shape entity in AutoCAD.
@@ -285,6 +286,12 @@ export class AcDbShape extends AcDbEntity {
 
   subGetGripPoints() {
     return [this._position]
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePrimaryGripPointAt(indices, offset, this._position)
+    return this
   }
 
   subGetOsnapPoints(

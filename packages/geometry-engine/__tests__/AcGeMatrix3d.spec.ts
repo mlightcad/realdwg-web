@@ -22,6 +22,18 @@ describe('AcGeMatrix3d', () => {
     expect(rotation.length()).toBeCloseTo(1, 8)
   })
 
+  it('creates translation matrices from vectors and numbers', () => {
+    const fromVector = AcGeMatrix3d.makeTranslation({ x: 1, y: 2, z: 0 })
+    expect(fromVector.elements[12]).toBe(1)
+    expect(fromVector.elements[13]).toBe(2)
+    expect(fromVector.elements[14]).toBe(0)
+
+    const fromNumbers = AcGeMatrix3d.makeTranslation(3, -2, 5)
+    expect(fromNumbers.elements[12]).toBe(3)
+    expect(fromNumbers.elements[13]).toBe(-2)
+    expect(fromNumbers.elements[14]).toBe(5)
+  })
+
   it('covers constructor and branch-heavy helpers', () => {
     const constructed = new AcGeMatrix3d(
       1,

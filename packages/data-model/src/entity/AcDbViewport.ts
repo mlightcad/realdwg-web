@@ -2,7 +2,8 @@ import {
   AcGeBox3d,
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
@@ -12,6 +13,7 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 
 /**
  * Represents a viewport entity in AutoCAD drawings.
@@ -209,6 +211,56 @@ export class AcDbViewport extends AcDbEntity {
   }
 
   /**
+   * Gets the grip points for this viewport.
+   *
+   * Grip points are the center point and the four corners of the viewport
+   * boundary in paper space, matching AutoCAD viewport grip behavior.
+   *
+   * @returns Array of grip points as 3D points
+   */
+  subGetGripPoints() {
+    const gripPoints = new Array<AcGePoint3d>()
+    const halfWidth = this._width / 2
+    const halfHeight = this._height / 2
+    const z = this._centerPoint.z
+
+    gripPoints.push(this._centerPoint)
+    if (halfWidth > 0 || halfHeight > 0) {
+      gripPoints.push(
+        new AcGePoint3d(
+          this._centerPoint.x - halfWidth,
+          this._centerPoint.y - halfHeight,
+          z
+        ),
+        new AcGePoint3d(
+          this._centerPoint.x + halfWidth,
+          this._centerPoint.y - halfHeight,
+          z
+        ),
+        new AcGePoint3d(
+          this._centerPoint.x + halfWidth,
+          this._centerPoint.y + halfHeight,
+          z
+        ),
+        new AcGePoint3d(
+          this._centerPoint.x - halfWidth,
+          this._centerPoint.y + halfHeight,
+          z
+        )
+      )
+    }
+    return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveGripAt(index, offset)
+    })
+    return this
+  }
+
+  /**
    * Transforms this viewport entity by the specified matrix.
    */
   transformBy(matrix: AcGeMatrix3d) {
@@ -378,5 +430,42 @@ export class AcDbViewport extends AcDbEntity {
     filer.writeDouble(45, this.viewHeight)
     filer.writeInt32(69, this.number)
     return this
+  }
+
+  private moveGripAt(gripIndex: number, offset: AcGeVector3dLike) {
+    switch (gripIndex) {
+      case 0:
+        this._centerPoint.add(offset)
+        break
+      case 1:
+      case 2:
+      case 3:
+      case 4: {
+        const halfWidth = this.width / 2
+        const halfHeight = this.height / 2
+        const cx = this._centerPoint.x
+        const cy = this._centerPoint.y
+        const corners: Record<number, { x: number; y: number }> = {
+          1: { x: cx - halfWidth, y: cy - halfHeight },
+          2: { x: cx + halfWidth, y: cy - halfHeight },
+          3: { x: cx + halfWidth, y: cy + halfHeight },
+          4: { x: cx - halfWidth, y: cy + halfHeight }
+        }
+        const oppositeCornerIndex =
+          gripIndex === 1 ? 3 : gripIndex === 2 ? 4 : gripIndex === 3 ? 1 : 2
+        const moved = corners[gripIndex]
+        const fixed = corners[oppositeCornerIndex]
+        moved.x += offset.x
+        moved.y += offset.y
+        this._centerPoint.x = (moved.x + fixed.x) / 2
+        this._centerPoint.y = (moved.y + fixed.y) / 2
+        this._centerPoint.z = (this._centerPoint.z ?? 0) + (offset.z ?? 0)
+        this.width = Math.abs(fixed.x - moved.x)
+        this.height = Math.abs(fixed.y - moved.y)
+        break
+      }
+      default:
+        break
+    }
   }
 }

@@ -8,6 +8,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
+  AcGeVector3dLike,
   offsetVertexPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -16,6 +17,10 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbForEachGripIndex,
+  acdbMovePolyline2dVertexAt
+} from './AcDbGripHelpers'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -326,6 +331,14 @@ export class AcDbPolyline extends AcDbCurve {
       gripPoints.push(this.getPoint3dAt(index))
     }
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      acdbMovePolyline2dVertexAt(this._geo.vertices, index, offset)
+    })
+    return this
   }
 
   /**

@@ -1,7 +1,8 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -12,6 +13,10 @@ import {
   loadAcDbProxyGraphicFromDxf
 } from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
+import {
+  acdbForEachGripIndex,
+  acdbMovePointArrayGripAt
+} from './AcDbGripHelpers'
 
 /**
  * Represents a proxy entity for custom objects not natively supported by the
@@ -275,6 +280,50 @@ export class AcDbProxyEntity extends AcDbEntity {
       return new AcGeBox3d().setFromPoints(extents)
     }
     return new AcGeBox3d()
+  }
+
+  /**
+   * Gets the grip points for this proxy entity.
+   *
+   * When entity origins are stored on the proxy, they are returned as grips.
+   * Otherwise the axis-aligned extents corners are used when available.
+   *
+   * @returns Array of grip points as 3D points
+   */
+  subGetGripPoints() {
+    if (this._entityOrigins.length > 0) {
+      return [...this._entityOrigins]
+    }
+
+    const extents = this.geometricExtents
+    if (!extents.isEmpty()) {
+      return [
+        new AcGePoint3d(extents.min.x, extents.min.y, extents.min.z),
+        new AcGePoint3d(extents.max.x, extents.max.y, extents.max.z)
+      ]
+    }
+
+    return []
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (this._entityOrigins.length > 0) {
+      acdbMovePointArrayGripAt(indices, offset, this._entityOrigins)
+      return this
+    }
+
+    const extents = this.geometricExtents
+    if (extents.isEmpty()) {
+      return this
+    }
+
+    acdbForEachGripIndex(indices, index => {
+      if (index === 0) {
+        this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+      }
+    })
+    return this
   }
 
   /**

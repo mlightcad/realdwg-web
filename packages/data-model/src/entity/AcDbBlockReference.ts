@@ -20,6 +20,7 @@ import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup
 } from './AcDbEntityProperties'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
@@ -420,6 +421,12 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   subGetGripPoints() {
     return [this._position]
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePrimaryGripPointAt(indices, offset, this._position)
+    return this
   }
 
   /**

@@ -11,6 +11,17 @@ export class AcGeMatrix3d {
    * Identity matrix.
    */
   static IDENTITY = Object.freeze(new AcGeMatrix3d())
+
+  /**
+   * Create a translation matrix from a vector or numbers x, y and z.
+   */
+  static makeTranslation(
+    x: number | AcGeVector3dLike,
+    y?: number,
+    z?: number
+  ): AcGeMatrix3d {
+    return new AcGeMatrix3d().makeTranslation(x, y, z)
+  }
   /**
    * A column-major list of matrix values.
    */
@@ -1014,9 +1025,9 @@ export class AcGeMatrix3d {
    * @param z Input one number
    * @returns Return this matrix
    */
-  makeTranslation(x: number | AcGeVector3d, y?: number, z?: number) {
-    if (x instanceof AcGeVector3d) {
-      this.set(1, 0, 0, x.x, 0, 1, 0, x.y, 0, 0, 1, x.z, 0, 0, 0, 1)
+  makeTranslation(x: number | AcGeVector3dLike, y?: number, z?: number) {
+    if (typeof x === 'object') {
+      this.set(1, 0, 0, x.x, 0, 1, 0, x.y, 0, 0, 1, x.z ?? 0, 0, 0, 0, 1)
     } else {
       this.set(1, 0, 0, x, 0, 1, 0, y!, 0, 0, 1, z!, 0, 0, 0, 1)
     }

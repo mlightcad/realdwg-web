@@ -81,8 +81,6 @@ export {
   inverseLerp,
   isBetween,
   isBetweenAngle,
-  isPointInPolygon,
-  isPolygonIntersect,
   isPowerOfTwo,
   lerp,
   mapLinear,

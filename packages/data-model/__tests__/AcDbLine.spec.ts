@@ -1,4 +1,4 @@
-import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
 import { AcDbLine } from '../src/entity'
@@ -106,6 +106,24 @@ describe('AcDbLine', () => {
     expect(gripPoints[0]).toMatchObject({ x: 4, y: 1, z: 0 })
     expect(gripPoints[1]).toBe(line.startPoint)
     expect(gripPoints[2]).toBe(line.endPoint)
+  })
+
+  it('moves grip points by index', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+
+    line.subMoveGripPointsAt([0], new AcGeVector3d(1, 2, 3))
+    expect(line.startPoint).toMatchObject({ x: 1, y: 2, z: 3 })
+    expect(line.endPoint).toMatchObject({ x: 11, y: 2, z: 3 })
+
+    line.subMoveGripPointsAt([1], new AcGeVector3d(-1, 0, 0))
+    expect(line.startPoint).toMatchObject({ x: 0, y: 2, z: 3 })
+    expect(line.endPoint).toMatchObject({ x: 11, y: 2, z: 3 })
+
+    line.subMoveGripPointsAt([2], new AcGeVector3d(0, 1, 0))
+    expect(line.endPoint).toMatchObject({ x: 11, y: 3, z: 3 })
   })
 
   it('computes osnap points for all supported modes', () => {

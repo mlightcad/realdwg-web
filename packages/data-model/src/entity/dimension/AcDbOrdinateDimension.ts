@@ -114,6 +114,13 @@ export class AcDbOrdinateDimension extends AcDbDimension {
   /**
    * @inheritdoc
    */
+  protected override collectDimensionDefinitionGripPoints() {
+    return [this.definingPoint, this.leaderEndPoint]
+  }
+
+  /**
+   * @inheritdoc
+   */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._definingPoint.applyMatrix4(matrix)
     this._leaderEndPoint.applyMatrix4(matrix)

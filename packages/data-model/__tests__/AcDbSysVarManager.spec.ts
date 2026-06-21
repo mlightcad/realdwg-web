@@ -15,11 +15,21 @@ describe('AcDbSysVarManager', () => {
     )
 
     const oldPickbox = manager.getVar(AcDbSystemVariables.PICKBOX, db)
+    const oldGripObjLimit = manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)
     const events: string[] = []
     manager.events.sysVarChanged.addEventListener(e => events.push(e.name))
 
     manager.setVar(AcDbSystemVariables.PICKBOX, '12', db)
     expect(manager.getVar(AcDbSystemVariables.PICKBOX, db)).toBe(12)
+
+    expect(manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)).toBe(100)
+    manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, '50', db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)).toBe(50)
+    manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)).toBe(0)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, 32768, db)
+    ).toThrow('Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.')
 
     manager.setVar(AcDbSystemVariables.DYNPROMPT, 'false', db)
     expect(manager.getVar(AcDbSystemVariables.DYNPROMPT, db)).toBe(false)
@@ -99,6 +109,11 @@ describe('AcDbSysVarManager', () => {
     ).toThrow('Invalid color value!')
 
     manager.setVar(AcDbSystemVariables.PICKBOX, oldPickbox as number, db)
+    manager.setVar(
+      AcDbSystemVariables.GRIPOBJLIMIT,
+      oldGripObjLimit as number,
+      db
+    )
   })
 
   it('supports registry helpers and defaults', () => {
@@ -163,6 +178,7 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARADDANG)).toBe('')
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARMODE)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARANG)).toBe(90)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GRIPOBJLIMIT)).toBe(100)
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'

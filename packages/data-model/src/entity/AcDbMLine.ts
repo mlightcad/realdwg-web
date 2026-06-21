@@ -22,6 +22,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -572,6 +573,36 @@ export class AcDbMLine extends AcDbEntity {
         }
       ]
     }
+  }
+
+  /**
+   * Gets the grip points for this MLINE reference path.
+   *
+   * Grip points are placed at the start point and each segment vertex,
+   * matching AutoCAD MLINE grip behavior on the reference path.
+   *
+   * @returns Array of grip points as 3D points
+   */
+  subGetGripPoints() {
+    const gripPoints = new Array<AcGePoint3d>()
+    gripPoints.push(this._startPosition)
+    this._segments.forEach(segment => gripPoints.push(segment.position))
+    return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      if (index === 0) {
+        this._startPosition.add(offset)
+      } else {
+        const segment = this._segments[index - 1]
+        if (segment) {
+          segment.position.add(offset)
+        }
+      }
+    })
+    return this
   }
 
   /**

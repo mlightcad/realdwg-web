@@ -1,11 +1,13 @@
 import { AcCmErrors } from '@mlightcad/common'
 import {
+  AcGeGeometryUtil,
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d,
+  AcGeVector3dLike,
   offsetSmoothedSampledPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -13,6 +15,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { AcDbPolyline } from './AcDbPolyline'
 
 function resolveSplineKnotParameterization(
@@ -473,6 +476,17 @@ export class AcDbSpline extends AcDbCurve {
     return this._geo.controlPoints.map(
       point => new AcGePoint3d(point.x, point.y, point.z ?? 0)
     )
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      const point = this._geo.controlPoints[index]
+      if (point) {
+        AcGeGeometryUtil.applyOffsetToPoint3d(point, offset)
+      }
+    })
+    return this
   }
 
   /**

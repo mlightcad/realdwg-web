@@ -156,6 +156,18 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
   /**
    * @inheritdoc
    */
+  protected override collectDimensionDefinitionGripPoints() {
+    return [
+      this.centerPoint,
+      this.xLine1Point,
+      this.xLine2Point,
+      this.arcPoint
+    ]
+  }
+
+  /**
+   * @inheritdoc
+   */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._arcPoint.applyMatrix4(matrix)
     this._centerPoint.applyMatrix4(matrix)

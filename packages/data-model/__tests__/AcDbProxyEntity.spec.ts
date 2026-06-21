@@ -142,4 +142,22 @@ describe('AcDbProxyEntity', () => {
     expect(extents.min).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(extents.max).toMatchObject({ x: 10, y: 20, z: 0 })
   })
+
+  it('returns entity origins or extents corners as grip points', () => {
+    setupWorkingDatabase()
+    const entity = new AcDbProxyEntity()
+    entity.setEntityOrigins([new AcGePoint3d(1, 2, 3)])
+
+    expect(entity.subGetGripPoints()).toEqual([entity.entityOrigins[0]])
+
+    const extentsEntity = new AcDbProxyEntity()
+    extentsEntity.setProxyGraphic(
+      buildExtentsProxyGraphic([0, 0, 0], [10, 20, 0])
+    )
+    const grips = extentsEntity.subGetGripPoints()
+
+    expect(grips).toHaveLength(2)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(grips[1]).toMatchObject({ x: 10, y: 20, z: 0 })
+  })
 })

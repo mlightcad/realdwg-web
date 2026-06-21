@@ -16,7 +16,11 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
+
+/** Quadrant grip angles in radians: 0°, 90°, 180°, 270°. */
+const CIRCLE_QUADRANT_GRIP_ANGLES = [0, Math.PI / 2, Math.PI, (Math.PI / 2) * 3]
 
 /**
  * Represents a circle entity in AutoCAD.
@@ -373,20 +377,32 @@ export class AcDbCircle extends AcDbCurve {
    * Gets the grip points for this circle.
    *
    * Grip points are control points that can be used to modify the circle.
-   * For a circle, the grip point is the center point.
+   * For a circle, the grip points are the center and the four quadrant
+   * points at 0°, 90°, 180°, and 270°.
    *
-   * @returns Array of grip points (center point)
+   * @returns Array of grip points (center, then quadrant points)
    *
    * @example
    * ```typescript
    * const gripPoints = circle.subGetGripPoints();
-   * // gripPoints contains: [center]
+   * // gripPoints contains: [center, q0, q90, q180, q270]
    * ```
    */
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this.center)
+    for (const angle of CIRCLE_QUADRANT_GRIP_ANGLES) {
+      gripPoints.push(this._geo.getPointAtAngle(angle))
+    }
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveGripAt(index, offset)
+    })
+    return this
   }
 
   /**
@@ -454,5 +470,32 @@ export class AcDbCircle extends AcDbCurve {
     const geo = this._geo.offset(offsetDist)
     if (!geo) return null
     return new AcDbCircle(geo.center, geo.radius, geo.normal)
+  }
+
+  private moveGripAt(gripIndex: number, offset: AcGeVector3dLike) {
+    switch (gripIndex) {
+      case 0:
+        this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+        break
+      case 1:
+      case 2:
+      case 3:
+      case 4: {
+        const angle = CIRCLE_QUADRANT_GRIP_ANGLES[gripIndex - 1]
+        const point = this._geo.getPointAtAngle(angle)
+        const newPoint = new AcGePoint3d(
+          point.x + offset.x,
+          point.y + offset.y,
+          (point.z ?? 0) + (offset.z ?? 0)
+        )
+        const newRadius = newPoint.distanceTo(this.center)
+        if (newRadius > 0) {
+          this.radius = newRadius
+        }
+        break
+      }
+      default:
+        break
+    }
   }
 }

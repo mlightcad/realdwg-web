@@ -1,6 +1,21 @@
-import { AcGeGeometryUtil } from '../src'
+import { AcGeGeometryUtil, AcGePoint3dLike } from '../src'
 
 describe('AcGeGeometryUtil', () => {
+  it('converts 2d points to 3d points with default or preserved z', () => {
+    expect(AcGeGeometryUtil.point2dToPoint3d({ x: 1, y: 2 })).toEqual({
+      x: 1,
+      y: 2,
+      z: 0
+    })
+    expect(
+      AcGeGeometryUtil.point2dToPoint3d({ x: 3, y: 4, z: 5 } as AcGePoint3dLike)
+    ).toEqual({
+      x: 3,
+      y: 4,
+      z: 5
+    })
+  })
+
   it('handles empty, disjoint and duplicate-point polygons', () => {
     expect(AcGeGeometryUtil.isPolygonIntersect([], [])).toBe(false)
 

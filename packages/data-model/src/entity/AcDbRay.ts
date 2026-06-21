@@ -5,6 +5,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
+  AcGeVector3dLike,
   offsetPointByDirectionInXY
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -13,6 +14,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 
 /**
  * Represents a ray entity in AutoCAD.
@@ -277,6 +279,12 @@ export class AcDbRay extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this.basePoint)
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePrimaryGripPointAt(indices, offset, this.basePoint)
+    return this
   }
 
   /**

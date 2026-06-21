@@ -205,6 +205,8 @@ export type {
 } from './entity'
 export {
   ACAD_APPID,
+  ACDB_GRIPOBJLIMIT_MAX,
+  ACDB_GRIPOBJLIMIT_MIN,
   ACTIVE_VPORT_NAME,
   AcDbAngleUnits,
   AcDbCodePage,
@@ -404,8 +406,6 @@ export {
   inverseLerp,
   isBetween,
   isBetweenAngle,
-  isPointInPolygon,
-  isPolygonIntersect,
   isPowerOfTwo,
   lerp,
   mapLinear,

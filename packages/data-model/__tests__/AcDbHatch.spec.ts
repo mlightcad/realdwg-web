@@ -652,4 +652,26 @@ describe('AcDbHatch', () => {
     hatch.add(createRectLoop(2, 2, 6, 6))
     expect(hatch.area).toBeCloseTo(64, 8)
   })
+
+  it('returns boundary grip points for non-associative hatches', () => {
+    const hatch = new AcDbHatch()
+    hatch.associative = false
+    hatch.add(createRectLoop(0, 0, 10, 5))
+
+    const grips = hatch.subGetGripPoints()
+
+    expect(grips).toHaveLength(4)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(grips[1]).toMatchObject({ x: 10, y: 0, z: 0 })
+    expect(grips[2]).toMatchObject({ x: 10, y: 5, z: 0 })
+    expect(grips[3]).toMatchObject({ x: 0, y: 5, z: 0 })
+  })
+
+  it('returns no grip points for associative hatches', () => {
+    const hatch = new AcDbHatch()
+    hatch.associative = true
+    hatch.add(createRectLoop(0, 0, 10, 5))
+
+    expect(hatch.subGetGripPoints()).toEqual([])
+  })
 })

@@ -5,7 +5,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
-  AcGePolyline2dVertex
+  AcGePolyline2dVertex,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -13,6 +14,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -164,6 +166,14 @@ export class AcDb3dPolyline extends AcDbCurve {
       gripPoints.push(this.getPointAt(i))
     }
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveVertexAt(index, offset)
+    })
+    return this
   }
 
   /**
@@ -494,5 +504,14 @@ export class AcDb3dPolyline extends AcDbCurve {
       }
     }
     return bestZ
+  }
+
+  private moveVertexAt(index: number, offset: AcGeVector3dLike) {
+    const vertex = this._geo.vertices[index]
+    if (!vertex) return
+    vertex.x += offset.x
+    vertex.y += offset.y
+    const point = vertex as AcGePoint3dLike
+    point.z = (point.z ?? 0) + (offset.z ?? 0)
   }
 }

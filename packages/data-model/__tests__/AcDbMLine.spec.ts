@@ -728,4 +728,23 @@ describe('AcDbMLine', () => {
     expect(after.max.x).toBeCloseTo(40)
     expect(after.max.y).toBeGreaterThan(before.max.y)
   })
+
+  it('returns grip points on the reference path', () => {
+    const db = createDb()
+    const style = new AcDbMlineStyle()
+    style.styleName = 'GRIP_STYLE'
+    style.elements = [
+      { offset: 0.5, color: createAciColor(3), lineType: 'BYLAYER' },
+      { offset: -0.5, color: createAciColor(5), lineType: 'BYLAYER' }
+    ]
+    db.objects.mlineStyle.setAt(style.styleName, style)
+
+    const mline = createBasicMline(style)
+    const grips = mline.subGetGripPoints()
+
+    expect(grips).toHaveLength(3)
+    expect(grips[0]).toBe(mline.startPosition)
+    expect(grips[1]).toMatchObject({ x: 10, y: 0, z: 0 })
+    expect(grips[2]).toMatchObject({ x: 20, y: 0, z: 0 })
+  })
 })

@@ -1,4 +1,4 @@
-import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { acdbHostApplicationServices } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import { AcDbAlignedDimension, AcDbLine } from '../src/entity'
@@ -151,5 +151,36 @@ describe('AcDbAlignedDimension', () => {
 
     expect(dim.geometricExtents.min).toMatchObject({ x: 5, y: 5, z: 0 })
     expect(dim.geometricExtents.max).toMatchObject({ x: 20, y: 12, z: 0 })
+  })
+
+  it('returns definition and text grip points', () => {
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(5, 0, 0),
+      new AcGePoint3d(5, 1, 0)
+    )
+    dim.textPosition = new AcGePoint3d(3, 4, 0)
+
+    const grips = dim.subGetGripPoints()
+
+    expect(grips).toHaveLength(4)
+    expect(grips[0]).toBe(dim.xLine1Point)
+    expect(grips[1]).toBe(dim.xLine2Point)
+    expect(grips[2]).toBe(dim.dimLinePoint)
+    expect(grips[3]).toBe(dim.textPosition)
+  })
+
+  it('moves definition and text grip points', () => {
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(5, 0, 0),
+      new AcGePoint3d(5, 1, 0)
+    )
+    dim.textPosition = new AcGePoint3d(3, 4, 0)
+
+    dim.subMoveGripPointsAt([0, 3], new AcGeVector3d(1, 2, 0))
+
+    expect(dim.xLine1Point).toMatchObject({ x: 1, y: 2, z: 0 })
+    expect(dim.textPosition).toMatchObject({ x: 4, y: 6, z: 0 })
   })
 })

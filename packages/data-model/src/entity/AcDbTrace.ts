@@ -6,13 +6,15 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
-  AcGePolyline2d
+  AcGePolyline2d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
+import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
@@ -246,6 +248,12 @@ export class AcDbTrace extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(...this._vertices)
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePointArrayGripAt(indices, offset, this._vertices)
+    return this
   }
 
   /**

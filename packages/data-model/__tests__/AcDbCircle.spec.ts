@@ -62,14 +62,40 @@ describe('AcDbCircle', () => {
     expect(circle.geometricExtents.max).toMatchObject({ x: 12, y: 22, z: 0 })
   })
 
-  it('returns grip points with center point', () => {
-    const circle = new AcDbCircle(new AcGePoint3d(2, 3, 4), 5)
+  it('returns grip points with center and quadrant points', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(1, 2, 0), 3)
 
     const grips = circle.subGetGripPoints()
 
-    expect(grips).toHaveLength(1)
+    expect(grips).toHaveLength(5)
     expect(grips[0]).toBe(circle.center)
-    expect(grips[0]).toMatchObject({ x: 2, y: 3, z: 4 })
+    expect(grips[0]).toMatchObject({ x: 1, y: 2, z: 0 })
+    expect(grips[1].x).toBeCloseTo(4, 8)
+    expect(grips[1].y).toBeCloseTo(2, 8)
+    expect(grips[2].x).toBeCloseTo(1, 8)
+    expect(grips[2].y).toBeCloseTo(5, 8)
+    expect(grips[3].x).toBeCloseTo(-2, 8)
+    expect(grips[3].y).toBeCloseTo(2, 8)
+    expect(grips[4].x).toBeCloseTo(1, 8)
+    expect(grips[4].y).toBeCloseTo(-1, 8)
+  })
+
+  it('translates the circle when moving grip index 0', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(2, 3, 4), 5)
+
+    circle.subMoveGripPointsAt([0], new AcGeVector3d(1, -2, 3))
+
+    expect(circle.center).toMatchObject({ x: 3, y: 1, z: 7 })
+    expect(circle.radius).toBe(5)
+  })
+
+  it('scales the circle when moving a quadrant grip', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 5)
+
+    circle.subMoveGripPointsAt([1], new AcGeVector3d(3, 0, 0))
+
+    expect(circle.center).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(circle.radius).toBeCloseTo(8, 8)
   })
 
   it('collects center and centroid osnap points', () => {

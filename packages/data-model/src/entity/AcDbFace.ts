@@ -4,13 +4,15 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike
+  AcGePointLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
+import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
@@ -207,6 +209,12 @@ export class AcDbFace extends AcDbEntity {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(...this._vertices)
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePointArrayGripAt(indices, offset, this._vertices)
+    return this
   }
 
   /**
