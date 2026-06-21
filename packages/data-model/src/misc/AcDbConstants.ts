@@ -99,3 +99,7 @@ export const VPORT_FALLBACK_LLC = Object.freeze({ x: 0, y: 0 })
 export const VPORT_FALLBACK_URC = Object.freeze({ x: 1, y: 1 })
 export const VPORT_FALLBACK_VIEW_DIR = Object.freeze({ x: 0, y: 0, z: 1 })
 export const VPORT_FALLBACK_VIEW_TARGET = Object.freeze({ x: 0, y: 0, z: 0 })
+
+/** AutoCAD valid range for the GRIPOBJLIMIT system variable. */
+export const ACDB_GRIPOBJLIMIT_MIN = 0
+export const ACDB_GRIPOBJLIMIT_MAX = 32767

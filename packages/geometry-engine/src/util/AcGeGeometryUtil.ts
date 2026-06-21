@@ -1,5 +1,30 @@
-import { AcGeBox2d, AcGePoint2dLike } from '../math'
+import {
+  AcGeBox2d,
+  AcGePoint2dLike,
+  AcGePoint3dLike,
+  AcGeVector3dLike
+} from '../math'
 import { DEFAULT_TOL } from './AcGeTol'
+
+/**
+ * Converts a 2D point to a 3D point, preserving an optional `z` when present.
+ */
+function point2dToPoint3d(point: AcGePoint2dLike): AcGePoint3dLike {
+  const p = point as AcGePoint3dLike
+  return { x: point.x, y: point.y, z: p.z ?? 0 }
+}
+
+/**
+ * Applies a translation offset to a mutable 3D point.
+ */
+function applyOffsetToPoint3d(
+  point: AcGePoint3dLike,
+  offset: AcGeVector3dLike
+) {
+  point.x += offset.x
+  point.y += offset.y
+  point.z = (point.z ?? 0) + (offset.z ?? 0)
+}
 
 /**
  * Determine if the 2d point is inside the polygon
@@ -50,7 +75,7 @@ function isPolygonIntersect(
   }
 
   for (let i = 0; i < polygon1.length; ) {
-    if (isPointInPolygon(polygon1[i], polygon2, true)) {
+    if (AcGeGeometryUtil.isPointInPolygon(polygon1[i], polygon2, true)) {
       return true
     }
 
@@ -67,8 +92,10 @@ function isPolygonIntersect(
 }
 
 const AcGeGeometryUtil = {
+  applyOffsetToPoint3d: applyOffsetToPoint3d,
   isPointInPolygon: isPointInPolygon,
-  isPolygonIntersect: isPolygonIntersect
+  isPolygonIntersect: isPolygonIntersect,
+  point2dToPoint3d: point2dToPoint3d
 }
 
-export { isPointInPolygon, isPolygonIntersect, AcGeGeometryUtil }
+export { AcGeGeometryUtil }

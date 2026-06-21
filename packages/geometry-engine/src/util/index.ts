@@ -4,11 +4,7 @@ export {
   ORIGIN_POINT_3D,
   TAU
 } from './AcGeConstants'
-export {
-  AcGeGeometryUtil,
-  isPointInPolygon,
-  isPolygonIntersect
-} from './AcGeGeometryUtil'
+export { AcGeGeometryUtil } from './AcGeGeometryUtil'
 export {
   AcGeMathUtil,
   DEG2RAD,

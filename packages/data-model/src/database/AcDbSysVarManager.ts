@@ -252,6 +252,19 @@ export class AcDbSysVarManager {
       defaultValue: true
     })
     /**
+     * Suppresses the display of grips when the initial selection set includes
+     * more than the specified number of objects. Valid range is **0–32767**;
+     * `0` always displays grips. Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2022/ENU/?guid=GUID-705F3A42-4A2F-4B5C-A2A6-0CF8949B8ED5
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GRIPOBJLIMIT,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 100
+    })
+    /**
      * Sets the default angle, in radians, for new hatch patterns in this session.
      */
     this.registerVar({
@@ -656,6 +669,13 @@ export class AcDbSysVarManager {
           }
           value = tmp
         }
+      }
+      if (name === AcDbSystemVariables.GRIPOBJLIMIT.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (!Number.isFinite(intVal) || intVal < 0 || intVal > 32767) {
+          throw new Error('Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.')
+        }
+        value = intVal
       }
       if (descriptor.isDbVar) {
         ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value

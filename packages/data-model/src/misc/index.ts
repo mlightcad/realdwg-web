@@ -6,6 +6,8 @@ export { AcDbRenderingCache } from './AcDbRenderingCache'
 export { AcDbCodePage, dwgCodePageToEncoding } from './AcDbCodePage'
 export {
   ACAD_APPID,
+  ACDB_GRIPOBJLIMIT_MAX,
+  ACDB_GRIPOBJLIMIT_MIN,
   ACTIVE_VPORT_NAME,
   ByBlock,
   ByLayer,

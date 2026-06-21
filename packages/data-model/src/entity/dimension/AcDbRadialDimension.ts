@@ -309,6 +309,13 @@ export class AcDbRadialDimension extends AcDbDimension {
   /**
    * @inheritdoc
    */
+  protected override collectDimensionDefinitionGripPoints() {
+    return [this.center, this.chordPoint]
+  }
+
+  /**
+   * @inheritdoc
+   */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._center.applyMatrix4(matrix)
     this._chordPoint.applyMatrix4(matrix)

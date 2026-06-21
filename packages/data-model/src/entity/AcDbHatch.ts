@@ -14,7 +14,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
-  AcGeSpline3d
+  AcGeSpline3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
   AcGiHatchPatternLine,
@@ -34,6 +35,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import {
+  acdbForEachGripIndex,
+  acdbMovePolyline2dVertexAt
+} from './AcDbGripHelpers'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -1099,6 +1104,269 @@ export class AcDbHatch extends AcDbEntity {
           ]
         }
       ]
+    }
+  }
+
+  /**
+   * Gets the grip points for this hatch.
+   *
+   * Associative hatches do not expose editable grips in AutoCAD. Non-associative
+   * hatches return boundary definition points from all loops.
+   *
+   * @returns Array of grip points as 3D points
+   */
+  subGetGripPoints() {
+    if (this.associative) {
+      return []
+    }
+    return this.collectBoundaryGripPoints()
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (this.associative) {
+      return this
+    }
+    acdbForEachGripIndex(indices, index => {
+      this.moveBoundaryGripPointAt(index, offset)
+    })
+    return this
+  }
+
+  /**
+   * Collects editable grip points from hatch boundary loops.
+   */
+  private collectBoundaryGripPoints() {
+    const gripPoints = new Array<AcGePoint3d>()
+    const elevation = this._elevation
+    const seen = new Set<string>()
+
+    const appendPoint = (point: AcGePoint3dLike) => {
+      const key = `${point.x},${point.y},${point.z ?? 0}`
+      if (seen.has(key)) return
+      seen.add(key)
+      gripPoints.push(new AcGePoint3d(point.x, point.y, point.z ?? elevation))
+    }
+
+    this._geo.loops.forEach(loop => {
+      if (loop instanceof AcGePolyline2d) {
+        const vertexCount = loop.numberOfVertices
+        for (let index = 0; index < vertexCount; index++) {
+          const vertex = loop.getPointAt(index)
+          appendPoint({ x: vertex.x, y: vertex.y, z: elevation })
+        }
+        return
+      }
+
+      loop.curves.forEach(curve => {
+        if (curve instanceof AcGeLine2d) {
+          appendPoint({
+            x: curve.startPoint.x,
+            y: curve.startPoint.y,
+            z: elevation
+          })
+          appendPoint({
+            x: curve.endPoint.x,
+            y: curve.endPoint.y,
+            z: elevation
+          })
+        } else if (curve instanceof AcGeCircArc2d) {
+          appendPoint({
+            x: curve.startPoint.x,
+            y: curve.startPoint.y,
+            z: elevation
+          })
+          appendPoint({
+            x: curve.endPoint.x,
+            y: curve.endPoint.y,
+            z: elevation
+          })
+          appendPoint({
+            x: curve.midPoint.x,
+            y: curve.midPoint.y,
+            z: elevation
+          })
+        } else if (curve instanceof AcGeEllipseArc2d) {
+          appendPoint({
+            x: curve.startPoint.x,
+            y: curve.startPoint.y,
+            z: elevation
+          })
+          appendPoint({
+            x: curve.endPoint.x,
+            y: curve.endPoint.y,
+            z: elevation
+          })
+          const mid = curve.getPoint(0.5)
+          appendPoint({ x: mid.x, y: mid.y, z: elevation })
+        }
+      })
+    })
+
+    return gripPoints
+  }
+
+  /**
+   * Moves one boundary grip point using the same index order as
+   * {@link collectBoundaryGripPoints}.
+   */
+  private moveBoundaryGripPointAt(
+    gripIndex: number,
+    offset: AcGeVector3dLike
+  ) {
+    let currentIndex = 0
+    const elevation = this._elevation
+    const seen = new Set<string>()
+
+    const tryMove = (point: AcGePoint3dLike, move: () => void) => {
+      const key = `${point.x},${point.y},${point.z ?? 0}`
+      if (seen.has(key)) return
+      seen.add(key)
+      if (currentIndex === gripIndex) {
+        move()
+      }
+      currentIndex++
+    }
+
+    this._geo.loops.forEach(loop => {
+      if (loop instanceof AcGePolyline2d) {
+        const vertexCount = loop.numberOfVertices
+        for (let index = 0; index < vertexCount; index++) {
+          const vertex = loop.vertices[index]
+          if (!vertex) continue
+          tryMove({ x: vertex.x, y: vertex.y, z: elevation }, () => {
+            acdbMovePolyline2dVertexAt(loop.vertices, index, offset)
+          })
+        }
+        return
+      }
+
+      loop.curves.forEach(curve => {
+        if (curve instanceof AcGeLine2d) {
+          tryMove(
+            { x: curve.startPoint.x, y: curve.startPoint.y, z: elevation },
+            () => {
+              curve.startPoint.x += offset.x
+              curve.startPoint.y += offset.y
+            }
+          )
+          tryMove(
+            { x: curve.endPoint.x, y: curve.endPoint.y, z: elevation },
+            () => {
+              curve.endPoint.x += offset.x
+              curve.endPoint.y += offset.y
+            }
+          )
+        } else if (curve instanceof AcGeCircArc2d) {
+          tryMove(
+            { x: curve.startPoint.x, y: curve.startPoint.y, z: elevation },
+            () => this.moveCircArc2dGripPoint(curve, 'start', offset)
+          )
+          tryMove(
+            { x: curve.endPoint.x, y: curve.endPoint.y, z: elevation },
+            () => this.moveCircArc2dGripPoint(curve, 'end', offset)
+          )
+          tryMove(
+            { x: curve.midPoint.x, y: curve.midPoint.y, z: elevation },
+            () => this.moveCircArc2dGripPoint(curve, 'mid', offset)
+          )
+        } else if (curve instanceof AcGeEllipseArc2d) {
+          tryMove(
+            { x: curve.startPoint.x, y: curve.startPoint.y, z: elevation },
+            () => this.moveEllipseArc2dGripPoint(curve, 'start', offset)
+          )
+          tryMove(
+            { x: curve.endPoint.x, y: curve.endPoint.y, z: elevation },
+            () => this.moveEllipseArc2dGripPoint(curve, 'end', offset)
+          )
+          const mid = curve.getPoint(0.5)
+          tryMove({ x: mid.x, y: mid.y, z: elevation }, () =>
+            this.moveEllipseArc2dGripPoint(curve, 'mid', offset)
+          )
+        }
+      })
+    })
+  }
+
+  private moveCircArc2dGripPoint(
+    arc: AcGeCircArc2d,
+    which: 'start' | 'end' | 'mid',
+    offset: AcGeVector3dLike
+  ) {
+    const center = arc.center
+    switch (which) {
+      case 'start': {
+        const point = arc.startPoint
+        arc.startAngle = Math.atan2(
+          point.y + offset.y - center.y,
+          point.x + offset.x - center.x
+        )
+        break
+      }
+      case 'end': {
+        const point = arc.endPoint
+        arc.endAngle = Math.atan2(
+          point.y + offset.y - center.y,
+          point.x + offset.x - center.x
+        )
+        break
+      }
+      case 'mid': {
+        const mid = arc.midPoint
+        const movedArc = new AcGeCircArc2d(
+          arc.startPoint,
+          { x: mid.x + offset.x, y: mid.y + offset.y },
+          arc.endPoint
+        )
+        arc.center = movedArc.center
+        arc.radius = movedArc.radius
+        arc.startAngle = movedArc.startAngle
+        arc.endAngle = movedArc.endAngle
+        arc.clockwise = movedArc.clockwise
+        break
+      }
+    }
+  }
+
+  private moveEllipseArc2dGripPoint(
+    arc: AcGeEllipseArc2d,
+    which: 'start' | 'end' | 'mid',
+    offset: AcGeVector3dLike
+  ) {
+    const center = arc.center
+    switch (which) {
+      case 'start': {
+        const point = arc.startPoint
+        arc.startAngle = Math.atan2(
+          point.y + offset.y - center.y,
+          point.x + offset.x - center.x
+        )
+        break
+      }
+      case 'end': {
+        const point = arc.endPoint
+        arc.endAngle = Math.atan2(
+          point.y + offset.y - center.y,
+          point.x + offset.x - center.x
+        )
+        break
+      }
+      case 'mid': {
+        const mid = arc.getPoint(0.5)
+        const dx = mid.x + offset.x - arc.center.x
+        const dy = mid.y + offset.y - arc.center.y
+        const currentRadius = Math.hypot(
+          mid.x - arc.center.x,
+          mid.y - arc.center.y
+        )
+        const targetRadius = Math.hypot(dx, dy)
+        if (currentRadius > 0 && targetRadius > 0) {
+          const scale = targetRadius / currentRadius
+          arc.majorAxisRadius *= scale
+          arc.minorAxisRadius *= scale
+        }
+        break
+      }
     }
   }
 

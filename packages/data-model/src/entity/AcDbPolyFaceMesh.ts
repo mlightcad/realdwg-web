@@ -3,7 +3,8 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
-  AcGePoint3dLike
+  AcGePoint3dLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -11,6 +12,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
@@ -166,6 +168,17 @@ export class AcDbPolyFaceMesh extends AcDbCurve {
       gripPoints.push(vertex.position)
     })
     return gripPoints
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      const vertex = this._vertices[index]
+      if (vertex) {
+        vertex.position.add(offset)
+      }
+    })
+    return this
   }
 
   /**

@@ -4,7 +4,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
-  AcGeVector3dLike
+  AcGeVector3dLike,
+  getOcsAngle
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -12,6 +13,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
@@ -339,6 +341,14 @@ export class AcDbEllipse extends AcDbCurve {
     return gripPoints
   }
 
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveGripAt(index, offset)
+    })
+    return this
+  }
+
   /**
    * Gets the object snap points for this ellipse or ellipse arc.
    *
@@ -612,6 +622,42 @@ export class AcDbEllipse extends AcDbCurve {
     const u = dx * ux + dy * uy
     const v = dx * vx + dy * vy
     return (u / majorLen) ** 2 + (v / minorLen) ** 2 >= 1 ? 1 : -1
+  }
+
+  private moveGripAt(gripIndex: number, offset: AcGeVector3dLike) {
+    switch (gripIndex) {
+      case 0:
+        this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+        break
+      case 1: {
+        const point = this._geo.startPoint
+        this._geo.startAngle = getOcsAngle(
+          this._geo.center,
+          {
+            x: point.x + offset.x,
+            y: point.y + offset.y,
+            z: (point.z ?? 0) + (offset.z ?? 0)
+          },
+          this._geo.normal
+        )
+        break
+      }
+      case 2: {
+        const point = this._geo.endPoint
+        this._geo.endAngle = getOcsAngle(
+          this._geo.center,
+          {
+            x: point.x + offset.x,
+            y: point.y + offset.y,
+            z: (point.z ?? 0) + (offset.z ?? 0)
+          },
+          this._geo.normal
+        )
+        break
+      }
+      default:
+        break
+    }
   }
 
   private createOffsetCurve(offsetDist: number): AcDbEllipse | null {

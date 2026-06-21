@@ -17,6 +17,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 import {
   acdbCountMTextLines,
   acdbEstimateMTextHeight,
@@ -383,6 +384,12 @@ export class AcDbMText extends AcDbEntity {
    */
   subGetGripPoints() {
     return [this._location]
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePrimaryGripPointAt(indices, offset, this._location)
+    return this
   }
 
   /**

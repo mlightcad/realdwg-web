@@ -2,7 +2,8 @@ import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 import {
   AcGeBox3d,
   AcGeMatrix3d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
@@ -519,6 +520,30 @@ export abstract class AcDbEntity extends AcDbObject {
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
     return gripPoints
+  }
+
+  /**
+   * Moves the grip points at the specified indices by the given offset.
+   *
+   * This method should be overridden by subclasses to provide entity-specific
+   * grip editing behavior, matching AutoCAD `AcDbEntity::subMoveGripPointsAt`.
+   *
+   * @param indices - Zero-based indexes into the array returned by {@link subGetGripPoints}
+   * @param offset - WCS translation offset applied to the selected grips
+   * @returns This entity after the grip edit
+   *
+   * @example
+   * ```typescript
+   * entity.subMoveGripPointsAt([0], new AcGeVector3d(1, 0, 0));
+   * ```
+   */
+  subMoveGripPointsAt(
+    // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
+    indices: number[],
+    // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
+    offset: AcGeVector3dLike
+  ): this {
+    return this
   }
 
   /**

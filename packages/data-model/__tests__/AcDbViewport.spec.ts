@@ -1,7 +1,8 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -258,5 +259,36 @@ describe('AcDbViewport', () => {
     expect(out).toContain('12\n4\n22\n5\n32\n6\n')
     expect(out).toContain('45\n33\n')
     expect(out).toContain('69\n4\n')
+  })
+
+  it('returns center and corner grip points', () => {
+    const viewport = new AcDbViewport()
+    viewport.width = 10
+    viewport.height = 6
+    viewport.centerPoint = new AcGePoint3d(2, 4, 0)
+
+    const grips = viewport.subGetGripPoints()
+
+    expect(grips).toHaveLength(5)
+    expect(grips[0]).toBe(viewport.centerPoint)
+    expect(grips[1]).toMatchObject({ x: -3, y: 1, z: 0 })
+    expect(grips[2]).toMatchObject({ x: 7, y: 1, z: 0 })
+    expect(grips[3]).toMatchObject({ x: 7, y: 7, z: 0 })
+    expect(grips[4]).toMatchObject({ x: -3, y: 7, z: 0 })
+  })
+
+  it('moves center and resizes from opposite corner grips', () => {
+    const viewport = new AcDbViewport()
+    viewport.width = 10
+    viewport.height = 6
+    viewport.centerPoint = new AcGePoint3d(2, 4, 0)
+
+    viewport.subMoveGripPointsAt([0], new AcGeVector3d(1, 1, 0))
+    expect(viewport.centerPoint).toMatchObject({ x: 3, y: 5, z: 0 })
+
+    viewport.subMoveGripPointsAt([2], new AcGeVector3d(2, 0, 0))
+    expect(viewport.width).toBeCloseTo(12)
+    expect(viewport.height).toBe(6)
+    expect(viewport.centerPoint).toMatchObject({ x: 4, y: 5, z: 0 })
   })
 })

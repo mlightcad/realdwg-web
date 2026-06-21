@@ -1,7 +1,8 @@
 import {
   AcGeMatrix3d,
   AcGePoint2d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
@@ -162,6 +163,19 @@ describe('AcDbPolyline', () => {
       centerSnaps
     )
     expect(centerSnaps).toHaveLength(0)
+  })
+
+  it('moves vertex grip points by index', () => {
+    const polyline = new AcDbPolyline()
+    polyline.elevation = 2
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0))
+    polyline.addVertexAt(1, new AcGePoint2d(2, 0))
+    polyline.addVertexAt(2, new AcGePoint2d(2, 3))
+
+    polyline.subMoveGripPointsAt([1], new AcGeVector3d(1, 2, 0))
+
+    expect(polyline.getPoint2dAt(1)).toEqual(new AcGePoint2d(3, 2))
+    expect(polyline.getPoint3dAt(1)).toMatchObject({ x: 3, y: 2, z: 2 })
   })
 
   it('transforms points, updates elevation and flips bulges for mirrored transforms', () => {

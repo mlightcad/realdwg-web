@@ -16,6 +16,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
@@ -491,6 +492,14 @@ export class AcDbArc extends AcDbCurve {
     return gripPoints
   }
 
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveGripAt(index, offset)
+    })
+    return this
+  }
+
   /**
    * Gets the object snap points for this arc.
    *
@@ -623,6 +632,42 @@ export class AcDbArc extends AcDbCurve {
     const c = this.center
     const r = this.radius
     return Math.sqrt((point.x - c.x) ** 2 + (point.y - c.y) ** 2) >= r ? 1 : -1
+  }
+
+  private moveGripAt(gripIndex: number, offset: AcGeVector3dLike) {
+    switch (gripIndex) {
+      case 0:
+        this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+        break
+      case 1: {
+        const point = this._geo.startPoint
+        this._geo.startAngle = getOcsAngle(
+          this._geo.center,
+          {
+            x: point.x + offset.x,
+            y: point.y + offset.y,
+            z: (point.z ?? 0) + (offset.z ?? 0)
+          },
+          this._geo.normal
+        )
+        break
+      }
+      case 2: {
+        const point = this._geo.endPoint
+        this._geo.endAngle = getOcsAngle(
+          this._geo.center,
+          {
+            x: point.x + offset.x,
+            y: point.y + offset.y,
+            z: (point.z ?? 0) + (offset.z ?? 0)
+          },
+          this._geo.normal
+        )
+        break
+      }
+      default:
+        break
+    }
   }
 
   private createOffsetCurve(offsetDist: number): AcDbArc | null {

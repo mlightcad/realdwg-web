@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
+import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -401,6 +402,12 @@ export class AcDbLeader extends AcDbCurve {
    */
   subGetGripPoints() {
     return this._vertices.map(vertex => vertex.clone())
+  }
+
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbMovePointArrayGripAt(indices, offset, this._vertices)
+    return this
   }
 
   /**

@@ -5,7 +5,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
@@ -308,6 +309,20 @@ export class AcDbAlignedDimension extends AcDbDimension {
         }
       ]
     }
+  }
+
+  /**
+   * @inheritdoc
+   */
+  protected override collectDimensionDefinitionGripPoints() {
+    return [this.xLine1Point, this.xLine2Point, this.dimLinePoint]
+  }
+
+  /** @inheritdoc */
+  override subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    super.subMoveGripPointsAt(indices, offset)
+    this.calculateRotation()
+    return this
   }
 
   /**

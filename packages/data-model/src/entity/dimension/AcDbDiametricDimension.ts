@@ -200,6 +200,13 @@ export class AcDbDiametricDimension extends AcDbDimension {
   /**
    * @inheritdoc
    */
+  protected override collectDimensionDefinitionGripPoints() {
+    return [this.chordPoint, this.farChordPoint]
+  }
+
+  /**
+   * @inheritdoc
+   */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._chordPoint.applyMatrix4(matrix)
     this._farChordPoint.applyMatrix4(matrix)

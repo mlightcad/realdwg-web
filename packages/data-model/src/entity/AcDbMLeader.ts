@@ -27,6 +27,7 @@ import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -1413,6 +1414,14 @@ export class AcDbMLeader extends AcDbEntity {
     return this.collectGeometryPoints().map(point => point.clone())
   }
 
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      this.moveGeometryGripPointAt(index, offset)
+    })
+    return this
+  }
+
   /**
    * Gets the object snap points for this multileader.
    */
@@ -1934,6 +1943,93 @@ export class AcDbMLeader extends AcDbEntity {
     if (this._blockContent?.position) points.push(this._blockContent.position)
     if (this.planeOrigin) points.push(this.planeOrigin)
     return points
+  }
+
+  /**
+   * Moves one geometry grip point using the same index order as
+   * {@link collectGeometryPoints}.
+   */
+  private moveGeometryGripPointAt(
+    gripIndex: number,
+    offset: AcGeVector3dLike
+  ) {
+    let currentIndex = 0
+
+    const visit = (
+      point: AcGePoint3d | undefined,
+      onComputed?: () => void
+    ) => {
+      if (point) {
+        if (currentIndex === gripIndex) {
+          point.add(offset)
+        }
+        currentIndex++
+        return
+      }
+      if (onComputed) {
+        if (currentIndex === gripIndex) {
+          onComputed()
+        }
+        currentIndex++
+      }
+    }
+
+    this._leaders.forEach(leader => {
+      visit(leader.lastLeaderLinePoint)
+      visit(leader.landingPoint)
+      leader.breaks.forEach(item => {
+        visit(item.start)
+        visit(item.end)
+      })
+      leader.leaderLines.forEach(line => {
+        line.vertices.forEach(vertex => visit(vertex))
+        line.breaks.forEach(item => {
+          visit(item.start)
+          visit(item.end)
+        })
+      })
+      const doglegPoints = this.getDoglegPoints(leader)
+      if (doglegPoints) {
+        visit(doglegPoints[0])
+        visit(undefined, () => {
+          const start = doglegPoints[0]
+          const end = doglegPoints[1]
+          if (!start || !end) return
+          const newLength = start.distanceTo({
+            x: end.x + offset.x,
+            y: end.y + offset.y,
+            z: (end.z ?? 0) + (offset.z ?? 0)
+          })
+          if (leader.doglegLength != null || leader.doglegVectorSet) {
+            leader.doglegLength = newLength
+          } else {
+            this._doglegLength = newLength
+          }
+        })
+      }
+      leader.leaderLines.forEach(line => {
+        const drawPoints = this.getLeaderLineDrawPoints(leader, line)
+        const arrowPoints = this.getArrowheadPoints(drawPoints)
+        if (!arrowPoints) return
+        arrowPoints.forEach((_, arrowIndex) => {
+          if (arrowIndex === 0 || arrowIndex === arrowPoints.length - 1) {
+            visit(drawPoints[0])
+          } else {
+            visit(undefined)
+          }
+        })
+      })
+    })
+    visit(this._landingPoint)
+    visit(this.contentBasePosition)
+    visit(this.textAnchor)
+    if (this._mtextContent) {
+      visit(this._mtextContent.anchorPoint)
+    }
+    if (this._blockContent?.position) {
+      visit(this._blockContent.position)
+    }
+    visit(this.planeOrigin)
   }
 
   /**

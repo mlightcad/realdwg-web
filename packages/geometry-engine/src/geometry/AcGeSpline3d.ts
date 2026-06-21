@@ -8,6 +8,7 @@ import {
   AcGePoint3dLike,
   AcGePointLike
 } from '../math'
+import { AcGeGeometryUtil } from '../util/AcGeGeometryUtil'
 import { acGeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
@@ -276,19 +277,11 @@ export class AcGeSpline3d extends AcGeCurve3d {
   }
 
   get controlPoints() {
-    return this._controlPoints.map(point => ({
-      x: point.x,
-      y: point.y,
-      z: point.z || 0
-    }))
+    return this._controlPoints.map(AcGeGeometryUtil.point2dToPoint3d)
   }
 
   get fitPoints() {
-    return this._fitPoints?.map(point => ({
-      x: point.x,
-      y: point.y,
-      z: point.z || 0
-    }))
+    return this._fitPoints?.map(AcGeGeometryUtil.point2dToPoint3d)
   }
 
   get knots() {
@@ -363,7 +356,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
     const length = this._fitPoints.length
     const newIndex = index < 0 || index >= length ? length - 1 : index
     const point = this._fitPoints[newIndex]
-    return { x: point.x, y: point.y, z: point.z || 0 }
+    return AcGeGeometryUtil.point2dToPoint3d(point)
   }
 
   /**
@@ -507,37 +500,17 @@ export class AcGeSpline3d extends AcGeCurve3d {
   clone() {
     if (this._fitPoints && this._knotParameterization) {
       return new AcGeSpline3d(
-        this._fitPoints.map(point => ({
-          x: point.x,
-          y: point.y,
-          z: point.z || 0
-        })),
+        this._fitPoints.map(AcGeGeometryUtil.point2dToPoint3d),
         this._knotParameterization,
         this._degree,
         this._closed,
-        this._startTangent
-          ? {
-              x: this._startTangent.x,
-              y: this._startTangent.y,
-              z: this._startTangent.z || 0
-            }
-          : undefined,
-        this._endTangent
-          ? {
-              x: this._endTangent.x,
-              y: this._endTangent.y,
-              z: this._endTangent.z || 0
-            }
-          : undefined
+        this._startTangent ? AcGeGeometryUtil.point2dToPoint3d(this._startTangent) : undefined,
+        this._endTangent ? AcGeGeometryUtil.point2dToPoint3d(this._endTangent) : undefined
       )
     }
 
     return new AcGeSpline3d(
-      this._controlPoints.map(point => ({
-        x: point.x,
-        y: point.y,
-        z: point.z || 0
-      })),
+      this._controlPoints.map(AcGeGeometryUtil.point2dToPoint3d),
       this._nurbsCurve.knots(),
       this._nurbsCurve.weights(),
       this._degree,
@@ -738,11 +711,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
     endTangent?: { x: number; y: number; z?: number } | null
   }): AcGeSpline3d | null {
     if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-      const controlPoints = spline.controlPoints.map(item => ({
-        x: item.x,
-        y: item.y,
-        z: item.z ?? 0
-      }))
+      const controlPoints = spline.controlPoints.map(AcGeGeometryUtil.point2dToPoint3d)
       let hasWeights = true
       const weights = spline.controlPoints.map(item => {
         if (item.weight == null) hasWeights = false
@@ -758,28 +727,17 @@ export class AcGeSpline3d extends AcGeCurve3d {
     }
 
     if (spline.numberOfFitData > 0) {
-      const fitPoints = spline.fitDatum.map(item => ({
-        x: item.x,
-        y: item.y,
-        z: item.z ?? 0
-      }))
+      const fitPoints = spline.fitDatum.map(AcGeGeometryUtil.point2dToPoint3d)
       return AcGeSpline3d.fromFitPoints(
         fitPoints,
         'Uniform',
         spline.degree,
         false,
-        AcGeSpline3d.toPoint3dLike(spline.startTangent),
-        AcGeSpline3d.toPoint3dLike(spline.endTangent)
+        spline.startTangent ? AcGeGeometryUtil.point2dToPoint3d(spline.startTangent) : undefined,
+        spline.endTangent ? AcGeGeometryUtil.point2dToPoint3d(spline.endTangent) : undefined
       )
     }
 
     return null
-  }
-
-  private static toPoint3dLike(
-    point?: { x: number; y: number; z?: number } | null
-  ): AcGePoint3dLike | undefined {
-    if (!point) return undefined
-    return { x: point.x, y: point.y, z: point.z ?? 0 }
   }
 }

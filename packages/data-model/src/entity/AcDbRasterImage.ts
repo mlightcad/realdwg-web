@@ -6,7 +6,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector2d,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -14,6 +15,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
+import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
@@ -365,6 +367,18 @@ export class AcDbRasterImage extends AcDbEntity {
     return this.boundaryPath()
   }
 
+  /** @inheritdoc */
+  subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    acdbForEachGripIndex(indices, index => {
+      if (this.isClipped && this._clipBoundary.length > 3) {
+        this.moveClippedBoundaryGripAt(index, offset)
+      } else {
+        this.moveUnclippedGripAt(index, offset)
+      }
+    })
+    return this
+  }
+
   /**
    * Gets the object snap points for this raster image.
    */
@@ -458,6 +472,70 @@ export class AcDbRasterImage extends AcDbEntity {
     this._height = transformedV.length()
     this._scale.set(1, 1)
     return this
+  }
+
+  private moveUnclippedGripAt(index: number, offset: AcGeVector3dLike) {
+    const px = this._position.x
+    const py = this._position.y
+    const w = this._width
+    const h = this._height
+
+    switch (index) {
+      case 0:
+        this._position.add(offset)
+        break
+      case 1: {
+        const fixedX = px
+        const fixedY = py + h
+        const movedX = px + w + offset.x
+        const movedY = py + offset.y
+        this._position.x = fixedX
+        this._position.y = movedY
+        this._width = movedX - fixedX
+        this._height = fixedY - movedY
+        break
+      }
+      case 2: {
+        const movedX = px + w + offset.x
+        const movedY = py + h + offset.y
+        this._width = movedX - px
+        this._height = movedY - py
+        break
+      }
+      case 3: {
+        const fixedX = px + w
+        const fixedY = py
+        const movedX = px + offset.x
+        const movedY = py + h + offset.y
+        this._position.x = movedX
+        this._position.y = fixedY
+        this._width = fixedX - movedX
+        this._height = movedY - fixedY
+        break
+      }
+      default:
+        break
+    }
+  }
+
+  private moveClippedBoundaryGripAt(index: number, offset: AcGeVector3dLike) {
+    if (index < 0 || index >= this._clipBoundary.length) {
+      return
+    }
+
+    const wcsWidth = this._width
+    const wcsHeight = this._height
+    const ocsBox = new AcGeBox2d()
+    ocsBox.setFromPoints(this._clipBoundary)
+    const translation = new AcGePoint2d()
+    translation.setX(this._position.x - ocsBox.min.x * wcsWidth)
+    translation.setY(this._position.y - ocsBox.min.y * wcsHeight)
+
+    const clipPoint = this._clipBoundary[index]
+    const wcsX = clipPoint.x * wcsWidth + translation.x + offset.x
+    const wcsY = clipPoint.y * wcsHeight + translation.y + offset.y
+    clipPoint.x = (wcsX - translation.x) / wcsWidth
+    clipPoint.y = (wcsY - translation.y) / wcsHeight
   }
 
   protected boundaryPath() {

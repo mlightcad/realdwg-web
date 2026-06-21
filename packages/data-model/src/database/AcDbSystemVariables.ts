@@ -56,6 +56,12 @@ export const AcDbSystemVariables = {
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */
   EXTMIN: 'EXTMIN',
+  /**
+   * Maximum number of selected objects that display grips. When the initial
+   * selection set exceeds this limit, grips are suppressed to improve
+   * performance. `0` disables the limit and always shows grips.
+   */
+  GRIPOBJLIMIT: 'GRIPOBJLIMIT',
   /** Default angle, in radians, for newly created hatch patterns. */
   HPANG: 'HPANG',
   /** Controls whether newly created hatches are associative. */
