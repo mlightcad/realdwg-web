@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.9
+
+### Patch Changes
+
+- feat: introduced grip point editing across entity types and unified DWG/DXF font collection through AcDbFontNameCollector for improved editing and font management consistency
+- Updated dependencies
+  - @mlightcad/common@1.6.9
+  - @mlightcad/geometry-engine@3.4.9
+  - @mlightcad/graphic-interface@3.5.9
+
 ## 1.9.8
 
 ### Patch Changes

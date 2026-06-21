@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.7.9
+
+### Patch Changes
+
+- feat: introduced grip point editing across entity types and unified DWG/DXF font collection through AcDbFontNameCollector for improved editing and font management consistency
+- Updated dependencies
+  - @mlightcad/data-model@1.9.9
+
 ## 3.7.8
 
 ### Patch Changes
