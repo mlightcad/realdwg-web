@@ -408,7 +408,6 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.objectId = btr.handle
         dbBlock.name = btr.name
         dbBlock.ownerId = btr.ownerHandle
-        dbBlock.origin.copy(btr.basePoint)
         dbBlock.layoutId = btr.layout
         dbBlock.blockInsertUnits = btr.insertionUnits
         dbBlock.explodability = btr.explodability
@@ -418,6 +417,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         }
         db.tables.blockTable.add(dbBlock)
       }
+      dbBlock.origin.copy(btr.basePoint)
 
       // Don't process entities in block space until other blocks are processed
       if (!dbBlock.isModelSapce && btr.entities && btr.entities.length > 0) {
