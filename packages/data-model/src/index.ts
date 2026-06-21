@@ -19,12 +19,17 @@ export type {
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
+  AcDbFontNameCollector,
   AcDbRegenerator,
   AcDbWorkerApi,
   AcDbWorkerManager,
   createWorkerApi
 } from './converter'
 export type {
+  AcDbFontNameCollectorAdapter,
+  AcDbFontNameCollectorEntityFontInfo,
+  AcDbFontNameCollectorOptions,
+  AcDbFontNameCollectorStyleEntry,
   AcDbWorkerConfig,
   AcDbWorkerInstance,
   AcDbWorkerMessage,

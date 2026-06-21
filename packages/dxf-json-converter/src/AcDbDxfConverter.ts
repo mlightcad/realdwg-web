@@ -17,6 +17,7 @@ import {
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
+  AcDbFontNameCollector,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
   AcDbObjectId,
@@ -45,7 +46,6 @@ import {
   CommonDxfEntity,
   CommonDxfTableEntry,
   DimStylesTableEntry,
-  DxfBlock,
   DxfTable,
   ImageDefDXFObject,
   InsertEntity,
@@ -141,111 +141,43 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected getFonts(dxf: ParsedDxf) {
-    // Build text style map. The key is text style name, and the value is font name list.
-    const styleMap = new Map<string, string[]>()
-    const getFontName = (fontFileName: string) => {
-      if (fontFileName) {
-        const lastDotIndex = fontFileName.lastIndexOf('.')
-        if (lastDotIndex >= 0) {
-          return fontFileName.substring(0, lastDotIndex).toLowerCase()
-        } else {
-          return fontFileName.toLowerCase()
-        }
-      }
-    }
-    dxf.tables.STYLE?.entries.forEach(style => {
-      const fontNames: string[] = []
-      if (style.font) {
-        const fontName = getFontName(style.font)
-        if (fontName) fontNames.push(fontName)
-      }
-      if (style.bigFont) {
-        const fontName = getFontName(style.bigFont)
-        if (fontName) fontNames.push(fontName)
-      }
-      if (style.extendedFont) {
-        const fontName = getFontName(style.extendedFont)
-        if (fontName) fontNames.push(fontName)
-      }
-      styleMap.set(style.name, fontNames)
-    })
-
-    const fonts: Set<string> = new Set<string>()
-    // Collect shape file definitions from the TEXT STYLE TABLE (standardFlag bit 0 = isShapeFile).
-    // SHAPE entities render glyph codes from these .shx shape fonts, so they must be included
-    // in the font list even when no text entity references the style directly.
-    dxf.tables.STYLE?.entries.forEach(style => {
-      if (style.standardFlag & 1) {
-        if (style.font) {
-          const fontName = getFontName(style.font)
-          if (fontName) {
-            fonts.add(fontName)
+    const blocks = dxf.blocks ?? {}
+    return new AcDbFontNameCollector({
+      styles: dxf.tables.STYLE?.entries ?? [],
+      textStyleVar:
+        (dxf.header?.['$TEXTSTYLE'] as string | undefined) || DEFAULT_TEXT_STYLE
+    }).collect(dxf.entities, {
+      getEntityFontInfo: (entity: CommonDxfEntity) => {
+        if (entity.type == 'MTEXT') {
+          const mtext = entity as MTextEntity
+          return {
+            styleName: mtext.styleName,
+            formattedText: mtext.text,
+            resolveStyle: true
           }
         }
-      }
-    })
-    this.getFontsInBlock(dxf.entities, dxf.blocks, styleMap, fonts)
-    return Array.from(fonts)
-  }
-
-  /**
-   * Iterates through entities in a block to get fonts used by text, MText, and insert entities.
-   *
-   * This is a helper method that recursively processes entities to extract font information
-   * from text-based entities and block references.
-   *
-   * @param entities - Array of DXF entities to process
-   * @param blockMap - Map of block definitions
-   * @param styleMap - Map of text styles to font names
-   * @param fonts - Set to collect font names
-   *
-   * @example
-   * ```typescript
-   * const fonts = new Set<string>();
-   * converter.getFontsInBlock(entities, blocks, styleMap, fonts);
-   * ```
-   */
-  private getFontsInBlock(
-    entities: CommonDxfEntity[],
-    blockMap: Record<string, DxfBlock>,
-    styleMap: Map<string, string[]>,
-    fonts: Set<string>
-  ) {
-    const regex = /\\f(.*?)\|/g
-    entities.forEach(entity => {
-      if (entity.type == 'MTEXT') {
-        const mtext = entity as MTextEntity
-        const text = mtext.text
-        ;[...text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
-        const fontNames = styleMap.get(mtext.styleName)
-        fontNames?.forEach(name => fonts.add(name))
-      } else if (entity.type == 'TEXT') {
-        const text = entity as TextEntity
-        const fontNames = styleMap.get(text.styleName)
-        fontNames?.forEach(name => fonts.add(name))
-      } else if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-        const mleader = entity as MultiLeaderEntity & Record<string, unknown>
-        const text =
-          typeof mleader.textContent === 'string' ? mleader.textContent : ''
-        ;[...text.matchAll(regex)].forEach(match => {
-          fonts.add(match[1].toLowerCase())
-        })
-        const styleName =
-          typeof mleader.textStyleName === 'string'
-            ? mleader.textStyleName
-            : typeof mleader.styleName === 'string'
-              ? mleader.styleName
-              : undefined
-        const fontNames = styleName ? styleMap.get(styleName) : undefined
-        fontNames?.forEach(name => fonts.add(name))
-      } else if (entity.type == 'INSERT') {
-        const insert = entity as InsertEntity
-        const block = blockMap[insert.name]
-        if (block && block.entities)
-          this.getFontsInBlock(block.entities, blockMap, styleMap, fonts)
-      }
+        if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
+          const text = entity as TextEntity
+          return { styleName: text.styleName, resolveStyle: true }
+        }
+        if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
+          const mleader = entity as MultiLeaderEntity & Record<string, unknown>
+          const text =
+            typeof mleader.textContent === 'string' ? mleader.textContent : ''
+          const styleName =
+            typeof mleader.textStyleName === 'string'
+              ? mleader.textStyleName
+              : typeof mleader.styleName === 'string'
+                ? mleader.styleName
+                : undefined
+          return { styleName, formattedText: text, resolveStyle: true }
+        }
+        if (entity.type == 'INSERT') {
+          return { blockName: (entity as InsertEntity).name }
+        }
+        return null
+      },
+      getBlockEntities: (blockName: string) => blocks[blockName]?.entities
     })
   }
 

@@ -1,3 +1,4 @@
+import { AcDbFontNameCollector } from '../converter/AcDbFontNameCollector'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
@@ -136,21 +137,17 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
    */
   get fonts() {
     const fonts = new Set<string>()
-    const setFontName = (fontFileName: string) => {
-      if (fontFileName) {
-        const lastDotIndex = fontFileName.lastIndexOf('.')
-        if (lastDotIndex >= 0) {
-          const fontName = fontFileName.substring(0, lastDotIndex).toLowerCase()
-          fonts.add(fontName)
-        } else {
-          fonts.add(fontFileName.toLowerCase())
-        }
-      }
-    }
-
     for (const item of this.newIterator()) {
-      setFontName(item.fileName)
-      setFontName(item.bigFontFileName)
+      const fileName = AcDbFontNameCollector.normalizeFontFileName(item.fileName)
+      if (fileName) {
+        fonts.add(fileName)
+      }
+      const bigFontFileName = AcDbFontNameCollector.normalizeFontFileName(
+        item.bigFontFileName
+      )
+      if (bigFontFileName) {
+        fonts.add(bigFontFileName)
+      }
     }
     return Array.from(fonts)
   }
