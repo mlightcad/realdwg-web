@@ -64,6 +64,14 @@ export {
   AcDbSymbolTableRecord,
   AcDbSysVarManager,
   AcDbSystemVariables,
+  AcDbChangeApplier,
+  AcDbChangeRecorder,
+  AcDbDatabaseTransaction,
+  AcDbDatabaseTransactionManager,
+  AcDbTransaction,
+  AcDbTransactionManager,
+  AcDbUndoStack,
+  collectChangeEntities,
   AcDbTextStyleTable,
   AcDbTextStyleTableRecord,
   AcDbViewTable,
@@ -102,7 +110,10 @@ export type {
   AcDbSysVarType,
   AcDbSysVarTypeName,
   AcDbSystemVariableName,
-  AcDbTables
+  AcDbTables,
+  AcDbChangeContainer,
+  AcDbDatabaseChange,
+  AcDbUndoRecord
 } from './database'
 export {
   AcDb2dPolyline,

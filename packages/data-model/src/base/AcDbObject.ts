@@ -488,6 +488,104 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   close() {}
 
+  /** Own-property keys omitted from clone/restore snapshots (database back-references). */
+  private static readonly SNAPSHOT_EXCLUDED_KEYS = new Set([
+    '_database',
+    'transactionManager'
+  ])
+
+  /** Own-property keys restored through dedicated attribute/xdata helpers instead of generic copy. */
+  private static readonly SNAPSHOT_INTERNAL_KEYS = new Set([
+    '_attrs',
+    '_xDataMap'
+  ])
+
+  /**
+   * Returns own string property names that participate in generic snapshot copy.
+   *
+   * Excludes {@link SNAPSHOT_EXCLUDED_KEYS} so database and transaction-manager
+   * references are never duplicated onto clones.
+   */
+  private getOwnSnapshotKeys(): string[] {
+    return Reflect.ownKeys(this).filter((key): key is string => {
+      return (
+        typeof key === 'string' &&
+        !AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key)
+      )
+    })
+  }
+
+  /**
+   * Deep-clones attribute storage into a new {@link AcCmObject} instance.
+   *
+   * @param source - Attribute container to copy
+   * @returns Detached attribute object with the same values as `source`
+   */
+  private cloneAttrs(source: AcCmObject<ATTRS>): AcCmObject<ATTRS> {
+    const attrs = this.cloneValue(source.attributes) as Partial<ATTRS>
+    return new AcCmObject<ATTRS>(attrs)
+  }
+
+  /**
+   * Replaces this object's attributes from a snapshot, removing keys absent in the source.
+   *
+   * Updates are applied silently so restore does not trigger attribute observers.
+   *
+   * @param source - Attribute container captured before modification
+   */
+  private restoreAttrsFrom(source: AcCmObject<ATTRS>): void {
+    const nextAttrs = this.cloneValue(source.attributes) as Partial<ATTRS>
+    const current = this._attrs.attributes as Record<string, unknown>
+
+    for (const key of Object.keys(current)) {
+      if (!(key in nextAttrs)) {
+        this._attrs.set(key as AcCmStringKey<ATTRS>, undefined, {
+          unset: true,
+          silent: true
+        })
+      }
+    }
+
+    this._attrs.set(nextAttrs, { silent: true })
+  }
+
+  /**
+   * Replaces extended-data entries from a snapshot map.
+   *
+   * @param source - Deep-cloned xdata map from a snapshot object
+   */
+  private restoreXDataMapFrom(source: Map<string, AcDbResultBuffer>): void {
+    this._xDataMap.clear()
+    for (const [key, value] of source.entries()) {
+      this._xDataMap.set(key, this.cloneValue(value) as AcDbResultBuffer)
+    }
+  }
+
+  /**
+   * Copies cloneable internal state from this instance onto `target`.
+   *
+   * Used by {@link clone} and {@link clonePreservingIdentity} to populate a
+   * freshly allocated object of the same runtime type.
+   *
+   * @param target - Newly created instance receiving the copied state
+   */
+  private copySnapshotStateTo(target: this): void {
+    target._attrs = this.cloneAttrs(this._attrs)
+    target._xDataMap = this.cloneValue(this._xDataMap) as Map<
+      string,
+      AcDbResultBuffer
+    >
+
+    const source = this as unknown as Record<string, unknown>
+    const dest = target as unknown as Record<string, unknown>
+    for (const key of this.getOwnSnapshotKeys()) {
+      if (AcDbObject.SNAPSHOT_INTERNAL_KEYS.has(key)) {
+        continue
+      }
+      dest[key] = this.cloneValue(source[key])
+    }
+  }
+
   /**
    * Creates a deep clone of this object.
    *
@@ -497,18 +595,74 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   clone(): this {
     const cloned = Object.create(Object.getPrototypeOf(this)) as this
-    const source = this as unknown as Record<string, unknown>
-    const target = cloned as unknown as Record<string, unknown>
+    this.copySnapshotStateTo(cloned)
+    cloned.objectId = this.generateTemporaryHandle()
+    return cloned
+  }
 
-    for (const key of Object.keys(source)) {
-      if (key === '_database') {
+  /**
+   * Creates a deep clone that preserves database identity fields.
+   *
+   * Used for undo/redo snapshots where {@link objectId}, {@link ownerId},
+   * and {@link database} must match the live object after restore.
+   */
+  clonePreservingIdentity(): this {
+    const cloned = this.clone()
+    const objectId = this.getAttrWithoutException('objectId')
+    if (objectId) {
+      cloned._attrs.set('objectId', objectId)
+    }
+    const ownerId = this.getAttrWithoutException('ownerId')
+    if (ownerId !== undefined) {
+      cloned._attrs.set('ownerId', ownerId)
+    }
+    if (this._database) {
+      cloned._database = this._database
+    }
+    return cloned
+  }
+
+  /**
+   * Restores internal state from a detached clone while preserving identity fields.
+   *
+   * @param snapshot - Clone produced by {@link clone} or {@link clonePreservingIdentity}.
+   */
+  restoreFrom(snapshot: this): void {
+    const preservedObjectId = this.objectId
+    const preservedDatabase = this._database
+
+    this.restoreAttrsFrom(snapshot._attrs)
+    this.restoreXDataMapFrom(snapshot._xDataMap)
+
+    const source = snapshot as unknown as Record<string, unknown>
+    const target = this as unknown as Record<string, unknown>
+    const sourceKeys = new Set(snapshot.getOwnSnapshotKeys())
+
+    for (const key of sourceKeys) {
+      if (
+        AcDbObject.SNAPSHOT_INTERNAL_KEYS.has(key) ||
+        AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key)
+      ) {
         continue
       }
       target[key] = this.cloneValue(source[key])
     }
 
-    cloned.objectId = this.generateTemporaryHandle()
-    return cloned
+    for (const key of this.getOwnSnapshotKeys()) {
+      if (
+        AcDbObject.SNAPSHOT_INTERNAL_KEYS.has(key) ||
+        AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key) ||
+        sourceKeys.has(key)
+      ) {
+        continue
+      }
+      delete target[key]
+    }
+
+    this.objectId = preservedObjectId
+    if (preservedDatabase) {
+      this.database = preservedDatabase
+    }
   }
 
   /**
@@ -559,6 +713,15 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
 
     if (value instanceof ArrayBuffer) {
       return value.slice(0)
+    }
+
+    if (
+      value &&
+      typeof value === 'object' &&
+      'tables' in value &&
+      'transactionManager' in value
+    ) {
+      return value
     }
 
     if (

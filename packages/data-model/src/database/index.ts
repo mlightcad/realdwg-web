@@ -71,6 +71,24 @@ export type {
   AcDbSysVarType,
   AcDbSysVarTypeName
 } from './AcDbSysVarManager'
+export {
+  AcDbChangeApplier,
+  AcDbChangeRecorder,
+  AcDbDatabaseTransaction,
+  AcDbDatabaseTransactionManager,
+  AcDbTransaction,
+  AcDbTransactionManager,
+  AcDbUndoStack,
+  areChangeContainersEqual,
+  collectChangeEntities,
+  collectDictionaryChanges
+} from './transaction'
+export type {
+  AcDbChangeContainer,
+  AcDbDatabaseChange,
+  AcDbDictionaryChangeEntry,
+  AcDbUndoRecord
+} from './transaction'
 export { AcDbTextStyleTable } from './AcDbTextStyleTable'
 export { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
 export { AcDbViewTable } from './AcDbViewTable'

@@ -71,6 +71,19 @@ export class AcDbSymbolTable<
    * ```
    */
   add(record: RecordType) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot add symbol table records outside an active transaction.'
+      )
+    }
+
+    const tableName = manager.resolveSymbolTableName(this)
+
     record.database = this.database
     record.ownerId = this.objectId
 
@@ -81,6 +94,10 @@ export class AcDbSymbolTable<
       this._recordsByName.set(normalizedName, record)
     }
     this._recordsById.set(record.objectId, record)
+
+    if (manager.isRecording()) {
+      manager.recordAppend({ type: 'symbolTable', tableName }, record)
+    }
   }
 
   /**
@@ -101,8 +118,7 @@ export class AcDbSymbolTable<
     const normalizedName = this.normalizeName(name)
     const record = this._recordsByName.get(normalizedName)
     if (record) {
-      this._recordsById.delete(record.objectId)
-      this._recordsByName.delete(normalizedName)
+      this.removeRecord(record)
       return true
     }
     return false
@@ -125,11 +141,39 @@ export class AcDbSymbolTable<
   removeId(id: AcDbObjectId) {
     const record = this._recordsById.get(id)
     if (record) {
-      this._recordsByName.delete(this.normalizeName(record.name))
-      this._recordsById.delete(id)
+      this.removeRecord(record)
       return true
     }
     return false
+  }
+
+  /**
+   * Removes one symbol table record from internal maps and records the change when needed.
+   *
+   * Shared by {@link remove} and {@link removeId}. Enforces strict-mode transaction
+   * requirements before mutating table membership.
+   *
+   * @param record - Symbol table record to remove
+   */
+  private removeRecord(record: RecordType) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot remove symbol table records outside an active transaction.'
+      )
+    }
+
+    if (manager.isRecording()) {
+      const tableName = manager.resolveSymbolTableName(this)
+      manager.recordRemove({ type: 'symbolTable', tableName }, record)
+    }
+
+    this._recordsByName.delete(this.normalizeName(record.name))
+    this._recordsById.delete(record.objectId)
   }
 
   /**

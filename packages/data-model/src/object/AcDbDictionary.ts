@@ -83,6 +83,29 @@ export class AcDbDictionary<
    * ```
    */
   setAt(key: string, value: TObjectType) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot modify dictionary entries outside an active transaction.'
+      )
+    }
+
+    const existing = this.getAt(key)
+    if (existing && manager.isRecording()) {
+      manager.recordRemove(
+        {
+          type: 'dictionary',
+          dictionaryId: this.objectId,
+          key
+        },
+        existing
+      )
+    }
+
     value.database = this.database
     value.ownerId = this.objectId
 
@@ -90,11 +113,21 @@ export class AcDbDictionary<
 
     this._recordsByName.set(key, value)
     this._recordsById.set(value.objectId, value)
-    this.database.events.dictObjetSet.dispatch({
-      database: this.database,
-      object: value,
-      key: key
-    })
+
+    if (manager.isRecording()) {
+      manager.recordAppend(
+        {
+          type: 'dictionary',
+          dictionaryId: this.objectId,
+          key
+        },
+        value
+      )
+    }
+
+    if (!manager.isRecording() && !manager.isApplyingUndoRedo()) {
+      this.database.notifyDictObjectSet(value, key)
+    }
   }
 
   /**
@@ -114,13 +147,7 @@ export class AcDbDictionary<
   remove(name: string) {
     const object = this.getAt(name)
     if (object) {
-      this._recordsByName.delete(name.toUpperCase())
-      this._recordsById.delete(this.objectId)
-      this.database.events.dictObjectErased.dispatch({
-        database: this.database,
-        object: object,
-        key: name
-      })
+      this.removeStoredObject(object, name)
       return true
     }
     return false
@@ -140,20 +167,64 @@ export class AcDbDictionary<
   removeId(id: string) {
     const object = this.getIdAt(id)
     if (object) {
-      this._recordsById.delete(this.objectId)
+      let removedKey = ''
       this._recordsByName.forEach((value, key) => {
         if (value === object) {
-          this._recordsByName.delete(key)
-          this.database.events.dictObjectErased.dispatch({
-            database: this.database,
-            object: object,
-            key: key
-          })
+          removedKey = key
         }
       })
+      this.removeStoredObject(object, removedKey)
       return true
     }
     return false
+  }
+
+  /**
+   * Removes one dictionary entry from internal maps and records the change when needed.
+   *
+   * Shared by {@link remove} and {@link removeId}. Enforces strict-mode transaction
+   * requirements and defers {@link AcDbDatabase.notifyDictObjectErased} while
+   * recording or applying undo/redo.
+   *
+   * @param object - Stored dictionary object to remove
+   * @param key - Dictionary key associated with the object (may be empty when resolved by ID)
+   */
+  private removeStoredObject(object: TObjectType, key: string) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot remove dictionary entries outside an active transaction.'
+      )
+    }
+
+    if (manager.isRecording()) {
+      manager.recordRemove(
+        {
+          type: 'dictionary',
+          dictionaryId: this.objectId,
+          key
+        },
+        object
+      )
+    }
+
+    this._recordsById.delete(object.objectId)
+    this._recordsByName.forEach((value, entryKey) => {
+      if (value === object) {
+        this._recordsByName.delete(entryKey)
+      }
+    })
+    if (
+      key &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      this.database.notifyDictObjectErased(object, key)
+    }
   }
 
   /**

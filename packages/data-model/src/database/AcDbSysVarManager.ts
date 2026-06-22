@@ -654,6 +654,56 @@ export class AcDbSysVarManager {
   }
 
   /**
+   * Applies one system variable mutation with shared transaction and event rules.
+   *
+   * Database-backed variables should mutate through {@link AcDbDatabase} property
+   * setters or {@link setVar}. Non-database variables mutate through the cache.
+   *
+   * @param name - System variable name (normalized internally)
+   * @param oldVal - Value before mutation; recorded for undo when a transaction is active
+   * @param newVal - Value after mutation; used for change detection and event dispatch
+   * @param db - Database whose transaction manager governs recording and strict mode
+   * @param mutate - Callback that performs the actual value write
+   */
+  public applyVarMutation<T>(
+    name: string,
+    oldVal: T,
+    newVal: T,
+    db: AcDbDatabase,
+    mutate: () => void
+  ): void {
+    const normalizedName = this.normalizeName(name)
+    if (!this.hasValueChanged(oldVal as AcDbSysVarType, newVal as AcDbSysVarType)) {
+      return
+    }
+
+    if (db.transactionManager.isRecording()) {
+      db.transactionManager.recordSysvar(normalizedName, oldVal)
+    } else if (
+      db.transactionManager.strictMode &&
+      !db.transactionManager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        `Cannot change system variable ${normalizedName} outside an active transaction.`
+      )
+    }
+
+    mutate()
+
+    if (
+      !db.transactionManager.isApplyingUndoRedo() &&
+      !db.transactionManager.isRecording()
+    ) {
+      this.events.sysVarChanged.dispatch({
+        database: db,
+        name: normalizedName,
+        newVal: newVal as AcDbSysVarType,
+        oldVal: oldVal as AcDbSysVarType
+      })
+    }
+  }
+
+  /**
    * Set system variable value.
    */
   public setVar(name: string, value: AcDbSysVarType, db: AcDbDatabase) {
@@ -698,17 +748,13 @@ export class AcDbSysVarManager {
         value = intVal
       }
       if (descriptor.isDbVar) {
-        ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value
+        this.applyVarMutation(name, oldVal, value, db, () => {
+          ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value
+        })
       } else {
-        this.cache.set(name, value)
-        if (this.hasValueChanged(oldVal, value)) {
-          this.events.sysVarChanged.dispatch({
-            database: db,
-            name,
-            newVal: value,
-            oldVal
-          })
-        }
+        this.applyVarMutation(name, oldVal, value, db, () => {
+          this.cache.set(name, value)
+        })
       }
     } else {
       throw new Error(`System variable ${name} not found!`)

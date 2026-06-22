@@ -3,10 +3,9 @@ import { AcDbTransaction } from './AcDbTransaction'
 /**
  * Manages database transactions.
  *
- * This class is the TypeScript equivalent of ObjectARX AcDbTransactionManager.
- * It supports nested transactions and object open tracking.
- *
- * A transaction must be explicitly committed or aborted.
+ * @deprecated Use {@link AcDbDatabaseTransactionManager} via
+ * {@link AcDbDatabase.transactionManager} for database-bound transactions,
+ * undo/redo, and change recording.
  */
 export class AcDbTransactionManager {
   /** Stack of active transactions */
