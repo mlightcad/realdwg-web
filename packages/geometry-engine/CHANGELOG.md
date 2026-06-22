@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.4.11
+
+### Patch Changes
+
+- feat: implement database transaction manager with undo/redo
+- Updated dependencies
+  - @mlightcad/common@1.6.11
+
 ## 3.4.10
 
 ### Patch Changes

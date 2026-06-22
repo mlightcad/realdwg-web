@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.11
+
+### Patch Changes
+
+- feat: implement database transaction manager with undo/redo
+- Updated dependencies
+  - @mlightcad/data-model@1.9.11
+
 ## 1.9.10
 
 ### Patch Changes

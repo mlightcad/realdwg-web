@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.11
+
+### Patch Changes
+
+- feat: implement database transaction manager with undo/redo
+- Updated dependencies
+  - @mlightcad/data-model@1.9.11
+  - @mlightcad/dxf-json-converter@1.9.11
+  - @mlightcad/libredwg-converter@3.7.11
+
 ## 0.3.10
 
 ### Patch Changes

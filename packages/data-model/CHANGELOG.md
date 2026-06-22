@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.11
+
+### Patch Changes
+
+- feat: implement database transaction manager with undo/redo
+- Updated dependencies
+  - @mlightcad/common@1.6.11
+  - @mlightcad/geometry-engine@3.4.11
+  - @mlightcad/graphic-interface@3.5.11
+
 ## 1.9.10
 
 ### Patch Changes

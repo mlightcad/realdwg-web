@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.11
+
+### Patch Changes
+
+- feat: implement database transaction manager with undo/redo
+
 ## 1.6.10
 
 ### Patch Changes
