@@ -67,6 +67,7 @@ import { AcDbSystemVariables } from './AcDbSystemVariables'
 import { AcDbLayout } from '../object/layout/AcDbLayout'
 import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbDatabaseTransactionManager } from './transaction/AcDbDatabaseTransactionManager'
 
 /**
  * Event arguments for object events in the dictionary.
@@ -409,6 +410,16 @@ export class AcDbDatabase extends AcDbObject {
   /** Current drawing file name (**DWGNAME**), including extension. */
   private _dwgname: string
 
+  /** Manages transactions and undo/redo for this database. */
+  readonly transactionManager: AcDbDatabaseTransactionManager
+
+  private _eventBatchDepth = 0
+  private readonly _pendingEntityModified = new Set<AcDbEntity>()
+  private _pendingEntityAppended: AcDbEntity[] = []
+  private _pendingEntityErased: AcDbEntity[] = []
+  private _pendingDictObjectSet: { object: AcDbObject; key: string }[] = []
+  private _pendingDictObjectErased: { object: AcDbObject; key: string }[] = []
+
   /**
    * Events that can be triggered by the database.
    *
@@ -494,6 +505,7 @@ export class AcDbDatabase extends AcDbObject {
       mlineStyle: new AcDbDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
+    this.transactionManager = new AcDbDatabaseTransactionManager(this)
   }
 
   /**
@@ -525,6 +537,285 @@ export class AcDbDatabase extends AcDbObject {
    */
   get objects() {
     return this._objects
+  }
+
+  /**
+   * Looks up a database-resident object by its object ID.
+   *
+   * Search order: entities, symbol table records, dictionary objects
+   * (including nested dictionaries), then the database object itself.
+   *
+   * @param id - Object identifier to resolve
+   * @param _openErased - Reserved for erased-object support
+   * @returns The matching object, or undefined if not found
+   */
+  getObjectById(
+    id: AcDbObjectId,
+    _openErased = false
+  ): AcDbObject | undefined {
+    if (id === this.objectId) {
+      return this
+    }
+
+    const entity = this.tables.blockTable.getEntityById(id)
+    if (entity) {
+      return entity
+    }
+
+    const symbolTables: AcDbSymbolTable[] = [
+      this.tables.appIdTable,
+      this.tables.blockTable,
+      this.tables.dimStyleTable,
+      this.tables.linetypeTable,
+      this.tables.textStyleTable,
+      this.tables.viewTable,
+      this.tables.layerTable,
+      this.tables.viewportTable
+    ]
+    for (const table of symbolTables) {
+      const record = table.getIdAt(id)
+      if (record) {
+        return record
+      }
+    }
+
+    for (const dictionary of this.getRootDictionaries()) {
+      if (dictionary.objectId === id) {
+        return dictionary
+      }
+      const object = this.findObjectInDictionary(dictionary, id)
+      if (object) {
+        return object
+      }
+    }
+
+    return undefined
+  }
+
+  /**
+   * Returns the top-level named object dictionaries owned by this database.
+   */
+  getRootDictionaries(): AcDbDictionary[] {
+    return [
+      this.objects.dictionary,
+      this.objects.imageDefinition,
+      this.objects.layout,
+      this.objects.mleaderStyle,
+      this.objects.mlineStyle,
+      this.objects.xrecord
+    ]
+  }
+
+  /**
+   * Recursively searches a dictionary tree for an object with the given ID.
+   *
+   * @param dictionary - Root dictionary to search (including nested dictionaries)
+   * @param id - Object identifier to resolve
+   * @returns Matching object, or undefined when not found under `dictionary`
+   */
+  private findObjectInDictionary(
+    dictionary: AcDbDictionary,
+    id: AcDbObjectId
+  ): AcDbObject | undefined {
+    if (dictionary.objectId === id) {
+      return dictionary
+    }
+
+    const direct = dictionary.getIdAt(id)
+    if (direct) {
+      return direct
+    }
+
+    for (const [, entry] of dictionary.entries()) {
+      if (entry.objectId === id) {
+        return entry
+      }
+      if (entry instanceof AcDbDictionary) {
+        const nested = this.findObjectInDictionary(entry, id)
+        if (nested) {
+          return nested
+        }
+      }
+    }
+
+    return undefined
+  }
+
+  /**
+   * Begins suppressing database events until {@link endEventBatch} is called.
+   */
+  beginEventBatch(): void {
+    this._eventBatchDepth++
+  }
+
+  /**
+   * Ends event batching and dispatches accumulated entity events when the outermost batch closes.
+   */
+  endEventBatch(): void {
+    if (this._eventBatchDepth <= 0) {
+      return
+    }
+    this._eventBatchDepth--
+    if (this._eventBatchDepth === 0) {
+      this.flushEventBatch()
+    }
+  }
+
+  /**
+   * Returns true when database events are being batched.
+   */
+  isEventBatched(): boolean {
+    return this._eventBatchDepth > 0
+  }
+
+  /**
+   * Dispatches or queues an entity-modified notification.
+   *
+   * When {@link isEventBatched} is true, the entity is deduplicated in a pending set
+   * and dispatched from {@link flushEventBatch} when the outermost batch closes.
+   *
+   * @param entity - Entity whose properties changed
+   */
+  notifyEntityModified(entity: AcDbEntity): void {
+    if (this.isEventBatched()) {
+      this._pendingEntityModified.add(entity)
+      return
+    }
+    this.events.entityModified.dispatch({
+      database: this,
+      entity
+    })
+  }
+
+  /**
+   * Dispatches or queues an entity-appended notification.
+   *
+   * @param entity - One entity or batch of entities added to model/paper space
+   */
+  notifyEntityAppended(entity: AcDbEntity | AcDbEntity[]): void {
+    if (this.isEventBatched()) {
+      const items = Array.isArray(entity) ? entity : [entity]
+      this._pendingEntityAppended.push(...items)
+      return
+    }
+    this.events.entityAppended.dispatch({
+      database: this,
+      entity
+    })
+  }
+
+  /**
+   * Dispatches or queues an entity-erased notification.
+   *
+   * @param entity - One entity or batch of entities removed from model/paper space
+   */
+  notifyEntityErased(entity: AcDbEntity | AcDbEntity[]): void {
+    if (this.isEventBatched()) {
+      const items = Array.isArray(entity) ? entity : [entity]
+      this._pendingEntityErased.push(...items)
+      return
+    }
+    this.events.entityErased.dispatch({
+      database: this,
+      entity
+    })
+  }
+
+  /**
+   * Dispatches or queues a dictionary-object-set notification.
+   *
+   * @param object - Object inserted or replaced in a named dictionary
+   * @param key - Dictionary key under which the object is stored
+   */
+  notifyDictObjectSet(object: AcDbObject, key: string): void {
+    if (this.isEventBatched()) {
+      this._pendingDictObjectSet.push({ object, key })
+      return
+    }
+    this.events.dictObjetSet.dispatch({
+      database: this,
+      object,
+      key
+    })
+  }
+
+  /**
+   * Dispatches or queues a dictionary-object-erased notification.
+   *
+   * @param object - Object removed from a named dictionary
+   * @param key - Dictionary key that previously referenced the object
+   */
+  notifyDictObjectErased(object: AcDbObject, key: string): void {
+    if (this.isEventBatched()) {
+      this._pendingDictObjectErased.push({ object, key })
+      return
+    }
+    this.events.dictObjectErased.dispatch({
+      database: this,
+      object,
+      key
+    })
+  }
+
+  /**
+   * Dispatches all notifications accumulated while event batching was active.
+   *
+   * Entity-modified events are deduplicated by entity; appended and erased
+   * entities are dispatched in batch arrays where applicable.
+   */
+  private flushEventBatch(): void {
+    if (this._pendingEntityModified.size > 0) {
+      const modified = [...this._pendingEntityModified]
+      this._pendingEntityModified.clear()
+      for (const entity of modified) {
+        this.events.entityModified.dispatch({
+          database: this,
+          entity
+        })
+      }
+    }
+
+    if (this._pendingEntityAppended.length > 0) {
+      const appended = this._pendingEntityAppended
+      this._pendingEntityAppended = []
+      this.events.entityAppended.dispatch({
+        database: this,
+        entity: appended
+      })
+    }
+
+    if (this._pendingEntityErased.length > 0) {
+      const erased = this._pendingEntityErased
+      this._pendingEntityErased = []
+      this.events.entityErased.dispatch({
+        database: this,
+        entity: erased
+      })
+    }
+
+    if (this._pendingDictObjectSet.length > 0) {
+      const dictSet = this._pendingDictObjectSet
+      this._pendingDictObjectSet = []
+      for (const { object, key } of dictSet) {
+        this.events.dictObjetSet.dispatch({
+          database: this,
+          object,
+          key
+        })
+      }
+    }
+
+    if (this._pendingDictObjectErased.length > 0) {
+      const dictErased = this._pendingDictObjectErased
+      this._pendingDictObjectErased = []
+      for (const { object, key } of dictErased) {
+        this.events.dictObjectErased.dispatch({
+          database: this,
+          object,
+          key
+        })
+      }
+    }
   }
 
   /**
@@ -2309,6 +2600,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   private clear() {
+    this.transactionManager.clearUndoStack()
     // Clear all tables and dictionaries
     this._tables.blockTable.removeAll()
     this._tables.dimStyleTable.removeAll()
@@ -2335,37 +2627,13 @@ export class AcDbDatabase extends AcDbObject {
     nextValue: T,
     setter: (nextValue: T) => void
   ) {
-    if (!this.hasSysVarValueChanged(currentValue, nextValue)) {
-      return
-    }
-
-    setter(nextValue)
-    this.triggerSysVarChangedEvent(sysVarName, currentValue, nextValue)
-  }
-
-  /**
-   * Determines whether two sysvar values are different.
-   */
-  private hasSysVarValueChanged(currentValue: unknown, nextValue: unknown) {
-    if (currentValue instanceof AcCmColor && nextValue instanceof AcCmColor) {
-      return !currentValue.equals(nextValue)
-    }
-
-    if (
-      currentValue instanceof AcCmTransparency &&
-      nextValue instanceof AcCmTransparency
-    ) {
-      return !currentValue.equals(nextValue)
-    }
-
-    if (
-      currentValue instanceof AcDbDwgVersion &&
-      nextValue instanceof AcDbDwgVersion
-    ) {
-      return currentValue.value !== nextValue.value
-    }
-
-    return !Object.is(currentValue, nextValue)
+    AcDbSysVarManager.instance().applyVarMutation(
+      sysVarName,
+      currentValue,
+      nextValue,
+      this,
+      () => setter(nextValue)
+    )
   }
 
   /**

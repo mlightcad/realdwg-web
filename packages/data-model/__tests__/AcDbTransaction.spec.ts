@@ -23,6 +23,7 @@ describe('AcDbTransaction', () => {
     const tr = new TestTransaction()
     const obj = tr.register(new AcDbObject())
 
+    obj.ownerId = 'original-owner'
     const opened = tr.getObject<AcDbObject>(
       obj.objectId,
       AcDbOpenMode.kForWrite
@@ -30,10 +31,11 @@ describe('AcDbTransaction', () => {
     expect(opened).toBe(obj)
 
     opened!.ownerId = 'changed-owner'
-    expect(() => tr.abort()).not.toThrow()
+    tr.abort()
+    expect(obj.ownerId).toBe('original-owner')
   })
 
-  it('returns undefined when opening the same object twice and clears on commit', () => {
+  it('returns the same object when opening twice and clears on commit', () => {
     const tr = new TestTransaction()
     const obj = tr.register(new AcDbObject())
 
@@ -42,7 +44,7 @@ describe('AcDbTransaction', () => {
     )
     expect(
       tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)
-    ).toBeUndefined()
+    ).toBe(obj)
 
     tr.commit()
     expect(tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)).toBe(

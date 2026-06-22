@@ -1,4 +1,5 @@
 import { AcDbObject, AcDbObjectId, AcDbOpenMode } from '../../base'
+import { AcDbChangeRecorder } from './AcDbChangeRecorder'
 
 /**
  * Represents a single database transaction.
@@ -13,31 +14,41 @@ export class AcDbTransaction {
   private readonly openedObjects = new Map<AcDbObjectId, AcDbObject>()
 
   /** Snapshots of objects before modification */
-  private readonly originalStates = new Map<AcDbObjectId, unknown>()
+  private readonly originalStates = new Map<AcDbObjectId, AcDbObject>()
+
+  /** Structured changes recorded during this transaction for commit/undo integration */
+  readonly recorder = new AcDbChangeRecorder()
 
   /**
    * Records an object opening.
    *
+   * When the object is opened for write, a pre-modification snapshot is stored
+   * for abort rollback and a modify entry is added to {@link recorder}.
+   *
    * @param objectId - Object identifier
    * @param mode - Open mode
    * @param openErased - Whether erased objects are allowed
+   * @returns The opened object, or the cached instance if already opened in this transaction
    */
   getObject<T extends AcDbObject>(
     objectId: AcDbObjectId,
     mode: AcDbOpenMode,
     openErased = false
   ): T | undefined {
-    if (!this.openedObjects.has(objectId)) {
-      const obj = this.lookupObject<T>(objectId, openErased)
-      this.openedObjects.set(objectId, obj)
-
-      if (mode === AcDbOpenMode.kForWrite) {
-        // Deep snapshot for rollback
-        this.originalStates.set(obj.objectId, structuredClone(obj))
-      }
-      return obj
+    const opened = this.openedObjects.get(objectId)
+    if (opened) {
+      return opened as T
     }
-    return undefined
+
+    const obj = this.lookupObject<T>(objectId, openErased)
+    this.openedObjects.set(objectId, obj)
+
+    if (mode === AcDbOpenMode.kForWrite) {
+      const snapshot = obj.clonePreservingIdentity()
+      this.originalStates.set(obj.objectId, snapshot)
+      this.recorder.recordModify(obj)
+    }
+    return obj
   }
 
   /**
@@ -56,12 +67,13 @@ export class AcDbTransaction {
     for (const [id, snapshot] of this.originalStates) {
       const obj = this.openedObjects.get(id)
       if (obj) {
-        Object.assign(obj, snapshot)
+        obj.restoreFrom(snapshot)
       }
     }
 
     this.originalStates.clear()
     this.openedObjects.clear()
+    this.recorder.clear()
   }
 
   /**

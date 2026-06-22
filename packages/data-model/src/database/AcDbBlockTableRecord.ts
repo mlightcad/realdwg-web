@@ -263,6 +263,17 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   appendEntity(entity: AcDbEntity | AcDbEntity[]) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot append entities outside an active transaction.'
+      )
+    }
+
     const commitEntity = (item: AcDbEntity) => {
       item.database = this.database
       item.ownerId = this.objectId
@@ -279,21 +290,28 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
       }
     }
 
-    if (Array.isArray(entity)) {
-      for (let i = 0; i < entity.length; ++i) {
-        commitEntity(entity[i])
+    const entitiesToAppend = Array.isArray(entity) ? entity : [entity]
+    for (const item of entitiesToAppend) {
+      commitEntity(item)
+    }
+
+    if (manager.isRecording()) {
+      for (const item of entitiesToAppend) {
+        manager.recordAppend(
+          { type: 'blockTableRecord', ownerId: this.objectId },
+          item
+        )
       }
-    } else {
-      commitEntity(entity)
     }
 
     // When creating one block, it will also go to this function. But we don't want `entityAppended` event
     // tiggered in this case. So check whether the block name is name of the model space.
-    if (this.isModelSapce || this.isPaperSapce) {
-      this.database.events.entityAppended.dispatch({
-        database: this.database,
-        entity: entity
-      })
+    if (
+      (this.isModelSapce || this.isPaperSapce) &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      this.database.notifyEntityAppended(entity)
     }
   }
 
@@ -314,20 +332,38 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * or false if the entity does not exist.
    */
   removeEntity(objectId: AcDbObjectId | AcDbObjectId[]) {
+    const manager = this.database.transactionManager
+    if (
+      manager.strictMode &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      throw new Error(
+        'Cannot remove entities outside an active transaction.'
+      )
+    }
+
     const ids = Array.isArray(objectId) ? objectId : [objectId]
     const entities: AcDbEntity[] = []
     ids.forEach(id => {
       const entity = this._entities.get(id)
       if (entity) {
+        if (manager.isRecording()) {
+          manager.recordRemove(
+            { type: 'blockTableRecord', ownerId: this.objectId },
+            entity
+          )
+        }
         entities.push(entity)
       }
       this._entities.delete(id)
     })
-    if (entities.length > 0) {
-      this.database.events.entityErased.dispatch({
-        database: this.database,
-        entity: entities
-      })
+    if (
+      entities.length > 0 &&
+      !manager.isRecording() &&
+      !manager.isApplyingUndoRedo()
+    ) {
+      this.database.notifyEntityErased(entities)
     }
     return entities.length > 0
   }

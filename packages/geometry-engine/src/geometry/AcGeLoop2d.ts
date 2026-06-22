@@ -1,4 +1,3 @@
-import { AcGeEllipseArc2d, AcGeSpline3d } from '../geometry'
 import {
   AcGeBox2d,
   AcGeMatrix2d,
@@ -8,7 +7,9 @@ import {
 } from '../math'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
+import { AcGeEllipseArc2d } from './AcGeEllipseArc2d'
 import { AcGeLine2d } from './AcGeLine2d'
+import { AcGeSpline3d } from './AcGeSpline3d'
 
 export type AcGeBoundaryEdgeType =
   | AcGeLine2d

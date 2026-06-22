@@ -703,10 +703,10 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   triggerModifiedEvent() {
-    this.database.events.entityModified.dispatch({
-      database: this.database,
-      entity: this
-    })
+    if (this.database.transactionManager.isRecording()) {
+      return
+    }
+    this.database.notifyEntityModified(this)
   }
 
   /**
