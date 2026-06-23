@@ -8,6 +8,7 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
+import { AcDbOpenMode } from '../base/AcDbOpenMode'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator'
 import {
   AcDbConverterType,
@@ -590,6 +591,99 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     return undefined
+  }
+
+  /**
+   * Returns true when the transaction manager is actively recording changes.
+   *
+   * Shortcut for {@link AcDbDatabaseTransactionManager.isRecording}.
+   */
+  isUndoRecording(): boolean {
+    return this.transactionManager.isRecording()
+  }
+
+  /**
+   * Opens a database object, preferring the active transaction when present.
+   *
+   * Editor shortcut: when a transaction is active, objects are opened through it
+   * so mutations are tracked for undo. Otherwise falls back to {@link getObjectById}.
+   */
+  private openObject<T extends AcDbObject>(
+    objectId: AcDbObjectId,
+    mode: AcDbOpenMode
+  ): T | undefined {
+    const tr = this.transactionManager.currentTransaction()
+    if (tr) {
+      const opened = tr.getObject<T>(objectId, mode)
+      if (opened) {
+        return opened
+      }
+    }
+    return this.getObjectById(objectId) as T | undefined
+  }
+
+  /**
+   * Opens a database object for read through the active transaction when present.
+   *
+   * Editor shortcut; see {@link openObject}.
+   */
+  openObjectForRead<T extends AcDbObject>(
+    objectId: AcDbObjectId
+  ): T | undefined {
+    return this.openObject<T>(objectId, AcDbOpenMode.kForRead)
+  }
+
+  /**
+   * Opens a database object for write through the active transaction when present.
+   *
+   * Editor shortcut; see {@link openObject}.
+   */
+  openObjectForWrite<T extends AcDbObject>(
+    objectId: AcDbObjectId
+  ): T | undefined {
+    return this.openObject<T>(objectId, AcDbOpenMode.kForWrite)
+  }
+
+  /**
+   * Opens an entity for read through the active transaction when present.
+   *
+   * Editor shortcut; see {@link openObject}.
+   */
+  openEntityForRead(
+    entityOrId: AcDbObjectId | AcDbEntity
+  ): AcDbEntity | undefined {
+    const objectId =
+      typeof entityOrId === 'string' ? entityOrId : entityOrId.objectId
+    return this.openObjectForRead<AcDbEntity>(objectId)
+  }
+
+  /**
+   * Opens an entity for write through the active transaction when present.
+   *
+   * Editor shortcut; see {@link openObject}.
+   */
+  openEntityForWrite(
+    entityOrId: AcDbObjectId | AcDbEntity
+  ): AcDbEntity | undefined {
+    const objectId =
+      typeof entityOrId === 'string' ? entityOrId : entityOrId.objectId
+    return this.openObjectForWrite<AcDbEntity>(objectId)
+  }
+
+  /**
+   * Runs a database mutation as one undoable operation.
+   *
+   * Editor shortcut: skips creating a new undo mark when the transaction manager
+   * is already recording (nested editor operations). Otherwise wraps `fn` in
+   * {@link AcDbDatabaseTransactionManager.runUndoable}.
+   */
+  runDatabaseEdit(label: string, fn: () => void): void {
+    if (this.isUndoRecording()) {
+      fn()
+      return
+    }
+
+    this.transactionManager.runUndoable(label, fn)
   }
 
   /**
