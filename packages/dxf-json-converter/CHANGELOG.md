@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.12
+
+### Patch Changes
+
+- feat(data-model,dxf-json-converter): add edit shortcuts and binary DXF parsing
+- Updated dependencies
+  - @mlightcad/data-model@1.9.12
+
 ## 1.9.11
 
 ### Patch Changes

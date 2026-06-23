@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.12
+
+### Patch Changes
+
+- feat(data-model,dxf-json-converter): add edit shortcuts and binary DXF parsing
+
 ## 1.6.11
 
 ### Patch Changes

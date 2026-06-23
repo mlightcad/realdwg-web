@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.5.12
+
+### Patch Changes
+
+- feat(data-model,dxf-json-converter): add edit shortcuts and binary DXF parsing
+- Updated dependencies
+  - @mlightcad/common@1.6.12
+  - @mlightcad/geometry-engine@3.4.12
+
 ## 3.5.11
 
 ### Patch Changes

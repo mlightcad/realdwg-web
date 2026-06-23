@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.12
+
+### Patch Changes
+
+- feat(data-model,dxf-json-converter): add edit shortcuts and binary DXF parsing
+- Updated dependencies
+  - @mlightcad/data-model@1.9.12
+  - @mlightcad/dxf-json-converter@1.9.12
+  - @mlightcad/libredwg-converter@3.7.12
+
 ## 0.3.11
 
 ### Patch Changes

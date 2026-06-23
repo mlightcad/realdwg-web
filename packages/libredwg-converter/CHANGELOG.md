@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.7.12
+
+### Patch Changes
+
+- feat(data-model,dxf-json-converter): add edit shortcuts and binary DXF parsing
+- Updated dependencies
+  - @mlightcad/data-model@1.9.12
+
 ## 3.7.11
 
 ### Patch Changes
