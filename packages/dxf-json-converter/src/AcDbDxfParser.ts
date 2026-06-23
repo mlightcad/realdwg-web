@@ -3,7 +3,7 @@ import {
   AcDbDwgVersion,
   dwgCodePageToEncoding
 } from '@mlightcad/data-model'
-import { DxfParser, ParsedDxf } from '@mlightcad/dxf-json'
+import { DxfParser, isBinaryDxf, ParsedDxf } from '@mlightcad/dxf-json'
 
 /**
  * Extracts DXF version and code page from an ArrayBuffer containing the DXF data.
@@ -20,7 +20,13 @@ export interface AcDbDxfHeaderInfo {
  */
 export class AcDbDxfParser {
   parse(data: ArrayBuffer): ParsedDxf {
+    const bytes = new Uint8Array(data)
     const parser = new DxfParser()
+
+    if (isBinaryDxf(bytes)) {
+      return parser.parseBuffer(bytes)
+    }
+
     // Use our own parser to parse version and code page information only to avoid
     // parsing the whole dxf file in order to imporve performance
     const headerInfo = this.getDxfInfoFromBuffer(data)

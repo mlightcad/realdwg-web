@@ -12,6 +12,7 @@
   "requiredInWorker": [
     "encodingFailureFatal",
     "thumbnailImageFormat",
+    "parseBuffer",
     "parseSync"
   ]
 }
