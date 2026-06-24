@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.13
+
+### Patch Changes
+
+- feat(data-model): enhance grip editing with GRIPS sysvar and entity-specific grips
+
 ## 1.6.12
 
 ### Patch Changes

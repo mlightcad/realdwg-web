@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.7.13
+
+### Patch Changes
+
+- feat(data-model): enhance grip editing with GRIPS sysvar and entity-specific grips
+- Updated dependencies
+  - @mlightcad/data-model@1.9.13
+
 ## 3.7.12
 
 ### Patch Changes

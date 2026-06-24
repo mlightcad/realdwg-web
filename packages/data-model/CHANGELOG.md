@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.13
+
+### Patch Changes
+
+- feat(data-model): enhance grip editing with GRIPS sysvar and entity-specific grips
+- Updated dependencies
+  - @mlightcad/common@1.6.13
+  - @mlightcad/geometry-engine@3.4.13
+  - @mlightcad/graphic-interface@3.5.13
+
 ## 1.9.12
 
 ### Patch Changes

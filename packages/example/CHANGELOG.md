@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.3.13
+
+### Patch Changes
+
+- feat(data-model): enhance grip editing with GRIPS sysvar and entity-specific grips
+- Updated dependencies
+  - @mlightcad/data-model@1.9.13
+  - @mlightcad/dxf-json-converter@1.9.13
+  - @mlightcad/libredwg-converter@3.7.13
+
 ## 0.3.12
 
 ### Patch Changes
