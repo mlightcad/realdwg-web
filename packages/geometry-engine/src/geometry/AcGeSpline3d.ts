@@ -6,7 +6,8 @@ import {
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGePointLike
+  AcGePointLike,
+  AcGeVector3dLike
 } from '../math'
 import { AcGeGeometryUtil } from '../util/AcGeGeometryUtil'
 import { acGeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
@@ -370,6 +371,134 @@ export class AcGeSpline3d extends AcGeCurve3d {
     const length = this._controlPoints.length
     const newIndex = index < 0 || index >= length ? length - 1 : index
     return this._controlPoints[newIndex]
+  }
+
+  /**
+   * Whether this spline is still driven by fit-point metadata.
+   */
+  get isFitPointSpline(): boolean {
+    return !!(
+      this._fitPoints &&
+      this._fitPoints.length > 0 &&
+      this._knotParameterization
+    )
+  }
+
+  /**
+   * Whether this spline is driven by explicit control-point metadata.
+   */
+  get isControlPointSpline(): boolean {
+    return !this.isFitPointSpline
+  }
+
+  /**
+   * Returns grip points for editing: fit points for fit splines, CVs otherwise.
+   */
+  getGripPoints(): AcGePoint3d[] {
+    if (this.isFitPointSpline) {
+      return this._fitPoints!.map(
+        point => new AcGePoint3d(point.x, point.y, point.z ?? 0)
+      )
+    }
+
+    return this._controlPoints.map(
+      point => new AcGePoint3d(point.x, point.y, point.z ?? 0)
+    )
+  }
+
+  /**
+   * Moves grip points by offset and rebuilds the underlying NURBS curve.
+   *
+   * Fit-point splines move fit points; control-point splines move CVs.
+   */
+  moveGripPointsAt(indices: readonly number[], offset: AcGeVector3dLike) {
+    if (this.isFitPointSpline) {
+      this.moveFitPointsAt(indices, offset)
+      return this
+    }
+
+    this.moveControlPointsAt(indices, offset)
+    return this
+  }
+
+  /**
+   * Applies an offset to the fit points at the given indices and rebuilds the
+   * NURBS curve from the updated fit data.
+   *
+   * @param indices - Grip indices to move; non-integer and negative values are skipped.
+   * @param offset - Translation applied in WCS.
+   */
+  private moveFitPointsAt(
+    indices: readonly number[],
+    offset: AcGeVector3dLike
+  ) {
+    if (!this._fitPoints) {
+      return
+    }
+
+    for (const index of indices) {
+      if (!Number.isInteger(index) || index < 0) {
+        continue
+      }
+      const point = this._fitPoints[index]
+      if (point) {
+        AcGeGeometryUtil.applyOffsetToPoint3d(point, offset)
+      }
+    }
+
+    this._boundingBoxNeedsUpdate = true
+    this.buildCurve()
+  }
+
+  /**
+   * Applies an offset to the control points at the given indices and rebuilds
+   * the underlying NURBS representation.
+   *
+   * @param indices - Grip indices to move; non-integer and negative values are skipped.
+   * @param offset - Translation applied in WCS.
+   */
+  private moveControlPointsAt(
+    indices: readonly number[],
+    offset: AcGeVector3dLike
+  ) {
+    for (const index of indices) {
+      if (!Number.isInteger(index) || index < 0) {
+        continue
+      }
+      const point = this.getControlPointAt(index)
+      if (point) {
+        AcGeGeometryUtil.applyOffsetToPoint3d(point, offset)
+      }
+    }
+
+    this.rebuildAfterControlPointMutation()
+  }
+
+  /**
+   * Rebuilds the NURBS curve from the current control points while preserving
+   * knots and weights.
+   *
+   * When the spline was fit-point driven, fit-point metadata is cleared so the
+   * curve is represented purely by control vertices after the edit.
+   */
+  private rebuildAfterControlPointMutation() {
+    const knots = this._nurbsCurve.knots()
+    const weights = this._nurbsCurve.weights()
+
+    if (this.isFitPointSpline) {
+      this._fitPoints = undefined
+      this._knotParameterization = undefined
+      this._startTangent = undefined
+      this._endTangent = undefined
+    }
+
+    this._nurbsCurve = AcGeNurbsCurve.byKnotsControlPointsWeights(
+      this._degree,
+      knots,
+      this._controlPoints,
+      weights.length > 0 ? weights : undefined
+    )
+    this._boundingBoxNeedsUpdate = true
   }
 
   /**

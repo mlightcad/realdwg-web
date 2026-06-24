@@ -100,6 +100,31 @@ export const VPORT_FALLBACK_URC = Object.freeze({ x: 1, y: 1 })
 export const VPORT_FALLBACK_VIEW_DIR = Object.freeze({ x: 0, y: 0, z: 1 })
 export const VPORT_FALLBACK_VIEW_TARGET = Object.freeze({ x: 0, y: 0, z: 0 })
 
+/** AutoCAD default ACI color index for the GRIPCOLOR system variable. */
+export const ACDB_GRIPCOLOR_DEFAULT = 150
+
+/** AutoCAD valid range for the GRIPCOLOR system variable. */
+export const ACDB_GRIPCOLOR_MIN = 1
+export const ACDB_GRIPCOLOR_MAX = 255
+
+/** AutoCAD default ACI color index for the GRIPHOT system variable. */
+export const ACDB_GRIPHOT_DEFAULT = 12
+
+/** AutoCAD valid range for the GRIPHOT system variable. */
+export const ACDB_GRIPHOT_MIN = 1
+export const ACDB_GRIPHOT_MAX = 255
+
 /** AutoCAD valid range for the GRIPOBJLIMIT system variable. */
 export const ACDB_GRIPOBJLIMIT_MIN = 0
 export const ACDB_GRIPOBJLIMIT_MAX = 32767
+
+/** AutoCAD valid range for the GRIPS system variable. */
+export const ACDB_GRIPS_MIN = 0
+export const ACDB_GRIPS_MAX = 2
+
+/** AutoCAD default value for the GRIPSIZE system variable. */
+export const ACDB_GRIPSIZE_DEFAULT = 5
+
+/** AutoCAD valid range for the GRIPSIZE system variable. */
+export const ACDB_GRIPSIZE_MIN = 1
+export const ACDB_GRIPSIZE_MAX = 255
