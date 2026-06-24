@@ -1,5 +1,5 @@
 import { AcCmErrors } from '@mlightcad/common'
-import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import type { AcGeKnotParameterizationType } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -143,12 +143,88 @@ describe('AcDbSpline', () => {
     expect(nearestPoints[0].x).toBeLessThanOrEqual(3)
   })
 
-  it('returns control vertices as grip points', () => {
+  it('returns control vertices as grip points for control-point splines', () => {
     const spline = new AcDbSpline(controlPoints, knots)
     const grips = spline.subGetGripPoints()
     expect(grips).toHaveLength(4)
     expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(grips[3]).toMatchObject({ x: 3, y: 0, z: 0 })
+  })
+
+  it('uses control vertices rather than derived fit data for CV splines', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+    const grips = spline.subGetGripPoints()
+
+    expect(grips).toHaveLength(controlPoints.length)
+    grips.forEach((grip, index) => {
+      expect(grip).toMatchObject(controlPoints[index])
+    })
+  })
+
+  it('moves control vertices via subMoveGripPointsAt and updates the curve', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+
+    const endBefore: AcGePoint3d[] = []
+    spline.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endBefore
+    )
+
+    spline.subMoveGripPointsAt([3], new AcGeVector3d(0, 2, 0))
+
+    const endAfter: AcGePoint3d[] = []
+    spline.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      endAfter
+    )
+
+    expect(spline.subGetGripPoints()[3]).toMatchObject({ x: 3, y: 2, z: 0 })
+    expect(endAfter[1].y).toBeGreaterThan(endBefore[1].y)
+  })
+
+  it('returns fit points as grip points for fit-point splines', () => {
+    const fitPoints = [
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(3, 4, 0),
+      new AcGePoint3d(7, 4, 0),
+      new AcGePoint3d(10, 0, 0)
+    ]
+    const spline = new AcDbSpline(
+      fitPoints,
+      'Uniform' as AcGeKnotParameterizationType
+    )
+    const grips = spline.subGetGripPoints()
+
+    expect(grips).toHaveLength(fitPoints.length)
+    grips.forEach((grip, index) => {
+      expect(grip).toMatchObject({
+        x: fitPoints[index].x,
+        y: fitPoints[index].y,
+        z: fitPoints[index].z
+      })
+    })
+  })
+
+  it('moves fit points via subMoveGripPointsAt and updates the curve', () => {
+    const fitPoints = [
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(3, 4, 0),
+      new AcGePoint3d(7, 4, 0),
+      new AcGePoint3d(10, 0, 0)
+    ]
+    const spline = new AcDbSpline(
+      fitPoints,
+      'Uniform' as AcGeKnotParameterizationType
+    )
+
+    spline.subMoveGripPointsAt([1], new AcGeVector3d(0, 3, 0))
+
+    expect(spline.subGetGripPoints()[1]).toMatchObject({ x: 3, y: 7, z: 0 })
+    expect(spline.subGetGripPoints()).toHaveLength(fitPoints.length)
   })
 
   it('transforms by matrix and returns itself', () => {

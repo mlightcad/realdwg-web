@@ -14,6 +14,8 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
+import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -315,9 +317,10 @@ export class AcDbPolyline extends AcDbCurve {
    * Gets the grip points for this polyline.
    *
    * Grip points are control points that can be used to modify the polyline.
-   * For a polyline, the grip points are all the vertices.
+   * For a polyline, the grip points are all the vertices. When the **GRIPS**
+   * system variable is `2`, midpoint grips are also returned for each segment.
    *
-   * @returns Array of grip points (all vertices)
+   * @returns Array of grip points (vertices, then optional segment midpoints)
    *
    * @example
    * ```typescript
@@ -330,15 +333,94 @@ export class AcDbPolyline extends AcDbCurve {
     for (let index = 0; index < this.numberOfVertices; ++index) {
       gripPoints.push(this.getPoint3dAt(index))
     }
+    if (this.shouldIncludeSegmentMidpointGrips()) {
+      this.appendSegmentMidpointGrips(gripPoints)
+    }
     return gripPoints
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const vertexCount = this.numberOfVertices
+    const includeMidpoints = this.shouldIncludeSegmentMidpointGrips()
+    const segmentCount = includeMidpoints ? this.getSegmentCount() : 0
+
     acdbForEachGripIndex(indices, index => {
-      acdbMovePolyline2dVertexAt(this._geo.vertices, index, offset)
+      if (index < vertexCount) {
+        acdbMovePolyline2dVertexAt(this._geo.vertices, index, offset)
+        return
+      }
+      if (!includeMidpoints || index >= vertexCount + segmentCount) {
+        return
+      }
+      const segmentIndex = index - vertexCount
+      acdbMovePolyline2dVertexAt(this._geo.vertices, segmentIndex, offset)
+      acdbMovePolyline2dVertexAt(
+        this._geo.vertices,
+        (segmentIndex + 1) % vertexCount,
+        offset
+      )
     })
     return this
+  }
+
+  /**
+   * Returns whether segment midpoint grips should be included.
+   *
+   * Matches AutoCAD **GRIPS** = `2`.
+   */
+  private shouldIncludeSegmentMidpointGrips() {
+    return this.getGripsMode() >= 2
+  }
+
+  /**
+   * Reads the current **GRIPS** system variable value.
+   */
+  private getGripsMode() {
+    try {
+      const value = AcDbSysVarManager.instance().getVar(
+        AcDbSystemVariables.GRIPS,
+        this.database
+      )
+      return typeof value === 'number' ? value : 2
+    } catch {
+      return 2
+    }
+  }
+
+  /**
+   * Returns the number of editable polyline segments.
+   */
+  private getSegmentCount() {
+    const vertexCount = this.numberOfVertices
+    if (vertexCount < 2) {
+      return 0
+    }
+    return this.closed ? vertexCount : vertexCount - 1
+  }
+
+  /**
+   * Appends one midpoint grip for each polyline segment.
+   */
+  private appendSegmentMidpointGrips(gripPoints: AcGePoint3d[]) {
+    const geo = this._geo
+    const elevation = this._elevation
+    const segmentCount = this.getSegmentCount()
+    const vertexCount = geo.numberOfVertices
+
+    for (let index = 0; index < segmentCount; index++) {
+      const segmentSnaps: AcGePoint3d[] = []
+      acdbCollectPolyline2dSegmentOsnapPoints(
+        geo.getPointAt(index),
+        geo.getPointAt((index + 1) % vertexCount),
+        geo.vertices[index]?.bulge,
+        elevation,
+        AcDbOsnapMode.MidPoint,
+        { x: 0, y: 0, z: 0 },
+        segmentSnaps
+      )
+      gripPoints.push(...segmentSnaps)
+    }
   }
 
   /**

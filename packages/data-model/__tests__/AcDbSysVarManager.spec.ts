@@ -16,12 +16,40 @@ describe('AcDbSysVarManager', () => {
     )
 
     const oldPickbox = manager.getVar(AcDbSystemVariables.PICKBOX, db)
+    const oldGripColor = manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)
+    const oldGripHot = manager.getVar(AcDbSystemVariables.GRIPHOT, db)
     const oldGripObjLimit = manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)
+    const oldGrips = manager.getVar(AcDbSystemVariables.GRIPS, db)
+    const oldGripSize = manager.getVar(AcDbSystemVariables.GRIPSIZE, db)
     const events: string[] = []
     manager.events.sysVarChanged.addEventListener(e => events.push(e.name))
 
     manager.setVar(AcDbSystemVariables.PICKBOX, '12', db)
     expect(manager.getVar(AcDbSystemVariables.PICKBOX, db)).toBe(12)
+
+    expect(manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)).toBe(150)
+    manager.setVar(AcDbSystemVariables.GRIPCOLOR, '5', db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)).toBe(5)
+    manager.setVar(AcDbSystemVariables.GRIPCOLOR, 255, db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)).toBe(255)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPCOLOR, 0, db)
+    ).toThrow('Invalid GRIPCOLOR value! Valid range is 1 to 255.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPCOLOR, 256, db)
+    ).toThrow('Invalid GRIPCOLOR value! Valid range is 1 to 255.')
+
+    expect(manager.getVar(AcDbSystemVariables.GRIPHOT, db)).toBe(12)
+    manager.setVar(AcDbSystemVariables.GRIPHOT, '5', db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPHOT, db)).toBe(5)
+    manager.setVar(AcDbSystemVariables.GRIPHOT, 255, db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPHOT, db)).toBe(255)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPHOT, 0, db)
+    ).toThrow('Invalid GRIPHOT value! Valid range is 1 to 255.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPHOT, 256, db)
+    ).toThrow('Invalid GRIPHOT value! Valid range is 1 to 255.')
 
     expect(manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)).toBe(100)
     manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, '50', db)
@@ -31,6 +59,27 @@ describe('AcDbSysVarManager', () => {
     expect(() =>
       manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, 32768, db)
     ).toThrow('Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.')
+
+    expect(manager.getVar(AcDbSystemVariables.GRIPS, db)).toBe(2)
+    manager.setVar(AcDbSystemVariables.GRIPS, '1', db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPS, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.GRIPS, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPS, db)).toBe(0)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPS, 3, db)
+    ).toThrow('Invalid GRIPS value! Valid range is 0 to 2.')
+
+    expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(5)
+    manager.setVar(AcDbSystemVariables.GRIPSIZE, '10', db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(10)
+    manager.setVar(AcDbSystemVariables.GRIPSIZE, 255, db)
+    expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(255)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPSIZE, 0, db)
+    ).toThrow('Invalid GRIPSIZE value! Valid range is 1 to 255.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GRIPSIZE, 256, db)
+    ).toThrow('Invalid GRIPSIZE value! Valid range is 1 to 255.')
 
     manager.setVar(AcDbSystemVariables.DYNPROMPT, 'false', db)
     expect(manager.getVar(AcDbSystemVariables.DYNPROMPT, db)).toBe(false)
@@ -110,11 +159,15 @@ describe('AcDbSysVarManager', () => {
     ).toThrow('Invalid color value!')
 
     manager.setVar(AcDbSystemVariables.PICKBOX, oldPickbox as number, db)
+    manager.setVar(AcDbSystemVariables.GRIPCOLOR, oldGripColor as number, db)
+    manager.setVar(AcDbSystemVariables.GRIPHOT, oldGripHot as number, db)
     manager.setVar(
       AcDbSystemVariables.GRIPOBJLIMIT,
       oldGripObjLimit as number,
       db
     )
+    manager.setVar(AcDbSystemVariables.GRIPS, oldGrips as number, db)
+    manager.setVar(AcDbSystemVariables.GRIPSIZE, oldGripSize as number, db)
   })
 
   it('supports registry helpers and defaults', () => {
@@ -179,7 +232,11 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARADDANG)).toBe('')
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARMODE)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.POLARANG)).toBe(90)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GRIPCOLOR)).toBe(150)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GRIPHOT)).toBe(12)
     expect(manager.getDefaultValue(AcDbSystemVariables.GRIPOBJLIMIT)).toBe(100)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GRIPS)).toBe(2)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GRIPSIZE)).toBe(5)
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'

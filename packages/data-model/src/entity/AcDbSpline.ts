@@ -1,10 +1,8 @@
 import { AcCmErrors } from '@mlightcad/common'
 import {
-  AcGeGeometryUtil,
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
   AcGePoint2d,
-  AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d,
   AcGeVector3dLike,
@@ -15,7 +13,6 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { AcDbPolyline } from './AcDbPolyline'
 
 function resolveSplineKnotParameterization(
@@ -468,24 +465,18 @@ export class AcDbSpline extends AcDbCurve {
   /**
    * Gets the grip points for this spline.
    *
-   * Grip points are the B-spline control vertices (CVs).
+   * Grip points follow the spline definition mode: fit points for fit splines,
+   * control vertices for control-point splines.
    *
-   * @returns Array of grip points at each control vertex
+   * @returns Array of grip points for editing
    */
   subGetGripPoints() {
-    return this._geo.controlPoints.map(
-      point => new AcGePoint3d(point.x, point.y, point.z ?? 0)
-    )
+    return this._geo.getGripPoints()
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
-    acdbForEachGripIndex(indices, index => {
-      const point = this._geo.controlPoints[index]
-      if (point) {
-        AcGeGeometryUtil.applyOffsetToPoint3d(point, offset)
-      }
-    })
+    this._geo.moveGripPointsAt(indices, offset)
     return this
   }
 

@@ -64,11 +64,40 @@ export const AcDbSystemVariables = {
   /** Lower-left corner of the model-space drawing extents. */
   EXTMIN: 'EXTMIN',
   /**
+   * ACI color index for unselected grips on selected objects. Valid range is
+   * **1–255**. Saved in the registry (not in the drawing).
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-6D239124-BCB9-430F-91F8-7D7C4DC1A0A4
+   */
+  GRIPCOLOR: 'GRIPCOLOR',
+  /**
+   * ACI color index for selected (hot) grips. Valid range is **1–255**. Saved
+   * in the registry (not in the drawing).
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-96ABB239-7C6F-431B-BB37-672123472EC8
+   */
+  GRIPHOT: 'GRIPHOT',
+  /**
    * Maximum number of selected objects that display grips. When the initial
    * selection set exceeds this limit, grips are suppressed to improve
    * performance. `0` disables the limit and always shows grips.
    */
   GRIPOBJLIMIT: 'GRIPOBJLIMIT',
+  /**
+   * Controls the display of grips on selected objects. `0` hides grips, `1`
+   * displays grips, and `2` displays additional midpoint grips on polyline
+   * segments. Saved in the registry (not in the drawing).
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?caas=caas/documentation/ACDLT/2014/ENU/files/GUID-97AD30F3-A1A3-4027-91B7-49008841A447-htm.html
+   */
+  GRIPS: 'GRIPS',
+  /**
+   * Sets the size of the grip box, in device-independent pixels. Valid range is
+   * **1–255**. Saved in the registry (not in the drawing).
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-5F355F5F-0DDE-49B4-B253-C6BA717BAF8B
+   */
+  GRIPSIZE: 'GRIPSIZE',
   /** Default angle, in radians, for newly created hatch patterns. */
   HPANG: 'HPANG',
   /** Controls whether newly created hatches are associative. */

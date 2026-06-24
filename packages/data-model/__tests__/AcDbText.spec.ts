@@ -1,7 +1,8 @@
 import {
   AcGeBox3d,
   AcGeMatrix3d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -153,6 +154,46 @@ describe('AcDbText', () => {
     expect(text.height).toBeCloseTo(6, 8)
     expect(text.widthFactor).toBeCloseTo(2 / 3, 8)
     expect(text.thickness).toBeCloseTo(20, 8)
+  })
+
+  it('moves alignment point together with position via transformBy', () => {
+    const text = new AcDbText()
+    text.horizontalMode = AcDbTextHorizontalMode.CENTER
+    text.verticalMode = AcDbTextVerticalMode.TOP
+    text.position = new AcGePoint3d(417.4074308462113, 141.1597540414588, 0)
+    text.alignmentPoint = new AcGePoint3d(
+      437.6794664300651,
+      156.1597540414587,
+      0
+    )
+    const alignmentBefore = text.alignmentPoint.clone()
+
+    text.transformBy(new AcGeMatrix3d().makeTranslation(10, 20, 0))
+
+    expect(text.position.x).toBeCloseTo(427.4074308462113, 6)
+    expect(text.position.y).toBeCloseTo(161.1597540414588, 6)
+    expect(text.alignmentPoint.x).toBeCloseTo(alignmentBefore.x + 10, 6)
+    expect(text.alignmentPoint.y).toBeCloseTo(alignmentBefore.y + 20, 6)
+  })
+
+  it('moves alignment point together with position via subMoveGripPointsAt', () => {
+    const text = new AcDbText()
+    text.horizontalMode = AcDbTextHorizontalMode.CENTER
+    text.verticalMode = AcDbTextVerticalMode.TOP
+    text.position = new AcGePoint3d(417.4074308462113, 141.1597540414588, 0)
+    text.alignmentPoint = new AcGePoint3d(
+      437.6794664300651,
+      156.1597540414587,
+      0
+    )
+    const alignmentBefore = text.alignmentPoint.clone()
+
+    text.subMoveGripPointsAt([0], new AcGeVector3d(5, -3, 0))
+
+    expect(text.position.x).toBeCloseTo(422.4074308462113, 6)
+    expect(text.position.y).toBeCloseTo(138.1597540414588, 6)
+    expect(text.alignmentPoint.x).toBeCloseTo(alignmentBefore.x + 5, 6)
+    expect(text.alignmentPoint.y).toBeCloseTo(alignmentBefore.y - 3, 6)
   })
 
   it('keeps rotation and thickness when corresponding transformed axes collapse', () => {

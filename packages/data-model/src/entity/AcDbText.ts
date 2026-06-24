@@ -523,6 +523,9 @@ export class AcDbText extends AcDbEntity {
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
     acdbMovePrimaryGripPointAt(indices, offset, this._position)
+    // Non-default alignments render from group 11 (`alignmentPoint`), so a grip
+    // drag on group 10 must translate both anchors together.
+    this._alignmentPoint.add(offset)
     return this
   }
 
@@ -591,6 +594,9 @@ export class AcDbText extends AcDbEntity {
     if (zScale > 0) {
       this._thickness *= zScale
     }
+    const alignmentPoint = this._alignmentPoint.clone()
+    alignmentPoint.applyMatrix4(matrix)
+    this._alignmentPoint.copy(alignmentPoint)
     return this
   }
 

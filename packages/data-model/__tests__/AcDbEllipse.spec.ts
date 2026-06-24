@@ -1,7 +1,8 @@
 import {
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGeVector3d
+  AcGeVector3d,
+  TAU
 } from '@mlightcad/geometry-engine'
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database'
@@ -225,7 +226,7 @@ describe('AcDbEllipse', () => {
     expect(openQuadrantPoints).toHaveLength(0)
   })
 
-  it('returns grip points for center, start, and end parameter points', () => {
+  it('returns grip points for center, start, and end on open ellipse arcs', () => {
     createWorkingDb()
     const ellipse = new AcDbEllipse(
       new AcGePoint3d(1, 2, 3),
@@ -243,6 +244,67 @@ describe('AcDbEllipse', () => {
     expect(grips[2].x).toBeCloseTo(1, 10)
     expect(grips[2].y).toBeCloseTo(4, 10)
     expect(grips[2].z).toBeCloseTo(3, 10)
+  })
+
+  it('returns grip points with center and quadrant points on closed ellipses', () => {
+    createWorkingDb()
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(1, 2, 0),
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      3,
+      2,
+      0,
+      0
+    )
+    const grips = ellipse.subGetGripPoints()
+    expect(ellipse.closed).toBe(true)
+    expect(grips).toHaveLength(5)
+    expect(grips[0]).toBe(ellipse.center)
+    expect(grips[0]).toMatchObject({ x: 1, y: 2, z: 0 })
+    expect(grips[1].x).toBeCloseTo(4, 8)
+    expect(grips[1].y).toBeCloseTo(2, 8)
+    expect(grips[2].x).toBeCloseTo(1, 8)
+    expect(grips[2].y).toBeCloseTo(4, 8)
+    expect(grips[3].x).toBeCloseTo(-2, 8)
+    expect(grips[3].y).toBeCloseTo(2, 8)
+    expect(grips[4].x).toBeCloseTo(1, 8)
+    expect(grips[4].y).toBeCloseTo(0, 8)
+  })
+
+  it('treats a full ellipse stored with a 0 to 2π span as closed', () => {
+    createWorkingDb()
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(1, 2, 0),
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      3,
+      2,
+      0,
+      TAU
+    )
+
+    expect(ellipse.closed).toBe(true)
+    expect(ellipse.subGetGripPoints()).toHaveLength(5)
+  })
+
+  it('scales the closed ellipse when moving a quadrant grip', () => {
+    createWorkingDb()
+    const ellipse = new AcDbEllipse(
+      new AcGePoint3d(0, 0, 0),
+      AcGeVector3d.Z_AXIS,
+      AcGeVector3d.X_AXIS,
+      5,
+      2,
+      0,
+      0
+    )
+
+    ellipse.subMoveGripPointsAt([1], new AcGeVector3d(3, 0, 0))
+
+    expect(ellipse.center).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(ellipse.majorAxisRadius).toBeCloseTo(8, 8)
+    expect(ellipse.minorAxisRadius).toBeCloseTo(2, 8)
   })
 
   it('exposes runtime properties and accessors', () => {

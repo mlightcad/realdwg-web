@@ -8,12 +8,15 @@ import {
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { TEMP_OBJECT_ID_PREFIX } from '../src/base/AcDbObject'
 import { AcDbDatabase } from '../src/database'
+import { AcDbSystemVariables } from '../src/database/AcDbSystemVariables'
+import { AcDbSysVarManager } from '../src/database/AcDbSysVarManager'
 import { AcDbPolyline } from '../src/entity'
 import { AcDbOsnapMode } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 import {
   attachEntityToNewModelSpace,
-  getDxfGroupValues
+  getDxfGroupValues,
+  setupWorkingDatabase
 } from '../test-utils/entityTestUtils'
 
 describe('AcDbPolyline', () => {
@@ -103,6 +106,11 @@ describe('AcDbPolyline', () => {
   })
 
   it('returns grip points and osnap points for supported modes', () => {
+    const db = setupWorkingDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldGrips = manager.getVar(AcDbSystemVariables.GRIPS, db)
+    manager.setVar(AcDbSystemVariables.GRIPS, 1, db)
+
     const polyline = new AcDbPolyline()
     polyline.elevation = 2
     polyline.addVertexAt(0, new AcGePoint2d(0, 0))
@@ -163,6 +171,54 @@ describe('AcDbPolyline', () => {
       centerSnaps
     )
     expect(centerSnaps).toHaveLength(0)
+
+    manager.setVar(AcDbSystemVariables.GRIPS, oldGrips as number, db)
+  })
+
+  it('returns segment midpoint grips when GRIPS is 2', () => {
+    const db = setupWorkingDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldGrips = manager.getVar(AcDbSystemVariables.GRIPS, db)
+    manager.setVar(AcDbSystemVariables.GRIPS, 2, db)
+
+    const polyline = new AcDbPolyline()
+    polyline.elevation = 2
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0))
+    polyline.addVertexAt(1, new AcGePoint2d(2, 0))
+    polyline.addVertexAt(2, new AcGePoint2d(2, 3))
+
+    const grips = polyline.subGetGripPoints()
+    expect(grips).toHaveLength(5)
+    expect(grips.slice(0, 3)).toEqual([
+      new AcGePoint3d(0, 0, 2),
+      new AcGePoint3d(2, 0, 2),
+      new AcGePoint3d(2, 3, 2)
+    ])
+    expect(grips[3]).toMatchObject({ x: 1, y: 0, z: 2 })
+    expect(grips[4]).toMatchObject({ x: 2, y: 1.5, z: 2 })
+
+    manager.setVar(AcDbSystemVariables.GRIPS, oldGrips as number, db)
+  })
+
+  it('moves segment midpoint grips by translating both segment vertices', () => {
+    const db = setupWorkingDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldGrips = manager.getVar(AcDbSystemVariables.GRIPS, db)
+    manager.setVar(AcDbSystemVariables.GRIPS, 2, db)
+
+    const polyline = new AcDbPolyline()
+    polyline.elevation = 2
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0))
+    polyline.addVertexAt(1, new AcGePoint2d(2, 0))
+    polyline.addVertexAt(2, new AcGePoint2d(2, 3))
+
+    polyline.subMoveGripPointsAt([3], new AcGeVector3d(1, 0, 0))
+
+    expect(polyline.getPoint2dAt(0)).toEqual(new AcGePoint2d(1, 0))
+    expect(polyline.getPoint2dAt(1)).toEqual(new AcGePoint2d(3, 0))
+    expect(polyline.getPoint2dAt(2)).toEqual(new AcGePoint2d(2, 3))
+
+    manager.setVar(AcDbSystemVariables.GRIPS, oldGrips as number, db)
   })
 
   it('moves vertex grip points by index', () => {

@@ -9,6 +9,15 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
 import {
+  ACDB_GRIPCOLOR_DEFAULT,
+  ACDB_GRIPCOLOR_MAX,
+  ACDB_GRIPCOLOR_MIN,
+  ACDB_GRIPHOT_DEFAULT,
+  ACDB_GRIPHOT_MAX,
+  ACDB_GRIPHOT_MIN,
+  ACDB_GRIPSIZE_DEFAULT,
+  ACDB_GRIPSIZE_MAX,
+  ACDB_GRIPSIZE_MIN,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
@@ -269,6 +278,30 @@ export class AcDbSysVarManager {
       defaultValue: 'Drawing1.dwg'
     })
     /**
+     * Controls the color of unselected grips as an ACI color index. Valid
+     * range is **1–255**. Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-6D239124-BCB9-430F-91F8-7D7C4DC1A0A4
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GRIPCOLOR,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_GRIPCOLOR_DEFAULT
+    })
+    /**
+     * Controls the color of selected (hot) grips as an ACI color index. Valid
+     * range is **1–255**. Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-96ABB239-7C6F-431B-BB37-672123472EC8
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GRIPHOT,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_GRIPHOT_DEFAULT
+    })
+    /**
      * Suppresses the display of grips when the initial selection set includes
      * more than the specified number of objects. Valid range is **0–32767**;
      * `0` always displays grips. Saved in the registry (not in the drawing).
@@ -280,6 +313,34 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 100
+    })
+    /**
+     * Controls the display of grips on selected objects.
+     * - 0: Hides grips
+     * - 1: Displays grips
+     * - 2: Displays additional midpoint grips on polyline segments
+     *
+     * Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2024/ENU/?caas=caas/documentation/ACDLT/2014/ENU/files/GUID-97AD30F3-A1A3-4027-91B7-49008841A447-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GRIPS,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 2
+    })
+    /**
+     * Sets the size of the grip box, in device-independent pixels. Valid range
+     * is **1–255**. Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-5F355F5F-0DDE-49B4-B253-C6BA717BAF8B
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GRIPSIZE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_GRIPSIZE_DEFAULT
     })
     /**
      * Sets the default angle, in radians, for new hatch patterns in this session.
@@ -740,10 +801,56 @@ export class AcDbSysVarManager {
           value = tmp
         }
       }
+      if (name === AcDbSystemVariables.GRIPCOLOR.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (
+          !Number.isFinite(intVal) ||
+          intVal < ACDB_GRIPCOLOR_MIN ||
+          intVal > ACDB_GRIPCOLOR_MAX
+        ) {
+          throw new Error(
+            `Invalid GRIPCOLOR value! Valid range is ${ACDB_GRIPCOLOR_MIN} to ${ACDB_GRIPCOLOR_MAX}.`
+          )
+        }
+        value = intVal
+      }
+      if (name === AcDbSystemVariables.GRIPHOT.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (
+          !Number.isFinite(intVal) ||
+          intVal < ACDB_GRIPHOT_MIN ||
+          intVal > ACDB_GRIPHOT_MAX
+        ) {
+          throw new Error(
+            `Invalid GRIPHOT value! Valid range is ${ACDB_GRIPHOT_MIN} to ${ACDB_GRIPHOT_MAX}.`
+          )
+        }
+        value = intVal
+      }
       if (name === AcDbSystemVariables.GRIPOBJLIMIT.toLowerCase()) {
         const intVal = Math.trunc(value as number)
         if (!Number.isFinite(intVal) || intVal < 0 || intVal > 32767) {
           throw new Error('Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.')
+        }
+        value = intVal
+      }
+      if (name === AcDbSystemVariables.GRIPS.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (!Number.isFinite(intVal) || intVal < 0 || intVal > 2) {
+          throw new Error('Invalid GRIPS value! Valid range is 0 to 2.')
+        }
+        value = intVal
+      }
+      if (name === AcDbSystemVariables.GRIPSIZE.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (
+          !Number.isFinite(intVal) ||
+          intVal < ACDB_GRIPSIZE_MIN ||
+          intVal > ACDB_GRIPSIZE_MAX
+        ) {
+          throw new Error(
+            `Invalid GRIPSIZE value! Valid range is ${ACDB_GRIPSIZE_MIN} to ${ACDB_GRIPSIZE_MAX}.`
+          )
         }
         value = intVal
       }
