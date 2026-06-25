@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.7.14
+
+### Patch Changes
+
+- fix(data-model): correct transforms for dimensions, proxy entities, and block attributes
+- Updated dependencies
+  - @mlightcad/data-model@1.9.14
+
 ## 3.7.13
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.6.14
+
+### Patch Changes
+
+- fix(data-model): correct transforms for dimensions, proxy entities, and block attributes
+
 ## 1.6.13
 
 ### Patch Changes

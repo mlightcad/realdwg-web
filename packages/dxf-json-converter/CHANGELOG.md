@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.9.14
+
+### Patch Changes
+
+- fix(data-model): correct transforms for dimensions, proxy entities, and block attributes
+- Updated dependencies
+  - @mlightcad/data-model@1.9.14
+
 ## 1.9.13
 
 ### Patch Changes

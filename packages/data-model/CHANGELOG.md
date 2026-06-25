@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.9.14
+
+### Patch Changes
+
+- fix(data-model): correct transforms for dimensions, proxy entities, and block attributes
+- Updated dependencies
+  - @mlightcad/common@1.6.14
+  - @mlightcad/geometry-engine@3.4.14
+  - @mlightcad/graphic-interface@3.5.14
+
 ## 1.9.13
 
 ### Patch Changes
