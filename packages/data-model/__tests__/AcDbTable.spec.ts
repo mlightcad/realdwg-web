@@ -20,7 +20,6 @@ const createGiEntity = () => {
     layerName: '',
     visible: true,
     applyMatrix: jest.fn(),
-    bakeTransformToChildren: jest.fn(),
     addChild: jest.fn(),
     fastDeepClone: jest.fn()
   }

@@ -226,18 +226,27 @@ export class AcDbRenderingCache {
       }
 
       if (block && transform) {
-        block.applyMatrix(transform)
+        _tmpWorldTransform.copy(transform)
+        block.applyMatrix(_tmpWorldTransform)
         if (normal && (normal.x != 0 || normal.y != 0 || normal.z != 1)) {
-          transform.setFromExtrusionDirection(normal)
-          block.applyMatrix(transform)
+          _tmpExtrusion.setFromExtrusionDirection(normal)
+          block.applyMatrix(_tmpExtrusion)
+          _tmpWorldTransform.premultiply(_tmpExtrusion)
         }
       }
       if (block && attributes && attributes.length > 0) {
-        // Geometry information in attribute are in WCS. So we need to bake the block
-        // reference's transformation into all of its children and resets the block
-        // reference itself to an identity transform.
-        block.bakeTransformToChildren()
-        attributes.forEach(attrib => block.addChild(attrib))
+        // Attribute geometry is emitted in WCS. Convert it to block-local space so
+        // the block reference transform applied above places it correctly.
+        const inverse =
+          transform != null
+            ? _tmpInverse.copy(_tmpWorldTransform).invert()
+            : undefined
+        attributes.forEach(attrib => {
+          if (inverse) {
+            attrib.applyMatrix(inverse)
+          }
+          block.addChild(attrib)
+        })
       }
       return block
     } else {
@@ -269,3 +278,6 @@ export class AcDbRenderingCache {
 }
 
 const _tmpColor = /*@__PURE__*/ new AcCmColor()
+const _tmpWorldTransform = /*@__PURE__*/ new AcGeMatrix3d()
+const _tmpExtrusion = /*@__PURE__*/ new AcGeMatrix3d()
+const _tmpInverse = /*@__PURE__*/ new AcGeMatrix3d()
