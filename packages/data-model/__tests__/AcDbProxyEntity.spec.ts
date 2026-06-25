@@ -1,4 +1,4 @@
-import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbProxyEntity } from '../src/entity/AcDbProxyEntity'
 import {
@@ -159,5 +159,59 @@ describe('AcDbProxyEntity', () => {
     expect(grips).toHaveLength(2)
     expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(grips[1]).toMatchObject({ x: 10, y: 20, z: 0 })
+  })
+
+  it('transformBy applies a world transform when entity origins are absent', () => {
+    setupWorkingDatabase()
+    const entity = new AcDbProxyEntity()
+    entity.setProxyGraphic(
+      buildPolylineProxyGraphic([
+        [0, 0, 0],
+        [10, 0, 0]
+      ])
+    )
+
+    entity.transformBy(new AcGeMatrix3d().makeTranslation(5, 0, 0))
+
+    const renderer = {
+      subEntityTraits: {
+        color: { clone: () => ({}) },
+        lineType: { name: 'Continuous', definitionLines: [] },
+        lineTypeScale: 1,
+        lineWeight: -3,
+        layer: '0',
+        thickness: 0
+      },
+      lines: jest.fn(() => ({ id: 'line', applyMatrix: jest.fn() })),
+      group: jest.fn(entities => ({
+        id: 'group',
+        applyMatrix: jest.fn(function (this: { applyMatrix: jest.Mock }, matrix) {
+          entities.forEach((child: { applyMatrix?: jest.Mock }) =>
+            child.applyMatrix?.(matrix)
+          )
+        })
+      }))
+    }
+
+    entity.subWorldDraw(renderer as never)
+    const points = (renderer.lines as jest.Mock).mock
+      .calls[0][0] as AcGePoint3d[]
+    expect(points[0]).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(points[1]).toMatchObject({ x: 10, y: 0, z: 0 })
+    expect(renderer.group).toHaveBeenCalled()
+    const group = (renderer.group as jest.Mock).mock.results[0].value
+    expect(group.applyMatrix).toHaveBeenCalledTimes(1)
+  })
+
+  it('transformBy updates geometric extents when entity origins are absent', () => {
+    setupWorkingDatabase()
+    const entity = new AcDbProxyEntity()
+    entity.setProxyGraphic(buildExtentsProxyGraphic([0, 0, 0], [10, 20, 0]))
+
+    entity.transformBy(new AcGeMatrix3d().makeTranslation(5, 0, 0))
+
+    const extents = entity.geometricExtents
+    expect(extents.min).toMatchObject({ x: 5, y: 0, z: 0 })
+    expect(extents.max).toMatchObject({ x: 15, y: 20, z: 0 })
   })
 })

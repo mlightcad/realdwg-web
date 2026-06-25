@@ -1,4 +1,4 @@
-import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { acdbHostApplicationServices } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import { AcDbAlignedDimension, AcDbLine } from '../src/entity'
@@ -91,6 +91,38 @@ describe('AcDbAlignedDimension', () => {
     expect(extents.isEmpty()).toBe(false)
     expect(extents.min).toMatchObject({ x: 11, y: 22, z: 0 })
     expect(extents.max).toMatchObject({ x: 14, y: 26, z: 0 })
+  })
+
+  it('rotates dimension block geometry with transformBy', () => {
+    const db = createDb()
+
+    const dimBlock = new AcDbBlockTableRecord()
+    dimBlock.name = '*D_ROTATE'
+    dimBlock.appendEntity(
+      new AcDbLine(new AcGePoint3d(1, 2, 0), new AcGePoint3d(4, 2, 0))
+    )
+    db.tables.blockTable.add(dimBlock)
+
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(5, 0, 0),
+      new AcGePoint3d(5, 1, 0)
+    )
+    dim.dimBlockId = '*D_ROTATE'
+    dim.dimBlockPosition = new AcGePoint3d(10, 20, 0)
+    db.tables.blockTable.modelSpace.appendEntity(dim)
+
+    const before = dim.geometricExtents
+    expect(before.min).toMatchObject({ x: 11, y: 22, z: 0 })
+    expect(before.max).toMatchObject({ x: 14, y: 22, z: 0 })
+
+    dim.transformBy(new AcGeMatrix3d().makeRotationZ(Math.PI / 2))
+
+    const after = dim.geometricExtents
+    expect(after.min.x).toBeCloseTo(-22, 8)
+    expect(after.min.y).toBeCloseTo(11, 8)
+    expect(after.max.x).toBeCloseTo(-22, 8)
+    expect(after.max.y).toBeCloseTo(14, 8)
   })
 
   it('updates geometricExtents when dimBlockPosition changes', () => {

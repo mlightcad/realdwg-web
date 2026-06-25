@@ -89,6 +89,13 @@ export abstract class AcDbDimension extends AcDbEntity {
   private _dimStyle?: AcDbDimStyleTableRecord
   /** The normal vector of the plane containing the block reference */
   private _normal: AcGeVector3d
+  /**
+   * Additional rotation (radians) applied when placing the anonymous dimension
+   * block. Block geometry is authored at a fixed orientation; this accumulates
+   * rigid-body rotations from {@link transformBy} so the block rotates with the
+   * dimension definition points.
+   */
+  private _dimBlockRotation: number
 
   /**
    * Creates a new dimension entity.
@@ -114,6 +121,7 @@ export abstract class AcDbDimension extends AcDbEntity {
     this._textPosition = new AcGePoint3d()
     this._textRotation = 0
     this._normal = new AcGeVector3d(0, 0, 1)
+    this._dimBlockRotation = 0
   }
 
   /**
@@ -379,6 +387,16 @@ export abstract class AcDbDimension extends AcDbEntity {
     this._dimBlockPosition.applyMatrix4(matrix)
     this._textPosition.applyMatrix4(matrix)
     this._normal.transformDirection(matrix)
+
+    const dimBlockRotationAxis = new AcGeVector3d(1, 0, 0).transformDirection(
+      matrix
+    )
+    if (dimBlockRotationAxis.lengthSq() > 0) {
+      this._dimBlockRotation += Math.atan2(
+        dimBlockRotationAxis.y,
+        dimBlockRotationAxis.x
+      )
+    }
 
     origin.applyMatrix4(matrix)
     rotationPoint.applyMatrix4(matrix)
@@ -889,15 +907,16 @@ export abstract class AcDbDimension extends AcDbEntity {
    * ```
    * dimBlockTransform =
    *   T(dimBlockPosition)
+   * · R(dimBlockRotation)
    * · T(-blockBasePoint)
    * ```
    *
    * ### Notes
    *
    * - The returned matrix operates entirely in dimension OCS
-   * - No scaling or rotation is applied here
+   * - {@link transformBy} accumulates extra block rotation so cached anonymous
+   *   block geometry rotates with the dimension definition points
    * - {@link normal} is applied later as a final orientation step
-   * - This mirrors the internal behavior of `AcDbDimension` in ObjectARX
    *
    * @returns A transformation matrix that positions the anonymous dimension
    *          block in OCS space, excluding extrusion.
@@ -934,18 +953,24 @@ export abstract class AcDbDimension extends AcDbEntity {
       this._dimBlockPosition.z
     )
 
+    const mRot = new AcGeMatrix3d().makeRotationZ(this._dimBlockRotation)
+
     // ------------------------------------------------------------
     // Final matrix (OCS space only):
     //
     // dimBlockTransform =
     //   T(dimBlockPosition)
+    // · R(dimBlockRotation)
     // · T(-blockBasePoint)
     //
     // NOTE:
     // - This matrix operates entirely in dimension OCS
     // - The extrusion / normal is intentionally excluded
     // ------------------------------------------------------------
-    return new AcGeMatrix3d().multiplyMatrices(mInsert, mBase)
+    return new AcGeMatrix3d().multiplyMatrices(
+      mInsert,
+      new AcGeMatrix3d().multiplyMatrices(mRot, mBase)
+    )
   }
 
   /**

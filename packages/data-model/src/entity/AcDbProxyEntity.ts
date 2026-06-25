@@ -112,6 +112,14 @@ export class AcDbProxyEntity extends AcDbEntity {
   private _entityOrigins: AcGePoint3d[] = []
 
   /**
+   * Cumulative world-space transform applied at draw time.
+   *
+   * The proxy-graphic byte stream is left unchanged; editor operations such as
+   * MOVE, COPY, and ROTATE update this matrix instead of rewriting the stream.
+   */
+  private _worldTransform = new AcGeMatrix3d()
+
+  /**
    * Gets the original DXF name of the proxied entity class.
    *
    * Mirrors the ObjectARX original-class DXF name and corresponds to DXF
@@ -277,7 +285,11 @@ export class AcDbProxyEntity extends AcDbEntity {
     })
     const extents = parser.scanExtents()
     if (extents) {
-      return new AcGeBox3d().setFromPoints(extents)
+      const box = new AcGeBox3d().setFromPoints(extents)
+      if (!this._worldTransform.equals(new AcGeMatrix3d())) {
+        box.applyMatrix4(this._worldTransform)
+      }
+      return box
     }
     return new AcGeBox3d()
   }
@@ -329,16 +341,18 @@ export class AcDbProxyEntity extends AcDbEntity {
   /**
    * Transforms this proxy entity by the specified matrix.
    *
-   * Only {@link entityOrigins} are modified. The proxy-graphic byte stream is
-   * left unchanged because transforms are encoded as {@link AcDbProxyGraphicType.PushMatrix}
-   * / {@link AcDbProxyGraphicType.PopMatrix} commands inside the stream and
-   * applied at render time by {@link AcDbProxyGraphic}.
+   * {@link entityOrigins} and the cumulative {@link _worldTransform} are
+   * updated. The proxy-graphic byte stream is left unchanged; stream-local
+   * transforms remain encoded as {@link AcDbProxyGraphicType.PushMatrix} /
+   * {@link AcDbProxyGraphicType.PopMatrix} commands and are applied by
+   * {@link AcDbProxyGraphic} before {@link _worldTransform}.
    *
-   * @param matrix - Transformation matrix to apply to entity origins.
+   * @param matrix - World-space transformation matrix to apply.
    * @returns This entity for chaining.
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._entityOrigins.forEach(origin => origin.applyMatrix4(matrix))
+    this._worldTransform.premultiply(matrix)
     return this
   }
 
@@ -364,7 +378,11 @@ export class AcDbProxyEntity extends AcDbEntity {
       database: this.database,
       defaultLayer: this.layer
     })
-    return parser.worldDraw(renderer)
+    const drawable = parser.worldDraw(renderer)
+    if (drawable && !this._worldTransform.equals(new AcGeMatrix3d())) {
+      drawable.applyMatrix(this._worldTransform)
+    }
+    return drawable
   }
 
   /**
