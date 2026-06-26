@@ -1,4 +1,5 @@
 import { AcDbObject } from '../../base'
+import { AcDbEntity } from '../../entity/AcDbEntity'
 import { AcDbDatabase } from '../AcDbDatabase'
 import { AcDbSysVarManager, AcDbSysVarType } from '../AcDbSysVarManager'
 import {
@@ -32,6 +33,7 @@ export class AcDbDatabaseTransactionManager {
   private readonly changeApplier: AcDbChangeApplier
   private readonly undoMarkStack: AcDbUndoMarkState[] = []
   private _applyingUndoRedo = false
+  private readonly _pendingEntityModified = new Set<AcDbEntity>()
 
   /**
    * When true, mutations outside an active transaction throw an error.
@@ -392,7 +394,7 @@ export class AcDbDatabaseTransactionManager {
     )
 
     for (const entity of modified) {
-      entity.triggerModifiedEvent()
+      this.dispatchEntityModified(entity)
     }
     if (appended.length > 0) {
       this.database.notifyEntityAppended(appended)
@@ -449,7 +451,7 @@ export class AcDbDatabaseTransactionManager {
 
     if (inverse) {
       for (const entity of modified) {
-        entity.triggerModifiedEvent()
+        this.dispatchEntityModified(entity)
       }
       if (erased.length > 0) {
         this.database.notifyEntityAppended(erased)
@@ -465,7 +467,7 @@ export class AcDbDatabaseTransactionManager {
       }
     } else {
       for (const entity of modified) {
-        entity.triggerModifiedEvent()
+        this.dispatchEntityModified(entity)
       }
       if (appended.length > 0) {
         this.database.notifyEntityAppended(appended)
@@ -494,6 +496,40 @@ export class AcDbDatabaseTransactionManager {
           })
         }
       }
+    }
+  }
+
+  /**
+   * Dispatches or queues an entity-modified notification after commit or undo/redo.
+   */
+  private dispatchEntityModified(entity: AcDbEntity): void {
+    if (this.database.isEventBatched()) {
+      this._pendingEntityModified.add(entity)
+      return
+    }
+    this.database.events.entityModified.dispatch({
+      database: this.database,
+      entity
+    })
+  }
+
+  /**
+   * Dispatches entity-modified notifications accumulated during event batching.
+   *
+   * Called from {@link AcDbDatabase.endEventBatch} when the outermost batch closes.
+   */
+  flushPendingEntityModifiedEvents(): void {
+    if (this._pendingEntityModified.size === 0) {
+      return
+    }
+
+    const modified = [...this._pendingEntityModified]
+    this._pendingEntityModified.clear()
+    for (const entity of modified) {
+      this.database.events.entityModified.dispatch({
+        database: this.database,
+        entity
+      })
     }
   }
 }

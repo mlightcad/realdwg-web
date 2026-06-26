@@ -2,6 +2,8 @@ import { AcCmColor } from '@mlightcad/common'
 
 import { acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase, AcDbLinetypeTableRecord } from '../src/database'
+import { AcGeVector3d } from '@mlightcad/geometry-engine'
+
 import { AcDbMLine, AcDbMLineJustification } from '../src/entity'
 import { AcDbOsnapMode } from '../src/misc'
 import { AcDbMlineStyle } from '../src/object'
@@ -743,8 +745,33 @@ describe('AcDbMLine', () => {
     const grips = mline.subGetGripPoints()
 
     expect(grips).toHaveLength(3)
-    expect(grips[0]).toBe(mline.startPosition)
+    expect(grips[0]).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(grips[1]).toMatchObject({ x: 10, y: 0, z: 0 })
     expect(grips[2]).toMatchObject({ x: 20, y: 0, z: 0 })
+  })
+
+  it('moves only the selected reference-path grip via subMoveGripPointsAt', () => {
+    const db = createDb()
+    const style = new AcDbMlineStyle()
+    style.styleName = 'GRIP_MOVE_STYLE'
+    style.elements = [
+      { offset: 0.5, color: createAciColor(3), lineType: 'BYLAYER' },
+      { offset: -0.5, color: createAciColor(5), lineType: 'BYLAYER' }
+    ]
+    db.objects.mlineStyle.setAt(style.styleName, style)
+
+    const mline = createBasicMline(style)
+
+    mline.subMoveGripPointsAt([1], new AcGeVector3d(0, 5, 0))
+
+    expect(mline.startPosition).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(mline.segments[0].position).toMatchObject({ x: 10, y: 5, z: 0 })
+    expect(mline.segments[1].position).toMatchObject({ x: 20, y: 0, z: 0 })
+
+    mline.subMoveGripPointsAt([0], new AcGeVector3d(2, 0, 0))
+
+    expect(mline.startPosition).toMatchObject({ x: 2, y: 0, z: 0 })
+    expect(mline.segments[0].position).toMatchObject({ x: 10, y: 5, z: 0 })
+    expect(mline.segments[1].position).toMatchObject({ x: 20, y: 0, z: 0 })
   })
 })

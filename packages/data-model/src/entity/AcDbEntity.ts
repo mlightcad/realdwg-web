@@ -693,23 +693,6 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
-   * Triggers a modified event for this entity.
-   *
-   * This method notifies listeners that the entity has been modified.
-   *
-   * @example
-   * ```typescript
-   * entity.triggerModifiedEvent();
-   * ```
-   */
-  triggerModifiedEvent() {
-    if (this.database.transactionManager.isRecording()) {
-      return
-    }
-    this.database.notifyEntityModified(this)
-  }
-
-  /**
    * Creates the "General" property group for this entity.
    *
    * This group contains common metadata attributes shared by all CAD entities
