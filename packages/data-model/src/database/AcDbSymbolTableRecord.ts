@@ -1,4 +1,4 @@
-import { defaults } from '@mlightcad/common'
+import { AcCmStringKey, defaults } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
@@ -72,6 +72,59 @@ export class AcDbSymbolTableRecord<
   }
   set name(value: string) {
     this.setAttr('name', value)
+  }
+
+  /**
+   * Sets an attribute after verifying the record is open for write.
+   *
+   * Symbol table records follow ObjectARX semantics: existing database records
+   * must be opened with {@link AcDbDatabase.openObjectForWrite} before mutation.
+   */
+  override setAttr<A extends AcCmStringKey<ATTRS>>(attrName: A, val?: ATTRS[A]) {
+    this.assertOpenForWrite()
+    super.setAttr(attrName, val)
+  }
+
+  /**
+   * Ensures this record may be modified.
+   *
+   * Temporary records and undo/redo replay are exempt from the open-for-write check.
+   *
+   * @throws Error when an existing record is modified without being opened for write
+   */
+  protected assertOpenForWrite(): void {
+    if (this.isTemp) {
+      return
+    }
+
+    const db = this.database
+    if (!db) {
+      return
+    }
+
+    const manager = db.transactionManager
+    if (manager.isApplyingUndoRedo()) {
+      return
+    }
+
+    if (
+      manager.strictMode &&
+      !manager.isRecording()
+    ) {
+      throw new Error(
+        'Cannot modify symbol table records outside an active transaction.'
+      )
+    }
+
+    if (!manager.isRecording()) {
+      return
+    }
+
+    if (!manager.isOpenedForWriteInTransaction(this.objectId)) {
+      throw new Error(
+        `Symbol table record "${this.name || this.objectId}" is not open for write. Use openObjectForWrite().`
+      )
+    }
   }
 
   /**

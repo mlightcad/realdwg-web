@@ -39,6 +39,43 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
 }
 
 /**
+ * Creates default attribute values for a new layer table record.
+ *
+ * Also serves as the source of layer data attribute keys used when diffing
+ * records for {@link LAYER_TABLE_RECORD_DIFF_ATTR_KEYS}.
+ */
+export function createLayerTableRecordDefaultAttrs() {
+  return {
+    color: new AcCmColor(),
+    description: '',
+    standardFlags: 0,
+    isHidden: false,
+    isInUse: true,
+    isOff: false,
+    isPlottable: true,
+    transparency: new AcCmTransparency(),
+    linetype: '',
+    lineWeight: 1,
+    materialId: -1
+  } satisfies Omit<
+    Partial<AcDbLayerTableRecordAttrs>,
+    keyof import('../base/AcDbObject').AcDbObjectAttrs | 'name'
+  >
+}
+
+type LayerTableRecordDataAttrKey = keyof ReturnType<
+  typeof createLayerTableRecordDefaultAttrs
+>
+
+/** Layer attribute keys compared when emitting layer-modified events. */
+export const LAYER_TABLE_RECORD_DIFF_ATTR_KEYS = [
+  'name',
+  ...(Object.keys(
+    createLayerTableRecordDefaultAttrs()
+  ) as LayerTableRecordDataAttrKey[])
+] as const satisfies readonly (LayerTableRecordDataAttrKey | 'name')[]
+
+/**
  * Represents a record in the layer table.
  *
  * This class contains information about a layer in the drawing database,
@@ -67,27 +104,8 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     defaultAttrs?: Partial<AcDbLayerTableRecordAttrs>
   ) {
     attrs = attrs || {}
-    defaults(attrs, {
-      color: new AcCmColor(),
-      description: '',
-      standardFlags: 0,
-      isHidden: false,
-      isInUse: true,
-      isOff: false,
-      isPlottable: true,
-      transparency: new AcCmTransparency(),
-      linetype: '',
-      lineWeight: 1,
-      materialId: -1
-    })
+    defaults(attrs, createLayerTableRecordDefaultAttrs())
     super(attrs, defaultAttrs)
-    this.attrs.events.attrChanged.addEventListener(args => {
-      this.database.events.layerModified.dispatch({
-        database: this.database,
-        layer: this,
-        changes: args.object.changedAttributes()
-      })
-    })
   }
 
   /**

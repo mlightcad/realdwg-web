@@ -739,7 +739,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Ends event batching and dispatches accumulated entity events when the outermost batch closes.
+   * Ends event batching and dispatches accumulated entity and layer events when the outermost batch closes.
    */
   endEventBatch(): void {
     if (this._eventBatchDepth <= 0) {
@@ -748,6 +748,7 @@ export class AcDbDatabase extends AcDbObject {
     this._eventBatchDepth--
     if (this._eventBatchDepth === 0) {
       this.transactionManager.flushPendingEntityModifiedEvents()
+      this.transactionManager.flushPendingLayerModifiedEvents()
       this.flushEventBatch()
     }
   }
