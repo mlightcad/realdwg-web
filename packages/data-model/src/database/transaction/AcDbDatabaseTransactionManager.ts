@@ -1,11 +1,12 @@
 import { AcDbObject } from '../../base'
 import { AcDbEntity } from '../../entity/AcDbEntity'
-import { AcDbDatabase } from '../AcDbDatabase'
+import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase'
 import { AcDbSysVarManager, AcDbSysVarType } from '../AcDbSysVarManager'
 import {
   AcDbChangeApplier,
   collectChangeEntities,
-  collectDictionaryChanges
+  collectDictionaryChanges,
+  collectLayerModifications
 } from './AcDbChangeApplier'
 import { AcDbChangeContainer } from './AcDbDatabaseChange'
 import { AcDbDatabaseTransaction } from './AcDbDatabaseTransaction'
@@ -34,6 +35,10 @@ export class AcDbDatabaseTransactionManager {
   private readonly undoMarkStack: AcDbUndoMarkState[] = []
   private _applyingUndoRedo = false
   private readonly _pendingEntityModified = new Set<AcDbEntity>()
+  private readonly _pendingLayerModified = new Map<
+    string,
+    AcDbLayerModifiedEventArgs
+  >()
 
   /**
    * When true, mutations outside an active transaction throw an error.
@@ -92,6 +97,25 @@ export class AcDbDatabaseTransactionManager {
    */
   isApplyingUndoRedo(): boolean {
     return this._applyingUndoRedo
+  }
+
+  /**
+   * Returns true when the object was opened for write in an active transaction.
+   *
+   * Used by {@link AcDbSymbolTableRecord.assertOpenForWrite} to enforce ObjectARX
+   * write semantics. A modify entry in a transaction recorder indicates the object
+   * was opened with {@link AcDbOpenMode.kForWrite}, including entries merged from
+   * nested transactions.
+   *
+   * @param objectId - Object identifier to check
+   */
+  isOpenedForWriteInTransaction(objectId: string): boolean {
+    for (const tr of this.transactionStack) {
+      if (tr.recorder.hasModify(objectId)) {
+        return true
+      }
+    }
+    return false
   }
 
   /**
@@ -421,6 +445,10 @@ export class AcDbDatabaseTransactionManager {
         })
       }
     }
+
+    for (const args of collectLayerModifications(this.database, changes)) {
+      this.dispatchLayerModified(args)
+    }
   }
 
   /**
@@ -494,6 +522,34 @@ export class AcDbDatabaseTransactionManager {
         }
       }
     }
+
+    for (const args of collectLayerModifications(
+      this.database,
+      changes,
+      inverse
+    )) {
+      this.dispatchLayerModified(args)
+    }
+  }
+
+  /**
+   * Dispatches or queues a layer-modified notification after commit or undo/redo.
+   */
+  private dispatchLayerModified(args: AcDbLayerModifiedEventArgs): void {
+    if (this.database.isEventBatched()) {
+      const existing = this._pendingLayerModified.get(args.layer.objectId)
+      if (existing) {
+        existing.changes = { ...existing.changes, ...args.changes }
+        return
+      }
+      this._pendingLayerModified.set(args.layer.objectId, {
+        database: args.database,
+        layer: args.layer,
+        changes: { ...args.changes }
+      })
+      return
+    }
+    this.database.events.layerModified.dispatch(args)
   }
 
   /**
@@ -508,6 +564,23 @@ export class AcDbDatabaseTransactionManager {
       database: this.database,
       entity
     })
+  }
+
+  /**
+   * Dispatches layer-modified notifications accumulated during event batching.
+   *
+   * Called from {@link AcDbDatabase.endEventBatch} when the outermost batch closes.
+   */
+  flushPendingLayerModifiedEvents(): void {
+    if (this._pendingLayerModified.size === 0) {
+      return
+    }
+
+    const pending = [...this._pendingLayerModified.values()]
+    this._pendingLayerModified.clear()
+    for (const args of pending) {
+      this.database.events.layerModified.dispatch(args)
+    }
   }
 
   /**

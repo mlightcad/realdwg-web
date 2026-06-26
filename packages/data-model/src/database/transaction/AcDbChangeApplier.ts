@@ -1,7 +1,14 @@
+import { isEqual } from '@mlightcad/common'
+
 import { AcDbObject } from '../../base'
 import { AcDbEntity } from '../../entity/AcDbEntity'
 import { AcDbDictionary } from '../../object/AcDbDictionary'
-import { AcDbDatabase } from '../AcDbDatabase'
+import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase'
+import {
+  AcDbLayerTableRecord,
+  AcDbLayerTableRecordAttrs,
+  LAYER_TABLE_RECORD_DIFF_ATTR_KEYS
+} from '../AcDbLayerTableRecord'
 import { AcDbSymbolTable } from '../AcDbSymbolTable'
 import { AcDbSymbolTableRecord } from '../AcDbSymbolTableRecord'
 import { AcDbSysVarManager } from '../AcDbSysVarManager'
@@ -325,4 +332,80 @@ export function collectDictionaryChanges(
   }
 
   return { set, erased }
+}
+
+/**
+ * Compares two layer table record snapshots and returns changed attribute values.
+ *
+ * @param before - State before modification
+ * @param after - State after modification
+ * @returns Changed attributes mapped to their values in `after`
+ */
+export function diffLayerTableRecordAttrs(
+  before: AcDbLayerTableRecord,
+  after: AcDbLayerTableRecord
+): Partial<AcDbLayerTableRecordAttrs> {
+  const changes: Record<string, unknown> = {}
+
+  for (const key of LAYER_TABLE_RECORD_DIFF_ATTR_KEYS) {
+    const beforeVal = before.getAttrWithoutException(
+      key as keyof AcDbLayerTableRecordAttrs & string
+    )
+    const afterVal = after.getAttrWithoutException(
+      key as keyof AcDbLayerTableRecordAttrs & string
+    )
+    if (!isEqual(beforeVal, afterVal)) {
+      changes[key] = afterVal
+    }
+  }
+
+  return changes as Partial<AcDbLayerTableRecordAttrs>
+}
+
+/**
+ * Collects layer modification events from transaction or undo record changes.
+ *
+ * @param database - Database used to resolve live layer references
+ * @param changes - Changes produced by a transaction or undo record
+ * @param inverse - When true, compute diffs for undo replay
+ * @returns Layer-modified event payloads for dispatch
+ */
+export function collectLayerModifications(
+  database: AcDbDatabase,
+  changes: AcDbDatabaseChange[],
+  inverse = false
+): AcDbLayerModifiedEventArgs[] {
+  const results: AcDbLayerModifiedEventArgs[] = []
+
+  for (const change of changes) {
+    if (change.kind !== 'modify') {
+      continue
+    }
+
+    const layer = database.getObjectById(change.objectId)
+    if (!(layer instanceof AcDbLayerTableRecord)) {
+      continue
+    }
+
+    const before = change.before as AcDbLayerTableRecord | undefined
+    const after = change.after as AcDbLayerTableRecord | undefined
+    if (!before || !after) {
+      continue
+    }
+
+    const attrChanges = inverse
+      ? diffLayerTableRecordAttrs(after, before)
+      : diffLayerTableRecordAttrs(before, after)
+    if (Object.keys(attrChanges).length === 0) {
+      continue
+    }
+
+    results.push({
+      database,
+      layer,
+      changes: attrChanges
+    })
+  }
+
+  return results
 }

@@ -69,6 +69,21 @@ export class AcDbChangeRecorder {
   }
 
   /**
+   * Returns true when a modify entry exists for the given object ID.
+   *
+   * Used by {@link AcDbDatabaseTransactionManager.isOpenedForWriteInTransaction}
+   * to determine whether a symbol table record was opened for write within the
+   * active transaction stack.
+   *
+   * @param objectId - Object identifier to look up
+   */
+  hasModify(objectId: string): boolean {
+    return this.changes.some(
+      c => c.kind === 'modify' && c.objectId === objectId
+    )
+  }
+
+  /**
    * Records insertion of an object into a database container.
    *
    * If a matching remove was recorded earlier in the same transaction,

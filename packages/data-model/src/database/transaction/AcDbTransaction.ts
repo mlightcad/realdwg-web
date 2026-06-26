@@ -37,6 +37,14 @@ export class AcDbTransaction {
   ): T | undefined {
     const opened = this.openedObjects.get(objectId)
     if (opened) {
+      if (
+        mode === AcDbOpenMode.kForWrite &&
+        !this.originalStates.has(objectId)
+      ) {
+        const snapshot = opened.clonePreservingIdentity()
+        this.originalStates.set(objectId, snapshot)
+        this.recorder.recordModify(opened)
+      }
       return opened as T
     }
 
