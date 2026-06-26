@@ -1,3 +1,4 @@
+import { defaults } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -5,7 +6,10 @@ import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
-import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
+import {
+  AcDbSymbolTableRecord,
+  AcDbSymbolTableRecordAttrs
+} from './AcDbSymbolTableRecord'
 
 /**
  * Block table record that serves as a container for entities within drawing databases.
@@ -30,26 +34,32 @@ export enum AcDbBlockScaling {
   Uniform
 }
 
-export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
+/**
+ * Interface defining the attributes for block table records.
+ */
+export interface AcDbBlockTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
+  /** The base point of the block in WCS coordinates */
+  origin: AcGePoint3d
+  /** The object id of the associated AcDbLayout object in the Layouts dictionary */
+  layoutId: AcDbObjectId
+  /** Block insertion units (DXF group code 70) */
+  blockInsertUnits: AcDbUnitsValue
+  /** Block explodability flag (DXF group code 280) */
+  explodability: number
+  /** Block scalability flag (DXF group code 281) */
+  blockScaling: AcDbBlockScaling
+  /** Binary data for bitmap preview (DXF group code 310, optional) */
+  bmpPreview?: string
+}
+
+export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRecordAttrs> {
   /** Name constant for model space block table record */
   static MODEL_SPACE_NAME = '*Model_Space'
   /** Name prefix for paper space block table records */
   static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
 
-  /** The base point of the block in WCS coordinates */
-  private _origin: AcGePoint3d
-  /** The object id of the associated AcDbLayout object in the Layouts dictionary.*/
-  private _layoutId: AcDbObjectId
   /** Map of entities indexed by their object IDs */
   private _entities: Map<AcDbObjectId, AcDbEntity>
-  /** Block insertion units (DXF group code 70) */
-  private _blockInsertUnits: AcDbUnitsValue
-  /** Block explodability flag (DXF group code 280) */
-  private _explodability: number
-  /** Block scalability flag (DXF group code 281) */
-  private _blockScaling: AcDbBlockScaling
-  /** Binary data for bitmap preview (DXF group code 310, optional) */
-  private _bmpPreview?: string
 
   /**
    * Returns true if the specified name is the name of the model space block table record.
@@ -96,20 +106,29 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
   /**
    * Creates a new AcDbBlockTableRecord instance.
    *
+   * @param attrs - Input attribute values for this block table record
+   * @param defaultAttrs - Default values for attributes of this block table record
+   *
    * @example
    * ```typescript
    * const blockRecord = new AcDbBlockTableRecord();
    * ```
    */
-  constructor() {
-    super()
-    this._origin = new AcGePoint3d()
-    this._layoutId = ''
+  constructor(
+    attrs?: Partial<AcDbBlockTableRecordAttrs>,
+    defaultAttrs?: Partial<AcDbBlockTableRecordAttrs>
+  ) {
+    attrs = attrs || {}
+    defaults(attrs, {
+      origin: new AcGePoint3d(),
+      layoutId: '',
+      blockInsertUnits: 0,
+      explodability: 1,
+      blockScaling: AcDbBlockScaling.Uniform,
+      bmpPreview: undefined
+    })
+    super(attrs, defaultAttrs)
     this._entities = new Map<string, AcDbEntity>()
-    this._blockInsertUnits = 0
-    this._explodability = 1
-    this._blockScaling = AcDbBlockScaling.Uniform
-    this._bmpPreview = undefined
   }
 
   /**
@@ -163,10 +182,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   get origin() {
-    return this._origin
+    return this.getAttr('origin')
   }
   set origin(value: AcGePoint3d) {
-    this._origin.copy(value)
+    this.getAttr('origin').copy(value)
   }
 
   /**
@@ -186,10 +205,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * ```
    */
   get layoutId() {
-    return this._layoutId
+    return this.getAttr('layoutId')
   }
   set layoutId(value: AcDbObjectId) {
-    this._layoutId = value
+    this.setAttr('layoutId', value)
   }
 
   /**
@@ -200,10 +219,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * @returns The insertion units value
    */
   get blockInsertUnits() {
-    return this._blockInsertUnits
+    return this.getAttr('blockInsertUnits')
   }
   set blockInsertUnits(value: AcDbUnitsValue) {
-    this._blockInsertUnits = value
+    this.setAttr('blockInsertUnits', value)
   }
 
   /**
@@ -214,10 +233,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * @returns The explodability value
    */
   get explodability() {
-    return this._explodability
+    return this.getAttr('explodability')
   }
   set explodability(value: number) {
-    this._explodability = value
+    this.setAttr('explodability', value)
   }
 
   /**
@@ -228,10 +247,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * @returns The scalability value
    */
   get blockScaling() {
-    return this._blockScaling
+    return this.getAttr('blockScaling')
   }
   set blockScaling(value: AcDbBlockScaling) {
-    this._blockScaling = value
+    this.setAttr('blockScaling', value)
   }
 
   /**
@@ -242,10 +261,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * @returns The bitmap preview data
    */
   get bmpPreview() {
-    return this._bmpPreview
+    return this.getAttrWithoutException('bmpPreview')
   }
   set bmpPreview(value: string | undefined) {
-    this._bmpPreview = value
+    this.setAttr('bmpPreview', value)
   }
 
   /**
@@ -269,9 +288,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
       !manager.isRecording() &&
       !manager.isApplyingUndoRedo()
     ) {
-      throw new Error(
-        'Cannot append entities outside an active transaction.'
-      )
+      throw new Error('Cannot append entities outside an active transaction.')
     }
 
     const commitEntity = (item: AcDbEntity) => {
@@ -328,7 +345,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
    * we have to expose such one public method in AcDbBlockTableRecord.
    *
    * @param objectId - The object id or ids of entities to remove from this block table record
-   * @returns — true if an entity in the block table record existed and has been removed,
+   * @returns ??true if an entity in the block table record existed and has been removed,
    * or false if the entity does not exist.
    */
   removeEntity(objectId: AcDbObjectId | AcDbObjectId[]) {
@@ -338,9 +355,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord {
       !manager.isRecording() &&
       !manager.isApplyingUndoRedo()
     ) {
-      throw new Error(
-        'Cannot remove entities outside an active transaction.'
-      )
+      throw new Error('Cannot remove entities outside an active transaction.')
     }
 
     const ids = Array.isArray(objectId) ? objectId : [objectId]

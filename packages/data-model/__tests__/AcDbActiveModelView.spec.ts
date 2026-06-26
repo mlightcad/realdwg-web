@@ -39,12 +39,12 @@ describe('AcDbActiveModelView', () => {
       viewHeight: 100
     })
 
-    expect(
-      database.tables.viewportTable.getActiveVport()?.centerPoint
-    ).toEqual({
-      x: 10,
-      y: 20
-    })
+    expect(database.tables.viewportTable.getActiveVport()?.centerPoint).toEqual(
+      {
+        x: 10,
+        y: 20
+      }
+    )
   })
 
   it('builds the view box from center, height, and canvas aspect ratio', () => {

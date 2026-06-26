@@ -1,7 +1,14 @@
-import { AcGiBaseLineStyle } from '@mlightcad/graphic-interface'
+import { defaults } from '@mlightcad/common'
+import {
+  AcGiBaseLineStyle,
+  AcGiLineTypePatternElement
+} from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
+import {
+  AcDbSymbolTableRecord,
+  AcDbSymbolTableRecordAttrs
+} from './AcDbSymbolTableRecord'
 
 export interface AcDbLinetypePreviewSvgOptions {
   /**
@@ -37,6 +44,16 @@ export interface AcDbLinetypePreviewSvgOptions {
 }
 
 /**
+ * Interface defining the attributes for linetype table records.
+ *
+ * Merges {@link AcDbSymbolTableRecordAttrs} with {@link AcGiBaseLineStyle} fields
+ * (excluding the duplicate `name` property).
+ */
+export interface AcDbLinetypeTableRecordAttrs
+  extends AcDbSymbolTableRecordAttrs,
+    Omit<AcGiBaseLineStyle, 'name'> {}
+
+/**
  * Represents a record in the line type table within the AutoCAD drawing database.
  *
  * Each line type table record contains the information necessary to define a specific line type,
@@ -50,19 +67,34 @@ export interface AcDbLinetypePreviewSvgOptions {
  * list, even if there is a shape or text string sharing the same index. When the linetype is elaborated,
  * a shape's insertion point will coincide with the end of the dash that it shares an index with.
  */
-export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
-  private _linetype: AcGiBaseLineStyle
-
+export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeTableRecordAttrs> {
   /**
    * Creates a new line type table record.
    *
-   * @param linetype - The line type style object that defines the visual characteristics
-   *                   and pattern of this line type
+   * @param attrs - Input attribute values for this linetype table record
+   * @param defaultAttrs - Default values for attributes of this linetype table record
+   *
+   * @example
+   * ```typescript
+   * const record = new AcDbLinetypeTableRecord({
+   *   name: 'DASHED',
+   *   description: 'Dashed',
+   *   totalPatternLength: 1,
+   *   pattern: [{ elementLength: 0.5, elementTypeFlag: 0 }]
+   * });
+   * ```
    */
-  constructor(linetype: AcGiBaseLineStyle) {
-    super()
-    this.name = linetype.name
-    this._linetype = linetype
+  constructor(
+    attrs?: Partial<AcDbLinetypeTableRecordAttrs>,
+    defaultAttrs?: Partial<AcDbLinetypeTableRecordAttrs>
+  ) {
+    attrs = attrs || {}
+    defaults(attrs, {
+      standardFlag: 0,
+      description: '',
+      totalPatternLength: 0
+    })
+    super(attrs, defaultAttrs)
   }
 
   /**
@@ -74,7 +106,8 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
    * @returns The number of pattern elements in the line type
    */
   get numDashes() {
-    return this._linetype.pattern ? this._linetype.pattern.length : 0
+    const pattern = this.getAttrWithoutException('pattern')
+    return pattern ? pattern.length : 0
   }
 
   /**
@@ -89,7 +122,7 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
    * @returns The total length of the line type pattern in drawing units
    */
   get patternLength() {
-    return this._linetype.totalPatternLength
+    return this.getAttr('totalPatternLength')
   }
 
   /**
@@ -101,19 +134,25 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
    * @returns The description text for the line type
    */
   get comments() {
-    return this._linetype.description
+    return this.getAttr('description')
   }
 
   /**
    * Gets the line type style object used by the renderer.
    *
-   * This property provides access to the underlying line type definition that contains
-   * all the visual characteristics and rendering information.
+   * Returns a snapshot assembled from stored attributes. Mutating the returned object
+   * does not update this table record; use the dedicated setters instead.
    *
-   * @returns The line type style object
+   * @returns The line type style object assembled from stored attributes
    */
-  get linetype() {
-    return this._linetype
+  get linetype(): AcGiBaseLineStyle {
+    return {
+      name: this.name,
+      standardFlag: this.getAttr('standardFlag'),
+      description: this.getAttr('description'),
+      totalPatternLength: this.getAttr('totalPatternLength'),
+      pattern: this.getAttrWithoutException('pattern')
+    }
   }
 
   /**
@@ -134,7 +173,7 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
         'Index must be greater than or equal to zero, but less than the value of property "numDashes".'
       )
     }
-    return this._linetype.pattern![index].elementLength
+    return this.getAttr('pattern')![index].elementLength
   }
 
   /**
@@ -161,12 +200,14 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
     const startX = padding
     const endX = Math.max(width - padding, startX + 1)
     const previewWidth = endX - startX
-    const pattern = this._linetype.pattern ?? []
+    const pattern = this.getAttrWithoutException('pattern') ?? []
 
     if (
       pattern.length === 0 ||
       this.patternLength <= 0 ||
-      !pattern.some(item => item.elementLength !== 0)
+      !pattern.some(
+        (item: AcGiLineTypePatternElement) => item.elementLength !== 0
+      )
     ) {
       return this.buildSvgString({
         width,
@@ -271,12 +312,12 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbLinetypeTableRecord')
     filer.writeString(2, this.name)
-    filer.writeInt16(70, this.linetype.standardFlag)
+    filer.writeInt16(70, this.getAttr('standardFlag'))
     filer.writeString(3, this.comments)
     filer.writeInt16(72, 65)
     filer.writeInt16(73, this.numDashes)
     filer.writeDouble(40, this.patternLength)
-    for (const item of this.linetype.pattern ?? []) {
+    for (const item of this.getAttrWithoutException('pattern') ?? []) {
       filer.writeDouble(49, item.elementLength)
       filer.writeInt16(74, item.elementTypeFlag)
     }

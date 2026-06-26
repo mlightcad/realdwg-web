@@ -1,7 +1,7 @@
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbLinetypeTable } from '../src/database/AcDbLinetypeTable'
 import { AcDbLinetypeTableRecord } from '../src/database/AcDbLinetypeTableRecord'
-import type { AcGiBaseLineStyle } from '@mlightcad/graphic-interface'
+import type { AcDbLinetypeTableRecordAttrs } from '../src/database/AcDbLinetypeTableRecord'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 describe('AcDbLinetypeTable', () => {
@@ -12,14 +12,14 @@ describe('AcDbLinetypeTable', () => {
   it('supports inherited symbol table operations', () => {
     const db = new AcDbDatabase()
     const table = db.tables.linetypeTable
-    const style = {
+    const attrs: AcDbLinetypeTableRecordAttrs = {
       name: 'DASHED',
       standardFlag: 0,
       description: 'Dashed',
       totalPatternLength: 1,
       pattern: [{ elementLength: 0.5, elementTypeFlag: 0 }]
-    } as AcGiBaseLineStyle
-    const record = new AcDbLinetypeTableRecord(style)
+    }
+    const record = new AcDbLinetypeTableRecord(attrs)
     table.add(record)
 
     expect(table.getAt('DASHED')).toBe(record)

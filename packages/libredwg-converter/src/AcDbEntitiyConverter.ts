@@ -119,7 +119,6 @@ import type {
   DwgXlineEntity
 } from '@mlightcad/libredwg-web'
 
-
 type ParsedMLeaderBreak = {
   index?: number
   start: AcGePoint3dLike
@@ -670,7 +669,7 @@ export class AcDbEntityConverter {
     // Propagate DXF group 11 (alignment point) so non-default justifications
     // place the text correctly. `endPoint` is libredwg's name for the
     // alignment point on a TEXT entity. Fall back to startPoint when group
-    // 11 is missing or surfaces as the zero point — see comment in
+    // 11 is missing or surfaces as the zero point ??see comment in
     // `convertAttributeCommon`.
     const isEndPointZero =
       !text.endPoint ||
@@ -892,8 +891,7 @@ export class AcDbEntityConverter {
         'styleName',
         'textStyleName',
         'textStyle'
-      ]) ??
-      this.readString(raw, ['textStyleName', 'textStyle', 'styleName'])
+      ]) ?? this.readString(raw, ['textStyleName', 'textStyle', 'styleName'])
     if (textStyleName) dbEntity.textStyleName = textStyleName
 
     const textHeight =
@@ -1003,7 +1001,9 @@ export class AcDbEntityConverter {
       >
       const blockContentId = mleader.blockContent.blockContentId
       if (this.isValidHandleId(blockContentId)) {
-        const rawBlockColor = this.readMLeaderEntityColor(blockRecord, ['color'])
+        const rawBlockColor = this.readMLeaderEntityColor(blockRecord, [
+          'color'
+        ])
         dbEntity.blockContent = {
           blockContentId,
           normal: this.readPoint(blockRecord, ['normal']),
@@ -1113,7 +1113,9 @@ export class AcDbEntityConverter {
       const arcPoint =
         entity.definitionPoint ?? entity.arcPoint ?? entity.subDefinitionPoint2
       const vertexPoint =
-        entity.centerPoint ?? entity.subDefinitionPoint2 ?? entity.subDefinitionPoint1
+        entity.centerPoint ??
+        entity.subDefinitionPoint2 ??
+        entity.subDefinitionPoint1
       const centerPoint = vertexPoint ?? arcPoint
       const subDefinitionPoint1 =
         entity.subDefinitionPoint1 ?? vertexPoint ?? arcPoint
@@ -1247,7 +1249,7 @@ export class AcDbEntityConverter {
     // field on the parent entity (3D for ATTRIB, 2D for ATTDEF); fall back
     // to the embedded text's `endPoint` which carries the same information.
     // libredwg sometimes surfaces a zero point for entities that simply
-    // omit group 11 in the source DWG — fall back to startPoint so the
+    // omit group 11 in the source DWG ??fall back to startPoint so the
     // alignment anchor never collapses to the world origin and is always
     // moved consistently with the position by `transformBy`.
     const alignmentPoint = attrib.alignmentPoint ?? text.endPoint
@@ -1362,7 +1364,7 @@ export class AcDbEntityConverter {
       dbEntity.linetypeScale = entity.lineTypeScale
     }
     // Build the entity color in a fresh AcCmColor and assign it via the
-    // setter. The previous pattern (`dbEntity.color.<prop> = …`) read the
+    // setter. The previous pattern (`dbEntity.color.<prop> = ??) read the
     // getter and mutated the result, which works for entities whose getter
     // returns the cached `_color` field but breaks for entities like
     // AcDbHatch that override the getter to return a clone of an HPCOLOR /
@@ -1377,9 +1379,9 @@ export class AcDbEntityConverter {
         // ACI color precedence rule:
         // - If the libredwg binding already resolved a concrete RGB for
         //   the entity (entity.color != null), that RGB reflects the
-        //   DWG's own color table — trust it and do NOT overwrite with
+        //   DWG's own color table ??trust it and do NOT overwrite with
         //   ACI resolution from our default palette (which loses custom
-        //   palette mappings, e.g. ACI 254 → #d8f5c2 in the source DWG
+        //   palette mappings, e.g. ACI 254 ??#d8f5c2 in the source DWG
         //   vs. near-black in our default palette).
         // - Exception: colorIndex === 7 is semantically special (the
         //   "foreground" color that flips with COLORTHEME). Preserve it

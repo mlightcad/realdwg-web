@@ -185,7 +185,10 @@ describe('AcDbProxyEntity', () => {
       lines: jest.fn(() => ({ id: 'line', applyMatrix: jest.fn() })),
       group: jest.fn(entities => ({
         id: 'group',
-        applyMatrix: jest.fn(function (this: { applyMatrix: jest.Mock }, matrix) {
+        applyMatrix: jest.fn(function (
+          this: { applyMatrix: jest.Mock },
+          matrix
+        ) {
           entities.forEach((child: { applyMatrix?: jest.Mock }) =>
             child.applyMatrix?.(matrix)
           )

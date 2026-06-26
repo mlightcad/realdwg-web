@@ -1,5 +1,4 @@
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
-import type { AcGiTextStyle } from '@mlightcad/graphic-interface'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 describe('AcDbTextStyleTableRecord', () => {
@@ -8,6 +7,7 @@ describe('AcDbTextStyleTableRecord', () => {
       () =>
         new AcDbTextStyleTableRecord({
           name: 'Standard',
+          standardFlag: 0,
           fixedTextHeight: 0,
           widthFactor: 1,
           obliqueAngle: 0,
@@ -16,7 +16,7 @@ describe('AcDbTextStyleTableRecord', () => {
           font: 'SimKai',
           bigFont: '',
           extendedFont: 'SimKai'
-        } as AcGiTextStyle)
+        })
     )
   })
 
@@ -31,7 +31,7 @@ describe('AcDbTextStyleTableRecord', () => {
       lastHeight: 0,
       font: 'ltypeshp',
       bigFont: ''
-    } as AcGiTextStyle)
+    })
 
     expect(record.isShapeFile).toBe(false)
 
@@ -55,7 +55,7 @@ describe('AcDbTextStyleTableRecord', () => {
       lastHeight: 0,
       font: 'txt',
       bigFont: ''
-    } as AcGiTextStyle)
+    })
 
     expect(record.isVertical).toBe(false)
 

@@ -161,7 +161,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Sets the display precision for angles (number of decimal places or equivalent), used together
-     * with {@link AcDbDatabase.aunits | AUNITS}. Typical range in AutoCAD is **0–8**; initial value **0**.
+     * with {@link AcDbDatabase.aunits | AUNITS}. Typical range in AutoCAD is **0??**; initial value **0**.
      *
      * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3
      */
@@ -279,7 +279,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Controls the color of unselected grips as an ACI color index. Valid
-     * range is **1–255**. Saved in the registry (not in the drawing).
+     * range is **1??55**. Saved in the registry (not in the drawing).
      *
      * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-6D239124-BCB9-430F-91F8-7D7C4DC1A0A4
      */
@@ -291,7 +291,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Controls the color of selected (hot) grips as an ACI color index. Valid
-     * range is **1–255**. Saved in the registry (not in the drawing).
+     * range is **1??55**. Saved in the registry (not in the drawing).
      *
      * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-96ABB239-7C6F-431B-BB37-672123472EC8
      */
@@ -303,7 +303,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Suppresses the display of grips when the initial selection set includes
-     * more than the specified number of objects. Valid range is **0–32767**;
+     * more than the specified number of objects. Valid range is **0??2767**;
      * `0` always displays grips. Saved in the registry (not in the drawing).
      *
      * @see https://help.autodesk.com/view/ACD/2022/ENU/?guid=GUID-705F3A42-4A2F-4B5C-A2A6-0CF8949B8ED5
@@ -332,7 +332,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Sets the size of the grip box, in device-independent pixels. Valid range
-     * is **1–255**. Saved in the registry (not in the drawing).
+     * is **1??55**. Saved in the registry (not in the drawing).
      *
      * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-5F355F5F-0DDE-49B4-B253-C6BA717BAF8B
      */
@@ -490,7 +490,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Sets the display precision for linear distances (decimal places or equivalent), used together
-     * with {@link AcDbDatabase.lunits | LUNITS}. Typical range in AutoCAD is **0–8**; common initial value **4**.
+     * with {@link AcDbDatabase.lunits | LUNITS}. Typical range in AutoCAD is **0??**; common initial value **4**.
      *
      * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-5FFF39D6-EFC7-49F5-B56A-6023EB5C0DE7
      */
@@ -734,7 +734,9 @@ export class AcDbSysVarManager {
     mutate: () => void
   ): void {
     const normalizedName = this.normalizeName(name)
-    if (!this.hasValueChanged(oldVal as AcDbSysVarType, newVal as AcDbSysVarType)) {
+    if (
+      !this.hasValueChanged(oldVal as AcDbSysVarType, newVal as AcDbSysVarType)
+    ) {
       return
     }
 
@@ -830,7 +832,9 @@ export class AcDbSysVarManager {
       if (name === AcDbSystemVariables.GRIPOBJLIMIT.toLowerCase()) {
         const intVal = Math.trunc(value as number)
         if (!Number.isFinite(intVal) || intVal < 0 || intVal > 32767) {
-          throw new Error('Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.')
+          throw new Error(
+            'Invalid GRIPOBJLIMIT value! Valid range is 0 to 32767.'
+          )
         }
         value = intVal
       }
@@ -856,7 +860,8 @@ export class AcDbSysVarManager {
       }
       if (descriptor.isDbVar) {
         this.applyVarMutation(name, oldVal, value, db, () => {
-          ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] = value
+          ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] =
+            value
         })
       } else {
         this.applyVarMutation(name, oldVal, value, db, () => {

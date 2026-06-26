@@ -1,11 +1,13 @@
-import type { AcGiTextStyle } from '@mlightcad/graphic-interface'
-
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import type { AcDbTextStyleTableRecordAttrs } from '../src/database/AcDbTextStyleTableRecord'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
 import { AcDbText } from '../src/entity/AcDbText'
 
-function makeTextStyle(name: string, font = 'Arial'): AcGiTextStyle {
+function makeTextStyle(
+  name: string,
+  font = 'Arial'
+): AcDbTextStyleTableRecordAttrs {
   return {
     name,
     standardFlag: 0,

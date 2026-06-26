@@ -1705,7 +1705,10 @@ export class AcDbMLeader extends AcDbEntity {
    * @param renderer Graphics renderer used to create draw entities.
    * @returns A single entity, an entity group, or undefined when nothing is drawable.
    */
-  subWorldDraw(renderer: AcGiRenderer, delay?: boolean): AcGiEntity | undefined {
+  subWorldDraw(
+    renderer: AcGiRenderer,
+    delay?: boolean
+  ): AcGiEntity | undefined {
     const entities: AcGiEntity[] = []
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
@@ -1949,16 +1952,10 @@ export class AcDbMLeader extends AcDbEntity {
    * Moves one geometry grip point using the same index order as
    * {@link collectGeometryPoints}.
    */
-  private moveGeometryGripPointAt(
-    gripIndex: number,
-    offset: AcGeVector3dLike
-  ) {
+  private moveGeometryGripPointAt(gripIndex: number, offset: AcGeVector3dLike) {
     let currentIndex = 0
 
-    const visit = (
-      point: AcGePoint3d | undefined,
-      onComputed?: () => void
-    ) => {
+    const visit = (point: AcGePoint3d | undefined, onComputed?: () => void) => {
       if (point) {
         if (currentIndex === gripIndex) {
           point.add(offset)

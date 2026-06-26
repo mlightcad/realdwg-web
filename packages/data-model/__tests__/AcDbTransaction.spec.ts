@@ -42,9 +42,9 @@ describe('AcDbTransaction', () => {
     expect(tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)).toBe(
       obj
     )
-    expect(
-      tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)
-    ).toBe(obj)
+    expect(tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)).toBe(
+      obj
+    )
 
     tr.commit()
     expect(tr.getObject<AcDbObject>(obj.objectId, AcDbOpenMode.kForRead)).toBe(

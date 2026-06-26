@@ -32,9 +32,9 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)).toBe(5)
     manager.setVar(AcDbSystemVariables.GRIPCOLOR, 255, db)
     expect(manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)).toBe(255)
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPCOLOR, 0, db)
-    ).toThrow('Invalid GRIPCOLOR value! Valid range is 1 to 255.')
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPCOLOR, 0, db)).toThrow(
+      'Invalid GRIPCOLOR value! Valid range is 1 to 255.'
+    )
     expect(() =>
       manager.setVar(AcDbSystemVariables.GRIPCOLOR, 256, db)
     ).toThrow('Invalid GRIPCOLOR value! Valid range is 1 to 255.')
@@ -44,12 +44,12 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getVar(AcDbSystemVariables.GRIPHOT, db)).toBe(5)
     manager.setVar(AcDbSystemVariables.GRIPHOT, 255, db)
     expect(manager.getVar(AcDbSystemVariables.GRIPHOT, db)).toBe(255)
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPHOT, 0, db)
-    ).toThrow('Invalid GRIPHOT value! Valid range is 1 to 255.')
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPHOT, 256, db)
-    ).toThrow('Invalid GRIPHOT value! Valid range is 1 to 255.')
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPHOT, 0, db)).toThrow(
+      'Invalid GRIPHOT value! Valid range is 1 to 255.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPHOT, 256, db)).toThrow(
+      'Invalid GRIPHOT value! Valid range is 1 to 255.'
+    )
 
     expect(manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)).toBe(100)
     manager.setVar(AcDbSystemVariables.GRIPOBJLIMIT, '50', db)
@@ -65,21 +65,21 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getVar(AcDbSystemVariables.GRIPS, db)).toBe(1)
     manager.setVar(AcDbSystemVariables.GRIPS, 0, db)
     expect(manager.getVar(AcDbSystemVariables.GRIPS, db)).toBe(0)
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPS, 3, db)
-    ).toThrow('Invalid GRIPS value! Valid range is 0 to 2.')
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPS, 3, db)).toThrow(
+      'Invalid GRIPS value! Valid range is 0 to 2.'
+    )
 
     expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(5)
     manager.setVar(AcDbSystemVariables.GRIPSIZE, '10', db)
     expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(10)
     manager.setVar(AcDbSystemVariables.GRIPSIZE, 255, db)
     expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(255)
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPSIZE, 0, db)
-    ).toThrow('Invalid GRIPSIZE value! Valid range is 1 to 255.')
-    expect(() =>
-      manager.setVar(AcDbSystemVariables.GRIPSIZE, 256, db)
-    ).toThrow('Invalid GRIPSIZE value! Valid range is 1 to 255.')
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPSIZE, 0, db)).toThrow(
+      'Invalid GRIPSIZE value! Valid range is 1 to 255.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.GRIPSIZE, 256, db)).toThrow(
+      'Invalid GRIPSIZE value! Valid range is 1 to 255.'
+    )
 
     manager.setVar(AcDbSystemVariables.DYNPROMPT, 'false', db)
     expect(manager.getVar(AcDbSystemVariables.DYNPROMPT, db)).toBe(false)

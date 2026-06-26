@@ -92,7 +92,7 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
    *
    * Shape definitions are STYLE entries with {@link AcDbTextStyleTableRecord.isShapeFile}
    * set (standard flag bit 1). They typically have an empty name and describe SHX shape
-   * files used by complex linetypes and similar features—not text styles.
+   * files used by complex linetypes and similar features??ot text styles.
    *
    * These records are stored by object id only and are not returned by name-based lookup
    * ({@link getAt}) or the default {@link newIterator} iteration.
@@ -115,7 +115,7 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
   /**
    * Gets the unique font file names referenced by named text styles in this table.
    *
-   * Iterates {@link newIterator named text style records} only—shape file definitions
+   * Iterates {@link newIterator named text style records} only??hape file definitions
    * ({@link shapeFiles}) are excluded.
    *
    * For each record, both {@link AcDbTextStyleTableRecord.fileName | fileName} (primary
@@ -124,7 +124,7 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
    * for CJK and similar, DXF group 4) are collected when non-empty.
    *
    * Each file name is normalized before deduplication:
-   * - File extension is stripped (e.g. `Arial.ttf` → `arial`)
+   * - File extension is stripped (e.g. `Arial.ttf` ??`arial`)
    * - Result is lowercased
    *
    * @returns Sorted order is not guaranteed; array contains each normalized name at most once
@@ -138,7 +138,9 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
   get fonts() {
     const fonts = new Set<string>()
     for (const item of this.newIterator()) {
-      const fileName = AcDbFontNameCollector.normalizeFontFileName(item.fileName)
+      const fileName = AcDbFontNameCollector.normalizeFontFileName(
+        item.fileName
+      )
       if (fileName) {
         fonts.add(fileName)
       }

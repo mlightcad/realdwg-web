@@ -66,7 +66,11 @@ describe('libredwg AcDbEntityConverter MLEADER', () => {
     const mleader = result as AcDbMLeader
     expect(mleader.mleaderStyleId).toBe('STYLE-1')
     expect(mleader.mtextContent?.text).toBe('Note text')
-    expect(mleader.mtextContent?.anchorPoint).toMatchObject({ x: 10, y: 20, z: 0 })
+    expect(mleader.mtextContent?.anchorPoint).toMatchObject({
+      x: 10,
+      y: 20,
+      z: 0
+    })
     expect(mleader.textHeight).toBe(2.5)
     expect(mleader.textWidth).toBe(40)
     expect(mleader.numberOfLeaders).toBe(1)

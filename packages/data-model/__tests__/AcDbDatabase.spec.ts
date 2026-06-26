@@ -23,6 +23,8 @@ describe('AcDbDatabase', () => {
 
     db.setDwgName('Site Plan.dxf')
     expect(db.dwgname).toBe('Site Plan.dxf')
-    expect(manager.getVar(AcDbSystemVariables.DWGNAME, db)).toBe('Site Plan.dxf')
+    expect(manager.getVar(AcDbSystemVariables.DWGNAME, db)).toBe(
+      'Site Plan.dxf'
+    )
   })
 })

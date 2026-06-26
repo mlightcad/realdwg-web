@@ -128,7 +128,6 @@ import {
   RadialDiameterDimensionEntity
 } from '@mlightcad/dxf-json/types'
 
-
 type ParsedMLeaderBreak = {
   index?: number
   start: AcGePoint3dLike
@@ -343,7 +342,7 @@ export class AcDbEntityConverter {
     dbAttrib.position.copy(attrib.startPoint)
     // Propagate DXF group 11 (alignment point) used when halign/valign are
     // non-default. Falls back to startPoint when missing or zero so the
-    // alignment anchor never collapses to the world origin — see notes in
+    // alignment anchor never collapses to the world origin ??see notes in
     // `libredwg-converter` for the same defensive handling.
     const ap = attrib.alignmentPoint
     const isApZero =
@@ -761,7 +760,7 @@ export class AcDbEntityConverter {
     dbEntity.position.copy(text.startPoint)
     // dxf-json calls DXF group 11 `endPoint` on TEXT; this is the alignment
     // point used when halign/valign deviate from Left/Baseline. Fall back to
-    // startPoint when missing or zero — same defensive handling as in
+    // startPoint when missing or zero ??same defensive handling as in
     // `convertAttributeCommon`.
     const ep = text.endPoint
     const isEpZero =
@@ -988,8 +987,7 @@ export class AcDbEntityConverter {
         'styleName',
         'textStyleName',
         'textStyle'
-      ]) ??
-      this.readString(raw, ['textStyleName', 'textStyle', 'styleName'])
+      ]) ?? this.readString(raw, ['textStyleName', 'textStyle', 'styleName'])
     if (textStyleName) dbEntity.textStyleName = textStyleName
 
     const textHeight =
@@ -1114,7 +1112,7 @@ export class AcDbEntityConverter {
             mleader.blockContent.transformationMatrix
           )
             ? mleader.blockContent.transformationMatrix
-          : []
+            : []
         }
       }
     } else if (this.isValidHandleId(mleader.blockContentId)) {
@@ -1425,7 +1423,7 @@ export class AcDbEntityConverter {
       dbEntity.linetypeScale = entity.lineTypeScale
     }
     // Build the entity color in a fresh AcCmColor and assign it via the
-    // setter. The previous pattern (`dbEntity.color.<prop> = …`) read the
+    // setter. The previous pattern (`dbEntity.color.<prop> = ??) read the
     // getter and mutated the result, which works for entities whose getter
     // returns the cached `_color` field but breaks for entities like
     // AcDbHatch that override the getter to return a clone of an HPCOLOR /

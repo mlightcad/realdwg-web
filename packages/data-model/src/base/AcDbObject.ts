@@ -288,7 +288,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   /**
    * Sets the objectId of the extension dictionary owned by this object.
    *
-   * This does not create or delete the dictionary object itself — it only
+   * This does not create or delete the dictionary object itself ??it only
    * establishes or clears the ownership relationship.
    *
    * Passing `undefined` removes the association.
@@ -509,8 +509,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   private getOwnSnapshotKeys(): string[] {
     return Reflect.ownKeys(this).filter((key): key is string => {
       return (
-        typeof key === 'string' &&
-        !AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key)
+        typeof key === 'string' && !AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key)
       )
     })
   }

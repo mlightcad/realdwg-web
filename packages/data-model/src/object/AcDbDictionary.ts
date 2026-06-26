@@ -218,11 +218,7 @@ export class AcDbDictionary<
         this._recordsByName.delete(entryKey)
       }
     })
-    if (
-      key &&
-      !manager.isRecording() &&
-      !manager.isApplyingUndoRedo()
-    ) {
+    if (key && !manager.isRecording() && !manager.isApplyingUndoRedo()) {
       this.database.notifyDictObjectErased(object, key)
     }
   }

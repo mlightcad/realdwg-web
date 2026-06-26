@@ -252,9 +252,9 @@ export interface AcDbOpenDatabaseOptions {
   /**
    * Whether entities on non-plottable ("no-plot") layers are drawn.
    *
-   * - `true` (default): desktop AutoCAD editor semantics — no-plot layers remain
+   * - `true` (default): desktop AutoCAD editor semantics ??no-plot layers remain
    *   visible on screen (Defpoints, viewport frames on `*-NPLT`, etc.).
-   * - `false`: web/publish viewer semantics (e.g. BIM 360 / ACC) — entities on
+   * - `false`: web/publish viewer semantics (e.g. BIM 360 / ACC) ??entities on
    *   no-plot layers are omitted from display.
    */
   drawNoPlotLayers?: boolean
@@ -549,10 +549,7 @@ export class AcDbDatabase extends AcDbObject {
    * @param _openErased - Reserved for erased-object support
    * @returns The matching object, or undefined if not found
    */
-  getObjectById(
-    id: AcDbObjectId,
-    _openErased = false
-  ): AcDbObject | undefined {
+  getObjectById(id: AcDbObjectId, _openErased = false): AcDbObject | undefined {
     if (id === this.objectId) {
       return this
     }
@@ -1003,11 +1000,11 @@ export class AcDbDatabase extends AcDbObject {
    *
    * | Value | Meaning |
    * |------:|---------|
-   * | `0` | **Decimal degrees** — e.g. `45.5` |
-   * | `1` | **Degrees/minutes/seconds** — e.g. `45d30'15"` |
-   * | `2` | **Gradians** — e.g. `50g` (400 grads = full circle) |
-   * | `3` | **Radians** — e.g. `0.785398...` |
-   * | `4` | **Surveyor's units** — quadrant bearing notation (e.g. `N 45d30'15" E`) |
+   * | `0` | **Decimal degrees** ??e.g. `45.5` |
+   * | `1` | **Degrees/minutes/seconds** ??e.g. `45d30'15"` |
+   * | `2` | **Gradians** ??e.g. `50g` (400 grads = full circle) |
+   * | `3` | **Radians** ??e.g. `0.785398...` |
+   * | `4` | **Surveyor's units** ??quadrant bearing notation (e.g. `N 45d30'15" E`) |
    *
    * @remarks
    * Prefer assigning {@link AcDbAngleUnits} enum members for readability instead of raw integers.
@@ -1025,9 +1022,9 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Sets **AUNITS** — the angular unit display format (see {@link aunits} getter for value meanings).
+   * Sets **AUNITS** ??the angular unit display format (see {@link aunits} getter for value meanings).
    *
-   * @param value - Integer `0`–`4` per {@link AcDbAngleUnits}, or `undefined`/`null` coerced to `0` by the setter chain.
+   * @param value - Integer `0`??4` per {@link AcDbAngleUnits}, or `undefined`/`null` coerced to `0` by the setter chain.
    *
    * @example
    * ```typescript
@@ -1049,7 +1046,7 @@ export class AcDbDatabase extends AcDbObject {
    * Angular display precision for the drawing (**AUPREC**): how many decimal places (or equivalent)
    * are used when showing angles, in conjunction with {@link aunits}.
    *
-   * AutoCAD typically uses integers in the range **0–8**; behavior for other values is
+   * AutoCAD typically uses integers in the range **0??**; behavior for other values is
    * implementation-defined in this library (stored as-is).
    *
    * @see {@link https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-EE1ED20C-1096-4299-820F-83F1BC9B96F3 | AutoCAD Help: AUPREC}
@@ -1059,7 +1056,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Sets **AUPREC** — angular display precision (see {@link auprec} getter).
+   * Sets **AUPREC** ??angular display precision (see {@link auprec} getter).
    */
   set auprec(value: number) {
     this.updateSysVar(
@@ -1100,7 +1097,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Sets **LUNITS** — linear display format (see {@link lunits} getter).
+   * Sets **LUNITS** ??linear display format (see {@link lunits} getter).
    *
    * @param value - Integer per {@link AcDbLinearUnits}, or coerced default {@link AcDbLinearUnits.Decimal} when `undefined`/`null`.
    */
@@ -1119,7 +1116,7 @@ export class AcDbDatabase extends AcDbObject {
    * Linear display precision for the drawing (**LUPREC**): number of decimal places (or equivalent)
    * used when showing linear distances, together with {@link lunits}.
    *
-   * AutoCAD typically uses integers in the range **0–8**; initial value is commonly **4**.
+   * AutoCAD typically uses integers in the range **0??**; initial value is commonly **4**.
    * Values outside that range are stored as-is by this library.
    *
    * @see {@link https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-5FFF39D6-EFC7-49F5-B56A-6023EB5C0DE7 | AutoCAD Help: LUPREC}
@@ -1129,7 +1126,7 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Sets **LUPREC** — linear display precision (see {@link luprec} getter).
+   * Sets **LUPREC** ??linear display precision (see {@link luprec} getter).
    */
   set luprec(value: number) {
     this.updateSysVar(

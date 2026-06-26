@@ -103,7 +103,10 @@ describe('AcDbDatabaseTransactionManager', () => {
     db.tables.blockTable.modelSpace.appendEntity(line)
 
     db.transactionManager.runUndoable('Move', tr => {
-      const opened = tr.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+      const opened = tr.getObject<AcDbLine>(
+        line.objectId,
+        AcDbOpenMode.kForWrite
+      )
       opened!.endPoint = new AcGePoint3d(30, 0, 0)
     })
 
@@ -126,7 +129,10 @@ describe('AcDbDatabaseTransactionManager', () => {
     })
 
     db.transactionManager.runUndoable('Move', tr => {
-      const opened = tr.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+      const opened = tr.getObject<AcDbLine>(
+        line.objectId,
+        AcDbOpenMode.kForWrite
+      )
       opened!.endPoint = new AcGePoint3d(30, 0, 0)
     })
 
@@ -145,7 +151,10 @@ describe('AcDbDatabaseTransactionManager', () => {
     })
 
     db.transactionManager.runUndoable('Move', tr => {
-      const opened = tr.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+      const opened = tr.getObject<AcDbLine>(
+        line.objectId,
+        AcDbOpenMode.kForWrite
+      )
       opened!.endPoint = new AcGePoint3d(30, 0, 0)
     })
     expect(modifiedCount).toBe(1)
@@ -180,7 +189,10 @@ describe('AcDbDatabaseTransactionManager', () => {
     db.transactionManager.startUndoMark('Nested')
     db.transactionManager.startTransaction()
     const inner = db.transactionManager.startTransaction()
-    const opened = inner.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+    const opened = inner.getObject<AcDbLine>(
+      line.objectId,
+      AcDbOpenMode.kForWrite
+    )
     opened!.endPoint = new AcGePoint3d(40, 0, 0)
     db.transactionManager.commitTransaction()
     db.transactionManager.commitTransaction()
@@ -198,7 +210,10 @@ describe('AcDbDatabaseTransactionManager', () => {
 
     db.transactionManager.startTransaction()
     const inner = db.transactionManager.startTransaction()
-    const opened = inner.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+    const opened = inner.getObject<AcDbLine>(
+      line.objectId,
+      AcDbOpenMode.kForWrite
+    )
     opened!.endPoint = new AcGePoint3d(40, 0, 0)
     db.transactionManager.commitTransaction()
     db.transactionManager.abortTransaction()

@@ -1,7 +1,21 @@
+import { defaults } from '@mlightcad/common'
 import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
+import {
+  AcDbSymbolTableRecord,
+  AcDbSymbolTableRecordAttrs
+} from './AcDbSymbolTableRecord'
+
+/**
+ * Interface defining the attributes for text style table records.
+ *
+ * Merges {@link AcDbSymbolTableRecordAttrs} with {@link AcGiTextStyle} fields
+ * (excluding the duplicate `name` property).
+ */
+export interface AcDbTextStyleTableRecordAttrs
+  extends AcDbSymbolTableRecordAttrs,
+    Omit<AcGiTextStyle, 'name'> {}
 
 /**
  * Represents a record in the text style table.
@@ -12,36 +26,54 @@ import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
  *
  * @example
  * ```typescript
- * const textStyle = new AcGiBaseTextStyle();
- * textStyle.name = 'MyStyle';
- * textStyle.font = 'Arial';
- * const record = new AcDbTextStyleTableRecord(textStyle);
+ * const record = new AcDbTextStyleTableRecord({
+ *   name: 'MyStyle',
+ *   font: 'Arial'
+ * });
  * ```
  */
-export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
-  /** The text style configuration */
-  private _textStyle: AcGiTextStyle
-
+export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord<AcDbTextStyleTableRecordAttrs> {
   /**
    * Creates a new AcDbTextStyleTableRecord instance.
    *
-   * @param textStyle - The text style configuration to use
+   * Property `font` may be empty. When it contains a file extension, the extension is removed
+   * during construction.
+   *
+   * @param attrs - Input attribute values for this text style table record
+   * @param defaultAttrs - Default values for attributes of this text style table record
    *
    * @example
    * ```typescript
-   * const textStyle = new AcGiBaseTextStyle();
-   * textStyle.name = 'MyStyle';
-   * const record = new AcDbTextStyleTableRecord(textStyle);
+   * const record = new AcDbTextStyleTableRecord({
+   *   name: 'MyStyle',
+   *   font: 'Arial'
+   * });
    * ```
    */
-  constructor(textStyle: AcGiTextStyle) {
-    super()
-    this.name = textStyle.name
-    this._textStyle = textStyle
-    // Property `font` in text style may be empty string
-    // If it contans file extension, just remove file extension.
-    this._textStyle.font = this.getFileNameWithoutExtension(
-      this._textStyle.font || this._textStyle.extendedFont || this.name
+  constructor(
+    attrs?: Partial<AcDbTextStyleTableRecordAttrs>,
+    defaultAttrs?: Partial<AcDbTextStyleTableRecordAttrs>
+  ) {
+    attrs = attrs || {}
+    defaults(attrs, {
+      standardFlag: 0,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font: '',
+      bigFont: ''
+    })
+    super(attrs, defaultAttrs)
+
+    this.setAttr(
+      'font',
+      this.getFileNameWithoutExtension(
+        this.getAttr('font') ||
+          this.getAttrWithoutException('extendedFont') ||
+          this.name
+      )
     )
   }
 
@@ -49,93 +81,82 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    * Gets or sets the obliquing angle.
    *
    * The obliquing angle is the angle from the text's vertical; that is, the
-   * top of the text "slants" relative to the bottom--the same as the slope in this italic text.
-   * Positive angles slant characters forward at their tops. Negative angles have 2pi added to them
-   * to convert them to their positive equivalent.
+   * top of the text "slants" relative to the bottom. Positive angles slant
+   * characters forward at their tops.
    *
    * @returns The obliquing angle in radians
    *
    * @example
    * ```typescript
-   * const angle = record.obliquingAngle;
    * record.obliquingAngle = Math.PI / 6; // 30 degrees
    * ```
    */
   get obliquingAngle() {
-    return this._textStyle.obliqueAngle
+    return this.getAttr('obliqueAngle')
   }
   set obliquingAngle(value: number) {
-    this._textStyle.obliqueAngle = value
+    this.setAttr('obliqueAngle', value)
   }
 
   /**
    * Gets or sets the text height used for the last text created using this text style.
    *
    * This value is updated automatically by AutoCAD after the creation of any text object
-   * that references this text style table record. If the textSize value for this text style
-   * is 0, then the priorSize value is used by AutoCAD as the default text height for the
-   * next text created using this text style.
-   *
-   * This value is automatically changed by the use of the text command. It will only be
-   * automatically changed if the textSize is set to 0 so that users are prompted for a height.
+   * that references this text style table record. If {@link textSize} is 0, then priorSize
+   * is used as the default text height for the next text created using this text style.
    *
    * @returns The prior text size
    *
    * @example
    * ```typescript
-   * const priorSize = record.priorSize;
    * record.priorSize = 12.0;
    * ```
    */
   get priorSize() {
-    return this._textStyle.lastHeight
+    return this.getAttr('lastHeight')
   }
   set priorSize(value: number) {
-    this._textStyle.lastHeight = value
+    this.setAttr('lastHeight', value)
   }
 
   /**
    * Gets or sets the default size of the text drawn with this text style.
    *
-   * If the text size is set to 0, then each use of the AutoCAD text commands prompt
-   * for a text height to use in creating the text entity. If textSize is non-zero,
-   * the text command will not prompt for a text height and will use this value.
+   * If the text size is set to 0, AutoCAD prompts for a text height when creating text.
+   * If textSize is non-zero, that fixed height is used instead.
    *
    * @returns The default text size
    *
    * @example
    * ```typescript
-   * const textSize = record.textSize;
    * record.textSize = 10.0; // Fixed text height
    * ```
    */
   get textSize() {
-    return this._textStyle.fixedTextHeight
+    return this.getAttr('fixedTextHeight')
   }
   set textSize(value: number) {
-    this._textStyle.fixedTextHeight = value
+    this.setAttr('fixedTextHeight', value)
   }
 
   /**
    * Gets or sets the width factor (also referred to as the relative X-scale factor) for the text style.
    *
-   * The width factor is applied to the text's width to allow the width to be adjusted
-   * independently of the height. For example, if the width factor value is 0.8, then the text is
-   * drawn with a width that is 80% of its normal "unadjusted" width.
+   * The width factor is applied to the text's width independently of the height. For example,
+   * a value of 0.8 draws text at 80% of its normal width.
    *
    * @returns The width factor
    *
    * @example
    * ```typescript
-   * const xScale = record.xScale;
    * record.xScale = 0.8; // 80% width
    * ```
    */
   get xScale() {
-    return this._textStyle.widthFactor
+    return this.getAttr('widthFactor')
   }
   set xScale(value: number) {
-    this._textStyle.widthFactor = value
+    this.setAttr('widthFactor', value)
   }
 
   /**
@@ -147,21 +168,15 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    *
    * @example
    * ```typescript
-   * if (record.isVertical) {
-   *   console.log('Text style is vertical');
-   * }
    * record.isVertical = true;
    * ```
    */
   get isVertical() {
-    return (this._textStyle.standardFlag & 4) === 4
+    return (this.getAttr('standardFlag') & 4) === 4
   }
   set isVertical(value: boolean) {
-    if (value) {
-      this._textStyle.standardFlag |= 4
-    } else {
-      this._textStyle.standardFlag &= ~4
-    }
+    const standardFlag = this.getAttr('standardFlag')
+    this.setAttr('standardFlag', value ? standardFlag | 4 : standardFlag & ~4)
   }
 
   /**
@@ -177,18 +192,14 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    * if (record.isShapeFile) {
    *   console.log('Shape file definition:', record.fileName);
    * }
-   * record.isShapeFile = true;
    * ```
    */
   get isShapeFile() {
-    return (this._textStyle.standardFlag & 1) === 1
+    return (this.getAttr('standardFlag') & 1) === 1
   }
   set isShapeFile(value: boolean) {
-    if (value) {
-      this._textStyle.standardFlag |= 1
-    } else {
-      this._textStyle.standardFlag &= ~1
-    }
+    const standardFlag = this.getAttr('standardFlag')
+    this.setAttr('standardFlag', value ? standardFlag | 1 : standardFlag & ~1)
   }
 
   /**
@@ -198,15 +209,14 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    *
    * @example
    * ```typescript
-   * const fileName = record.fileName;
    * record.fileName = 'Arial';
    * ```
    */
   get fileName() {
-    return this._textStyle.font
+    return this.getAttr('font')
   }
   set fileName(value: string) {
-    this._textStyle.font = value
+    this.setAttr('font', value)
   }
 
   /**
@@ -219,21 +229,23 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    *
    * @example
    * ```typescript
-   * const bigFontFileName = record.bigFontFileName;
    * record.bigFontFileName = 'bigfont.shx';
    * ```
    */
   get bigFontFileName() {
-    return this._textStyle.bigFont
+    return this.getAttr('bigFont')
   }
   set bigFontFileName(value: string) {
-    this._textStyle.bigFont = value
+    this.setAttr('bigFont', value)
   }
 
   /**
    * Gets the text style information used by the renderer.
    *
-   * @returns The text style configuration
+   * Returns a snapshot assembled from stored attributes. Mutating the returned object
+   * does not update this table record; use the dedicated setters instead.
+   *
+   * @returns The text style configuration assembled from stored attributes
    *
    * @example
    * ```typescript
@@ -241,8 +253,19 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    * console.log('Font:', textStyle.font);
    * ```
    */
-  get textStyle() {
-    return this._textStyle
+  get textStyle(): AcGiTextStyle {
+    return {
+      name: this.name,
+      standardFlag: this.getAttr('standardFlag'),
+      fixedTextHeight: this.getAttr('fixedTextHeight'),
+      widthFactor: this.getAttr('widthFactor'),
+      obliqueAngle: this.getAttr('obliqueAngle'),
+      textGenerationFlag: this.getAttr('textGenerationFlag'),
+      lastHeight: this.getAttr('lastHeight'),
+      font: this.getAttr('font'),
+      bigFont: this.getAttr('bigFont'),
+      extendedFont: this.getAttrWithoutException('extendedFont')
+    }
   }
 
   /**
@@ -250,25 +273,14 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
    *
    * @param pathName - The file path or name
    * @returns The file name without extension
-   *
-   * @example
-   * ```typescript
-   * const fileName = this.getFileNameWithoutExtension('arial.ttf');
-   * // Returns: 'arial'
-   * ```
    */
   private getFileNameWithoutExtension(pathName: string) {
     const fileName = pathName.split('/').pop()
     if (fileName) {
-      // Find the last dot to separate the extension, if any
       const dotIndex = fileName.lastIndexOf('.')
-
-      // If no dot is found, return the file name as is
       if (dotIndex === -1) {
         return fileName
       }
-
-      // Otherwise, return the part before the last dot (file name without extension)
       return fileName.substring(0, dotIndex)
     }
     return pathName
@@ -284,11 +296,11 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbTextStyleTableRecord')
     filer.writeString(2, this.name)
-    filer.writeInt16(70, this.textStyle.standardFlag)
+    filer.writeInt16(70, this.getAttr('standardFlag'))
     filer.writeDouble(40, this.textSize)
     filer.writeDouble(41, this.xScale)
     filer.writeAngle(50, this.obliquingAngle)
-    filer.writeInt16(71, this.textStyle.textGenerationFlag)
+    filer.writeInt16(71, this.getAttr('textGenerationFlag'))
     filer.writeDouble(42, this.priorSize)
     filer.writeString(3, this.fileName)
     filer.writeString(4, this.bigFontFileName)

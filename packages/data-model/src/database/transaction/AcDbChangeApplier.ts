@@ -126,7 +126,10 @@ export class AcDbChangeApplier {
    * @param container - Target block table record, symbol table, or dictionary entry
    * @param object - Object snapshot to append
    */
-  private applyAppend(container: AcDbChangeContainer, object: AcDbObject): void {
+  private applyAppend(
+    container: AcDbChangeContainer,
+    object: AcDbObject
+  ): void {
     switch (container.type) {
       case 'blockTableRecord': {
         const btr = this.database.tables.blockTable.getIdAt(container.ownerId)
@@ -160,7 +163,10 @@ export class AcDbChangeApplier {
    * @param container - Source block table record, symbol table, or dictionary entry
    * @param object - Object whose {@link AcDbObject.objectId} identifies the removal target
    */
-  private applyRemove(container: AcDbChangeContainer, object: AcDbObject): void {
+  private applyRemove(
+    container: AcDbChangeContainer,
+    object: AcDbObject
+  ): void {
     switch (container.type) {
       case 'blockTableRecord': {
         const btr = this.database.tables.blockTable.getIdAt(container.ownerId)

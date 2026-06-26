@@ -17,8 +17,13 @@ import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
-/** Quadrant grip angles in radians: 0°, 90°, 180°, 270°. */
-const ELLIPSE_QUADRANT_GRIP_ANGLES = [0, Math.PI / 2, Math.PI, (Math.PI / 2) * 3]
+/** Quadrant grip angles in radians: 0?, 90?, 180?, 270?. */
+const ELLIPSE_QUADRANT_GRIP_ANGLES = [
+  0,
+  Math.PI / 2,
+  Math.PI,
+  (Math.PI / 2) * 3
+]
 
 /**
  * Represents an ellipse entity in AutoCAD.
@@ -69,8 +74,8 @@ export class AcDbEllipse extends AcDbCurve {
    * @param majorAxis - The major axis vector in WCS coordinates
    * @param majorAxisRadius - The radius of the major axis (must be positive)
    * @param minorAxisRadius - The radius of the minor axis (must be positive)
-   * @param startAngle - The starting angle in radians (0 to 2π)
-   * @param endAngle - The ending angle in radians (0 to 2π)
+   * @param startAngle - The starting angle in radians (0 to 2?)
+   * @param endAngle - The ending angle in radians (0 to 2?)
    *
    * @example
    * ```typescript
@@ -227,7 +232,7 @@ export class AcDbEllipse extends AcDbCurve {
   /**
    * Sets the start angle of this ellipse.
    *
-   * @param value - The new start angle in radians (0 to 2π)
+   * @param value - The new start angle in radians (0 to 2?)
    *
    * @example
    * ```typescript
@@ -256,7 +261,7 @@ export class AcDbEllipse extends AcDbCurve {
   /**
    * Sets the end angle of this ellipse.
    *
-   * @param value - The new end angle in radians (0 to 2π)
+   * @param value - The new end angle in radians (0 to 2?)
    *
    * @example
    * ```typescript
@@ -317,14 +322,12 @@ export class AcDbEllipse extends AcDbCurve {
    * Gets whether this ellipse is closed.
    *
    * A full ellipse may be stored either with identical start/end angles (AutoCAD
-   * convention) or with a 0→2π parameter span. Both represent a closed curve.
+   * convention) or with a 0??? parameter span. Both represent a closed curve.
    *
    * @returns True if the ellipse is closed (forms a complete ellipse), false otherwise
    */
   get closed(): boolean {
-    return (
-      this._geo.closed || Math.abs(this._geo.deltaAngle - TAU) < 1e-10
-    )
+    return this._geo.closed || Math.abs(this._geo.deltaAngle - TAU) < 1e-10
   }
 
   /** @inheritdoc */
@@ -690,11 +693,11 @@ export class AcDbEllipse extends AcDbCurve {
   /**
    * Moves a quadrant grip on a closed ellipse by updating the corresponding axis radius.
    *
-   * Grips at 0° and 180° adjust {@link majorAxisRadius}; grips at 90° and 270° adjust
+   * Grips at 0? and 180? adjust {@link majorAxisRadius}; grips at 90? and 270? adjust
    * {@link minorAxisRadius}. The new radius is the absolute projection of the dragged
    * point onto the relevant axis from the ellipse center.
    *
-   * @param angle - Quadrant angle in radians (0, π/2, π, or 3π/2).
+   * @param angle - Quadrant angle in radians (0, ?/2, ?, or 3?/2).
    * @param offset - Translation applied to the grip point before recomputing the radius.
    * @private
    */

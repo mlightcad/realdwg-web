@@ -19,13 +19,14 @@ import {
   AcDbLayerTableRecord,
   AcDbLayout,
   AcDbLinetypeTableRecord,
+  AcDbLinetypeTableRecordAttrs,
   AcDbObject,
   AcDbParsingTaskResult,
   AcDbRasterImageDef,
   AcDbSymbolTableRecord,
   AcDbTextStyleTableRecord,
+  AcDbTextStyleTableRecordAttrs,
   AcDbViewportTableRecord,
-  AcGiBaseLineStyle,
   AcGiDefaultLightingType,
   AcGiOrthographicType,
   AcGiRenderMode,
@@ -136,7 +137,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
           return { styleName: shape.styleName, resolveStyle: true }
         }
         if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-          const mleader = entity as DwgMultiLeaderEntity & Record<string, unknown>
+          const mleader = entity as DwgMultiLeaderEntity &
+            Record<string, unknown>
           const text =
             typeof mleader.textContent === 'string' ? mleader.textContent : ''
           const styleName =
@@ -159,16 +161,15 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   protected processLineTypes(model: DwgDatabase, db: AcDbDatabase) {
     const lineTypes = model.tables.LTYPE.entries
     lineTypes.forEach(item => {
-      const lineType: AcGiBaseLineStyle = {
+      const attrs: AcDbLinetypeTableRecordAttrs = {
         name: item.name,
         description: item.description,
         standardFlag: item.standardFlag,
         totalPatternLength: item.totalPatternLength,
         pattern: item.pattern
       }
-      const record = new AcDbLinetypeTableRecord(lineType)
+      const record = new AcDbLinetypeTableRecord(attrs)
       this.processCommonTableEntryAttrs(item, record)
-      record.name = item.name
       db.tables.linetypeTable.add(record)
     })
   }
@@ -176,7 +177,19 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   protected processTextStyles(model: DwgDatabase, db: AcDbDatabase) {
     const textStyles = model.tables.STYLE.entries
     textStyles.forEach(item => {
-      const record = new AcDbTextStyleTableRecord(item)
+      const attrs: AcDbTextStyleTableRecordAttrs = {
+        name: item.name,
+        standardFlag: item.standardFlag,
+        fixedTextHeight: item.fixedTextHeight,
+        widthFactor: item.widthFactor,
+        obliqueAngle: item.obliqueAngle,
+        textGenerationFlag: item.textGenerationFlag,
+        lastHeight: item.lastHeight,
+        font: item.font,
+        bigFont: item.bigFont,
+        extendedFont: (item as { extendedFont?: string }).extendedFont
+      }
+      const record = new AcDbTextStyleTableRecord(attrs)
       this.processCommonTableEntryAttrs(item, record)
       db.tables.textStyleTable.add(record)
     })

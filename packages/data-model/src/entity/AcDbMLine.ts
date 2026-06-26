@@ -589,9 +589,7 @@ export class AcDbMLine extends AcDbEntity {
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
     gripPoints.push(this._startPosition.clone())
-    this._segments.forEach(segment =>
-      gripPoints.push(segment.position.clone())
-    )
+    this._segments.forEach(segment => gripPoints.push(segment.position.clone()))
     return gripPoints
   }
 

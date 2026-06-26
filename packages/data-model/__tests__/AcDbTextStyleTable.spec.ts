@@ -1,8 +1,8 @@
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbTextStyleTable } from '../src/database/AcDbTextStyleTable'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
+import type { AcDbTextStyleTableRecordAttrs } from '../src/database/AcDbTextStyleTableRecord'
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import type { AcGiTextStyle } from '@mlightcad/graphic-interface'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 describe('AcDbTextStyleTable', () => {
@@ -13,18 +13,22 @@ describe('AcDbTextStyleTable', () => {
   it('collects normalized unique font names from file and big-font fields', () => {
     const db = new AcDbDatabase()
     const table = db.tables.textStyleTable
-    const makeStyle = (name: string, font: string) =>
-      ({
-        name,
-        fixedTextHeight: 0,
-        widthFactor: 1,
-        obliqueAngle: 0,
-        textGenerationFlag: 0,
-        lastHeight: 0,
-        font,
-        bigFont: '',
-        extendedFont: ''
-      }) as AcGiTextStyle
+    const makeStyle = (
+      name: string,
+      font: string,
+      standardFlag = 0
+    ): AcDbTextStyleTableRecordAttrs => ({
+      name,
+      standardFlag,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font,
+      bigFont: '',
+      extendedFont: ''
+    })
 
     const style1 = new AcDbTextStyleTableRecord(makeStyle('S1', 'Arial.ttf'))
     style1.bigFontFileName = 'Gbcbig.SHX'
@@ -56,19 +60,18 @@ describe('AcDbTextStyleTable', () => {
       name: string,
       font: string,
       standardFlag = 0
-    ): AcGiTextStyle =>
-      ({
-        name,
-        standardFlag,
-        fixedTextHeight: 0,
-        widthFactor: 1,
-        obliqueAngle: 0,
-        textGenerationFlag: 0,
-        lastHeight: 0,
-        font,
-        bigFont: '',
-        extendedFont: ''
-      }) as AcGiTextStyle
+    ): AcDbTextStyleTableRecordAttrs => ({
+      name,
+      standardFlag,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font,
+      bigFont: '',
+      extendedFont: ''
+    })
 
     const textStyle = new AcDbTextStyleTableRecord(makeStyle('Standard', 'txt'))
     const shapeDef = new AcDbTextStyleTableRecord(makeStyle('', 'ltypeshp', 1))
