@@ -1,5 +1,9 @@
 import { AcCmErrors } from '@mlightcad/common'
-import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeMatrix3d,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
 import type { AcGeKnotParameterizationType } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 

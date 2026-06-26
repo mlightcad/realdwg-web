@@ -144,7 +144,14 @@ describe('AcDbDxfConverter', () => {
           ]
         }
       },
-      entities: [{ type: 'SHAPE', shapeName: '_GV_', insertionPoint: { x: 0, y: 0, z: 0 }, size: 0.01 }],
+      entities: [
+        {
+          type: 'SHAPE',
+          shapeName: '_GV_',
+          insertionPoint: { x: 0, y: 0, z: 0 },
+          size: 0.01
+        }
+      ],
       blocks: {}
     })
 

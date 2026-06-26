@@ -339,10 +339,7 @@ export class AcDbDatabaseTransactionManager {
    * @param fn - Callback that performs the command using the active transaction
    * @returns The value returned by `fn`
    */
-  runUndoable<T>(
-    label: string,
-    fn: (tr: AcDbDatabaseTransaction) => T
-  ): T {
+  runUndoable<T>(label: string, fn: (tr: AcDbDatabaseTransaction) => T): T {
     this.startUndoMark(label)
     this.startTransaction()
     try {

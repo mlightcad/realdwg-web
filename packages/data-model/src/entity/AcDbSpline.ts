@@ -23,7 +23,10 @@ function resolveSplineKnotParameterization(
   return 'Uniform'
 }
 
-function createAcDbSplineFromGeo(geo: AcGeSpline3d, closed: boolean): AcDbSpline | null {
+function createAcDbSplineFromGeo(
+  geo: AcGeSpline3d,
+  closed: boolean
+): AcDbSpline | null {
   try {
     return new AcDbSpline(
       geo.controlPoints,

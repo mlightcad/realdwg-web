@@ -2,10 +2,14 @@ import { AcDbFontNameCollector } from '../src/converter/AcDbFontNameCollector'
 
 describe('AcDbFontNameCollector', () => {
   it('normalizes font file names', () => {
-    expect(AcDbFontNameCollector.normalizeFontFileName('Arial.ttf')).toBe('arial')
+    expect(AcDbFontNameCollector.normalizeFontFileName('Arial.ttf')).toBe(
+      'arial'
+    )
     expect(AcDbFontNameCollector.normalizeFontFileName('SIMHEI')).toBe('simhei')
     expect(AcDbFontNameCollector.normalizeFontFileName('')).toBeUndefined()
-    expect(AcDbFontNameCollector.normalizeFontFileName(undefined)).toBeUndefined()
+    expect(
+      AcDbFontNameCollector.normalizeFontFileName(undefined)
+    ).toBeUndefined()
   })
 
   it('collects fonts from styles, inline mtext, and nested blocks', () => {

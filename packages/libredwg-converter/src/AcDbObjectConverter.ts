@@ -3,10 +3,7 @@ import {
   AcDbObject,
   decodeMLeaderStyleRawColor
 } from '@mlightcad/data-model'
-import {
-  DwgCommonObject,
-  DwgMLeaderStyleObject
-} from '@mlightcad/libredwg-web'
+import { DwgCommonObject, DwgMLeaderStyleObject } from '@mlightcad/libredwg-web'
 
 /**
  * Converts libredwg object records to AcDbObject instances.

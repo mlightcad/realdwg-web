@@ -273,10 +273,7 @@ export class AcGeMatrix3d {
         : extrusion
     if (!DEFAULT_TOL.equalPoint3d(normal, AcGeVector3d.Z_AXIS)) {
       const xAxis = new AcGeVector3d(1, 0, 0)
-      if (
-        Math.abs(normal.x) < 1.0 / 64.0 &&
-        Math.abs(normal.y) < 1.0 / 64.0
-      ) {
+      if (Math.abs(normal.x) < 1.0 / 64.0 && Math.abs(normal.y) < 1.0 / 64.0) {
         xAxis.crossVectors(AcGeVector3d.Y_AXIS, normal).normalize()
       } else {
         xAxis.crossVectors(AcGeVector3d.Z_AXIS, normal).normalize()
@@ -1036,7 +1033,7 @@ export class AcGeMatrix3d {
   }
 
   /**
-   * Set this matrix as a rotational transformation around the X axis by theta (θ) radians.
+   * Set this matrix as a rotational transformation around the X axis by theta (?) radians.
    * @param theta Input rotation angle in radians.
    * @returns Return this matrix
    */
@@ -1050,7 +1047,7 @@ export class AcGeMatrix3d {
   }
 
   /**
-   * Set this matrix as a rotational transformation around the Y axis by theta (θ) radians.
+   * Set this matrix as a rotational transformation around the Y axis by theta (?) radians.
    * @param theta Input rotation angle in radians.
    * @returns Return this matrix
    */
@@ -1064,7 +1061,7 @@ export class AcGeMatrix3d {
   }
 
   /**
-   * Set this matrix as a rotational transformation around the Z axis by theta (θ) radians.
+   * Set this matrix as a rotational transformation around the Z axis by theta (?) radians.
    * @param theta Input rotation angle in radians.
    * @returns Return this matrix
    */

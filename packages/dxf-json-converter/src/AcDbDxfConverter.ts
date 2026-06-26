@@ -761,10 +761,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       this.processCommonTableAttrs(lineTypeTable, db.tables.linetypeTable)
       const lineTypes = lineTypeTable.entries
       if (lineTypes && lineTypes.length > 0) {
-        lineTypes.forEach(item => {
-          const record = new AcDbLinetypeTableRecord(item)
+        lineTypes.forEach((item: LTypeTableEntry) => {
+          const record = new AcDbLinetypeTableRecord({
+            name: item.name,
+            standardFlag: item.standardFlag,
+            description: item.description,
+            totalPatternLength: item.totalPatternLength,
+            pattern: item.pattern
+          })
           this.processCommonTableEntryAttrs(item, record)
-          record.name = item.name
           db.tables.linetypeTable.add(record)
         })
       }
@@ -791,8 +796,19 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       this.processCommonTableAttrs(textStyleTable, db.tables.textStyleTable)
       const textStyles = textStyleTable.entries
       if (textStyles && textStyles.length > 0) {
-        textStyles.forEach(item => {
-          const record = new AcDbTextStyleTableRecord(item)
+        textStyles.forEach((item: StyleTableEntry) => {
+          const record = new AcDbTextStyleTableRecord({
+            name: item.name,
+            standardFlag: item.standardFlag,
+            fixedTextHeight: item.fixedTextHeight,
+            widthFactor: item.widthFactor,
+            obliqueAngle: item.obliqueAngle,
+            textGenerationFlag: item.textGenerationFlag,
+            lastHeight: item.lastHeight,
+            font: item.font,
+            bigFont: item.bigFont,
+            extendedFont: item.extendedFont
+          })
           this.processCommonTableEntryAttrs(item, record)
           db.tables.textStyleTable.add(record)
         })

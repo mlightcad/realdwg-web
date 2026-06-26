@@ -159,12 +159,7 @@ export class AcDbArcDimension extends AcDbDimension {
    * @inheritdoc
    */
   protected override collectDimensionDefinitionGripPoints() {
-    return [
-      this.centerPoint,
-      this.xLine1Point,
-      this.xLine2Point,
-      this.arcPoint
-    ]
+    return [this.centerPoint, this.xLine1Point, this.xLine2Point, this.arcPoint]
   }
 
   /**

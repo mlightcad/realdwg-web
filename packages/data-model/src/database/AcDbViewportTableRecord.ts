@@ -1,9 +1,12 @@
+import { defaults } from '@mlightcad/common'
 import { AcGeBox2d, AcGePoint2d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
-import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
-
+import {
+  AcDbAbstractViewTableRecord,
+  AcDbAbstractViewTableRecordAttrs
+} from './AcDbAbstractViewTableRecord'
 /** Reject saved views zoomed out more than this factor vs drawing EXTMIN/EXTMAX. */
 const MAX_VIEW_TO_EXTENT_RATIO = 2
 
@@ -12,6 +15,33 @@ const MAX_VIEW_CENTER_OFFSET_RATIO = 0.45
 
 /** Max model-space view span when EXTMIN/EXTMAX are unavailable. */
 const MAX_VIEW_SPAN_WITHOUT_EXTENTS = 1e5
+
+/**
+ * Interface defining the attributes for viewport table records.
+ */
+export interface AcDbViewportTableRecordAttrs
+  extends AcDbAbstractViewTableRecordAttrs {
+  /** Number of sides used for circle tessellation */
+  circleSides: number
+  /** Lower left corner of the viewport window */
+  lowerLeftCorner: AcGePoint2d
+  /** Upper right corner of the viewport window */
+  upperRightCorner: AcGePoint2d
+  /** Snap base point for the viewport */
+  snapBase: AcGePoint2d
+  /** Snap angle for the viewport */
+  snapAngle: number
+  /** Snap spacing for the viewport */
+  snapSpacing: AcGePoint2d
+  /** Standard flags for the viewport */
+  standardFlag: number
+  /** Grid spacing for the viewport */
+  gridSpacing: AcGePoint2d
+  /** Grid major spacing for the viewport */
+  gridMajor: number
+  /** Background object ID for the viewport */
+  backgroundObjectId?: string
+}
 
 type VportAspectRatioSource = {
   aspectRatio?: number
@@ -40,7 +70,10 @@ function resolveViewAspectRatio(
   return 1
 }
 
-function intersectionArea(viewBox: AcGeBox2d, drawingExtents: AcGeBox2d): number {
+function intersectionArea(
+  viewBox: AcGeBox2d,
+  drawingExtents: AcGeBox2d
+): number {
   const minX = Math.max(viewBox.min.x, drawingExtents.min.x)
   const minY = Math.max(viewBox.min.y, drawingExtents.min.y)
   const maxX = Math.min(viewBox.max.x, drawingExtents.max.x)
@@ -86,7 +119,7 @@ function hasMeaningfulDrawingExtents(
  * viewportRecord.upperRightCorner = new AcGePoint2d(1, 1);
  * ```
  */
-export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
+export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbViewportTableRecordAttrs> {
   /**
    * Returns true if the specified name is the active viewport table record.
    *
@@ -98,46 +131,29 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
     return name.toLowerCase() === ACTIVE_VPORT_NAME.toLowerCase()
   }
 
-  /** Number of sides used for circle tessellation */
-  private _circleSides: number
-  /** Lower left corner of the viewport window */
-  private _lowerLeftCorner: AcGePoint2d
-  /** Upper right corner of the viewport window */
-  private _upperRightCorner: AcGePoint2d
-  /** Snap base point for the viewport */
-  private _snapBase: AcGePoint2d
-  /** Snap angle for the viewport */
-  private _snapAngle: number
-  /** Snap spacing for the viewport */
-  private _snapSpacing: AcGePoint2d
-  /** Standard flags for the viewport */
-  private _standardFlag: number
-  /** Grid spacing for the viewport */
-  private _gridSpacing: AcGePoint2d
-  /** Grid major spacing for the viewport */
-  private _gridMajor: number
-  /** Background object ID for the viewport */
-  private _backgroundObjectId?: string
   /**
    * Creates a new AcDbViewportTableRecord instance.
    *
-   * @example
-   * ```typescript
-   * const viewportRecord = new AcDbViewportTableRecord();
-   * ```
+   * @param attrs - Input attribute values for this viewport table record
+   * @param defaultAttrs - Default values for attributes of this viewport table record
    */
-  constructor() {
-    super()
-    this._circleSides = 100
-    this._lowerLeftCorner = new AcGePoint2d(0, 0)
-    this._upperRightCorner = new AcGePoint2d(1, 1)
-    this._snapBase = new AcGePoint2d(0, 0)
-    this._snapAngle = 0
-    this._snapSpacing = new AcGePoint2d(0, 0)
-    this._standardFlag = 0
-    this._gridSpacing = new AcGePoint2d()
-    // TODO: Not sure what's the correct default value
-    this._gridMajor = 10
+  constructor(
+    attrs?: Partial<AcDbViewportTableRecordAttrs>,
+    defaultAttrs?: Partial<AcDbViewportTableRecordAttrs>
+  ) {
+    attrs = attrs || {}
+    defaults(attrs, {
+      circleSides: 100,
+      lowerLeftCorner: new AcGePoint2d(0, 0),
+      upperRightCorner: new AcGePoint2d(1, 1),
+      snapBase: new AcGePoint2d(0, 0),
+      snapAngle: 0,
+      snapSpacing: new AcGePoint2d(0, 0),
+      standardFlag: 0,
+      gridSpacing: new AcGePoint2d(),
+      gridMajor: 10
+    })
+    super(attrs, defaultAttrs)
   }
 
   /**
@@ -156,10 +172,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * ```
    */
   get circleSides() {
-    return this._circleSides
+    return this.getAttr('circleSides')
   }
   set circleSides(value: number) {
-    this._circleSides = value
+    this.setAttr('circleSides', value)
   }
 
   /**
@@ -198,10 +214,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * ```
    */
   get lowerLeftCorner() {
-    return this._lowerLeftCorner
+    return this.getAttr('lowerLeftCorner')
   }
   set lowerLeftCorner(value: AcGePoint2d) {
-    this._lowerLeftCorner.copy(value)
+    this.getAttr('lowerLeftCorner').copy(value)
   }
 
   /**
@@ -212,20 +228,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * graphics area, midway between the left and right edges of the graphics area.
    */
   get upperRightCorner() {
-    return this._upperRightCorner
+    return this.getAttr('upperRightCorner')
   }
   set upperRightCorner(value: AcGePoint2d) {
-    this._upperRightCorner.copy(value)
+    this.getAttr('upperRightCorner').copy(value)
   }
 
   /**
    * The snap basepoint (in UCS coordinates) for the viewport table record.
    */
   get snapBase() {
-    return this._snapBase
+    return this.getAttr('snapBase')
   }
   set snapBase(value: AcGePoint2d) {
-    this._snapBase.copy(value)
+    this.getAttr('snapBase').copy(value)
   }
 
   /**
@@ -234,10 +250,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * when looking down the UCS Z axis towards the UCS origin.
    */
   get snapAngle() {
-    return this._snapAngle
+    return this.getAttr('snapAngle')
   }
   set snapAngle(value: number) {
-    this._snapAngle = value
+    this.setAttr('snapAngle', value)
   }
 
   /**
@@ -245,20 +261,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * represents the Y spacing of the snap grid. Both values are in drawing units.
    */
   get snapIncrements() {
-    return this._snapSpacing
+    return this.getAttr('snapSpacing')
   }
   set snapIncrements(value: AcGePoint2d) {
-    this._snapSpacing.copy(value)
+    this.getAttr('snapSpacing').copy(value)
   }
 
   /**
    * The number of minor grid lines between each major grid line in the viewport.
    */
   get gridMajor() {
-    return this._gridMajor
+    return this.getAttr('gridMajor')
   }
   set gridMajor(value: number) {
-    this._gridMajor = value
+    this.setAttr('gridMajor', value)
   }
 
   /**
@@ -266,10 +282,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * the Y value represents the Y spacing of the grid.
    */
   get gridIncrements() {
-    return this._gridSpacing
+    return this.getAttr('gridSpacing')
   }
   set gridIncrements(value: AcGePoint2d) {
-    this._gridSpacing.copy(value)
+    this.getAttr('gridSpacing').copy(value)
   }
 
   /*
@@ -300,24 +316,24 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * @internal
    */
   get standardFlag() {
-    return this._standardFlag
+    return this.getAttr('standardFlag')
   }
   set standardFlag(value: number) {
-    this._standardFlag = value
+    this.setAttr('standardFlag', value)
   }
 
   get snapEnabled() {
-    return !!(this._standardFlag & 0x100)
+    return !!(this.standardFlag & 0x100)
   }
 
   /**
    * The object dD of the new background for the view.
    */
   get backgroundObjectId() {
-    return this._backgroundObjectId
+    return this.getAttrWithoutException('backgroundObjectId')
   }
   set backgroundObjectId(value: string | undefined) {
-    this._backgroundObjectId = value
+    this.setAttr('backgroundObjectId', value)
   }
 
   /**
@@ -326,10 +342,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
    * AutoCAD stores:
    * - view center in groups 10/20 (mapped to `centerPoint`)
    * - view height in group 40/45 (`viewHeight`)
-   * - aspect ratio in group 41 (`gsView.aspectRatio`) — the AutoCAD graphics
+   * - aspect ratio in group 41 (`gsView.aspectRatio`) ??the AutoCAD graphics
    *   window width/height at save time, not the model-space view on its own
    *
-   * View width = view height × aspect ratio. The viewer uses the current canvas
+   * View width = view height ? aspect ratio. The viewer uses the current canvas
    * aspect ratio so DWG/DXF exports of the same drawing frame identically even
    * when group 41 differs.
    */
@@ -423,14 +439,21 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord {
     drawingExtents?: AcGeBox2d
   ): AcGeBox2d | undefined {
     const viewBox = this.modelViewBox(canvasAspectRatio)
-    if (!viewBox || !AcDbViewportTableRecord.isModelViewBoxStructurallyValid(viewBox)) {
+    if (
+      !viewBox ||
+      !AcDbViewportTableRecord.isModelViewBoxStructurallyValid(viewBox)
+    ) {
       return undefined
     }
     if (hasMeaningfulDrawingExtents(drawingExtents)) {
-      if (!AcDbViewportTableRecord.isModelViewBoxUsable(viewBox, drawingExtents)) {
+      if (
+        !AcDbViewportTableRecord.isModelViewBoxUsable(viewBox, drawingExtents)
+      ) {
         return undefined
       }
-    } else if (!AcDbViewportTableRecord.isModelViewBoxPlausibleWithoutExtents(viewBox)) {
+    } else if (
+      !AcDbViewportTableRecord.isModelViewBoxPlausibleWithoutExtents(viewBox)
+    ) {
       return undefined
     }
     return viewBox

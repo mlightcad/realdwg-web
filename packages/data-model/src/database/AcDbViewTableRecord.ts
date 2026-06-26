@@ -1,5 +1,35 @@
+import { defaults } from '@mlightcad/common'
+
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
+import {
+  AcDbAbstractViewTableRecord,
+  AcDbAbstractViewTableRecordAttrs
+} from './AcDbAbstractViewTableRecord'
+
+/**
+ * Interface defining the attributes for view table records.
+ */
+export interface AcDbViewTableRecordAttrs
+  extends AcDbAbstractViewTableRecordAttrs {
+  /** Standard flags for the view record */
+  standardFlags: number
+  /** View width in DCS */
+  viewWidth: number
+  /** Whether a UCS is associated with this view */
+  ucsAssociated: boolean
+  /** Whether the camera is plottable */
+  cameraPlottable: boolean
+  /** UCS elevation when a UCS is associated */
+  ucsElevation: number
+  /** Named UCS object ID (optional) */
+  ucsObjectId?: string
+  /** Base UCS object ID (optional) */
+  ucsBaseObjectId?: string
+  /** Background object ID for the view */
+  backgroundObjectId?: string
+  /** Live section object ID for the view */
+  liveSectionObjectId?: string
+}
 
 /**
  * Represents a view table record in AutoCAD.
@@ -15,131 +45,119 @@ import { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
  * viewRecord.gsView.viewHeight = 1000;
  * ```
  */
-export class AcDbViewTableRecord extends AcDbAbstractViewTableRecord {
-  /** Standard flags for the view record */
-  private _standardFlags: number
-  /** View width in DCS */
-  private _viewWidth: number
-  /** Whether a UCS is associated with this view */
-  private _ucsAssociated: boolean
-  /** Whether the camera is plottable */
-  private _cameraPlottable: boolean
-  /** UCS elevation when a UCS is associated */
-  private _ucsElevation: number
-  /** Named UCS object ID (optional) */
-  private _ucsObjectId?: string
-  /** Base UCS object ID (optional) */
-  private _ucsBaseObjectId?: string
-  /** Background object ID for the view */
-  private _backgroundObjectId?: string
-  /** Live section object ID for the view */
-  private _liveSectionObjectId?: string
-
+export class AcDbViewTableRecord extends AcDbAbstractViewTableRecord<AcDbViewTableRecordAttrs> {
   /**
    * Creates a new AcDbViewTableRecord instance.
    *
-   * @example
-   * ```typescript
-   * const viewRecord = new AcDbViewTableRecord();
-   * ```
+   * @param attrs - Input attribute values for this view table record
+   * @param defaultAttrs - Default values for attributes of this view table record
    */
-  constructor() {
-    super()
-    this._standardFlags = 0
-    this._viewWidth = this.viewHeight
-    this._ucsAssociated = false
-    this._cameraPlottable = false
-    this._ucsElevation = 0
+  constructor(
+    attrs?: Partial<AcDbViewTableRecordAttrs>,
+    defaultAttrs?: Partial<AcDbViewTableRecordAttrs>
+  ) {
+    attrs = attrs || {}
+    const viewWidthProvided = attrs.viewWidth !== undefined
+    defaults(attrs, {
+      standardFlags: 0,
+      ucsAssociated: false,
+      cameraPlottable: false,
+      ucsElevation: 0
+    })
+    super(attrs, defaultAttrs)
+    if (!viewWidthProvided) {
+      this.viewWidth = this.viewHeight
+    }
   }
 
   /**
    * Gets or sets the standard flags for this view record.
    */
   get standardFlags() {
-    return this._standardFlags
+    return this.getAttr('standardFlags')
   }
   set standardFlags(value: number) {
-    this._standardFlags = value
+    this.setAttr('standardFlags', value)
   }
 
   /**
    * Gets or sets the view width in DCS.
    */
   get viewWidth() {
-    return this._viewWidth
+    return this.getAttr('viewWidth')
   }
   set viewWidth(value: number) {
-    this._viewWidth = value
+    this.setAttr('viewWidth', value)
   }
 
   /**
    * Gets or sets whether a UCS is associated to this view.
    */
   get ucsAssociated() {
-    return this._ucsAssociated
+    return this.getAttr('ucsAssociated')
   }
   set ucsAssociated(value: boolean) {
-    this._ucsAssociated = value
+    this.setAttr('ucsAssociated', value)
   }
 
   /**
    * Gets or sets whether the camera is plottable.
    */
   get cameraPlottable() {
-    return this._cameraPlottable
+    return this.getAttr('cameraPlottable')
   }
   set cameraPlottable(value: boolean) {
-    this._cameraPlottable = value
+    this.setAttr('cameraPlottable', value)
   }
 
   /**
    * Gets or sets the UCS elevation when UCS is associated.
    */
   get ucsElevation() {
-    return this._ucsElevation
+    return this.getAttr('ucsElevation')
   }
   set ucsElevation(value: number) {
-    this._ucsElevation = value
+    this.setAttr('ucsElevation', value)
   }
 
   /**
    * Gets or sets the named UCS object ID (optional).
    */
   get ucsObjectId() {
-    return this._ucsObjectId
+    return this.getAttrWithoutException('ucsObjectId')
   }
   set ucsObjectId(value: string | undefined) {
-    this._ucsObjectId = value
+    this.setAttr('ucsObjectId', value)
   }
 
   /**
    * Gets or sets the base UCS object ID (optional).
    */
   get ucsBaseObjectId() {
-    return this._ucsBaseObjectId
+    return this.getAttrWithoutException('ucsBaseObjectId')
   }
   set ucsBaseObjectId(value: string | undefined) {
-    this._ucsBaseObjectId = value
+    this.setAttr('ucsBaseObjectId', value)
   }
 
   /**
    * Gets or sets the background object ID (optional).
    */
   get backgroundObjectId() {
-    return this._backgroundObjectId
+    return this.getAttrWithoutException('backgroundObjectId')
   }
   set backgroundObjectId(value: string | undefined) {
-    this._backgroundObjectId = value
+    this.setAttr('backgroundObjectId', value)
   }
 
   /**
    * Gets or sets the live section object ID (optional).
    */
   get liveSectionObjectId() {
-    return this._liveSectionObjectId
+    return this.getAttrWithoutException('liveSectionObjectId')
   }
   set liveSectionObjectId(value: string | undefined) {
-    this._liveSectionObjectId = value
+    this.setAttr('liveSectionObjectId', value)
   }
 
   /**

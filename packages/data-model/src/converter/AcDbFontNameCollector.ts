@@ -120,9 +120,7 @@ export class AcDbFontNameCollector {
    * Resolves font names for a text entity style using the same fallbacks as
    * {@link AcDbTextStyleTable.resolveAt}.
    */
-  private resolveStyleFontNames(
-    styleName?: string
-  ): string[] | undefined {
+  private resolveStyleFontNames(styleName?: string): string[] | undefined {
     const candidates: string[] = []
     const addCandidate = (value?: string) => {
       const trimmed = value?.trim()
@@ -153,7 +151,10 @@ export class AcDbFontNameCollector {
     return this.styleMap.values().next().value
   }
 
-  private addResolvedStyleFonts(styleName: string | undefined, fonts: Set<string>) {
+  private addResolvedStyleFonts(
+    styleName: string | undefined,
+    fonts: Set<string>
+  ) {
     const fontNames = this.resolveStyleFontNames(styleName)
     fontNames?.forEach(name => fonts.add(name))
   }
@@ -163,7 +164,10 @@ export class AcDbFontNameCollector {
   ): Map<string, string[]> {
     const styleMap = new Map<string, string[]>()
     for (const style of styles) {
-      styleMap.set(style.name, AcDbFontNameCollector.collectStyleEntryFontNames(style))
+      styleMap.set(
+        style.name,
+        AcDbFontNameCollector.collectStyleEntryFontNames(style)
+      )
     }
     return styleMap
   }
@@ -185,12 +189,16 @@ export class AcDbFontNameCollector {
   }
 
   private static collectShapeDefinitionFonts(
-    styles: Array<Pick<AcDbFontNameCollectorStyleEntry, 'font' | 'standardFlag'>>
+    styles: Array<
+      Pick<AcDbFontNameCollectorStyleEntry, 'font' | 'standardFlag'>
+    >
   ): string[] {
     const fonts: string[] = []
     for (const style of styles) {
       if (style.standardFlag && style.standardFlag & 1) {
-        const normalized = AcDbFontNameCollector.normalizeFontFileName(style.font)
+        const normalized = AcDbFontNameCollector.normalizeFontFileName(
+          style.font
+        )
         if (normalized) {
           fonts.push(normalized)
         }

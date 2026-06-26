@@ -80,6 +80,8 @@ export {
   AcDbViewportTableRecord
 } from './database'
 export type {
+  AcDbAbstractViewTableRecordAttrs,
+  AcDbBlockTableRecordAttrs,
   AcDbColorTheme,
   AcDbConversionProgressCallback,
   AcDbConversionStage,
@@ -98,11 +100,13 @@ export type {
   AcDbLayerModifiedEventArgs,
   AcDbLayerTableRecordAttrs,
   AcDbLinetypePreviewSvgOptions,
+  AcDbLinetypeTableRecordAttrs,
   AcDbOpenDatabaseOptions,
   AcDbOpenFileStage,
   AcDbParsingTaskResult,
   AcDbParsingTaskStats,
   AcDbProgressdEventArgs,
+  AcDbRegAppTableRecordAttrs,
   AcDbStageStatus,
   AcDbSymbolTableRecordAttrs,
   AcDbSysVarDescriptor,
@@ -111,6 +115,9 @@ export type {
   AcDbSysVarTypeName,
   AcDbSystemVariableName,
   AcDbTables,
+  AcDbTextStyleTableRecordAttrs,
+  AcDbViewTableRecordAttrs,
+  AcDbViewportTableRecordAttrs,
   AcDbChangeContainer,
   AcDbDatabaseChange,
   AcDbUndoRecord

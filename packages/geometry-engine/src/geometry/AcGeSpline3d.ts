@@ -633,8 +633,12 @@ export class AcGeSpline3d extends AcGeCurve3d {
         this._knotParameterization,
         this._degree,
         this._closed,
-        this._startTangent ? AcGeGeometryUtil.point2dToPoint3d(this._startTangent) : undefined,
-        this._endTangent ? AcGeGeometryUtil.point2dToPoint3d(this._endTangent) : undefined
+        this._startTangent
+          ? AcGeGeometryUtil.point2dToPoint3d(this._startTangent)
+          : undefined,
+        this._endTangent
+          ? AcGeGeometryUtil.point2dToPoint3d(this._endTangent)
+          : undefined
       )
     }
 
@@ -833,14 +837,21 @@ export class AcGeSpline3d extends AcGeCurve3d {
     numberOfKnots: number
     numberOfFitData: number
     degree?: number
-    controlPoints: Array<{ x: number; y: number; z?: number; weight?: number | null }>
+    controlPoints: Array<{
+      x: number
+      y: number
+      z?: number
+      weight?: number | null
+    }>
     knots: number[]
     fitDatum: Array<{ x: number; y: number; z?: number }>
     startTangent?: { x: number; y: number; z?: number } | null
     endTangent?: { x: number; y: number; z?: number } | null
   }): AcGeSpline3d | null {
     if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
-      const controlPoints = spline.controlPoints.map(AcGeGeometryUtil.point2dToPoint3d)
+      const controlPoints = spline.controlPoints.map(
+        AcGeGeometryUtil.point2dToPoint3d
+      )
       let hasWeights = true
       const weights = spline.controlPoints.map(item => {
         if (item.weight == null) hasWeights = false
@@ -862,8 +873,12 @@ export class AcGeSpline3d extends AcGeCurve3d {
         'Uniform',
         spline.degree,
         false,
-        spline.startTangent ? AcGeGeometryUtil.point2dToPoint3d(spline.startTangent) : undefined,
-        spline.endTangent ? AcGeGeometryUtil.point2dToPoint3d(spline.endTangent) : undefined
+        spline.startTangent
+          ? AcGeGeometryUtil.point2dToPoint3d(spline.startTangent)
+          : undefined,
+        spline.endTangent
+          ? AcGeGeometryUtil.point2dToPoint3d(spline.endTangent)
+          : undefined
       )
     }
 

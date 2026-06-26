@@ -1,5 +1,4 @@
 import { AcDbLinetypeTableRecord } from '../src/database/AcDbLinetypeTableRecord'
-import type { AcGiBaseLineStyle } from '@mlightcad/graphic-interface'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 describe('AcDbLinetypeTableRecord', () => {
@@ -11,7 +10,7 @@ describe('AcDbLinetypeTableRecord', () => {
           standardFlag: 0,
           description: '',
           totalPatternLength: 0
-        } as AcGiBaseLineStyle)
+        })
     )
   })
 
@@ -21,7 +20,7 @@ describe('AcDbLinetypeTableRecord', () => {
       standardFlag: 0,
       description: 'Solid line',
       totalPatternLength: 0
-    } as AcGiBaseLineStyle)
+    })
 
     const svg = record.toPreviewSvgString({
       width: 120,
@@ -49,7 +48,7 @@ describe('AcDbLinetypeTableRecord', () => {
         { elementLength: 0, elementTypeFlag: 0 },
         { elementLength: -0.1, elementTypeFlag: 0 }
       ]
-    } as AcGiBaseLineStyle)
+    })
 
     const svg = record.toPreviewSvgString({
       width: 180,

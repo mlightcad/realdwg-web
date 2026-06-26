@@ -15,12 +15,12 @@ import {
   AcDbEntity,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
+  AcDbLinetypeTableRecordAttrs,
   AcDbSymbolTableRecord,
   AcDbTextStyleTableRecord,
+  AcDbTextStyleTableRecordAttrs,
   AcDbViewportTableRecord,
-  AcGiBaseLineStyle,
   AcGiLineTypePatternElement,
-  AcGiTextStyle,
   ByLayer,
   DEFAULT_TEXT_STYLE
 } from '@mlightcad/data-model'
@@ -99,16 +99,15 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     for (let index = 0, size = lineTypes.size(); index < size; ++index) {
       const item = lineTypes.get(index)
       if (item != null) {
-        const lineType: AcGiBaseLineStyle = {
+        const attrs: AcDbLinetypeTableRecordAttrs = {
           name: item.name,
           description: item.desc,
           standardFlag: item.flags,
           totalPatternLength: item.length,
           pattern: this.convertLineTypePattern(item.path)
         }
-        const record = new AcDbLinetypeTableRecord(lineType)
+        const record = new AcDbLinetypeTableRecord(attrs)
         this.processCommonTableEntryAttrs(item, record)
-        record.name = item.name
         db.tables.linetypeTable.add(record)
       }
     }
@@ -131,7 +130,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     for (let index = 0, size = textStyles.size(); index < size; ++index) {
       const item = textStyles.get(index)
       if (item != null) {
-        const textStyle: AcGiTextStyle = {
+        const attrs: AcDbTextStyleTableRecordAttrs = {
           name: item.name,
           standardFlag: item.flags,
           fixedTextHeight: item.height,
@@ -142,7 +141,7 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
           font: item.font,
           bigFont: item.bigFont
         }
-        const record = new AcDbTextStyleTableRecord(textStyle)
+        const record = new AcDbTextStyleTableRecord(attrs)
         this.processCommonTableEntryAttrs(item, record)
         db.tables.textStyleTable.add(record)
       }

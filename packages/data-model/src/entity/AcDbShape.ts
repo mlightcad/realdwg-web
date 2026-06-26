@@ -484,12 +484,14 @@ export class AcDbShape extends AcDbEntity {
     delay?: boolean
   ): AcGiEntity | undefined {
     const textStyle = this.getTextStyle()
-    const style: AcGiTextStyle | undefined = textStyle ? {
-      ...textStyle,
-      widthFactor: this.widthFactor,
-      // MText renderer stores oblique in degrees on the text style.
-      obliqueAngle: (this.oblique * 180) / Math.PI
-    } : undefined
+    const style: AcGiTextStyle | undefined = textStyle
+      ? {
+          ...textStyle,
+          widthFactor: this.widthFactor,
+          // MText renderer stores oblique in degrees on the text style.
+          obliqueAngle: (this.oblique * 180) / Math.PI
+        }
+      : undefined
 
     const shapeData: AcGiShapeData = {
       name: this._name.trim() || undefined,

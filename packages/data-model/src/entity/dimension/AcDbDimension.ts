@@ -27,9 +27,7 @@ import {
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
 } from '../AcDbEntityProperties'
-import {
-  acdbForEachGripIndex
-} from '../AcDbGripHelpers'
+import { acdbForEachGripIndex } from '../AcDbGripHelpers'
 
 /**
  * Defines the line spacing style for dimension text.
@@ -877,11 +875,11 @@ export abstract class AcDbDimension extends AcDbEntity {
    *
    * In AutoCAD, each dimension references an **anonymous block** that contains
    * the graphical representation of the dimension (dimension line, extension
-   * lines, arrows, and text). That block is defined in the **dimension’s Object
+   * lines, arrows, and text). That block is defined in the **dimension?? Object
    * Coordinate System (OCS)**.
    *
    * This method computes the transformation that positions the anonymous
-   * dimension block **within the dimension’s OCS**, excluding any extrusion
+   * dimension block **within the dimension?? OCS**, excluding any extrusion
    * (normal) transformation.
    *
    * Conceptually, AutoCAD applies the following steps when displaying a
@@ -893,7 +891,7 @@ export abstract class AcDbDimension extends AcDbEntity {
    *
    * This method implements **steps 1 and 2 only**.
    *
-   * The OCS → WCS transformation derived from {@link normal} is **intentionally
+   * The OCS ??WCS transformation derived from {@link normal} is **intentionally
    * excluded** and must be applied **after rendering** (see
    * {@link AcDbRenderingCache.draw}). This matches AutoCAD / RealDWG behavior and
    * ensures:
@@ -907,8 +905,8 @@ export abstract class AcDbDimension extends AcDbEntity {
    * ```
    * dimBlockTransform =
    *   T(dimBlockPosition)
-   * · R(dimBlockRotation)
-   * · T(-blockBasePoint)
+   * ? R(dimBlockRotation)
+   * ? T(-blockBasePoint)
    * ```
    *
    * ### Notes
@@ -960,8 +958,8 @@ export abstract class AcDbDimension extends AcDbEntity {
     //
     // dimBlockTransform =
     //   T(dimBlockPosition)
-    // · R(dimBlockRotation)
-    // · T(-blockBasePoint)
+    // ? R(dimBlockRotation)
+    // ? T(-blockBasePoint)
     //
     // NOTE:
     // - This matrix operates entirely in dimension OCS

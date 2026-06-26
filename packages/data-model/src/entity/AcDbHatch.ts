@@ -1210,10 +1210,7 @@ export class AcDbHatch extends AcDbEntity {
    * Moves one boundary grip point using the same index order as
    * {@link collectBoundaryGripPoints}.
    */
-  private moveBoundaryGripPointAt(
-    gripIndex: number,
-    offset: AcGeVector3dLike
-  ) {
+  private moveBoundaryGripPointAt(gripIndex: number, offset: AcGeVector3dLike) {
     let currentIndex = 0
     const elevation = this._elevation
     const seen = new Set<string>()
