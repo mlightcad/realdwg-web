@@ -415,7 +415,6 @@ export class AcDbDatabase extends AcDbObject {
   readonly transactionManager: AcDbDatabaseTransactionManager
 
   private _eventBatchDepth = 0
-  private readonly _pendingEntityModified = new Set<AcDbEntity>()
   private _pendingEntityAppended: AcDbEntity[] = []
   private _pendingEntityErased: AcDbEntity[] = []
   private _pendingDictObjectSet: { object: AcDbObject; key: string }[] = []
@@ -751,6 +750,7 @@ export class AcDbDatabase extends AcDbObject {
     }
     this._eventBatchDepth--
     if (this._eventBatchDepth === 0) {
+      this.transactionManager.flushPendingEntityModifiedEvents()
       this.flushEventBatch()
     }
   }
@@ -760,25 +760,6 @@ export class AcDbDatabase extends AcDbObject {
    */
   isEventBatched(): boolean {
     return this._eventBatchDepth > 0
-  }
-
-  /**
-   * Dispatches or queues an entity-modified notification.
-   *
-   * When {@link isEventBatched} is true, the entity is deduplicated in a pending set
-   * and dispatched from {@link flushEventBatch} when the outermost batch closes.
-   *
-   * @param entity - Entity whose properties changed
-   */
-  notifyEntityModified(entity: AcDbEntity): void {
-    if (this.isEventBatched()) {
-      this._pendingEntityModified.add(entity)
-      return
-    }
-    this.events.entityModified.dispatch({
-      database: this,
-      entity
-    })
   }
 
   /**
@@ -854,21 +835,9 @@ export class AcDbDatabase extends AcDbObject {
   /**
    * Dispatches all notifications accumulated while event batching was active.
    *
-   * Entity-modified events are deduplicated by entity; appended and erased
-   * entities are dispatched in batch arrays where applicable.
+   * Appended and erased entities are dispatched in batch arrays where applicable.
    */
   private flushEventBatch(): void {
-    if (this._pendingEntityModified.size > 0) {
-      const modified = [...this._pendingEntityModified]
-      this._pendingEntityModified.clear()
-      for (const entity of modified) {
-        this.events.entityModified.dispatch({
-          database: this,
-          entity
-        })
-      }
-    }
-
     if (this._pendingEntityAppended.length > 0) {
       const appended = this._pendingEntityAppended
       this._pendingEntityAppended = []

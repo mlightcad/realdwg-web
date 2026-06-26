@@ -22,7 +22,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
+import {
+  acdbForEachGripIndex,
+  acdbMovePointArrayGripAt
+} from './AcDbGripHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -585,22 +588,22 @@ export class AcDbMLine extends AcDbEntity {
    */
   subGetGripPoints() {
     const gripPoints = new Array<AcGePoint3d>()
-    gripPoints.push(this._startPosition)
-    this._segments.forEach(segment => gripPoints.push(segment.position))
+    gripPoints.push(this._startPosition.clone())
+    this._segments.forEach(segment =>
+      gripPoints.push(segment.position.clone())
+    )
     return gripPoints
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const gripPoints = [
+      this._startPosition,
+      ...this._segments.map(segment => segment.position)
+    ]
+    acdbMovePointArrayGripAt(indices, offset, gripPoints)
     acdbForEachGripIndex(indices, index => {
-      if (index === 0) {
-        this._startPosition.add(offset)
-      } else {
-        const segment = this._segments[index - 1]
-        if (segment) {
-          segment.position.add(offset)
-        }
-      }
+      this.updateReferencePathDirectionsAfterGripMove(index)
     })
     return this
   }
@@ -781,6 +784,47 @@ export class AcDbMLine extends AcDbEntity {
    * @param segment Segment-like payload.
    * @returns Normalized segment.
    */
+  /**
+   * Recomputes segment direction vectors affected by moving one reference-path grip.
+   *
+   * @param gripIndex Zero-based index into {@link subGetGripPoints}.
+   */
+  private updateReferencePathDirectionsAfterGripMove(gripIndex: number) {
+    const updateDirectionAtSegment = (segmentIndex: number) => {
+      const segment = this._segments[segmentIndex]
+      if (!segment) return
+
+      const previousPoint =
+        segmentIndex === 0
+          ? this._startPosition
+          : this._segments[segmentIndex - 1].position
+      const direction = new AcGeVector3d().subVectors(
+        segment.position,
+        previousPoint
+      )
+      if (direction.lengthSq() > 0) {
+        segment.direction.copy(direction.normalize())
+      }
+    }
+
+    if (gripIndex === 0) {
+      if (this._segments.length > 0) {
+        updateDirectionAtSegment(0)
+      }
+      return
+    }
+
+    const segmentIndex = gripIndex - 1
+    if (segmentIndex < 0 || segmentIndex >= this._segments.length) {
+      return
+    }
+
+    updateDirectionAtSegment(segmentIndex)
+    if (segmentIndex + 1 < this._segments.length) {
+      updateDirectionAtSegment(segmentIndex + 1)
+    }
+  }
+
   private createSegment(segment: AcDbMLineSegmentLike): AcDbMLineSegment {
     return {
       position: new AcGePoint3d().copy(segment.position),

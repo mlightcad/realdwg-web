@@ -114,6 +114,64 @@ describe('AcDbDatabaseTransactionManager', () => {
     expect(line.endPoint.x).toBe(30)
   })
 
+  it('dispatches entityModified on commit without manual event notification', () => {
+    const db = new AcDbDatabase()
+    const line = createLine()
+    db.tables.blockTable.modelSpace.appendEntity(line)
+
+    let modifiedCount = 0
+    db.events.entityModified.addEventListener(args => {
+      modifiedCount++
+      expect(args.entity).toBe(line)
+    })
+
+    db.transactionManager.runUndoable('Move', tr => {
+      const opened = tr.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+      opened!.endPoint = new AcGePoint3d(30, 0, 0)
+    })
+
+    expect(modifiedCount).toBe(1)
+  })
+
+  it('dispatches entityModified on undo and redo for entity modification', () => {
+    const db = new AcDbDatabase()
+    const line = createLine()
+    db.tables.blockTable.modelSpace.appendEntity(line)
+
+    let modifiedCount = 0
+    db.events.entityModified.addEventListener(args => {
+      modifiedCount++
+      expect(args.entity).toBe(line)
+    })
+
+    db.transactionManager.runUndoable('Move', tr => {
+      const opened = tr.getObject<AcDbLine>(line.objectId, AcDbOpenMode.kForWrite)
+      opened!.endPoint = new AcGePoint3d(30, 0, 0)
+    })
+    expect(modifiedCount).toBe(1)
+
+    db.transactionManager.undo()
+    expect(modifiedCount).toBe(2)
+
+    db.transactionManager.redo()
+    expect(modifiedCount).toBe(3)
+  })
+
+  it('does not dispatch entityModified when entity is mutated outside a transaction', () => {
+    const db = new AcDbDatabase()
+    const line = createLine()
+    db.tables.blockTable.modelSpace.appendEntity(line)
+
+    let modifiedCount = 0
+    db.events.entityModified.addEventListener(() => {
+      modifiedCount++
+    })
+
+    line.endPoint = new AcGePoint3d(25, 0, 0)
+
+    expect(modifiedCount).toBe(0)
+  })
+
   it('merges nested transaction changes into one undo record', () => {
     const db = new AcDbDatabase()
     const line = createLine()
