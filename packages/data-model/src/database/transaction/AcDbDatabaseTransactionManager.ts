@@ -5,7 +5,8 @@ import { AcDbSysVarManager, AcDbSysVarType } from '../AcDbSysVarManager'
 import {
   AcDbChangeApplier,
   collectChangeEntities,
-  collectDictionaryChanges
+  collectDictionaryChanges,
+  collectLayerModifications
 } from './AcDbChangeApplier'
 import { AcDbChangeContainer } from './AcDbDatabaseChange'
 import { AcDbDatabaseTransaction } from './AcDbDatabaseTransaction'
@@ -311,6 +312,21 @@ export class AcDbDatabaseTransactionManager {
   }
 
   /**
+   * Records the pre-modification snapshot of an object opened for write or
+   * mutated while a transaction is active.
+   *
+   * No-op when {@link isRecording} is false.
+   *
+   * @param object - Object whose state should be restorable on abort/undo
+   */
+  recordModify(object: AcDbObject): void {
+    if (!this.isRecording()) {
+      return
+    }
+    this.currentTransaction()?.recorder.recordModify(object)
+  }
+
+  /**
    * Maps a symbol table instance to the stable name stored in undo records.
    *
    * @param table - Symbol table whose logical name is needed
@@ -414,6 +430,8 @@ export class AcDbDatabaseTransactionManager {
       this.database.notifyDictObjectErased(object, key)
     }
 
+    this.dispatchLayerModifiedEvents(changes)
+
     for (const change of changes) {
       if (change.kind === 'sysvar' && change.after !== undefined) {
         AcDbSysVarManager.instance().events.sysVarChanged.dispatch({
@@ -483,6 +501,8 @@ export class AcDbDatabaseTransactionManager {
       }
     }
 
+    this.dispatchLayerModifiedEvents(changes, inverse)
+
     for (const change of changes) {
       if (change.kind === 'sysvar') {
         const oldVal = inverse ? change.after : change.before
@@ -496,6 +516,29 @@ export class AcDbDatabaseTransactionManager {
           })
         }
       }
+    }
+  }
+
+  /**
+   * Dispatches layer-modified notifications derived from recorded modify changes.
+   *
+   * @param changes - Finalized transaction or undo-record changes
+   * @param inverse - When true, diff from `after` back to `before`
+   */
+  private dispatchLayerModifiedEvents(
+    changes: import('./AcDbDatabaseChange').AcDbDatabaseChange[],
+    inverse = false
+  ): void {
+    for (const { layer, changes: layerChanges } of collectLayerModifications(
+      this.database,
+      changes,
+      inverse
+    )) {
+      this.database.events.layerModified.dispatch({
+        database: this.database,
+        layer,
+        changes: layerChanges
+      })
     }
   }
 

@@ -1,4 +1,4 @@
-import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
+import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -55,39 +55,51 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
  * });
  * ```
  */
-export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRecordAttrs> {
+export class AcDbLayerTableRecord extends AcDbSymbolTableRecord {
+  private _color: AcCmColor
+  private _description: string = ''
+  private _standardFlags: number = 0
+  private _isHidden: boolean = false
+  private _isInUse: boolean = true
+  private _isOff: boolean = false
+  private _isPlottable: boolean = true
+  private _transparency: AcCmTransparency
+  private _linetype: string = ''
+  private _lineWeight: AcGiLineWeight = -1 as AcGiLineWeight
+  private _materialId: string = -1 as unknown as string
+
   /**
    * Creates a new AcDbLayerTableRecord instance.
    *
-   * @param attrs - Input attribute values for this layer table record
-   * @param defaultAttrs - Default values for attributes of this layer table record
+   * @param init - Input values for this layer table record
    */
-  constructor(
-    attrs?: Partial<AcDbLayerTableRecordAttrs>,
-    defaultAttrs?: Partial<AcDbLayerTableRecordAttrs>
-  ) {
+  constructor(attrs?: Partial<AcDbLayerTableRecordAttrs>) {
     attrs = attrs || {}
-    defaults(attrs, {
-      color: new AcCmColor(),
-      description: '',
-      standardFlags: 0,
-      isHidden: false,
-      isInUse: true,
-      isOff: false,
-      isPlottable: true,
-      transparency: new AcCmTransparency(),
-      linetype: '',
-      lineWeight: 1,
-      materialId: -1
-    })
-    super(attrs, defaultAttrs)
-    this.attrs.events.attrChanged.addEventListener(args => {
-      this.database.events.layerModified.dispatch({
-        database: this.database,
-        layer: this,
-        changes: args.object.changedAttributes()
-      })
-    })
+    super(attrs)
+
+    this._color = (attrs.color ?? new AcCmColor()).clone()
+    this._description = attrs.description ?? ''
+    this._standardFlags = attrs.standardFlags ?? 0
+    this._isHidden = attrs.isHidden ?? false
+    this._isInUse = attrs.isInUse ?? true
+    this._isOff = attrs.isOff ?? false
+    this._isPlottable = attrs.isPlottable ?? true
+    this._transparency = (attrs.transparency ?? new AcCmTransparency()).clone()
+    this._linetype = attrs.linetype ?? ''
+    this._lineWeight = attrs.lineWeight ?? (-1 as AcGiLineWeight)
+    this._materialId = attrs.materialId ?? (-1 as unknown as string)
+  }
+
+  /**
+   * Records this layer for transaction commit when a property changes inside an
+   * active transaction.
+   */
+  private markModified(): void {
+    try {
+      this.database.transactionManager.recordModify(this)
+    } catch {
+      // Layer is not associated with a database yet.
+    }
   }
 
   /**
@@ -102,10 +114,15 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get color() {
-    return this.getAttr('color')
+    return this._color
   }
   set color(value: AcCmColor) {
-    this.setAttr('color', value.clone())
+    const next = value.clone()
+    if (this._color.equals(next)) {
+      return
+    }
+    this.markModified()
+    this._color = next
   }
 
   /**
@@ -120,10 +137,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get description() {
-    return this.getAttr('description')
+    return this._description
   }
   set description(value: string) {
-    this.setAttr('description', value)
+    if (this._description === value) {
+      return
+    }
+    this.markModified()
+    this._description = value
   }
 
   /**
@@ -146,10 +167,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get standardFlags() {
-    return this.getAttr('standardFlags')
+    return this._standardFlags
   }
   set standardFlags(value: number) {
-    this.setAttr('standardFlags', value)
+    if (this._standardFlags === value) {
+      return
+    }
+    this.markModified()
+    this._standardFlags = value
   }
 
   /**
@@ -192,10 +217,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get isHidden() {
-    return this.getAttr('isHidden')
+    return this._isHidden
   }
   set isHidden(value: boolean) {
-    this.setAttr('isHidden', value)
+    if (this._isHidden === value) {
+      return
+    }
+    this.markModified()
+    this._isHidden = value
   }
 
   /**
@@ -214,10 +243,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get isInUse() {
-    return this.getAttr('isInUse')
+    return this._isInUse
   }
   set isInUse(value: boolean) {
-    this.setAttr('isInUse', value)
+    if (this._isInUse === value) {
+      return
+    }
+    this.markModified()
+    this._isInUse = value
   }
 
   /**
@@ -259,10 +292,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get isOff() {
-    return this.getAttr('isOff')
+    return this._isOff
   }
   set isOff(value: boolean) {
-    this.setAttr('isOff', value)
+    if (this._isOff === value) {
+      return
+    }
+    this.markModified()
+    this._isOff = value
   }
 
   /**
@@ -281,10 +318,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get isPlottable() {
-    return this.getAttr('isPlottable')
+    return this._isPlottable
   }
   set isPlottable(value: boolean) {
-    this.setAttr('isPlottable', value)
+    if (this._isPlottable === value) {
+      return
+    }
+    this.markModified()
+    this._isPlottable = value
   }
 
   /**
@@ -295,10 +336,15 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * @returns The transparency level
    */
   get transparency() {
-    return this.getAttr('transparency')
+    return this._transparency
   }
   set transparency(value: AcCmTransparency) {
-    this.setAttr('transparency', value.clone())
+    const next = value.clone()
+    if (this._transparency.equals(next)) {
+      return
+    }
+    this.markModified()
+    this._transparency = next
   }
 
   /**
@@ -316,10 +362,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get linetype() {
-    return this.getAttr('linetype')
+    return this._linetype
   }
   set linetype(value: string) {
-    this.setAttr('linetype', value)
+    if (this._linetype === value) {
+      return
+    }
+    this.markModified()
+    this._linetype = value
   }
 
   /**
@@ -348,10 +398,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * @returns The line weight value
    */
   get lineWeight() {
-    return this.getAttr('lineWeight')
+    return this._lineWeight
   }
   set lineWeight(value: AcGiLineWeight) {
-    this.setAttr('lineWeight', value)
+    if (this._lineWeight === value) {
+      return
+    }
+    this.markModified()
+    this._lineWeight = value
   }
 
   /**
@@ -368,10 +422,14 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
    * ```
    */
   get materialId() {
-    return this.getAttr('materialId')
+    return this._materialId
   }
   set materialId(value: string) {
-    this.setAttr('materialId', value)
+    if (this._materialId === value) {
+      return
+    }
+    this.markModified()
+    this._materialId = value
   }
 
   /**

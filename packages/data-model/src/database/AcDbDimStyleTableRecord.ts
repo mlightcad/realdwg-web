@@ -1,5 +1,3 @@
-import { defaults } from '@mlightcad/common'
-
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
 import {
@@ -237,7 +235,7 @@ export interface AcDbDimStyleTableRecordAttrs
  * above, in, or below the line; arrows, slashes, or dots at the end of the dimension line, and
  * so on) for dimensions that reference it.
  */
-export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleTableRecordAttrs> {
+export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord {
   static DEFAULT_DIM_VALUES: AcDbDimStyleTableRecordAttrs = {
     name: '',
     dimpost: '',
@@ -320,14 +318,142 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     dimlwe: -2
   }
 
-  constructor(
-    attrs?: Partial<AcDbDimStyleTableRecordAttrs>,
-    defaultAttrs?: Partial<AcDbDimStyleTableRecordAttrs>
-  ) {
-    attrs = attrs || {}
-    defaults(attrs, AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES)
-    super(attrs, defaultAttrs)
+  constructor(attrs?: Partial<AcDbDimStyleTableRecordAttrs>) {
+    attrs = { ...AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES, ...attrs }
+    super(attrs)
+    this._dimpost = attrs.dimpost!
+    this._dimapost = attrs.dimapost!
+    this._dimscale = attrs.dimscale!
+    this._dimasz = attrs.dimasz!
+    this._dimexo = attrs.dimexo!
+    this._dimdli = attrs.dimdli!
+    this._dimexe = attrs.dimexe!
+    this._dimrnd = attrs.dimrnd!
+    this._dimdle = attrs.dimdle!
+    this._dimtp = attrs.dimtp!
+    this._dimtm = attrs.dimtm!
+    this._dimtxt = attrs.dimtxt!
+    this._dimcen = attrs.dimcen!
+    this._dimtsz = attrs.dimtsz!
+    this._dimaltf = attrs.dimaltf!
+    this._dimlfac = attrs.dimlfac!
+    this._dimtvp = attrs.dimtvp!
+    this._dimtfac = attrs.dimtfac!
+    this._dimgap = attrs.dimgap!
+    this._dimaltrnd = attrs.dimaltrnd!
+    this._dimtol = attrs.dimtol!
+    this._dimlim = attrs.dimlim!
+    this._dimtih = attrs.dimtih!
+    this._dimtoh = attrs.dimtoh!
+    this._dimse1 = attrs.dimse1!
+    this._dimse2 = attrs.dimse2!
+    this._dimtad = attrs.dimtad!
+    this._dimzin = attrs.dimzin!
+    this._dimazin = attrs.dimazin!
+    this._dimalt = attrs.dimalt!
+    this._dimaltd = attrs.dimaltd!
+    this._dimtofl = attrs.dimtofl!
+    this._dimsah = attrs.dimsah!
+    this._dimtix = attrs.dimtix!
+    this._dimsoxd = attrs.dimsoxd!
+    this._dimclrd = attrs.dimclrd!
+    this._dimclre = attrs.dimclre!
+    this._dimclrt = attrs.dimclrt!
+    this._dimadec = attrs.dimadec!
+    this._dimunit = attrs.dimunit!
+    this._dimdec = attrs.dimdec!
+    this._dimtdec = attrs.dimtdec!
+    this._dimaltu = attrs.dimaltu!
+    this._dimalttd = attrs.dimalttd!
+    this._dimaunit = attrs.dimaunit!
+    this._dimfrac = attrs.dimfrac!
+    this._dimlunit = attrs.dimlunit!
+    this._dimdsep = attrs.dimdsep!
+    this._dimtmove = attrs.dimtmove!
+    this._dimjust = attrs.dimjust!
+    this._dimsd1 = attrs.dimsd1!
+    this._dimsd2 = attrs.dimsd2!
+    this._dimtolj = attrs.dimtolj!
+    this._dimtzin = attrs.dimtzin!
+    this._dimaltz = attrs.dimaltz!
+    this._dimalttz = attrs.dimalttz!
+    this._dimfit = attrs.dimfit!
+    this._dimupt = attrs.dimupt!
+    this._dimatfit = attrs.dimatfit!
+    this._dimtxsty = attrs.dimtxsty!
+    this._dimldrblk = attrs.dimldrblk!
+    this._dimblk = attrs.dimblk!
+    this._dimblk1 = attrs.dimblk1!
+    this._dimblk2 = attrs.dimblk2!
+    this._dimlwd = attrs.dimlwd!
+    this._dimlwe = attrs.dimlwe!
   }
+  private _dimpost!: string
+  private _dimapost!: string
+  private _dimscale!: number
+  private _dimasz!: number
+  private _dimexo!: number
+  private _dimdli!: number
+  private _dimexe!: number
+  private _dimrnd!: number
+  private _dimdle!: number
+  private _dimtp!: number
+  private _dimtm!: number
+  private _dimtxt!: number
+  private _dimcen!: number
+  private _dimtsz!: number
+  private _dimaltf!: number
+  private _dimlfac!: number
+  private _dimtvp!: number
+  private _dimtfac!: number
+  private _dimgap!: number
+  private _dimaltrnd!: number
+  private _dimtol!: number
+  private _dimlim!: number
+  private _dimtih!: number
+  private _dimtoh!: number
+  private _dimse1!: number
+  private _dimse2!: number
+  private _dimtad!: AcDbDimTextVertical
+  private _dimzin!: AcDbDimZeroSuppression
+  private _dimazin!: AcDbDimZeroSuppressionAngular
+  private _dimalt!: number
+  private _dimaltd!: number
+  private _dimtofl!: number
+  private _dimsah!: number
+  private _dimtix!: number
+  private _dimsoxd!: number
+  private _dimclrd!: number
+  private _dimclre!: number
+  private _dimclrt!: number
+  private _dimadec!: number
+  private _dimunit!: number
+  private _dimdec!: number
+  private _dimtdec!: number
+  private _dimaltu!: number
+  private _dimalttd!: number
+  private _dimaunit!: number
+  private _dimfrac!: number
+  private _dimlunit!: number
+  private _dimdsep!: string
+  private _dimtmove!: number
+  private _dimjust!: AcDbDimTextHorizontal
+  private _dimsd1!: number
+  private _dimsd2!: number
+  private _dimtolj!: AcDbDimVerticalJustification
+  private _dimtzin!: AcDbDimZeroSuppression
+  private _dimaltz!: AcDbDimZeroSuppression
+  private _dimalttz!: AcDbDimZeroSuppression
+  private _dimfit!: number
+  private _dimupt!: number
+  private _dimatfit!: number
+  private _dimtxsty!: string
+  private _dimldrblk!: string
+  private _dimblk!: string
+  private _dimblk1!: string
+  private _dimblk2!: string
+  private _dimlwd!: number
+  private _dimlwe!: number
 
   /**
    * Dimension postfix. This property specifies a text prefix or suffix (or both) to the dimension
@@ -341,10 +467,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * dimensions.
    */
   get dimpost() {
-    return this.getAttr('dimpost')
+    return this._dimpost
   }
   set dimpost(value: string) {
-    this.setAttr('dimpost', value)
+    this._dimpost = value
   }
 
   /**
@@ -356,10 +482,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * To turn off an established prefix or suffix (or both), set it to a single period (.).
    */
   get dimapost() {
-    return this.getAttr('dimapost')
+    return this._dimapost
   }
   set dimapost(value: string) {
-    this.setAttr('dimapost', value)
+    this._dimapost = value
   }
 
   /**
@@ -368,10 +494,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * scale.
    */
   get dimscale() {
-    return this.getAttr('dimscale')
+    return this._dimscale
   }
   set dimscale(value: number) {
-    this.setAttr('dimscale', value)
+    this._dimscale = value
   }
 
   /**
@@ -379,10 +505,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * can modify this value to adjust the size of arrowheads based on your drawing's requirements.
    */
   get dimasz() {
-    return this.getAttr('dimasz')
+    return this._dimasz
   }
   set dimasz(value: number) {
-    this.setAttr('dimasz', value)
+    this._dimasz = value
   }
 
   /**
@@ -391,10 +517,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * back from the object being dimensioned.
    */
   get dimexo() {
-    return this.getAttr('dimexo')
+    return this._dimexo
   }
   set dimexo(value: number) {
-    this.setAttr('dimexo', value)
+    this._dimexo = value
   }
 
   /**
@@ -402,10 +528,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * create multiple parallel dimensions using the baseline dimensioning method.
    */
   get dimdli() {
-    return this.getAttr('dimdli')
+    return this._dimdli
   }
   set dimdli(value: number) {
-    this.setAttr('dimdli', value)
+    this._dimdli = value
   }
 
   /**
@@ -414,10 +540,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * past the dimension line.
    */
   get dimexe() {
-    return this.getAttr('dimexe')
+    return this._dimexe
   }
   set dimexe(value: number) {
-    this.setAttr('dimexe', value)
+    this._dimexe = value
   }
 
   /**
@@ -426,10 +552,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * set it to a non-zero value to round dimensions to a specific increment.
    */
   get dimrnd() {
-    return this.getAttr('dimrnd')
+    return this._dimrnd
   }
   set dimrnd(value: number) {
-    this.setAttr('dimrnd', value)
+    this._dimrnd = value
   }
 
   /**
@@ -438,10 +564,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * adjust this value to extend the dimension line beyond them.
    */
   get dimdle() {
-    return this.getAttr('dimdle')
+    return this._dimdle
   }
   set dimdle(value: number) {
-    this.setAttr('dimdle', value)
+    this._dimdle = value
   }
 
   /**
@@ -450,10 +576,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * that no additional tolerance is applied by default.
    */
   get dimtp() {
-    return this.getAttr('dimtp')
+    return this._dimtp
   }
   set dimtp(value: number) {
-    this.setAttr('dimtp', value)
+    this._dimtp = value
   }
 
   /**
@@ -462,10 +588,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * you need to specify a negative tolerance for your dimensions.
    */
   get dimtm() {
-    return this.getAttr('dimtm')
+    return this._dimtm
   }
   set dimtm(value: number) {
-    this.setAttr('dimtm', value)
+    this._dimtm = value
   }
 
   /**
@@ -474,10 +600,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * your drawing.
    */
   get dimtxt() {
-    return this.getAttr('dimtxt')
+    return this._dimtxt
   }
   set dimtxt(value: number) {
-    this.setAttr('dimtxt', value)
+    this._dimtxt = value
   }
 
   /**
@@ -487,10 +613,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * centerline is drawn.
    */
   get dimcen() {
-    return this.getAttr('dimcen')
+    return this._dimcen
   }
   set dimcen(value: number) {
-    this.setAttr('dimcen', value)
+    this._dimcen = value
   }
 
   /**
@@ -499,10 +625,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * of arrowheads, with the value controlling the size of the ticks.
    */
   get dimtsz() {
-    return this.getAttr('dimtsz')
+    return this._dimtsz
   }
   set dimtsz(value: number) {
-    this.setAttr('dimtsz', value)
+    this._dimtsz = value
   }
 
   /**
@@ -513,10 +639,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * depending on how you want the alternate dimensions to be displayed.
    */
   get dimaltf() {
-    return this.getAttr('dimaltf')
+    return this._dimaltf
   }
   set dimaltf(value: number) {
-    this.setAttr('dimaltf', value)
+    this._dimaltf = value
   }
 
   /**
@@ -526,10 +652,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * displayed at their actual size.
    */
   get dimlfac() {
-    return this.getAttr('dimlfac')
+    return this._dimlfac
   }
   set dimlfac(value: number) {
-    this.setAttr('dimlfac', value)
+    this._dimlfac = value
   }
 
   /**
@@ -539,10 +665,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * text above or below the dimension line.
    */
   get dimtvp() {
-    return this.getAttr('dimtvp')
+    return this._dimtvp
   }
   set dimtvp(value: number) {
-    this.setAttr('dimtvp', value)
+    this._dimtvp = value
   }
 
   /**
@@ -552,10 +678,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * 1.0 will make the text smaller.
    */
   get dimtfac() {
-    return this.getAttr('dimtfac')
+    return this._dimtfac
   }
   set dimtfac(value: number) {
-    this.setAttr('dimtfac', value)
+    this._dimtfac = value
   }
 
   /**
@@ -564,20 +690,20 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * your dimensions.
    */
   get dimgap() {
-    return this.getAttr('dimgap')
+    return this._dimgap
   }
   set dimgap(value: number) {
-    this.setAttr('dimgap', value)
+    this._dimgap = value
   }
 
   /**
    * Dimension alternate rounding. This property controls rounds off the alternate dimension units.
    */
   get dimaltrnd() {
-    return this.getAttr('dimaltrnd')
+    return this._dimaltrnd
   }
   set dimaltrnd(value: number) {
-    this.setAttr('dimaltrnd', value)
+    this._dimaltrnd = value
   }
 
   /**
@@ -585,10 +711,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * Setting DIMTOL to on (1) turns DIMLIM off (0).
    */
   get dimtol() {
-    return this.getAttr('dimtol')
+    return this._dimtol
   }
-  set dimtol(value: 0 | 1) {
-    this.setAttr('dimtol', value)
+  set dimtol(value: number) {
+    this._dimtol = value
   }
 
   /**
@@ -598,10 +724,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Dimension limits are generated as default text
    */
   get dimlim() {
-    return this.getAttr('dimlim')
+    return this._dimlim
   }
-  set dimlim(value: 0 | 1) {
-    this.setAttr('dimlim', value)
+  set dimlim(value: number) {
+    this._dimlim = value
   }
 
   /**
@@ -611,10 +737,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Draws text horizontally
    */
   get dimtih() {
-    return this.getAttr('dimtih')
+    return this._dimtih
   }
-  set dimtih(value: 0 | 1) {
-    this.setAttr('dimtih', value)
+  set dimtih(value: number) {
+    this._dimtih = value
   }
 
   /**
@@ -624,10 +750,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Draws text horizontally
    */
   get dimtoh() {
-    return this.getAttr('dimtoh')
+    return this._dimtoh
   }
-  set dimtoh(value: 0 | 1) {
-    this.setAttr('dimtoh', value)
+  set dimtoh(value: number) {
+    this._dimtoh = value
   }
 
   /**
@@ -637,10 +763,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Extension line is suppressed
    */
   get dimse1() {
-    return this.getAttr('dimse1')
+    return this._dimse1
   }
-  set dimse1(value: 0 | 1) {
-    this.setAttr('dimse1', value)
+  set dimse1(value: number) {
+    this._dimse1 = value
   }
 
   /**
@@ -650,10 +776,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Extension line is suppressed
    */
   get dimse2() {
-    return this.getAttr('dimse2')
+    return this._dimse2
   }
-  set dimse2(value: 0 | 1) {
-    this.setAttr('dimse2', value)
+  set dimse2(value: number) {
+    this._dimse2 = value
   }
 
   /**
@@ -669,10 +795,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 4: Places the dimension text below the dimension line.
    */
   get dimtad() {
-    return this.getAttr('dimtad')
+    return this._dimtad
   }
   set dimtad(value: AcDbDimTextVertical) {
-    this.setAttr('dimtad', value)
+    this._dimtad = value
   }
 
   /**
@@ -686,10 +812,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 12: Suppresses both leading and trailing zeros (for example, 0.5000 becomes .5)
    */
   get dimzin() {
-    return this.getAttr('dimzin')
+    return this._dimzin
   }
   set dimzin(value: AcDbDimZeroSuppression) {
-    this.setAttr('dimzin', value)
+    this._dimzin = value
   }
 
   /**
@@ -700,10 +826,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 3: Suppresses leading and trailing zeros (for example, 0.5000 becomes .5)
    */
   get dimazin() {
-    return this.getAttr('dimazin')
+    return this._dimazin
   }
   set dimazin(value: AcDbDimZeroSuppressionAngular) {
-    this.setAttr('dimazin', value)
+    this._dimazin = value
   }
 
   /**
@@ -712,10 +838,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Enables alternate units
    */
   get dimalt() {
-    return this.getAttr('dimalt')
+    return this._dimalt
   }
-  set dimalt(value: 0 | 1) {
-    this.setAttr('dimalt', value)
+  set dimalt(value: number) {
+    this._dimalt = value
   }
 
   /**
@@ -724,10 +850,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * decimal point in the alternate measurement.
    */
   get dimaltd() {
-    return this.getAttr('dimaltd')
+    return this._dimaltd
   }
   set dimaltd(value: number) {
-    this.setAttr('dimaltd', value)
+    this._dimaltd = value
   }
 
   /**
@@ -741,10 +867,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * outside the measured points
    */
   get dimtofl() {
-    return this.getAttr('dimtofl')
+    return this._dimtofl
   }
-  set dimtofl(value: 0 | 1) {
-    this.setAttr('dimtofl', value)
+  set dimtofl(value: number) {
+    this._dimtofl = value
   }
 
   /**
@@ -753,10 +879,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Use arrowhead blocks set by DIMBLK1 and DIMBLK2
    */
   get dimsah() {
-    return this.getAttr('dimsah')
+    return this._dimsah
   }
-  set dimsah(value: 0 | 1) {
-    this.setAttr('dimsah', value)
+  set dimsah(value: number) {
+    this._dimsah = value
   }
 
   /**
@@ -769,10 +895,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * text outside the circle or arc.
    */
   get dimtix() {
-    return this.getAttr('dimtix')
+    return this._dimtix
   }
-  set dimtix(value: 0 | 1) {
-    this.setAttr('dimtix', value)
+  set dimtix(value: number) {
+    this._dimtix = value
   }
 
   /**
@@ -784,10 +910,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Arrowheads are suppressed
    */
   get dimsoxd() {
-    return this.getAttr('dimsoxd')
+    return this._dimsoxd
   }
-  set dimsoxd(value: 0 | 1) {
-    this.setAttr('dimsoxd', value)
+  set dimsoxd(value: number) {
+    this._dimsoxd = value
   }
 
   /**
@@ -795,10 +921,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * lines. For BYBLOCK, enter 0. For BYLAYER, enter 256.
    */
   get dimclrd() {
-    return this.getAttr('dimclrd')
+    return this._dimclrd
   }
   set dimclrd(value: number) {
-    this.setAttr('dimclrd', value)
+    this._dimclrd = value
   }
 
   /**
@@ -806,10 +932,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * and centerlines. For BYBLOCK, enter 0. For BYLAYER, enter 256.
    */
   get dimclre() {
-    return this.getAttr('dimclre')
+    return this._dimclre
   }
   set dimclre(value: number) {
-    this.setAttr('dimclre', value)
+    this._dimclre = value
   }
 
   /**
@@ -817,10 +943,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * For BYLAYER, enter 256.
    */
   get dimclrt() {
-    return this.getAttr('dimclrt')
+    return this._dimclrt
   }
   set dimclrt(value: number) {
-    this.setAttr('dimclrt', value)
+    this._dimclrt = value
   }
 
   /**
@@ -830,10 +956,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 0-8: Specifies the number of decimal places displayed in angular dimensions (independent of DIMDEC)
    */
   get dimadec() {
-    return this.getAttr('dimadec')
+    return this._dimadec
   }
   set dimadec(value: number) {
-    this.setAttr('dimadec', value)
+    this._dimadec = value
   }
 
   /**
@@ -848,10 +974,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * and number grouping symbols)
    */
   get dimunit() {
-    return this.getAttr('dimunit')
+    return this._dimunit
   }
   set dimunit(value: number) {
-    this.setAttr('dimunit', value)
+    this._dimunit = value
   }
 
   /**
@@ -861,10 +987,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * to angular dimensions when DIMADEC is set to -1.
    */
   get dimdec() {
-    return this.getAttr('dimdec')
+    return this._dimdec
   }
   set dimdec(value: number) {
-    this.setAttr('dimdec', value)
+    this._dimdec = value
   }
 
   /**
@@ -873,10 +999,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * is set to On. The default for DIMTOL is Off.
    */
   get dimtdec() {
-    return this.getAttr('dimtdec')
+    return this._dimtdec
   }
   set dimtdec(value: number) {
-    this.setAttr('dimtdec', value)
+    this._dimtdec = value
   }
 
   /**
@@ -893,10 +1019,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * and number grouping symbols)
    */
   get dimaltu() {
-    return this.getAttr('dimaltu')
+    return this._dimaltu
   }
   set dimaltu(value: number) {
-    this.setAttr('dimaltu', value)
+    this._dimaltu = value
   }
 
   /**
@@ -904,10 +1030,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * for the tolerance values in the alternate units of a dimension.
    */
   get dimalttd() {
-    return this.getAttr('dimalttd')
+    return this._dimalttd
   }
   set dimalttd(value: number) {
-    this.setAttr('dimalttd', value)
+    this._dimalttd = value
   }
 
   /**
@@ -918,10 +1044,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 3: Radians
    */
   get dimaunit() {
-    return this.getAttr('dimaunit')
+    return this._dimaunit
   }
   set dimaunit(value: number) {
-    this.setAttr('dimaunit', value)
+    this._dimaunit = value
   }
 
   /**
@@ -932,10 +1058,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 2: Not stacked (for example, 1/2)
    */
   get dimfrac() {
-    return this.getAttr('dimfrac')
+    return this._dimfrac
   }
   set dimfrac(value: number) {
-    this.setAttr('dimfrac', value)
+    this._dimfrac = value
   }
 
   /**
@@ -950,10 +1076,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * and number grouping symbols)
    */
   get dimlunit() {
-    return this.getAttr('dimlunit')
+    return this._dimlunit
   }
   set dimlunit(value: number) {
-    this.setAttr('dimlunit', value)
+    this._dimlunit = value
   }
 
   /**
@@ -961,10 +1087,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * to use when creating dimensions whose unit format is decimal.
    */
   get dimdsep() {
-    return this.getAttr('dimdsep')
+    return this._dimdsep
   }
   set dimdsep(value: string) {
-    this.setAttr('dimdsep', value)
+    this._dimdsep = value
   }
 
   /**
@@ -974,10 +1100,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 2: Allows text to be moved freely without a leader
    */
   get dimtmove() {
-    return this.getAttr('dimtmove')
+    return this._dimtmove
   }
   set dimtmove(value: number) {
-    this.setAttr('dimtmove', value)
+    this._dimtmove = value
   }
 
   /**
@@ -989,10 +1115,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 4: Positions the text above and aligned with the second extension line
    */
   get dimjust() {
-    return this.getAttr('dimjust')
+    return this._dimjust
   }
   set dimjust(value: number) {
-    this.setAttr('dimjust', value)
+    this._dimjust = value
   }
 
   /**
@@ -1003,10 +1129,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: First dimension line is suppressed
    */
   get dimsd1() {
-    return this.getAttr('dimsd1')
+    return this._dimsd1
   }
-  set dimsd1(value: 0 | 1) {
-    this.setAttr('dimsd1', value)
+  set dimsd1(value: number) {
+    this._dimsd1 = value
   }
 
   /**
@@ -1017,10 +1143,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Second dimension line is suppressed
    */
   get dimsd2() {
-    return this.getAttr('dimsd2')
+    return this._dimsd2
   }
-  set dimsd2(value: 0 | 1) {
-    this.setAttr('dimsd2', value)
+  set dimsd2(value: number) {
+    this._dimsd2 = value
   }
 
   /**
@@ -1032,10 +1158,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 2: Top
    */
   get dimtolj() {
-    return this.getAttr('dimtolj')
+    return this._dimtolj
   }
   set dimtolj(value: AcDbDimVerticalJustification) {
-    this.setAttr('dimtolj', value)
+    this._dimtolj = value
   }
 
   /**
@@ -1050,10 +1176,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 12: Suppresses both leading and trailing zeros (for example, 0.5000 becomes .5)
    */
   get dimtzin() {
-    return this.getAttr('dimtzin')
+    return this._dimtzin
   }
   set dimtzin(value: AcDbDimZeroSuppression) {
-    this.setAttr('dimtzin', value)
+    this._dimtzin = value
   }
 
   /**
@@ -1068,10 +1194,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 12: Suppresses both leading and trailing zeros (for example, 0.5000 becomes .5)
    */
   get dimaltz() {
-    return this.getAttr('dimaltz')
+    return this._dimaltz
   }
   set dimaltz(value: AcDbDimZeroSuppression) {
-    this.setAttr('dimaltz', value)
+    this._dimaltz = value
   }
 
   /**
@@ -1087,10 +1213,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 8: Suppresses trailing zeros
    */
   get dimalttz() {
-    return this.getAttr('dimalttz')
+    return this._dimalttz
   }
   set dimalttz(value: AcDbDimZeroSuppression) {
-    this.setAttr('dimalttz', value)
+    this._dimalttz = value
   }
 
   /**
@@ -1103,10 +1229,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * available space.
    */
   get dimfit() {
-    return this.getAttr('dimfit')
+    return this._dimfit
   }
   set dimfit(value: number) {
-    this.setAttr('dimfit', value)
+    this._dimfit = value
   }
 
   /**
@@ -1115,10 +1241,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * - 1: Cursor controls both the text position and the dimension line location
    */
   get dimupt() {
-    return this.getAttr('dimupt')
+    return this._dimupt
   }
   set dimupt(value: number) {
-    this.setAttr('dimupt', value)
+    this._dimupt = value
   }
 
   /**
@@ -1131,20 +1257,20 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * A leader is added to moved dimension text when DIMTMOVE is set to 1.
    */
   get dimatfit() {
-    return this.getAttr('dimatfit')
+    return this._dimatfit
   }
   set dimatfit(value: number) {
-    this.setAttr('dimatfit', value)
+    this._dimatfit = value
   }
 
   /**
    * Dimension text style. This property specifies the text style of the dimension.
    */
   get dimtxsty() {
-    return this.getAttr('dimtxsty')
+    return this._dimtxsty
   }
   set dimtxsty(value: string) {
-    this.setAttr('dimtxsty', value)
+    this._dimtxsty = value
   }
 
   /**
@@ -1154,10 +1280,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * Note: Annotative blocks cannot be used as custom arrowheads for dimensions or leaders.
    */
   get dimldrblk() {
-    return this.getAttr('dimldrblk')
+    return this._dimldrblk
   }
   set dimldrblk(value: string) {
-    this.setAttr('dimldrblk', value)
+    this._dimldrblk = value
   }
 
   /**
@@ -1165,10 +1291,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * dimension lines.
    */
   get dimblk() {
-    return this.getAttr('dimblk')
+    return this._dimblk
   }
   set dimblk(value: string) {
-    this.setAttr('dimblk', value)
+    this._dimblk = value
   }
 
   /**
@@ -1176,10 +1302,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * first end of the dimension line when DIMSAH is on.
    */
   get dimblk1() {
-    return this.getAttr('dimblk1')
+    return this._dimblk1
   }
   set dimblk1(value: string) {
-    this.setAttr('dimblk1', value)
+    this._dimblk1 = value
   }
 
   /**
@@ -1187,10 +1313,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * second end of the dimension line when DIMSAH is on.
    */
   get dimblk2() {
-    return this.getAttr('dimblk2')
+    return this._dimblk2
   }
   set dimblk2(value: string) {
-    this.setAttr('dimblk2', value)
+    this._dimblk2 = value
   }
 
   /**
@@ -1204,10 +1330,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * values from inches to hundredths of millimeters.)
    */
   get dimlwd() {
-    return this.getAttr('dimlwd')
+    return this._dimlwd
   }
   set dimlwd(value: number) {
-    this.setAttr('dimlwd', value)
+    this._dimlwd = value
   }
 
   /**
@@ -1221,10 +1347,10 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
    * values from inches to hundredths of millimeters.)
    */
   get dimlwe() {
-    return this.getAttr('dimlwe')
+    return this._dimlwe
   }
   set dimlwe(value: number) {
-    this.setAttr('dimlwe', value)
+    this._dimlwe = value
   }
 
   /**

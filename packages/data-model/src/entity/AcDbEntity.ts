@@ -895,7 +895,7 @@ export abstract class AcDbEntity extends AcDbObject {
   private attachEntityInfo(target: AcGiEntity | null | undefined) {
     if (target) {
       target.objectId = this.objectId
-      if (this.attrs.has('ownerId')) {
+      if (this.ownerId) {
         target.ownerId = this.ownerId
       }
       target.layerName = this.layer

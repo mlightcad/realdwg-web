@@ -157,7 +157,7 @@ describe('AcDbObjectConverter', () => {
     } as any)
 
     expect(image.objectId).toBe('30')
-    expect(image.getAttrWithoutException('ownerId')).toBeUndefined()
+    expect(image.ownerId).toBe('')
   })
 
   it('decodes MLEADERSTYLE raw colors (ACI/true color/ByLayer) to AcCmColor', () => {

@@ -1,5 +1,3 @@
-import { defaults } from '@mlightcad/common'
-
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
 
@@ -18,39 +16,36 @@ export interface AcDbSymbolTableRecordAttrs extends AcDbObjectAttrs {
  * Base class for all symbol table records.
  *
  * This class provides the fundamental functionality for all symbol table records,
- * including name management and common attributes. Symbol table records represent
- * entries in various symbol tables such as layer tables, linetype tables, text
- * style tables, etc.
- *
- * @template ATTRS - The type of attributes this symbol table record can have
+ * including name management. Symbol table records represent entries in various
+ * symbol tables such as layer tables, linetype tables, text style tables, etc.
  *
  * @example
  * ```typescript
- * class MySymbolTableRecord extends AcDbSymbolTableRecord<MySymbolTableRecordAttrs> {
- *   constructor(attrs?: Partial<MySymbolTableRecordAttrs>) {
+ * class MySymbolTableRecord extends AcDbSymbolTableRecord {
+ *   constructor(attrs?: Partial<AcDbSymbolTableRecordAttrs>) {
  *     super(attrs);
  *   }
  * }
  * ```
  */
-export class AcDbSymbolTableRecord<
-  ATTRS extends AcDbSymbolTableRecordAttrs = AcDbSymbolTableRecordAttrs
-> extends AcDbObject<ATTRS> {
+export class AcDbSymbolTableRecord extends AcDbObject {
+  /** The name of the symbol table record */
+  private _name: string = ''
+
   /**
    * Creates a new AcDbSymbolTableRecord instance.
    *
    * @param attrs - Input attribute values for this symbol table record
-   * @param defaultAttrs - Default values for attributes of this symbol table record
    *
    * @example
    * ```typescript
    * const record = new AcDbSymbolTableRecord({ name: 'MyRecord' });
    * ```
    */
-  constructor(attrs?: Partial<ATTRS>, defaultAttrs?: Partial<ATTRS>) {
+  constructor(attrs?: Partial<AcDbSymbolTableRecordAttrs>) {
     attrs = attrs || {}
-    defaults(attrs, { name: '' })
-    super(attrs, defaultAttrs)
+    super(attrs)
+    this._name = attrs.name ?? ''
   }
 
   /**
@@ -68,10 +63,10 @@ export class AcDbSymbolTableRecord<
    * ```
    */
   get name(): string {
-    return this.getAttr('name')
+    return this._name
   }
   set name(value: string) {
-    this.setAttr('name', value)
+    this._name = value
   }
 
   /**

@@ -1,4 +1,3 @@
-import { AcCmAttributes, AcCmObject, AcCmStringKey } from '@mlightcad/common'
 import { uid } from 'uid'
 
 import type { AcDbDatabase } from '../database/AcDbDatabase'
@@ -11,6 +10,19 @@ export type AcDbObjectId = string
 
 /** Prefix for temporary object IDs that are not yet committed to the database */
 export const TEMP_OBJECT_ID_PREFIX = 'TEMP_'
+
+/** Attributes that can be associated with an {@link AcDbObject}. */
+export interface AcDbObjectAttrs {
+  /** Unique identifier for the object */
+  objectId?: AcDbObjectId
+  /** Identifier of the object that owns this object */
+  ownerId?: AcDbObjectId
+  /**
+   * The objectId of the extension dictionary owned by the object. If the object does
+   * not own an extension dictionary, then the returned objectId is set to undefined.
+   */
+  extensionDictionary?: AcDbObjectId
+}
 
 let hostApplicationServicesProvider:
   | (() => { workingDatabase: AcDbDatabase })
@@ -30,46 +42,30 @@ export function acdbGetWorkingDatabase(): AcDbDatabase {
 }
 
 /**
- * Interface defining the attributes that can be associated with an AcDbObject.
- *
- * Extends the base AcCmAttributes interface and adds object-specific attributes
- * like objectId and ownerId.
- */
-export interface AcDbObjectAttrs extends AcCmAttributes {
-  /** Unique identifier for the object */
-  objectId?: AcDbObjectId
-  /** Identifier of the object that owns this object */
-  ownerId?: AcDbObjectId
-  /**
-   * The objectId of the extension dictionary owned by the object. If the object does
-   * not own an extension dictionary, then the returned objectId is set to undefined.
-   */
-  extensionDictionary?: AcDbObjectId
-}
-
-/**
  * The base class for all objects that reside in a drawing database.
  *
  * This class provides the fundamental functionality for all database objects,
- * including attribute management, object identification, and database association.
+ * including object identification and database association.
  * It serves as the foundation for entities, tables, and other database objects.
- *
- * @template ATTRS - The type of attributes this object can have
  *
  * @example
  * ```typescript
- * class MyEntity extends AcDbObject<MyEntityAttrs> {
- *   constructor(attrs?: Partial<MyEntityAttrs>) {
+ * class MyEntity extends AcDbObject {
+ *   constructor(attrs?: AcDbObjectAttrs) {
  *     super(attrs);
  *   }
  * }
  * ```
  */
-export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
+export class AcDbObject {
   /** Reference to the database this object belongs to */
   private _database?: AcDbDatabase
-  /** The attributes object that stores all object properties */
-  private _attrs: AcCmObject<ATTRS>
+  /** Unique identifier for the object */
+  private _objectId: AcDbObjectId
+  /** Identifier of the object that owns this object */
+  private _ownerId?: AcDbObjectId
+  /** Object ID of the extension dictionary owned by this object */
+  private _extensionDictionary?: AcDbObjectId
   /** XData attached to this object */
   private _xDataMap: Map<string, AcDbResultBuffer>
 
@@ -77,26 +73,32 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * Creates a new AcDbObject instance.
    *
    * @param attrs - Input attribute values for this object
-   * @param defaultAttrs - Default values for attributes of this object
    *
    * @example
    * ```typescript
    * const obj = new AcDbObject({ objectId: '123' });
    * ```
    */
-  constructor(attrs?: Partial<ATTRS>, defaultAttrs?: Partial<ATTRS>) {
+  constructor(attrs?: AcDbObjectAttrs) {
     attrs = attrs || {}
-    this._attrs = new AcCmObject<ATTRS>(attrs, defaultAttrs)
     this._xDataMap = new Map()
 
-    // Generate objectId from database if not provided
-    if (!this._attrs.get('objectId')) {
+    if (attrs.objectId) {
+      this._objectId = attrs.objectId
+    } else {
       try {
-        this._attrs.set('objectId', this.database.generateHandle())
+        this._objectId = this.database.generateHandle()
       } catch {
         // Fallback: generate a temporary handle, will be reassigned when added to database
-        this._attrs.set('objectId', this.generateTemporaryHandle())
+        this._objectId = this.generateTemporaryHandle()
       }
+    }
+
+    if (attrs.ownerId !== undefined) {
+      this._ownerId = attrs.ownerId
+    }
+    if (attrs.extensionDictionary !== undefined) {
+      this._extensionDictionary = attrs.extensionDictionary
     }
   }
 
@@ -107,86 +109,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   private generateTemporaryHandle(): AcDbObjectId {
     return TEMP_OBJECT_ID_PREFIX + uid()
-  }
-
-  /**
-   * Gets the attributes object for this AcDbObject.
-   *
-   * @returns The AcCmObject instance containing all attributes
-   *
-   * @example
-   * ```typescript
-   * const attrs = obj.attrs;
-   * const value = attrs.get('someAttribute');
-   * ```
-   */
-  get attrs() {
-    return this._attrs
-  }
-
-  /**
-   * Gets the value of the specified attribute.
-   *
-   * This method will throw an exception if the specified attribute doesn't exist.
-   * Use getAttrWithoutException() if you want to handle missing attributes gracefully.
-   *
-   * @param attrName - The name of the attribute to retrieve
-   * @returns The value of the specified attribute
-   * @throws {Error} When the specified attribute doesn't exist
-   *
-   * @example
-   * ```typescript
-   * try {
-   *   const value = obj.getAttr('objectId');
-   * } catch (error) {
-   *   console.error('Attribute not found');
-   * }
-   * ```
-   */
-  getAttr(attrName: AcCmStringKey<ATTRS>) {
-    const value = this._attrs.get(attrName)
-    if (value === undefined) {
-      throw new Error(
-        `[AcDbObject] Attribute name '${attrName}' does't exist in this object!`
-      )
-    }
-    return value
-  }
-
-  /**
-   * Gets the value of the specified attribute without throwing an exception.
-   *
-   * This method returns undefined if the specified attribute doesn't exist,
-   * making it safer for optional attributes.
-   *
-   * @param attrName - The name of the attribute to retrieve
-   * @returns The value of the specified attribute, or undefined if it doesn't exist
-   *
-   * @example
-   * ```typescript
-   * const value = obj.getAttrWithoutException('optionalAttribute');
-   * if (value !== undefined) {
-   *   // Use the value
-   * }
-   * ```
-   */
-  getAttrWithoutException(attrName: AcCmStringKey<ATTRS>) {
-    return this._attrs.get(attrName)
-  }
-
-  /**
-   * Sets the value of an attribute.
-   *
-   * @param attrName - The name of the attribute to set
-   * @param val - The value to assign to the attribute
-   *
-   * @example
-   * ```typescript
-   * obj.setAttr('objectId', 'new-id-123');
-   * ```
-   */
-  setAttr<A extends AcCmStringKey<ATTRS>>(attrName: A, val?: ATTRS[A]) {
-    this._attrs.set(attrName, val)
   }
 
   /**
@@ -204,7 +126,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   get objectId(): AcDbObjectId {
-    return this.getAttr('objectId')
+    return this._objectId
   }
 
   /**
@@ -218,7 +140,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   set objectId(value: AcDbObjectId) {
-    this._attrs.set('objectId', value)
+    this._objectId = value
 
     // Update the database's maxHandle if the new objectId is a valid hex handle
     if (value && !value.startsWith(TEMP_OBJECT_ID_PREFIX)) {
@@ -232,14 +154,13 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * A temporary object is identified by its objectId starting with the TEMP prefix.
    */
   get isTemp() {
-    const id = this.getAttrWithoutException('objectId')
-    return !!id && id.startsWith(TEMP_OBJECT_ID_PREFIX)
+    return this._objectId.startsWith(TEMP_OBJECT_ID_PREFIX)
   }
 
   /**
    * Gets the object ID of the owner of this object.
    *
-   * @returns The owner object ID
+   * @returns The owner object ID, or undefined when not assigned
    *
    * @example
    * ```typescript
@@ -247,7 +168,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   get ownerId(): AcDbObjectId {
-    return this.getAttr('ownerId')
+    return this._ownerId ?? ''
   }
 
   /**
@@ -260,8 +181,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * obj.ownerId = 'parent-object-id';
    * ```
    */
-  set ownerId(value: AcDbObjectId) {
-    this._attrs.set('ownerId', value)
+  set ownerId(value: AcDbObjectId | undefined) {
+    this._ownerId = value
   }
 
   /**
@@ -282,7 +203,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   get extensionDictionary(): AcDbObjectId | undefined {
-    return this.getAttrWithoutException('extensionDictionary')
+    return this._extensionDictionary
   }
 
   /**
@@ -301,7 +222,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   set extensionDictionary(value: AcDbObjectId | undefined) {
-    this._attrs.set('extensionDictionary', value)
+    this._extensionDictionary = value
   }
 
   /**
@@ -450,27 +371,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   createExtensionDictionary(): AcDbObjectId | undefined {
-    // If already exists, behave like ObjectARX: do nothing
-    // const existingId = this.extensionDictionary
-    // if (existingId) {
-    //   return existingId
-    // }
-
-    // const db = this.database
-    // if (db) {
-    //   // Create a new extension dictionary
-    //   const dict = new AcDbDictionary(db)
-
-    //   // Ensure dictionary lives in the same database
-    //   dict.database = db
-
-    //   // Add dictionary to database
-    //   db.objects.dictionary.setAt(dict.objectId, dict)
-
-    //   // Establish ownership relationship
-    //   this.extensionDictionary = dict.objectId
-    //   return dict.objectId
-    // }
     return undefined
   }
 
@@ -494,11 +394,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     'transactionManager'
   ])
 
-  /** Own-property keys restored through dedicated attribute/xdata helpers instead of generic copy. */
-  private static readonly SNAPSHOT_INTERNAL_KEYS = new Set([
-    '_attrs',
-    '_xDataMap'
-  ])
+  /** Own-property keys restored through dedicated helpers instead of generic copy. */
+  private static readonly SNAPSHOT_INTERNAL_KEYS = new Set(['_xDataMap'])
 
   /**
    * Returns own string property names that participate in generic snapshot copy.
@@ -513,40 +410,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
         !AcDbObject.SNAPSHOT_EXCLUDED_KEYS.has(key)
       )
     })
-  }
-
-  /**
-   * Deep-clones attribute storage into a new {@link AcCmObject} instance.
-   *
-   * @param source - Attribute container to copy
-   * @returns Detached attribute object with the same values as `source`
-   */
-  private cloneAttrs(source: AcCmObject<ATTRS>): AcCmObject<ATTRS> {
-    const attrs = this.cloneValue(source.attributes) as Partial<ATTRS>
-    return new AcCmObject<ATTRS>(attrs)
-  }
-
-  /**
-   * Replaces this object's attributes from a snapshot, removing keys absent in the source.
-   *
-   * Updates are applied silently so restore does not trigger attribute observers.
-   *
-   * @param source - Attribute container captured before modification
-   */
-  private restoreAttrsFrom(source: AcCmObject<ATTRS>): void {
-    const nextAttrs = this.cloneValue(source.attributes) as Partial<ATTRS>
-    const current = this._attrs.attributes as Record<string, unknown>
-
-    for (const key of Object.keys(current)) {
-      if (!(key in nextAttrs)) {
-        this._attrs.set(key as AcCmStringKey<ATTRS>, undefined, {
-          unset: true,
-          silent: true
-        })
-      }
-    }
-
-    this._attrs.set(nextAttrs, { silent: true })
   }
 
   /**
@@ -570,7 +433,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * @param target - Newly created instance receiving the copied state
    */
   private copySnapshotStateTo(target: this): void {
-    target._attrs = this.cloneAttrs(this._attrs)
     target._xDataMap = this.cloneValue(this._xDataMap) as Map<
       string,
       AcDbResultBuffer
@@ -608,14 +470,9 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   clonePreservingIdentity(): this {
     const cloned = this.clone()
-    const objectId = this.getAttrWithoutException('objectId')
-    if (objectId) {
-      cloned._attrs.set('objectId', objectId)
-    }
-    const ownerId = this.getAttrWithoutException('ownerId')
-    if (ownerId !== undefined) {
-      cloned._attrs.set('ownerId', ownerId)
-    }
+    cloned._objectId = this._objectId
+    cloned._ownerId = this._ownerId
+    cloned._extensionDictionary = this._extensionDictionary
     if (this._database) {
       cloned._database = this._database
     }
@@ -628,10 +485,9 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * @param snapshot - Clone produced by {@link clone} or {@link clonePreservingIdentity}.
    */
   restoreFrom(snapshot: this): void {
-    const preservedObjectId = this.objectId
+    const preservedObjectId = this._objectId
     const preservedDatabase = this._database
 
-    this.restoreAttrsFrom(snapshot._attrs)
     this.restoreXDataMapFrom(snapshot._xDataMap)
 
     const source = snapshot as unknown as Record<string, unknown>
@@ -659,7 +515,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
       delete target[key]
     }
 
-    this.objectId = preservedObjectId
+    this._objectId = preservedObjectId
     if (preservedDatabase) {
       this.database = preservedDatabase
     }
@@ -743,14 +599,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
-   * Writes the common DXF wrapper for this object and then delegates the
-   * object-specific payload to {@link dxfOutFields}.
-   *
-   * @param filer - DXF output writer.
-   * @param allXdata - When true, emits all XData attached to this object.
-   * @returns The object instance (for chaining).
-   */
-  /**
    * Writes this object to the DXF output.
    *
    * @returns The instance (for chaining).
@@ -774,15 +622,6 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     return this
   }
 
-  /**
-   * Writes object-specific DXF fields.
-   *
-   * Subclasses should override this method and call `super.dxfOutFields(filer)`
-   * first so the subclass markers remain consistent.
-   *
-   * @param _filer - DXF output writer.
-   * @returns The object instance (for chaining).
-   */
   /**
    * Writes DXF fields for this object.
    *

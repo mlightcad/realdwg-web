@@ -78,6 +78,26 @@ describe('AcDbDatabaseTransactionManager', () => {
     expect(eraseCount).toBe(1)
   })
 
+  it('dispatches layerModified on commit and undo for layer property edits', () => {
+    const db = new AcDbDatabase()
+    const layer = new AcDbLayerTableRecord({ name: 'Layer-A' })
+    db.tables.layerTable.add(layer)
+
+    const modified: Array<{ isOff?: boolean }> = []
+    db.events.layerModified.addEventListener(args => {
+      modified.push(args.changes)
+    })
+
+    db.transactionManager.runUndoable('Layer Off', () => {
+      layer.isOff = true
+    })
+    expect(modified).toEqual([{ isOff: true }])
+
+    db.transactionManager.undo()
+    expect(modified).toEqual([{ isOff: true }, { isOff: false }])
+    expect(layer.isOff).toBe(false)
+  })
+
   it('supports undo and redo for entity append and remove', () => {
     const db = new AcDbDatabase()
     const line = createLine(new AcGePoint3d(1, 2, 3), new AcGePoint3d(4, 5, 6))

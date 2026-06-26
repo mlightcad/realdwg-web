@@ -2,6 +2,11 @@ import { AcDbObject } from '../../base'
 import { AcDbEntity } from '../../entity/AcDbEntity'
 import { AcDbDictionary } from '../../object/AcDbDictionary'
 import { AcDbDatabase } from '../AcDbDatabase'
+import {
+  AcDbLayerTableRecord,
+  AcDbLayerTableRecordAttrs
+} from '../AcDbLayerTableRecord'
+import { diffLayerTableRecords } from '../AcDbLayerTableRecordChanges'
 import { AcDbSymbolTable } from '../AcDbSymbolTable'
 import { AcDbSymbolTableRecord } from '../AcDbSymbolTableRecord'
 import { AcDbSysVarManager } from '../AcDbSysVarManager'
@@ -269,6 +274,56 @@ export function collectChangeEntities(
   }
 
   return { modified, appended, erased }
+}
+
+/**
+ * Resolves layer-modification notifications from recorded modify changes.
+ *
+ * @param database - Database used to resolve the live layer table record
+ * @param changes - Changes produced by a transaction or undo record
+ * @param inverse - When true, diff from `after` back to `before` (undo replay)
+ * @returns Layer modification payloads for {@link AcDbDatabase.events.layerModified}
+ */
+export function collectLayerModifications(
+  database: AcDbDatabase,
+  changes: AcDbDatabaseChange[],
+  inverse = false
+): Array<{
+  layer: AcDbLayerTableRecord
+  changes: Partial<AcDbLayerTableRecordAttrs>
+}> {
+  const modified: Array<{
+    layer: AcDbLayerTableRecord
+    changes: Partial<AcDbLayerTableRecordAttrs>
+  }> = []
+
+  for (const change of changes) {
+    if (change.kind !== 'modify' || !change.before || !change.after) {
+      continue
+    }
+    if (
+      !(change.before instanceof AcDbLayerTableRecord) ||
+      !(change.after instanceof AcDbLayerTableRecord)
+    ) {
+      continue
+    }
+
+    const layer = database.getObjectById(change.objectId)
+    if (!(layer instanceof AcDbLayerTableRecord)) {
+      continue
+    }
+
+    const attrChanges = inverse
+      ? diffLayerTableRecords(change.after, change.before)
+      : diffLayerTableRecords(change.before, change.after)
+    if (Object.keys(attrChanges).length === 0) {
+      continue
+    }
+
+    modified.push({ layer, changes: attrChanges })
+  }
+
+  return modified
 }
 
 /**

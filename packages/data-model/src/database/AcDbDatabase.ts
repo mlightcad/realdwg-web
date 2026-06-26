@@ -943,7 +943,7 @@ export class AcDbDatabase extends AcDbObject {
     object: AcDbObject,
     hasId?: (id: AcDbObjectId) => boolean
   ) {
-    const objectId = object.getAttrWithoutException('objectId')
+    const objectId = object.objectId
     if (!objectId || object.isTemp || (hasId && hasId(objectId))) {
       object.objectId = this.generateHandle()
     } else {
