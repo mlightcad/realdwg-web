@@ -1,5 +1,17 @@
 # @mlightcad/graphic-interface
 
+## 3.10.0
+
+### Minor Changes
+
+- feat: refactor symbol table storage with typed attributes, enforce write access controls, dispatch layerModified events, fix entityModified dispatch on commit, and resolve MLine grip issues for improved data integrity
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.10.0
+  - @mlightcad/geometry-engine@3.10.0
+
 ## 3.5.14
 
 ### Patch Changes

@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/realdwg-web-example",
-  "version": "0.3.14",
+  "version": "0.10.0",
   "private": true,
   "license": "MIT",
   "type": "module",

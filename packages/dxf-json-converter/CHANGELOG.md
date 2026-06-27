@@ -1,5 +1,16 @@
 # @mlightcad/dxf-json-converter
 
+## 1.10.0
+
+### Minor Changes
+
+- feat: refactor symbol table storage with typed attributes, enforce write access controls, dispatch layerModified events, fix entityModified dispatch on commit, and resolve MLine grip issues for improved data integrity
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.10.0
+
 ## 1.9.14
 
 ### Patch Changes

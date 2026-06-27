@@ -1,5 +1,18 @@
 # @mlightcad/realdwg-web-example
 
+## 0.10.0
+
+### Minor Changes
+
+- feat: refactor symbol table storage with typed attributes, enforce write access controls, dispatch layerModified events, fix entityModified dispatch on commit, and resolve MLine grip issues for improved data integrity
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.10.0
+  - @mlightcad/dxf-json-converter@1.10.0
+  - @mlightcad/libredwg-converter@3.10.0
+
 ## 0.3.14
 
 ### Patch Changes
