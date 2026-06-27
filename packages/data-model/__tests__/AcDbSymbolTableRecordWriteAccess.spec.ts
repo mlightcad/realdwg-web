@@ -62,9 +62,7 @@ describe('AcDbSymbolTableRecord write access', () => {
     })
 
     db.transactionManager.runUndoable('Layer Off', () => {
-      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(
-        layer.objectId
-      )
+      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(layer.objectId)
       opened!.isOff = true
       expect(modifiedCount).toBe(0)
     })
@@ -79,16 +77,16 @@ describe('AcDbSymbolTableRecord write access', () => {
     const layer = db.tables.layerTable.getAt('0')!
     const nextColor = new AcCmColor()
     nextColor.colorIndex = 1
-    let payload: { changes: Partial<{ isOff: boolean; color: AcCmColor }> } | undefined
+    let payload:
+      | { changes: Partial<{ isOff: boolean; color: AcCmColor }> }
+      | undefined
 
     db.events.layerModified.addEventListener(args => {
       payload = args
     })
 
     db.transactionManager.runUndoable('Layer Color', () => {
-      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(
-        layer.objectId
-      )
+      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(layer.objectId)
       opened!.color = nextColor
     })
 
@@ -199,9 +197,7 @@ describe('AcDbSymbolTableRecord write access', () => {
     })
 
     db.transactionManager.runUndoable('Layer Off', () => {
-      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(
-        layer.objectId
-      )
+      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(layer.objectId)
       opened!.isOff = !wasOff
     })
 
