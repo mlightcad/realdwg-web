@@ -831,6 +831,7 @@ export function offsetVertexPathAsPolyline(
 
 const WIDTH_EPSILON = 1e-6
 const MITER_LIMIT = 4
+const INNER_TO_OUTER_MAX_RATIO = 0.75
 
 /**
  * A sampled centerline point with local width used for wide polyline rendering.
@@ -844,9 +845,11 @@ interface WidePolylinePoint {
 /**
  * Builds a renderable filled area for a wide polyline.
  *
- * Open wide polylines are represented as a single stitched shell loop. Closed
- * wide polylines are represented as two loops (outer + inner hole) so the
- * stroke ring does not degenerate into a self-intersecting polygon.
+ * Open wide polylines are tessellated into per-segment quads so the stroke band
+ * follows the centerline without enclosing interior regions when the path bends
+ * back on itself. Closed wide polylines are represented as two loops (outer +
+ * inner hole) so the stroke ring does not degenerate into a self-intersecting
+ * polygon.
  *
  * @param points - Centerline samples with per-point widths.
  * @param closed - Whether the source polyline is topologically closed.
@@ -855,29 +858,171 @@ interface WidePolylinePoint {
  */
 function createWidePolylineArea(points: WidePolylinePoint[], closed: boolean) {
   if (points.length < 2) return null
+  if (closed) {
+    return createWidePolylineAreaForSingleProfile(points, true)
+  }
+
+  const subpaths = splitWidePolylineProfileAtRevisits(points)
+  if (subpaths.length === 1) {
+    return createWidePolylineAreaForSingleProfile(subpaths[0], false)
+  }
+
+  const area = new AcGeArea2d()
+  let added = false
+  for (const subpath of subpaths) {
+    const part = createWidePolylineAreaForSingleProfile(subpath, false)
+    if (part == null) {
+      continue
+    }
+    for (const loop of part.loops) {
+      area.add(loop)
+    }
+    added = true
+  }
+  return added ? area : null
+}
+
+function createWidePolylineAreaForSingleProfile(
+  points: WidePolylinePoint[],
+  closed: boolean
+) {
   const centerline = normalizeCenterline(points, closed)
   if (centerline.length < 2) return null
 
   const { left, right } = createWidePolylineBoundaries(centerline, closed)
-  if (left.length < 2 || right.length < 2) return null
+  if (countBoundaryPoints(left) < 2 || countBoundaryPoints(right) < 2) {
+    return null
+  }
 
   const area = new AcGeArea2d()
   if (closed) {
-    if (!isRenderableLoop(left) || !isRenderableLoop(right)) {
+    const leftLoop = compactBoundaryLoop(left)
+    const rightLoop = compactBoundaryLoop(right)
+    if (!isRenderableLoop(leftLoop) || !isRenderableLoop(rightLoop)) {
       return null
     }
-    const leftArea = Math.abs(calculateSignedArea(left))
-    const rightArea = Math.abs(calculateSignedArea(right))
-    const [outer, inner] = leftArea >= rightArea ? [left, right] : [right, left]
+    const leftArea = Math.abs(calculateSignedArea(leftLoop))
+    const rightArea = Math.abs(calculateSignedArea(rightLoop))
+    const [outer, inner] =
+      leftArea >= rightArea ? [leftLoop, rightLoop] : [rightLoop, leftLoop]
     area.add(new AcGePolyline2d(outer, true))
     area.add(new AcGePolyline2d(inner, true))
     return area
   }
 
-  const loop = [...left, ...right.reverse()]
-  if (!isRenderableLoop(loop)) return null
-  area.add(new AcGePolyline2d(loop, true))
-  return area
+  if (
+    (isNearlyClosedWidePolyline(centerline) &&
+      tryAddClosedOffsetWidePolylineRing(area, centerline)) ||
+    addOpenWidePolylineBand(area, left, right)
+  ) {
+    return area
+  }
+  return null
+}
+
+/**
+ * Splits a sampled centerline when it revisits the same point so each subpath
+ * can be stroked independently without forming one enclosing fill region.
+ */
+function splitWidePolylineProfileAtRevisits(points: WidePolylinePoint[]) {
+  if (points.length < 2) {
+    return [points]
+  }
+
+  const subpaths: WidePolylinePoint[][] = []
+  let segmentStart = 0
+  const firstIndexByKey = new Map<string, number>()
+
+  for (let i = 0; i < points.length; i++) {
+    const key = widePolylinePointKey(points[i])
+    const firstIndex = firstIndexByKey.get(key)
+    if (firstIndex != null && i - firstIndex > 1) {
+      const subpath = points.slice(segmentStart, i + 1)
+      if (subpath.length >= 2) {
+        subpaths.push(subpath)
+      }
+      segmentStart = firstIndex
+      firstIndexByKey.clear()
+      for (let j = segmentStart; j <= i; j++) {
+        firstIndexByKey.set(widePolylinePointKey(points[j]), j)
+      }
+      continue
+    }
+    firstIndexByKey.set(key, i)
+  }
+
+  const tail = points.slice(segmentStart)
+  if (tail.length >= 2) {
+    subpaths.push(tail)
+  }
+
+  return subpaths.length > 0 ? subpaths : [points]
+}
+
+function widePolylinePointKey(point: WidePolylinePoint) {
+  return `${point.x.toFixed(4)}:${point.y.toFixed(4)}`
+}
+
+/**
+ * Validates that two offset loops form a thin ring rather than a near-solid slab.
+ */
+function isValidWidePolylineRing(outerArea: number, innerArea: number) {
+  const outer = Math.max(outerArea, innerArea)
+  const inner = Math.min(outerArea, innerArea)
+  if (outer <= WIDTH_EPSILON) {
+    return false
+  }
+  const ringArea = outer - inner
+  if (ringArea <= WIDTH_EPSILON) {
+    return false
+  }
+  return inner / outer <= INNER_TO_OUTER_MAX_RATIO
+}
+
+/**
+ * Returns true when an open polyline's endpoints are close enough to be treated
+ * as a nearly-closed stirrup outline.
+ */
+function isNearlyClosedWidePolyline(centerline: WidePolylinePoint[]) {
+  const first = centerline[0]
+  const last = centerline[centerline.length - 1]
+  const gap = Math.hypot(last.x - first.x, last.y - first.y)
+  if (gap <= WIDTH_EPSILON) {
+    return true
+  }
+  const maxWidth = Math.max(...centerline.map(point => point.width))
+  if (maxWidth <= WIDTH_EPSILON) {
+    return false
+  }
+  return gap <= maxWidth * 4
+}
+
+/**
+ * Attempts to render an open wide polyline as a closed-offset ring. This matches
+ * stirrup-like paths whose endpoints are separated by a small gap.
+ */
+function tryAddClosedOffsetWidePolylineRing(
+  area: AcGeArea2d,
+  centerline: WidePolylinePoint[]
+) {
+  const { left, right } = createWidePolylineBoundaries(centerline, true)
+  const leftLoop = compactBoundaryLoop(left)
+  const rightLoop = compactBoundaryLoop(right)
+  if (!isRenderableLoop(leftLoop) || !isRenderableLoop(rightLoop)) {
+    return false
+  }
+
+  const leftArea = Math.abs(calculateSignedArea(leftLoop))
+  const rightArea = Math.abs(calculateSignedArea(rightLoop))
+  if (!isValidWidePolylineRing(leftArea, rightArea)) {
+    return false
+  }
+
+  const [outer, inner] =
+    leftArea >= rightArea ? [leftLoop, rightLoop] : [rightLoop, leftLoop]
+  area.add(new AcGePolyline2d(outer, true))
+  area.add(new AcGePolyline2d(inner, true))
+  return true
 }
 
 /**
@@ -892,29 +1037,94 @@ function createWidePolylineBoundaries(
   centerline: WidePolylinePoint[],
   closed: boolean
 ) {
-  const left: AcGePolyline2dVertex[] = []
-  const right: AcGePolyline2dVertex[] = []
+  const left: (AcGePolyline2dVertex | null)[] = new Array(centerline.length)
+  const right: (AcGePolyline2dVertex | null)[] = new Array(centerline.length)
   for (let i = 0; i < centerline.length; i++) {
     const point = centerline[i]
     const halfWidth = Math.max(0, point.width) / 2
     if (halfWidth <= WIDTH_EPSILON) {
+      left[i] = null
+      right[i] = null
       continue
     }
     const offset = computeOffsetDirection(centerline, i, closed)
     if (offset == null) {
+      left[i] = null
+      right[i] = null
       continue
     }
-    left.push({
+    left[i] = {
       x: point.x + offset.x * halfWidth,
       y: point.y + offset.y * halfWidth
-    })
-    right.push({
+    }
+    right[i] = {
       x: point.x - offset.x * halfWidth,
       y: point.y - offset.y * halfWidth
-    })
+    }
   }
 
   return { left, right }
+}
+
+/**
+ * Adds one segment quad to an open wide-polyline band area.
+ */
+function addOpenWidePolylineSegmentQuad(
+  area: AcGeArea2d,
+  leftStart: AcGePolyline2dVertex,
+  leftEnd: AcGePolyline2dVertex,
+  rightEnd: AcGePolyline2dVertex,
+  rightStart: AcGePolyline2dVertex
+) {
+  const quad = [leftStart, leftEnd, rightEnd, rightStart]
+  if (!isRenderableLoop(quad)) {
+    return false
+  }
+  area.add(new AcGePolyline2d(quad, true))
+  return true
+}
+
+/**
+ * Tessellates an open wide polyline into segment quads with flat end caps.
+ */
+function addOpenWidePolylineBand(
+  area: AcGeArea2d,
+  left: (AcGePolyline2dVertex | null)[],
+  right: (AcGePolyline2dVertex | null)[]
+) {
+  let added = false
+  for (let i = 0; i < left.length - 1; i++) {
+    const leftStart = left[i]
+    const leftEnd = left[i + 1]
+    const rightStart = right[i]
+    const rightEnd = right[i + 1]
+    if (leftStart == null || leftEnd == null || rightStart == null || rightEnd == null) {
+      continue
+    }
+    if (
+      addOpenWidePolylineSegmentQuad(
+        area,
+        leftStart,
+        leftEnd,
+        rightEnd,
+        rightStart
+      )
+    ) {
+      added = true
+    }
+  }
+  return added
+}
+
+function countBoundaryPoints(boundary: (AcGePolyline2dVertex | null)[]) {
+  return boundary.reduce(
+    (count, point) => (point == null ? count : count + 1),
+    0
+  )
+}
+
+function compactBoundaryLoop(boundary: (AcGePolyline2dVertex | null)[]) {
+  return boundary.filter((point): point is AcGePolyline2dVertex => point != null)
 }
 
 /**
