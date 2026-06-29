@@ -455,6 +455,147 @@ describe('AcDbPolyline', () => {
     ).toBeUndefined()
   })
 
+  it('renders open constant-width polyline as a band without filling interior', () => {
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 40, 40)
+    polyline.addVertexAt(1, new AcGePoint2d(200, 0), 0, 40, 40)
+    polyline.addVertexAt(2, new AcGePoint2d(200, 400), 0, 40, 40)
+    polyline.addVertexAt(3, new AcGePoint2d(0, 400), 0, 40, 40)
+    polyline.addVertexAt(4, new AcGePoint2d(0, 200), 0, 40, 40)
+
+    const giEntity = { id: 'open-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
+      area: number
+      loops: unknown[]
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops.length).toBeGreaterThan(1)
+    expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
+    expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
+  })
+
+  it('renders a wide polyline with width when the path revisits a point', () => {
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 40, 40)
+    polyline.addVertexAt(1, new AcGePoint2d(200, 0), 0, 40, 40)
+    polyline.addVertexAt(2, new AcGePoint2d(200, 400), 0, 40, 40)
+    polyline.addVertexAt(3, new AcGePoint2d(0, 400), 0, 40, 40)
+    polyline.addVertexAt(4, new AcGePoint2d(0, 400), 0, 40, 40)
+    polyline.addVertexAt(5, new AcGePoint2d(0, 200), 0, 40, 40)
+
+    const giEntity = { id: 'revisited-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
+      area: number
+      loops: unknown[]
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops.length).toBeGreaterThan(0)
+    expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
+    expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
+  })
+
+  it('renders nearly-closed open wide polyline as outer and inner loops', () => {
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 2, 2)
+    polyline.addVertexAt(1, new AcGePoint2d(10, 0), 0, 2, 2)
+    polyline.addVertexAt(2, new AcGePoint2d(10, 5), 0, 2, 2)
+    polyline.addVertexAt(3, new AcGePoint2d(0, 5), 0, 2, 2)
+
+    const giEntity = { id: 'nearly-closed-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
+      loops: unknown[]
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops).toHaveLength(2)
+  })
+
+  it('renders open stadium wide polyline as a segment band instead of a ring', () => {
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 120), 0, 10, 10)
+    polyline.addVertexAt(1, new AcGePoint2d(0, 130), -1, 10, 10)
+    polyline.addVertexAt(2, new AcGePoint2d(70, 130), 0, 10, 10)
+    polyline.addVertexAt(3, new AcGePoint2d(70, -70), -1, 10, 10)
+    polyline.addVertexAt(4, new AcGePoint2d(0, -70), 0, 10, 10)
+    polyline.addVertexAt(5, new AcGePoint2d(0, -60), 0, 10, 10)
+
+    const giEntity = { id: 'open-stadium-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
+      loops: unknown[]
+      area: number
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops.length).toBeGreaterThan(2)
+    expect(areaArg.area).toBeLessThan(70 * 200)
+  })
+
   it('writes LWPOLYLINE-specific dxf fields and vertices', () => {
     const polyline = new AcDbPolyline()
     attachEntityToNewModelSpace(polyline)
