@@ -304,18 +304,22 @@ export class AcDbSymbolTable<
   /**
    * Normalizes the name of a symbol table record.
    *
-   * Some symbol table records require name normalization. For example, the
+   * Per AutoCAD convention, symbol table record names compare case-insensitively
+   * and ignore leading and trailing whitespace. The default implementation trims
+   * the name and uppercases it for internal map lookup.
+   *
+   * Some symbol table records require additional normalization. For example, the
    * model space block table record may appear as either `*Model_Space` or
    * `*MODEL_SPACE`, and should be standardized to a consistent form.
    *
-   * Subclasses should override this method to implement record-specific
-   * normalization rules.
+   * Subclasses should override this method to implement record-specific rules
+   * and call `super.normalizeName()` when no special handling applies.
    *
    * @param name - The raw name of the symbol table record.
    * @returns The normalized symbol table record name.
    */
   protected normalizeName(name: string) {
-    return name
+    return name.trim().toUpperCase()
   }
 
   /**
