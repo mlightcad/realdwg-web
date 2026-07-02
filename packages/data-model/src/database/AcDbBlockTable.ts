@@ -107,14 +107,15 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
    * @returns The normalized block table record name.
    */
   protected normalizeName(name: string) {
-    let regularizedName = name
-    if (AcDbBlockTableRecord.isModelSapceName(name)) {
-      regularizedName = AcDbBlockTableRecord.MODEL_SPACE_NAME
-    } else if (AcDbBlockTableRecord.isPaperSapceName(name)) {
-      const prefix = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
-      const suffix = name.substring(prefix.length)
-      regularizedName = prefix + suffix
+    const trimmed = name.trim()
+    if (AcDbBlockTableRecord.isModelSapceName(trimmed)) {
+      return AcDbBlockTableRecord.MODEL_SPACE_NAME
     }
-    return regularizedName
+    if (AcDbBlockTableRecord.isPaperSapceName(trimmed)) {
+      const prefix = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+      const suffix = trimmed.substring(prefix.length)
+      return prefix + suffix
+    }
+    return super.normalizeName(trimmed)
   }
 }
