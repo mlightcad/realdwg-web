@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.10.1
+
+### Patch Changes
+
+- fix: improved AutoCAD compatibility by normalizing symbol table names and enhanced wide polyline fill rendering for self-overlapping paths
+- Updated dependencies
+  - @mlightcad/data-model@1.10.1
+  - @mlightcad/dxf-json-converter@1.10.1
+  - @mlightcad/libredwg-converter@3.10.1
+
 ## 0.10.0
 
 ### Minor Changes

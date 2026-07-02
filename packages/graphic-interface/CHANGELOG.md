@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.10.1
+
+### Patch Changes
+
+- fix: improved AutoCAD compatibility by normalizing symbol table names and enhanced wide polyline fill rendering for self-overlapping paths
+- Updated dependencies
+  - @mlightcad/common@1.10.1
+  - @mlightcad/geometry-engine@3.10.1
+
 ## 3.10.0
 
 ### Minor Changes

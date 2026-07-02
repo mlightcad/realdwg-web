@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.10.1
+
+### Patch Changes
+
+- fix: improved AutoCAD compatibility by normalizing symbol table names and enhanced wide polyline fill rendering for self-overlapping paths
+
 ## 1.10.0
 
 ### Minor Changes
