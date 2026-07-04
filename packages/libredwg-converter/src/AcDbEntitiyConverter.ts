@@ -707,6 +707,9 @@ export class AcDbEntityConverter {
     }
     dbEntity.drawingDirection =
       mtext.drawingDirection as unknown as AcGiMTextFlowDirection
+    if (mtext.extentsWidth != null && mtext.extentsWidth > 0) {
+      dbEntity.extentsWidth = mtext.extentsWidth
+    }
     return dbEntity
   }
 
@@ -717,10 +720,25 @@ export class AcDbEntityConverter {
     })
     dbEntity.hasArrowHead = leader.isArrowheadEnabled
     dbEntity.hasHookLine = leader.isHooklineExists
+    dbEntity.isHookLineSameDirection = leader.isHooklineSameDirection
     dbEntity.isSplined = leader.isSpline
-    dbEntity.dimensionStyle = leader.styleName
+    dbEntity.dimensionStyle = leader.styleName ?? ''
     dbEntity.annoType =
       leader.leaderCreationFlag as unknown as AcDbLeaderAnnotationType
+    if (leader.textHeight != null) dbEntity.textHeight = leader.textHeight
+    if (leader.textWidth != null) dbEntity.textWidth = leader.textWidth
+    if (leader.byBlockColor != null) dbEntity.byBlockColor = leader.byBlockColor
+    if (leader.associatedAnnotation) {
+      dbEntity.associatedAnnotation = leader.associatedAnnotation
+    }
+    if (leader.normal) dbEntity.normal = leader.normal
+    if (leader.horizontalDirection) {
+      dbEntity.horizontalDirection = leader.horizontalDirection
+    }
+    if (leader.offsetFromBlock) dbEntity.offsetFromBlock = leader.offsetFromBlock
+    if (leader.offsetFromAnnotation) {
+      dbEntity.offsetFromAnnotation = leader.offsetFromAnnotation
+    }
     return dbEntity
   }
 

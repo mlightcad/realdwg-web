@@ -61,6 +61,8 @@ export class AcDbMText extends AcDbEntity {
   private _height: number
   /** The maximum width for word wrap formatting */
   private _width: number
+  /** Cached actual text extents width from the source drawing, when available */
+  private _extentsWidth: number
   /** The text contents */
   private _contents: string
   /** The line spacing style */
@@ -107,6 +109,7 @@ export class AcDbMText extends AcDbEntity {
     this._contents = ''
     this._height = 0
     this._width = 0
+    this._extentsWidth = 0
     this._lineSpacingFactor = 0.25
     this._lineSpacingStyle = 0
     this._backgroundFill = false
@@ -213,6 +216,20 @@ export class AcDbMText extends AcDbEntity {
    */
   set width(value: number) {
     this._width = value
+  }
+
+  /**
+   * Gets the cached actual text extents width from the source file.
+   *
+   * When present, this reflects the rendered width of the MTEXT content and is
+   * preferred over {@link width} (reference/wrap width) for layout calculations.
+   */
+  get extentsWidth() {
+    return this._extentsWidth
+  }
+
+  set extentsWidth(value: number) {
+    this._extentsWidth = value
   }
 
   /**
@@ -356,9 +373,11 @@ export class AcDbMText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
     const width =
-      this.width > 0
-        ? this.width
-        : acdbEstimatePlainTextWidth(this.contents, this.height)
+      this.extentsWidth > 0
+        ? this.extentsWidth
+        : this.width > 0
+          ? this.width
+          : acdbEstimatePlainTextWidth(this.contents, this.height)
     const lineCount = acdbCountMTextLines(this.contents)
     const height = acdbEstimateMTextHeight(
       lineCount,
@@ -451,6 +470,9 @@ export class AcDbMText extends AcDbEntity {
       this._direction.copy(xAxis).normalize()
       this._rotation = Math.atan2(this._direction.y, this._direction.x)
       this._width *= xScale
+      if (this._extentsWidth > 0) {
+        this._extentsWidth *= xScale
+      }
     }
     if (yScale > 0) {
       this._height *= yScale
@@ -708,6 +730,9 @@ export class AcDbMText extends AcDbEntity {
     filer.writePoint3d(10, this.location)
     filer.writeDouble(40, this.height)
     filer.writeDouble(41, this.width)
+    if (this.extentsWidth > 0) {
+      filer.writeDouble(414, this.extentsWidth)
+    }
     // MTEXT contents use \P for paragraph breaks; raw newlines must not appear in DXF.
     filer.writeString(1, this.encodeMTextContentsForDxf(this.contents))
     filer.writeString(7, this.styleName)

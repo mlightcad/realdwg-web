@@ -8,6 +8,7 @@ import {
   AcDbMLeader,
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
+  AcDbMText,
   AcDbPolyline,
   AcDbProxyEntity,
   AcDbRotatedDimension,
@@ -227,6 +228,38 @@ describe('AcDbEntityConverter', () => {
     expect(leader.byBlockColor).toBe(256)
     expect(leader.associatedAnnotation).toBe('AA')
     expect(leader.offsetFromAnnotation).toMatchObject({ x: 1, y: 0, z: 0 })
+  })
+
+  it('converts MTEXT extentsWidth from dxf-json entities', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MTEXT',
+      text: 'Hello',
+      height: 2,
+      width: 10,
+      extentsWidth: 7.5,
+      insertionPoint: { x: 0, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbMText)
+    expect((result as AcDbMText).extentsWidth).toBeCloseTo(7.5)
+  })
+
+  it('converts MTEXT actualWidth alias from dxf-json entities', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MTEXT',
+      text: 'Hello',
+      height: 2,
+      width: 10,
+      actualWidth: 6,
+      insertionPoint: { x: 0, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbMText)
+    expect((result as AcDbMText).extentsWidth).toBeCloseTo(6)
   })
 
   it('converts dxf-json MULTILEADER text and leaderSections shape', () => {

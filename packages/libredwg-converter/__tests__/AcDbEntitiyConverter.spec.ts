@@ -6,6 +6,9 @@ import {
   AcDbCircle,
   AcDbDatabase,
   AcDbHatch,
+  AcDbLeader,
+  AcDbLeaderAnnotationType,
+  AcDbMText,
   AcDbProxyEntity,
   AcDbShape,
   acdbHostApplicationServices
@@ -318,5 +321,50 @@ describe('libredwg AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDb3PointAngularDimension)
     expect((result as AcDb3PointAngularDimension).dimBlockId).toBe('*D64')
+  })
+
+  it('converts LEADER hook-line metadata from libredwg entities', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'LEADER',
+      styleName: 'Standard',
+      isArrowheadEnabled: true,
+      isSpline: false,
+      leaderCreationFlag: 0,
+      isHooklineSameDirection: true,
+      isHooklineExists: true,
+      textHeight: 5,
+      textWidth: 9.51,
+      vertices: [
+        { x: 0, y: 0, z: 0 },
+        { x: 10, y: 5, z: 0 }
+      ],
+      horizontalDirection: { x: 1, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbLeader)
+    const leader = result as AcDbLeader
+    expect(leader.hasHookLine).toBe(true)
+    expect(leader.isHookLineSameDirection).toBe(true)
+    expect(leader.textWidth).toBeCloseTo(9.51)
+    expect(leader.annoType).toBe(AcDbLeaderAnnotationType.MText)
+    expect(leader.horizontalDirection).toMatchObject({ x: 1, y: 0, z: 0 })
+  })
+
+  it('converts MTEXT extentsWidth from libredwg entities', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MTEXT',
+      text: 'Note',
+      textHeight: 2.5,
+      rectWidth: 10,
+      extentsWidth: 16.25,
+      insertionPoint: { x: 0, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbMText)
+    expect((result as AcDbMText).extentsWidth).toBeCloseTo(16.25)
   })
 })
