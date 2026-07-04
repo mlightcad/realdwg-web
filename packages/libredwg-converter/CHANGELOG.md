@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.10.2
+
+### Patch Changes
+
+- feat: improved data model reliability with structured database error reporting, resilient font loading, accurate leader hook line rendering, and global handle registry to prevent cross-table handle collisions
+- Updated dependencies
+  - @mlightcad/data-model@1.10.2
+
 ## 3.10.1
 
 ### Patch Changes
