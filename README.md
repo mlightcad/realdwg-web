@@ -106,6 +106,16 @@ await database.read(
 
 For a complete example, see the [example project](./packages/example/src/main.ts).
 
+### Font Loading and Self-Hosting
+
+When using a viewer such as `@mlightcad/cad-simple-viewer`, fonts are loaded from a
+`baseUrl` (default: jsDelivr CDN). If the CDN is unreachable, `@mlightcad/data-model`
+continues parsing DWG/DXF entities by default; text may fall back until fonts load.
+
+For self-hosted fonts, templates, `fonts.json`, and server setup, see
+[Self Hosted Fonts and Templates](https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates)
+in the cad-viewer wiki.
+
 ### Extensibility
 
 This mechanism allows you to:

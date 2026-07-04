@@ -216,9 +216,18 @@ export interface AcDbOpenDatabaseOptions {
    * Loader used to load fonts used in the drawing database.
    *
    * This loader will be used to load any fonts referenced by text entities
-   * in the drawing database.
+   * in the drawing database. By default, font load failures are logged and
+   * parsing continues without the missing fonts. Set {@link failOnFontLoadError}
+   * to `true` to abort the read when font loading fails.
    */
   fontLoader?: AcDbFontLoader
+
+  /**
+   * When `true`, aborts {@link AcDbDatabase.read} if {@link fontLoader} fails.
+   *
+   * Defaults to `false` so unreachable font CDNs do not block entity parsing.
+   */
+  failOnFontLoadError?: boolean
 
   /**
    * The minimum number of items in one chunk.
@@ -1949,7 +1958,29 @@ export class AcDbDatabase extends AcDbObject {
           const fonts = data
             ? (data as string[])
             : this.tables.textStyleTable.fonts
-          await options.fontLoader.load(fonts)
+          try {
+            await options.fontLoader.load(fonts)
+          } catch (error) {
+            if (options.failOnFontLoadError) {
+              throw error
+            }
+            const message =
+              error instanceof Error ? error.message : String(error)
+            console.warn(
+              'Failed to load fonts; continuing without them. ' +
+                'Check your network or configure a local baseUrl. See ' +
+                'https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates',
+              error
+            )
+            this.events.openProgress.dispatch({
+              database: this,
+              percentage: percentage,
+              stage: 'CONVERSION',
+              subStage: stage,
+              subStageStatus: 'ERROR',
+              data: { fonts, error: message }
+            })
+          }
         }
       },
       options?.timeout,
