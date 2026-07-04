@@ -18,8 +18,8 @@ class TestDxfConverter extends AcDbDxfConverter {
     return this.getFonts(dxf)
   }
 
-  processCommonTableAttrsPublic(table: any, dbTable: any) {
-    return (this as any).processCommonTableAttrs(table, dbTable)
+  processCommonTableAttrsPublic(table: any, dbTable: any, db: AcDbDatabase) {
+    return (this as any).processCommonTableAttrs(table, dbTable, db)
   }
 
   processCommonTableEntryAttrsPublic(entry: any, dbEntry: any) {
@@ -168,7 +168,8 @@ describe('AcDbDxfConverter', () => {
       {
         handle: 'AA'
       },
-      layerTable
+      layerTable,
+      db
     )
 
     const record = new AcDbLayerTableRecord({ name: 'T1' })

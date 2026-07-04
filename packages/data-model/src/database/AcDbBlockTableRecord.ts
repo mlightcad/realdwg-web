@@ -58,8 +58,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   /** Name prefix for paper space block table records */
   static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
 
-  /** Map of entities indexed by their object IDs */
-  private _entities: Map<AcDbObjectId, AcDbEntity>
+  /** Entities owned by this block table record, in insertion order */
+  private _entities: AcDbEntity[]
 
   /**
    * Returns true if the specified name is the name of the model space block table record.
@@ -128,7 +128,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
       bmpPreview: undefined
     })
     super(attrs, defaultAttrs)
-    this._entities = new Map<string, AcDbEntity>()
+    this._entities = []
   }
 
   /**
@@ -295,9 +295,9 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
       item.database = this.database
       item.ownerId = this.objectId
       this.database.ensureEntityStyleDefaults(item)
-      this.database.commitObjectHandle(item, id => this._entities.has(id))
+      this.database.commitObjectHandle(item, id => this.hasEntityId(id))
       item.resolveEffectiveProperties()
-      this._entities.set(item.objectId, item)
+      this._entities.push(item)
       if (
         item.dxfTypeName === 'INSERT' &&
         'syncAttributeDatabases' in item &&
@@ -359,10 +359,16 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     }
 
     const ids = Array.isArray(objectId) ? objectId : [objectId]
+    if (ids.length === 0) {
+      return false
+    }
+
+    const idSet = new Set(ids)
     const entities: AcDbEntity[] = []
-    ids.forEach(id => {
-      const entity = this._entities.get(id)
-      if (entity) {
+    let write = 0
+
+    for (const entity of this._entities) {
+      if (idSet.has(entity.objectId)) {
         if (manager.isRecording()) {
           manager.recordRemove(
             { type: 'blockTableRecord', ownerId: this.objectId },
@@ -370,9 +376,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
           )
         }
         entities.push(entity)
+        this.database.releaseObjectHandle(entity)
+      } else {
+        this._entities[write++] = entity
       }
-      this._entities.delete(id)
-    })
+    }
+    this._entities.length = write
     if (
       entities.length > 0 &&
       !manager.isRecording() &&
@@ -407,7 +416,24 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
    * @returns The entity with the specified ID, or undefined if not found
    */
   getIdAt(id: AcDbObjectId) {
-    return this._entities.get(id)
+    const object = this.database.getObjectById(id)
+    if (!(object instanceof AcDbEntity)) {
+      return undefined
+    }
+    const ownerId = object.getAttrWithoutException('ownerId')
+    if (ownerId !== this.objectId) {
+      return undefined
+    }
+    return object
+  }
+
+  /**
+   * Returns true when this block table record already owns an entity with the given id.
+   *
+   * @internal
+   */
+  hasEntityId(id: AcDbObjectId) {
+    return this.getIdAt(id) !== undefined
   }
 
   /**

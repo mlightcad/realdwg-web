@@ -38,7 +38,7 @@ export class AcDbTextStyleTable extends AcDbSymbolTable<AcDbTextStyleTableRecord
   }
 
   protected override get dxfEntryCount() {
-    return this._recordsById.size
+    return this.totalRecordCount
   }
 
   /**

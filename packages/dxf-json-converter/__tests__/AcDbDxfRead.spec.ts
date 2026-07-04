@@ -9,6 +9,7 @@ import {
   AcDbDatabase,
   AcDbDatabaseConverterManager,
   AcDbFileType,
+  AcDbLayerTableRecord,
   AcDbLayout,
   AcDbLine,
   AcDbText,
@@ -441,5 +442,44 @@ EOF
         fileName === 'visible-lwpolylines-in-block.dxf'
       )
     }
+  })
+
+  it('keeps PLATE layer resolvable by handle when STYLE table is empty', async () => {
+    const fixturePath = join(__dirname, 'fixtures', 'sheet_0.dxf')
+    const dxfText = readFileSync(fixturePath, 'utf8')
+    const db = await readDxf(dxfText)
+
+    const plate = db.tables.layerTable.getAt('PLATE')
+    expect(plate).toBeTruthy()
+    expect(plate!.objectId).toBe('11')
+
+    const resolved = db.getObjectById(plate!.objectId)
+    expect(resolved).toBe(plate)
+
+    const textStyles = [...db.tables.textStyleTable.newIterator(true)].map(
+      rec => ({ name: rec.name, objectId: rec.objectId })
+    )
+    const standard = textStyles.find(style => style.name === 'Standard')
+    const layer0 = db.tables.layerTable.getAt('0')
+    expect(standard).toBeDefined()
+    expect(layer0).toBeTruthy()
+    expect(layer0!.objectId).toBe('10')
+    expect(standard!.objectId).not.toBe(layer0!.objectId)
+    expect(db.getObjectById(layer0!.objectId)).toBe(layer0)
+    expect(db.getObjectById(plate!.objectId)).toBe(plate)
+
+    const layerModified = jest.fn()
+    db.events.layerModified.addEventListener(layerModified)
+
+    db.transactionManager.runUndoable('layer test', () => {
+      const opened = db.openObjectForWrite<AcDbLayerTableRecord>(
+        plate!.objectId
+      )
+      expect(opened).toBe(plate)
+      opened!.isOff = true
+    })
+
+    expect(plate!.isOff).toBe(true)
+    expect(layerModified).toHaveBeenCalled()
   })
 })
