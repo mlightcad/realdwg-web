@@ -21,6 +21,7 @@ import {
   AcDbLinetypeTableRecord,
   AcDbLinetypeTableRecordAttrs,
   AcDbObject,
+  AcDbOpenDatabaseError,
   AcDbParsingTaskResult,
   AcDbRasterImageDef,
   AcDbSymbolTableRecord,
@@ -86,13 +87,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       >(data)
       // Release worker
       api.destroy()
-      if (result.success) {
-        return result.data!
-      } else {
-        throw new Error(
-          `Failed to parse drawing due to error: '${result.error}'`
-        )
-      }
+      AcDbOpenDatabaseError.throwOnWorkerParseFailure(result)
+      return result.data!
     } else {
       throw new Error('dwg converter can run in web worker only!')
     }

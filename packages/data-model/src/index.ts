@@ -34,7 +34,8 @@ export type {
   AcDbWorkerInstance,
   AcDbWorkerMessage,
   AcDbWorkerResponse,
-  AcDbWorkerResult
+  AcDbWorkerResult,
+  AcDbWorkerErrorCode
 } from './converter'
 export {
   AC_DB_SYSTEM_VARIABLE_NAMES,
@@ -72,6 +73,7 @@ export {
   AcDbTransactionManager,
   AcDbUndoStack,
   collectChangeEntities,
+  AcDbOpenDatabaseError,
   AcDbTextStyleTable,
   AcDbTextStyleTableRecord,
   AcDbViewTable,
@@ -102,7 +104,9 @@ export type {
   AcDbLinetypePreviewSvgOptions,
   AcDbLinetypeTableRecordAttrs,
   AcDbOpenDatabaseOptions,
+  AcDbOpenFailedEventArgs,
   AcDbOpenFileStage,
+  AcDbOpenDatabaseErrorCode,
   AcDbParsingTaskResult,
   AcDbParsingTaskStats,
   AcDbProgressdEventArgs,

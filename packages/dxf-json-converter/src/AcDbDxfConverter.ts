@@ -21,6 +21,7 @@ import {
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
   AcDbObjectId,
+  AcDbOpenDatabaseError,
   AcDbSymbolTable,
   AcDbSymbolTableRecord,
   AcDbSystemVariables,
@@ -108,17 +109,12 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       const result = await api.execute<ArrayBuffer, ParsedDxf>(data)
       // Release worker
       api.destroy()
-      if (result.success) {
-        return {
-          model: result.data,
-          data: {
-            unknownEntityCount: 0
-          }
+      AcDbOpenDatabaseError.throwOnWorkerParseFailure(result)
+      return {
+        model: result.data,
+        data: {
+          unknownEntityCount: 0
         }
-      } else {
-        throw new Error(
-          `Failed to parse drawing due to error: '${result.error}'`
-        )
       }
     } else {
       throw new Error('dxf converter can run in web worker only!')

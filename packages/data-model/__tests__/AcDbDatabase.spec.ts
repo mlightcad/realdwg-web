@@ -1,6 +1,7 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
+import { AcDbOpenDatabaseError } from '../src/database/AcDbOpenDatabaseError'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbDatabaseConverterManager } from '../src/database/AcDbDatabaseConverterManager'
 import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
@@ -148,6 +149,70 @@ describe('AcDbDatabase', () => {
           fileType
         )
       ).rejects.toThrow('Failed to fetch')
+    } finally {
+      manager.unregister(fileType)
+    }
+  })
+
+  it('exposes worker OOM failures via lastOpenError, openFailed, and openProgress', async () => {
+    const db = new AcDbDatabase()
+    const fileType = 'test-open-failure'
+    const oomError = new AcDbOpenDatabaseError(
+      "Failed to parse drawing due to error: 'Data cannot be cloned, out of memory.'",
+      'worker_oom',
+      { stage: 'PARSE' }
+    )
+    const converter = {
+      read: jest.fn(
+        async (
+          _data: ArrayBuffer,
+          _db: AcDbDatabase,
+          _minimumChunkSize: number,
+          progress?: (
+            percentage: number,
+            stage: string,
+            stageStatus: string,
+            data?: unknown,
+            taskError?: { error: unknown; task: { name: string }; taskIndex: number }
+          ) => Promise<void>
+        ) => {
+          if (progress) {
+            await progress(5, 'PARSE', 'ERROR', undefined, {
+              error: oomError,
+              task: { name: 'PARSE' },
+              taskIndex: 1
+            })
+          }
+          throw oomError
+        }
+      )
+    }
+    const manager = AcDbDatabaseConverterManager.instance
+    manager.register(fileType, converter as never)
+
+    const openFailed = jest.fn()
+    const openProgress = jest.fn()
+    db.events.openFailed.addEventListener(openFailed)
+    db.events.openProgress.addEventListener(openProgress)
+
+    try {
+      await expect(
+        db.read(new ArrayBuffer(0), { readOnly: true }, fileType)
+      ).rejects.toMatchObject({ code: 'worker_oom' })
+
+      expect(db.lastOpenError?.code).toBe('worker_oom')
+      expect(openFailed).toHaveBeenCalledWith(
+        expect.objectContaining({
+          database: db,
+          error: expect.objectContaining({ code: 'worker_oom' })
+        })
+      )
+      expect(openProgress).toHaveBeenCalledWith(
+        expect.objectContaining({
+          subStageStatus: 'ERROR',
+          data: expect.objectContaining({ code: 'worker_oom' })
+        })
+      )
     } finally {
       manager.unregister(fileType)
     }

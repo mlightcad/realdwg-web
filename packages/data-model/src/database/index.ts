@@ -8,10 +8,13 @@ export type {
   AcDbLayerEventArgs,
   AcDbLayerModifiedEventArgs,
   AcDbOpenDatabaseOptions,
+  AcDbOpenFailedEventArgs,
   AcDbOpenFileStage,
   AcDbProgressdEventArgs,
   AcDbTables
 } from './AcDbDatabase'
+export { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError'
+export type { AcDbOpenDatabaseErrorCode } from './AcDbOpenDatabaseError'
 export { AcDbBlockTable } from './AcDbBlockTable'
 export { AcDbBlockScaling, AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 export type { AcDbBlockTableRecordAttrs } from './AcDbBlockTableRecord'
