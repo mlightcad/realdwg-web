@@ -2,6 +2,7 @@ import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import { AcDbDatabaseConverterManager } from '../src/database/AcDbDatabaseConverterManager'
 import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
 import { DEFAULT_TEXT_STYLE } from '../src/misc/AcDbConstants'
@@ -64,5 +65,91 @@ describe('AcDbDatabase', () => {
     const db = new AcDbDatabase()
     db.initializeHandleSeed('FFFF')
     expect(db.generateHandle()).toBe('FFFF')
+  })
+
+  it('continues reading when font loading fails by default', async () => {
+    const db = new AcDbDatabase()
+    const fileType = 'test-font-load'
+    const fontLoader = {
+      load: jest.fn().mockRejectedValue(new Error('Failed to fetch')),
+      getAvaiableFonts: jest.fn().mockResolvedValue([])
+    }
+    const converter = {
+      read: jest.fn(
+        async (
+          _data: ArrayBuffer,
+          _db: AcDbDatabase,
+          _minimumChunkSize: number,
+          progress?: (
+            percentage: number,
+            stage: string,
+            stageStatus: string,
+            data?: unknown
+          ) => Promise<void>
+        ) => {
+          if (progress) {
+            await progress(5, 'FONT', 'END', ['arial'])
+          }
+        }
+      )
+    }
+    const manager = AcDbDatabaseConverterManager.instance
+    manager.register(fileType, converter as never)
+
+    const warnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {})
+
+    try {
+      await expect(
+        db.read(new ArrayBuffer(0), { fontLoader, readOnly: true }, fileType)
+      ).resolves.toBeUndefined()
+      expect(fontLoader.load).toHaveBeenCalledWith(['arial'])
+      expect(warnSpy).toHaveBeenCalled()
+    } finally {
+      warnSpy.mockRestore()
+      manager.unregister(fileType)
+    }
+  })
+
+  it('aborts reading when font loading fails and failOnFontLoadError is true', async () => {
+    const db = new AcDbDatabase()
+    const fileType = 'test-font-load-strict'
+    const loadError = new Error('Failed to fetch')
+    const fontLoader = {
+      load: jest.fn().mockRejectedValue(loadError),
+      getAvaiableFonts: jest.fn().mockResolvedValue([])
+    }
+    const converter = {
+      read: jest.fn(
+        async (
+          _data: ArrayBuffer,
+          _db: AcDbDatabase,
+          _minimumChunkSize: number,
+          progress?: (
+            percentage: number,
+            stage: string,
+            stageStatus: string,
+            data?: unknown
+          ) => Promise<void>
+        ) => {
+          if (progress) {
+            await progress(5, 'FONT', 'END', ['arial'])
+          }
+        }
+      )
+    }
+    const manager = AcDbDatabaseConverterManager.instance
+    manager.register(fileType, converter as never)
+
+    try {
+      await expect(
+        db.read(
+          new ArrayBuffer(0),
+          { fontLoader, readOnly: true, failOnFontLoadError: true },
+          fileType
+        )
+      ).rejects.toThrow('Failed to fetch')
+    } finally {
+      manager.unregister(fileType)
+    }
   })
 })

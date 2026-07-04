@@ -194,6 +194,23 @@ const buffer = await file.arrayBuffer()
 await database.read(buffer, { readOnly: true }, AcDbFileType.DXF)
 ```
 
+### Font Loading
+
+Text-heavy drawings may reference SHX or mesh fonts. Pass an `AcDbFontLoader` via
+`AcDbOpenDatabaseOptions.fontLoader` to fetch font files while the database is opened.
+Viewers such as `@mlightcad/cad-simple-viewer` typically load font metadata from
+[mlightcad/cad-data](https://github.com/mlightcad/cad-data) (default CDN:
+`https://cdn.jsdelivr.net/gh/mlightcad/cad-data@main/`).
+
+If the font CDN is unreachable, `AcDbDatabase.read()` **continues parsing entities by
+default** and logs a warning. Text may render with fallback fonts until fonts are loaded
+later. Set `failOnFontLoadError: true` to restore the previous strict behavior.
+
+To self-host fonts and templates (directory layout, `fonts.json`, CORS, and `baseUrl`
+configuration), see the
+[Self Hosted Fonts and Templates](https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates)
+guide in the cad-viewer wiki.
+
 ### Dimension Creation
 ```typescript
 import { AcDbAlignedDimension, AcGePoint3d } from '@mlightcad/data-model';
