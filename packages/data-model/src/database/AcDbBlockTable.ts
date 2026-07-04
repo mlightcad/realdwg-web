@@ -1,4 +1,5 @@
 import { AcDbObjectId } from '../base/AcDbObject'
+import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSymbolTable } from './AcDbSymbolTable'
@@ -64,9 +65,9 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
    * @returns The entity with the specified ID, or undefined if not found
    */
   getEntityById(id: AcDbObjectId) {
-    for (const btr of this.database.tables.blockTable.newIterator()) {
-      const entity = btr.getIdAt(id)
-      if (entity) return entity
+    const object = this.database.getObjectById(id)
+    if (object instanceof AcDbEntity) {
+      return object
     }
     return undefined
   }

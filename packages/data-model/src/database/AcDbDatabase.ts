@@ -7,7 +7,7 @@ import {
 } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
+import { AcDbObject, AcDbObjectId, TEMP_OBJECT_ID_PREFIX } from '../base/AcDbObject'
 import { AcDbOpenMode } from '../base/AcDbOpenMode'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator'
 import {
@@ -401,6 +401,8 @@ export class AcDbDatabase extends AcDbObject {
   private _currentSpace?: AcDbBlockTableRecord
   /** The maximum handle value in the database, used for generating unique object IDs */
   private _maxHandle: number
+  /** Global registry of committed object handles across all database-resident objects */
+  private _handleRegistry = new Map<AcDbObjectId, AcDbObject>()
   /** Lazily created formatter for lengths, angles, and coordinates */
   private _formatter?: AcDbFormatter
   /**
@@ -506,6 +508,7 @@ export class AcDbDatabase extends AcDbObject {
       xrecord: new AcDbDictionary(this)
     }
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
+    this.registerBootstrapHandles()
   }
 
   /**
@@ -542,8 +545,7 @@ export class AcDbDatabase extends AcDbObject {
   /**
    * Looks up a database-resident object by its object ID.
    *
-   * Search order: entities, symbol table records, dictionary objects
-   * (including nested dictionaries), then the database object itself.
+   * Uses the global handle registry maintained by {@link registerObjectHandle}.
    *
    * @param id - Object identifier to resolve
    * @param _openErased - Reserved for erased-object support
@@ -553,40 +555,7 @@ export class AcDbDatabase extends AcDbObject {
     if (id === this.objectId) {
       return this
     }
-
-    const entity = this.tables.blockTable.getEntityById(id)
-    if (entity) {
-      return entity
-    }
-
-    const symbolTables: AcDbSymbolTable[] = [
-      this.tables.appIdTable,
-      this.tables.blockTable,
-      this.tables.dimStyleTable,
-      this.tables.linetypeTable,
-      this.tables.textStyleTable,
-      this.tables.viewTable,
-      this.tables.layerTable,
-      this.tables.viewportTable
-    ]
-    for (const table of symbolTables) {
-      const record = table.getIdAt(id)
-      if (record) {
-        return record
-      }
-    }
-
-    for (const dictionary of this.getRootDictionaries()) {
-      if (dictionary.objectId === id) {
-        return dictionary
-      }
-      const object = this.findObjectInDictionary(dictionary, id)
-      if (object) {
-        return object
-      }
-    }
-
-    return undefined
+    return this._handleRegistry.get(id)
   }
 
   /**
@@ -694,41 +663,6 @@ export class AcDbDatabase extends AcDbObject {
       this.objects.mlineStyle,
       this.objects.xrecord
     ]
-  }
-
-  /**
-   * Recursively searches a dictionary tree for an object with the given ID.
-   *
-   * @param dictionary - Root dictionary to search (including nested dictionaries)
-   * @param id - Object identifier to resolve
-   * @returns Matching object, or undefined when not found under `dictionary`
-   */
-  private findObjectInDictionary(
-    dictionary: AcDbDictionary,
-    id: AcDbObjectId
-  ): AcDbObject | undefined {
-    if (dictionary.objectId === id) {
-      return dictionary
-    }
-
-    const direct = dictionary.getIdAt(id)
-    if (direct) {
-      return direct
-    }
-
-    for (const [, entry] of dictionary.entries()) {
-      if (entry.objectId === id) {
-        return entry
-      }
-      if (entry instanceof AcDbDictionary) {
-        const nested = this.findObjectInDictionary(entry, id)
-        if (nested) {
-          return nested
-        }
-      }
-    }
-
-    return undefined
   }
 
   /**
@@ -912,6 +846,135 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Generates a handle that is not already registered in this database.
+   *
+   * @internal
+   */
+  generateUniqueHandle(): AcDbObjectId {
+    let handle = this.generateHandle()
+    while (this.isHandleTaken(handle)) {
+      handle = this.generateHandle()
+    }
+    return handle
+  }
+
+  /**
+   * Initializes {@link generateHandle} from a DXF/DWG `$HANDSEED` value.
+   *
+   * `$HANDSEED` is the next handle AutoCAD would assign; internal `_maxHandle`
+   * is kept one below that value.
+   *
+   * @param seed - Hexadecimal handle seed from the drawing header
+   */
+  initializeHandleSeed(seed: string) {
+    const next = parseInt(seed, 16)
+    if (!isNaN(next) && next > 0) {
+      const baseline = next - 1
+      if (baseline > this._maxHandle) {
+        this._maxHandle = baseline
+      }
+    }
+  }
+
+  /**
+   * Adopts a handle from an external drawing when it is still available.
+   *
+   * When the preferred handle is already registered to another object, a new
+   * unique handle is generated instead.
+   *
+   * @internal
+   */
+  adoptExternalHandle(
+    object: AcDbObject,
+    preferredId: AcDbObjectId
+  ): AcDbObjectId {
+    this.releaseObjectHandle(object)
+    if (
+      preferredId &&
+      !preferredId.startsWith(TEMP_OBJECT_ID_PREFIX) &&
+      !this.isHandleTaken(preferredId)
+    ) {
+      object.objectId = preferredId
+      this.registerObjectHandle(object)
+      this.updateMaxHandle(preferredId)
+      return preferredId
+    }
+    return this.assignGeneratedHandle(object)
+  }
+
+  /**
+   * Registers an object's current {@link AcDbObject.objectId} in the global handle map.
+   *
+   * @internal
+   */
+  registerObjectHandle(object: AcDbObject) {
+    const objectId = object.objectId
+    if (!objectId || objectId.startsWith(TEMP_OBJECT_ID_PREFIX)) {
+      return
+    }
+    this._handleRegistry.set(objectId, object)
+  }
+
+  /**
+   * Removes an object's handle from the global handle map.
+   *
+   * @internal
+   */
+  releaseObjectHandle(object: AcDbObject) {
+    const objectId = object.objectId
+    if (!objectId || objectId.startsWith(TEMP_OBJECT_ID_PREFIX)) {
+      return
+    }
+    if (this._handleRegistry.get(objectId) === object) {
+      this._handleRegistry.delete(objectId)
+    }
+  }
+
+  /**
+   * Returns true when a handle is already registered to another object.
+   *
+   * @internal
+   */
+  isHandleTaken(objectId: AcDbObjectId, except?: AcDbObject): boolean {
+    if (!objectId || objectId.startsWith(TEMP_OBJECT_ID_PREFIX)) {
+      return false
+    }
+    const owner = this._handleRegistry.get(objectId)
+    return owner !== undefined && owner !== except
+  }
+
+  /**
+   * Registers bootstrap tables, dictionaries, and the database object itself.
+   */
+  private registerBootstrapHandles() {
+    this._handleRegistry.clear()
+    this.registerObjectHandle(this)
+    for (const table of Object.values(this._tables)) {
+      this.registerObjectHandle(table)
+    }
+    for (const dictionary of Object.values(this._objects)) {
+      this.registerObjectHandle(dictionary)
+    }
+  }
+
+  /**
+   * Assigns a freshly generated unique handle to an object.
+   *
+   * @internal
+   */
+  private assignGeneratedHandle(object: AcDbObject): AcDbObjectId {
+    const oldId = object.objectId
+    this.releaseObjectHandle(object)
+    const handle = this.generateUniqueHandle()
+    object.objectId = handle
+    this.registerObjectHandle(object)
+    if (oldId && oldId !== handle) {
+      this.updateMaxHandle(handle)
+    }
+    return handle
+  }
+
+  /**
    * Updates the maximum handle value if the provided handle is greater.
    * This is called when setting an object's objectId from external sources (e.g., reading DXF/DWG).
    *
@@ -942,11 +1005,38 @@ export class AcDbDatabase extends AcDbObject {
     hasId?: (id: AcDbObjectId) => boolean
   ) {
     const objectId = object.getAttrWithoutException('objectId')
-    if (!objectId || object.isTemp || (hasId && hasId(objectId))) {
-      object.objectId = this.generateHandle()
-    } else {
-      this.updateMaxHandle(objectId)
+    const tableDuplicate =
+      hasId != null && objectId != null && hasId(objectId)
+    const needsGenerated =
+      !objectId ||
+      object.isTemp ||
+      tableDuplicate
+
+    if (needsGenerated) {
+      this.assignGeneratedHandle(object)
+      return
     }
+
+    const incumbent = this._handleRegistry.get(objectId)
+    if (incumbent && incumbent !== object) {
+      if (this.shouldPreserveIncomingHandle(object)) {
+        this.assignGeneratedHandle(incumbent)
+      } else {
+        this.assignGeneratedHandle(object)
+        return
+      }
+    }
+
+    this.registerObjectHandle(object)
+    this.updateMaxHandle(objectId)
+  }
+
+  /**
+   * Returns true when an object already carries an explicit handle that should
+   * be preserved over auto-generated registry occupants (typically DXF/DWG imports).
+   */
+  private shouldPreserveIncomingHandle(object: AcDbObject): boolean {
+    return !object.isTemp
   }
 
   /**
@@ -2677,6 +2767,7 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.xrecord.removeAll()
     this._currentSpace = undefined
     this._extents.makeEmpty()
+    this.registerBootstrapHandles()
   }
 
   /**

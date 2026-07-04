@@ -466,6 +466,9 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     db.pdmode = header['$PDMODE'] || 0
     db.pdsize = header['$PDSIZE'] || 0.0
     db.textstyle = header['$TEXTSTYLE'] || DEFAULT_TEXT_STYLE
+    if (header['$HANDSEED'] != null) {
+      db.initializeHandleSeed(String(header['$HANDSEED']))
+    }
   }
 
   /**
@@ -576,7 +579,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   protected processViewports(model: ParsedDxf, db: AcDbDatabase) {
     const viewportTable = model.tables?.VPORT
     if (viewportTable) {
-      this.processCommonTableAttrs(viewportTable, db.tables.viewportTable)
+      this.processCommonTableAttrs(viewportTable, db.tables.viewportTable, db)
       const viewports = viewportTable.entries
       if (viewports && viewports.length > 0) {
         viewports.forEach(item => {
@@ -719,7 +722,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   protected processLayers(model: ParsedDxf, db: AcDbDatabase) {
     const layerTable = model.tables?.LAYER
     if (layerTable) {
-      this.processCommonTableAttrs(layerTable, db.tables.layerTable)
+      this.processCommonTableAttrs(layerTable, db.tables.layerTable, db)
       const layers = layerTable.entries
       if (layers && layers.length > 0) {
         layers.forEach(item => {
@@ -739,6 +742,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         })
       }
     }
+    db.ensureTextStyleDefaults()
   }
 
   /**
@@ -758,7 +762,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   protected processLineTypes(model: ParsedDxf, db: AcDbDatabase) {
     const lineTypeTable = model.tables?.LTYPE
     if (lineTypeTable) {
-      this.processCommonTableAttrs(lineTypeTable, db.tables.linetypeTable)
+      this.processCommonTableAttrs(lineTypeTable, db.tables.linetypeTable, db)
       const lineTypes = lineTypeTable.entries
       if (lineTypes && lineTypes.length > 0) {
         lineTypes.forEach((item: LTypeTableEntry) => {
@@ -793,7 +797,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   protected processTextStyles(model: ParsedDxf, db: AcDbDatabase) {
     const textStyleTable = model.tables?.STYLE
     if (textStyleTable) {
-      this.processCommonTableAttrs(textStyleTable, db.tables.textStyleTable)
+      this.processCommonTableAttrs(textStyleTable, db.tables.textStyleTable, db)
       const textStyles = textStyleTable.entries
       if (textStyles && textStyles.length > 0) {
         textStyles.forEach((item: StyleTableEntry) => {
@@ -814,7 +818,6 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         })
       }
     }
-    db.ensureTextStyleDefaults()
   }
 
   /**
@@ -835,7 +838,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   protected processDimStyles(model: ParsedDxf, db: AcDbDatabase) {
     const dimStyleTable = model.tables?.DIMSTYLE
     if (dimStyleTable) {
-      this.processCommonTableAttrs(dimStyleTable, db.tables.dimStyleTable)
+      this.processCommonTableAttrs(dimStyleTable, db.tables.dimStyleTable, db)
       const dimStyles = dimStyleTable.entries
       if (dimStyles && dimStyles.length > 0) {
         dimStyles.forEach(item => {
@@ -927,10 +930,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       | DxfTable<LayerTableEntry>
       | DxfTable<LTypeTableEntry>
       | DxfTable<VPortTableEntry>,
-    dbTable: AcDbSymbolTable
+    dbTable: AcDbSymbolTable,
+    db: AcDbDatabase
   ) {
     if (table.handle != null) {
-      dbTable.objectId = table.handle
+      db.adoptExternalHandle(dbTable, table.handle)
     }
     if (table.ownerObjectId != null) {
       dbTable.ownerId = table.ownerObjectId
