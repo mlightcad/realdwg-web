@@ -3,6 +3,7 @@ import {
   AcCmColor,
   AcCmColorMethod,
   AcCmEventManager,
+  AcCmTaskError,
   AcCmTransparency
 } from '@mlightcad/common'
 
@@ -40,6 +41,8 @@ import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
+import type { AcDbConversionProgressCallback } from './AcDbDatabaseConverter'
+import { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError'
 import { AcDbDimStyleTable } from './AcDbDimStyleTable'
 import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
 import { AcDbLayerTable } from './AcDbLayerTable'
@@ -134,10 +137,21 @@ export interface AcDbProgressdEventArgs {
    * are as follows.
    * - 'PARSE' stage: statistics of parsing task
    * - 'FONT' stage: fonts needed by this drawing
+   * - Any stage with {@link subStageStatus} `'ERROR'`: `{ code, message, stage? }`
    *
-   * Note: For now, 'PARSE' and 'FONT' sub stages use this field only.
+   * Note: For now, 'PARSE' and 'FONT' sub stages use this field only, except on errors.
    */
   data?: unknown
+}
+
+/**
+ * Event arguments when opening a drawing database fails.
+ */
+export interface AcDbOpenFailedEventArgs {
+  /** The database that failed to open */
+  database: AcDbDatabase
+  /** Structured failure information */
+  error: AcDbOpenDatabaseError
 }
 
 /**
@@ -430,6 +444,7 @@ export class AcDbDatabase extends AcDbObject {
   private _pendingEntityErased: AcDbEntity[] = []
   private _pendingDictObjectSet: { object: AcDbObject; key: string }[] = []
   private _pendingDictObjectErased: { object: AcDbObject; key: string }[] = []
+  private _lastOpenError: AcDbOpenDatabaseError | null = null
 
   /**
    * Events that can be triggered by the database.
@@ -455,7 +470,9 @@ export class AcDbDatabase extends AcDbObject {
     /** Fired when a layer is erased from the database */
     layerErased: new AcCmEventManager<AcDbLayerEventArgs>(),
     /** Fired during database opening operations to report progress */
-    openProgress: new AcCmEventManager<AcDbProgressdEventArgs>()
+    openProgress: new AcCmEventManager<AcDbProgressdEventArgs>(),
+    /** Fired when {@link AcDbDatabase.read} or {@link AcDbDatabase.openUri} fails */
+    openFailed: new AcCmEventManager<AcDbOpenFailedEventArgs>()
   }
 
   /**
@@ -1891,6 +1908,16 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * The most recent failure from {@link read} or {@link openUri}, or `null` after a successful open.
+   *
+   * Useful when a caller catches no exception (for example a viewer that returns `false`)
+   * but still needs to distinguish worker out-of-memory from other parse failures.
+   */
+  get lastOpenError(): AcDbOpenDatabaseError | null {
+    return this._lastOpenError
+  }
+
+  /**
    * Reads drawing data from a string or ArrayBuffer.
    *
    * This method parses the provided data and populates the database with
@@ -1926,68 +1953,95 @@ export class AcDbDatabase extends AcDbObject {
       )
 
     this.clear()
+    this._lastOpenError = null
     this._drawNoPlotLayers = options?.drawNoPlotLayers ?? true
     if (options?.fileName) {
       this.setDwgName(options.fileName)
     }
 
-    await converter.read(
-      data,
-      this,
-      (options && options.minimumChunkSize) || 10,
-      async (
-        percentage: number,
-        stage: AcDbConversionStage,
-        stageStatus: AcDbStageStatus,
-        data?: unknown
-      ) => {
-        this.events.openProgress.dispatch({
-          database: this,
-          percentage: percentage,
-          stage: 'CONVERSION',
-          subStage: stage,
-          subStageStatus: stageStatus,
-          data: data
-        })
-        if (
-          options &&
-          options.fontLoader &&
-          stage == 'FONT' &&
-          stageStatus == 'END'
-        ) {
-          const fonts = data
-            ? (data as string[])
-            : this.tables.textStyleTable.fonts
-          try {
-            await options.fontLoader.load(fonts)
-          } catch (error) {
-            if (options.failOnFontLoadError) {
-              throw error
-            }
-            const message =
-              error instanceof Error ? error.message : String(error)
-            console.warn(
-              'Failed to load fonts; continuing without them. ' +
-                'Check your network or configure a local baseUrl. See ' +
-                'https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates',
-              error
-            )
-            this.events.openProgress.dispatch({
-              database: this,
-              percentage: percentage,
-              stage: 'CONVERSION',
-              subStage: stage,
-              subStageStatus: 'ERROR',
-              data: { fonts, error: message }
-            })
-          }
-        }
-      },
-      options?.timeout,
-      options?.sysVars
-    )
+    try {
+      await converter.read(
+        data,
+        this,
+        (options && options.minimumChunkSize) || 10,
+        this.createConversionProgressHandler(options),
+        options?.timeout,
+        options?.sysVars
+      )
+    } catch (error) {
+      const openError = AcDbOpenDatabaseError.from(error)
+      this._lastOpenError = openError
+      this.events.openFailed.dispatch({ database: this, error: openError })
+      throw openError
+    }
 
+    this._lastOpenError = null
     this.ensureDatabaseDefaults()
+  }
+
+  private createConversionProgressHandler(
+    options?: AcDbOpenDatabaseOptions
+  ): AcDbConversionProgressCallback {
+    return async (
+      percentage: number,
+      stage: AcDbConversionStage,
+      stageStatus: AcDbStageStatus,
+      data?: unknown,
+      taskError?: AcCmTaskError
+    ) => {
+      let progressData: unknown = data
+      if (stageStatus === 'ERROR' && taskError) {
+        const openError = AcDbOpenDatabaseError.fromTask(taskError)
+        this._lastOpenError = openError
+        progressData = {
+          code: openError.code,
+          message: openError.message,
+          stage: openError.stage ?? stage
+        }
+      }
+
+      this.events.openProgress.dispatch({
+        database: this,
+        percentage: percentage,
+        stage: 'CONVERSION',
+        subStage: stage,
+        subStageStatus: stageStatus,
+        data: progressData
+      })
+      if (
+        options &&
+        options.fontLoader &&
+        stage == 'FONT' &&
+        stageStatus == 'END'
+      ) {
+        const fonts = data
+          ? (data as string[])
+          : this.tables.textStyleTable.fonts
+        try {
+          await options.fontLoader.load(fonts)
+        } catch (error) {
+          if (options.failOnFontLoadError) {
+            throw error
+          }
+          const message =
+            error instanceof Error ? error.message : String(error)
+          console.warn(
+            'Failed to load fonts; continuing without them. ' +
+              'Check your network or configure a local baseUrl. See ' +
+              'https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates',
+            error
+          )
+          this.events.openProgress.dispatch({
+            database: this,
+            percentage: percentage,
+            stage: 'CONVERSION',
+            subStage: stage,
+            subStageStatus: 'ERROR',
+            data: { fonts, error: message, code: 'font_load_failed' }
+          })
+        }
+      }
+    }
   }
 
   /**
@@ -2134,21 +2188,7 @@ export class AcDbDatabase extends AcDbObject {
       null as unknown as ArrayBuffer,
       this,
       500,
-      async (
-        percentage: number,
-        stage: AcDbConversionStage,
-        stageStatus: AcDbStageStatus,
-        data?: unknown
-      ) => {
-        this.events.openProgress.dispatch({
-          database: this,
-          percentage: percentage,
-          stage: 'CONVERSION',
-          subStage: stage,
-          subStageStatus: stageStatus,
-          data: data
-        })
-      }
+      this.createConversionProgressHandler()
     )
   }
 

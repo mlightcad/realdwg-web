@@ -9,4 +9,4 @@ export type {
   AcDbWorkerResult
 } from './AcDbWorkerManager'
 export { AcDbBaseWorker } from './AcDbBaseWorker'
-export type { AcDbWorkerMessage, AcDbWorkerResponse } from './AcDbBaseWorker'
+export type { AcDbWorkerMessage, AcDbWorkerResponse, AcDbWorkerErrorCode } from './AcDbBaseWorker'

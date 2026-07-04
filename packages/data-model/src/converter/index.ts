@@ -18,5 +18,6 @@ export type {
   AcDbWorkerInstance,
   AcDbWorkerMessage,
   AcDbWorkerResponse,
-  AcDbWorkerResult
+  AcDbWorkerResult,
+  AcDbWorkerErrorCode
 } from './worker'
