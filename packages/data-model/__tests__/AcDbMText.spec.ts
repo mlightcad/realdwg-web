@@ -99,6 +99,29 @@ describe('AcDbMText', () => {
     expect(mtext.geometricExtents.max.y).toBeCloseTo(0)
   })
 
+  it('prefers extentsWidth over reference width in geometricExtents', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.contents = 'Short'
+    mtext.height = 2
+    mtext.width = 5
+    mtext.extentsWidth = 20
+    mtext.location = { x: 0, y: 0, z: 0 }
+
+    expect(mtext.geometricExtents.max.x).toBeCloseTo(20)
+  })
+
+  it('scales extentsWidth when transformed along the text direction', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.extentsWidth = 10
+    mtext.direction = { x: 1, y: 0, z: 0 }
+
+    mtext.transformBy(new AcGeMatrix3d().makeScale(2, 1, 1))
+
+    expect(mtext.extentsWidth).toBeCloseTo(20)
+  })
+
   it('returns insertion osnap point only for insertion mode', () => {
     createWorkingDb()
     const mtext = new AcDbMText()
@@ -310,6 +333,7 @@ describe('AcDbMText', () => {
     expect(dxfWithoutBackground).toContain('30\n3')
     expect(dxfWithoutBackground).toContain('40\n2')
     expect(dxfWithoutBackground).toContain('41\n10')
+    expect(dxfWithoutBackground).not.toContain('414\n')
     expect(dxfWithoutBackground).toContain('1\na\\Pb\\Pc\\Pd')
     expect(dxfWithoutBackground).toContain('7\nMyTextStyle')
     expect(dxfWithoutBackground).toContain('50\n90')
@@ -342,5 +366,20 @@ describe('AcDbMText', () => {
     expect(dxfWithBackground).toContain('63\n1122867')
     expect(dxfWithBackground).toContain('441\n128')
     expect(dxfWithBackground).toContain('45\n2.5')
+  })
+
+  it('writes actual text width as DXF group 414 when extentsWidth is set', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.ownerId = 'ABC'
+    mtext.location = { x: 0, y: 0, z: 0 }
+    mtext.height = 2
+    mtext.width = 10
+    mtext.extentsWidth = 18.5
+
+    const filer = new AcDbDxfFiler()
+    mtext.dxfOutFields(filer)
+
+    expect(filer.toString()).toContain('414\n18.5')
   })
 })

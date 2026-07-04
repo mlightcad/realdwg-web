@@ -134,6 +134,18 @@ export function acdbGetLocalBoundsFromAttachment(
   }
 }
 
+/**
+ * Builds orthonormal text axes from rotation and/or direction.
+ *
+ * When `direction` is provided and non-zero it defines the local X axis;
+ * otherwise X is derived from `rotation` in the XY plane. Y is the
+ * counter-clockwise perpendicular to X.
+ *
+ * @param rotation - Text rotation in radians, used when direction is absent.
+ * @param direction - Optional direction vector overriding rotation.
+ * @returns Normalized local X and Y axis vectors.
+ * @internal
+ */
 function getTextAxes(rotation: number, direction?: AcGeVector3d) {
   let xAxis: AcGeVector3d
   if (direction && direction.lengthSq() > 0) {
@@ -195,4 +207,208 @@ export function acdbExpandBoxByOrientedTextRect(
   }
 
   return box
+}
+
+/**
+ * Resolved layout metrics for an oriented MTEXT rectangle.
+ *
+ * All width/height values are expressed in drawing units. Local axes follow
+ * AutoCAD MTEXT semantics: the X axis aligns with {@link AcDbMTextLayoutMetrics.direction}
+ * (or {@link AcDbMTextLayoutMetrics.rotation} when direction is unset), and the Y axis
+ * is the 90-degree counter-clockwise perpendicular in the text plane.
+ */
+export interface AcDbMTextLayoutMetrics {
+  /** Effective text width used for layout, preferring actual extents when available. */
+  width: number
+  /** Estimated total text height from line count and line spacing. */
+  height: number
+  /** Attachment point that anchors the local bounds to {@link AcDbMTextLayoutMetrics.location}. */
+  attachment: AcGiMTextAttachmentPoint
+  /** Rotation angle in radians relative to the text OCS X axis. */
+  rotation: number
+  /** Optional direction vector overriding {@link AcDbMTextLayoutMetrics.rotation}. */
+  direction?: AcGeVector3d
+  /** Insertion/anchor point of the MTEXT entity in world coordinates. */
+  location: AcGePoint3d
+}
+
+/**
+ * Padding applied in MTEXT-local coordinates when scoring annotation association.
+ *
+ * Padding extends the oriented text bounds along local axes:
+ * `padX` on local X, `padYAbove` toward local +Y, and `padYBelow` toward local -Y.
+ */
+export interface AcDbMTextAssociationPadding {
+  /** Extra tolerance along the local X axis on both sides of the text bounds. */
+  padX: number
+  /** Extra tolerance toward local +Y (above the oriented top edge). */
+  padYAbove: number
+  /** Extra tolerance toward local -Y (below the oriented bottom edge). */
+  padYBelow: number
+}
+
+/**
+ * Resolves oriented MTEXT layout metrics used for association and hook-line math.
+ *
+ * Width resolution order matches {@link AcDbMText.geometricExtents}:
+ * `extentsWidth` → `width` → estimated plain-text width.
+ *
+ * @param input - Raw MTEXT properties used to derive oriented layout metrics.
+ * @param input.contents - MTEXT contents, used for line-count and width estimation.
+ * @param input.height - Text height in drawing units.
+ * @param input.width - Reference/wrap width from the entity.
+ * @param input.extentsWidth - Cached actual rendered width from the source file.
+ * @param input.lineSpacingFactor - Line spacing factor (DXF group 44 semantics).
+ * @param input.attachmentPoint - Attachment point for local bound anchoring.
+ * @param input.rotation - Text rotation in radians.
+ * @param input.direction - Text direction vector; takes precedence over rotation when non-zero.
+ * @param input.location - MTEXT insertion point in world coordinates.
+ * @returns Normalized layout metrics with cloned direction/location values.
+ */
+export function acdbResolveMTextLayoutMetrics(input: {
+  contents: string
+  height: number
+  width: number
+  extentsWidth: number
+  lineSpacingFactor: number
+  attachmentPoint: AcGiMTextAttachmentPoint
+  rotation: number
+  direction: AcGeVector3d
+  location: AcGePoint3dLike
+}): AcDbMTextLayoutMetrics {
+  const width =
+    input.extentsWidth > 0
+      ? input.extentsWidth
+      : input.width > 0
+        ? input.width
+        : acdbEstimatePlainTextWidth(input.contents, input.height)
+  const height = acdbEstimateMTextHeight(
+    acdbCountMTextLines(input.contents),
+    input.height,
+    input.lineSpacingFactor
+  )
+
+  return {
+    width,
+    height,
+    attachment: input.attachmentPoint,
+    rotation: input.rotation,
+    direction:
+      input.direction.lengthSq() > 0 ? input.direction.clone() : undefined,
+    location: new AcGePoint3d(
+      input.location.x,
+      input.location.y,
+      input.location.z ?? 0
+    )
+  }
+}
+
+/**
+ * Converts a world-space point into MTEXT-local coordinates.
+ *
+ * Local X/Y are dot-product projections onto the oriented text axes derived
+ * from {@link AcDbMTextLayoutMetrics.rotation} and
+ * {@link AcDbMTextLayoutMetrics.direction}.
+ *
+ * @param point - Point to convert, typically a leader landing vertex.
+ * @param layout - Resolved MTEXT layout metrics.
+ * @returns Local coordinates `{ x, y }` relative to {@link AcDbMTextLayoutMetrics.location}.
+ */
+export function acdbWorldPointToMTextLocal(
+  point: AcGePoint3dLike,
+  layout: AcDbMTextLayoutMetrics
+): { x: number; y: number } {
+  const { xAxis, yAxis } = getTextAxes(layout.rotation, layout.direction)
+  const dx = point.x - layout.location.x
+  const dy = point.y - layout.location.y
+  const dz = (point.z ?? 0) - layout.location.z
+
+  return {
+    x: dx * xAxis.x + dy * xAxis.y + dz * xAxis.z,
+    y: dx * yAxis.x + dy * yAxis.y + dz * yAxis.z
+  }
+}
+
+/**
+ * Returns the four corners of an oriented MTEXT rectangle in world space.
+ *
+ * Corners are ordered counter-clockwise starting from
+ * `(minX, minY)` in local coordinates.
+ *
+ * @param layout - Resolved MTEXT layout metrics.
+ * @returns World-space corner points of the oriented text bounds.
+ */
+export function acdbCollectMTextOrientedCorners(
+  layout: AcDbMTextLayoutMetrics
+): AcGePoint3d[] {
+  const bounds = acdbGetLocalBoundsFromAttachment(
+    layout.width,
+    layout.height,
+    layout.attachment
+  )
+  const { xAxis, yAxis } = getTextAxes(layout.rotation, layout.direction)
+  const localCorners: Array<[number, number]> = [
+    [bounds.minX, bounds.minY],
+    [bounds.maxX, bounds.minY],
+    [bounds.maxX, bounds.maxY],
+    [bounds.minX, bounds.maxY]
+  ]
+
+  return localCorners.map(
+    ([localX, localY]) =>
+      new AcGePoint3d(
+        layout.location.x + xAxis.x * localX + yAxis.x * localY,
+        layout.location.y + xAxis.y * localX + yAxis.y * localY,
+        layout.location.z + xAxis.z * localX + yAxis.z * localY
+      )
+  )
+}
+
+/**
+ * Scores how closely one world point matches an oriented MTEXT annotation.
+ *
+ * The score is the Manhattan distance from the point to the inner text bounds
+ * in local coordinates. A score of `0` means the point lies inside the
+ * oriented bounds; larger values indicate proximity within the padded region.
+ *
+ * @param point - Candidate association point, usually a leader landing vertex.
+ * @param layout - Resolved MTEXT layout metrics.
+ * @param padding - Local-axis padding applied before rejecting a candidate.
+ * @returns Association score, or `null` when the point is outside padded bounds.
+ */
+export function acdbScorePointAgainstMTextLayout(
+  point: AcGePoint3dLike,
+  layout: AcDbMTextLayoutMetrics,
+  padding: AcDbMTextAssociationPadding
+): number | null {
+  const bounds = acdbGetLocalBoundsFromAttachment(
+    layout.width,
+    layout.height,
+    layout.attachment
+  )
+  const { x: localX, y: localY } = acdbWorldPointToMTextLocal(point, layout)
+
+  const minX = bounds.minX - padding.padX
+  const maxX = bounds.maxX + padding.padX
+  const minY = bounds.minY - padding.padYBelow
+  const maxY = bounds.maxY + padding.padYAbove
+
+  if (localX < minX || localX > maxX || localY < minY || localY > maxY) {
+    return null
+  }
+
+  const dx =
+    localX < bounds.minX
+      ? bounds.minX - localX
+      : localX > bounds.maxX
+        ? bounds.maxX - localX
+        : 0
+  const dy =
+    localY < bounds.minY
+      ? bounds.minY - localY
+      : localY > bounds.maxY
+        ? localY - bounds.maxY
+        : 0
+
+  return dx + dy
 }

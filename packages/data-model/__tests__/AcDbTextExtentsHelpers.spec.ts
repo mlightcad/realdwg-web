@@ -6,12 +6,16 @@ import {
 import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
 import {
+  acdbCollectMTextOrientedCorners,
   acdbCountMTextLines,
   acdbEstimateMTextHeight,
   acdbEstimatePlainTextWidth,
   acdbExpandBoxByOrientedTextRect,
   acdbGetLocalBoundsFromAttachment,
-  acdbStripMTextControlCodes
+  acdbResolveMTextLayoutMetrics,
+  acdbScorePointAgainstMTextLayout,
+  acdbStripMTextControlCodes,
+  acdbWorldPointToMTextLocal
 } from '../src/entity/AcDbTextExtentsHelpers'
 
 describe('AcDbTextExtentsHelpers', () => {
@@ -122,6 +126,63 @@ describe('AcDbTextExtentsHelpers', () => {
       expect(box.min.x).toBeCloseTo(-2)
       expect(box.max.x).toBeCloseTo(0)
       expect(box.max.y).toBeCloseTo(4)
+    })
+  })
+
+  describe('oriented MTEXT association helpers', () => {
+    const createRotatedLayout = () =>
+      acdbResolveMTextLayoutMetrics({
+        contents: 'Rotated',
+        height: 4,
+        width: 0,
+        extentsWidth: 20,
+        lineSpacingFactor: 0.25,
+        attachmentPoint: AcGiMTextAttachmentPoint.TopLeft,
+        rotation: Math.PI / 2,
+        direction: new AcGeVector3d(0, 1, 0),
+        location: new AcGePoint3d(10, 10, 0)
+      })
+
+    it('maps world points into MTEXT-local coordinates using rotation/direction', () => {
+      const layout = createRotatedLayout()
+      const local = acdbWorldPointToMTextLocal(new AcGePoint3d(12, 20, 0), layout)
+
+      expect(local.x).toBeCloseTo(10)
+      expect(local.y).toBeCloseTo(-2)
+    })
+
+    it('scores landing points against oriented bounds instead of world-axis padding', () => {
+      const layout = createRotatedLayout()
+      const padding = { padX: 8, padYAbove: 4, padYBelow: 10 }
+
+      expect(
+        acdbScorePointAgainstMTextLayout(
+          new AcGePoint3d(12, 20, 0),
+          layout,
+          padding
+        )
+      ).toBe(0)
+
+      expect(
+        acdbScorePointAgainstMTextLayout(
+          new AcGePoint3d(16, 40, 0),
+          layout,
+          padding
+        )
+      ).toBeNull()
+    })
+
+    it('collects oriented corners for hook-line span calculations', () => {
+      const layout = createRotatedLayout()
+      const corners = acdbCollectMTextOrientedCorners(layout)
+
+      expect(corners).toHaveLength(4)
+      expect(
+        corners.some(corner => corner.x === 14 && corner.y === 10)
+      ).toBe(true)
+      expect(
+        corners.some(corner => corner.x === 14 && corner.y === 30)
+      ).toBe(true)
     })
   })
 })

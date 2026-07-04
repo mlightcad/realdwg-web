@@ -11,14 +11,27 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import {
+  AcDbBlockTableRecord,
+  AcDbDimStyleTableRecord,
+  AcDbDimTextVertical
+} from '../database'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
+import { AcDbMText } from './AcDbMText'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers'
 import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import {
+  acdbCollectMTextOrientedCorners,
+  acdbEstimatePlainTextWidth,
+  acdbResolveMTextLayoutMetrics,
+  acdbScorePointAgainstMTextLayout,
+  acdbStripMTextControlCodes
+} from './AcDbTextExtentsHelpers'
 
 /**
  * Defines the annotation type for leader entities.
@@ -475,10 +488,9 @@ export class AcDbLeader extends AcDbCurve {
   get geometricExtents() {
     if (this._isSplined && this.splineGeo) {
       return this.splineGeo.calculateBoundingBox()
-    } else {
-      const box = new AcGeBox3d()
-      return box.setFromPoints(this._vertices)
     }
+    const box = new AcGeBox3d()
+    return box.setFromPoints(this.collectDrawPoints())
   }
 
   /**
@@ -521,11 +533,257 @@ export class AcDbLeader extends AcDbCurve {
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
+    return renderer.lines(this.collectDrawPoints())
+  }
+
+  /**
+   * Builds the leader polyline including the optional horizontal hook line
+   * segment that spans the associated annotation width.
+   */
+  private collectDrawPoints(): AcGePoint3d[] {
     if (this.isSplined && this.splineGeo) {
-      const points = this.splineGeo.getPoints(100)
-      return renderer.lines(points)
+      return this.splineGeo.getPoints(100)
+    }
+
+    const points = this._vertices.map(vertex => vertex.clone())
+    // Splined leaders do not render a horizontal hook line segment.
+    if (points.length > 0 && !this._isSplined) {
+      const lastVertex = points[points.length - 1]
+      if (this.shouldDrawHookLine(lastVertex)) {
+        const hookEnd = this.computeHookLineEndPoint(lastVertex)
+        if (hookEnd) {
+          points.push(hookEnd)
+        }
+      }
+    }
+    return points
+  }
+
+  /**
+   * Whether a hook line should be rendered for the landing vertex.
+   */
+  private shouldDrawHookLine(lastVertex: AcGePoint3d): boolean {
+    if (this.resolveHookLineLength(lastVertex) <= 0) {
+      return false
+    }
+    if (this._hasHookLine) {
+      return true
+    }
+
+    const mtext = this.resolveAssociatedMText()
+    if (mtext && this.resolveHookSpanFromMText(mtext, lastVertex) > 0) {
+      return true
+    }
+
+    if (this._annoType !== AcDbLeaderAnnotationType.MText) {
+      return false
+    }
+
+    const dimStyle = this.resolveDimensionStyle()
+    const dimtad =
+      dimStyle?.dimtad ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimtad
+    return dimtad !== AcDbDimTextVertical.Center
+  }
+
+  /**
+   * Computes the hook-line endpoint from the last leader vertex.
+   */
+  private computeHookLineEndPoint(lastVertex: AcGePoint3d): AcGePoint3d | null {
+    const hookLength = this.resolveHookLineLength(lastVertex)
+    if (hookLength <= 0) {
+      return null
+    }
+
+    const direction = this.resolveHookAxis()
+    return lastVertex.clone().addScaledVector(direction, hookLength)
+  }
+
+  /**
+   * Resolves hook-line length using dimension-style gap plus associated MTEXT
+   * geometry when available.
+   */
+  private resolveHookLineLength(lastVertex: AcGePoint3d): number {
+    const dimStyle = this.resolveDimensionStyle()
+    const gap =
+      (dimStyle?.dimgap ??
+        AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimgap) *
+      (dimStyle?.dimscale ??
+        AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimscale)
+    let length = this._textWidth + gap
+
+    const mtext = this.resolveAssociatedMText()
+    if (mtext) {
+      const span = this.resolveHookSpanFromMText(mtext, lastVertex)
+      if (span > 0) {
+        length = Math.max(length, span)
+      } else {
+        const width = this.resolveAnnotationWidth(mtext)
+        if (width > 0) {
+          length = Math.max(length, width)
+        }
+      }
+    }
+
+    return length
+  }
+
+  /**
+   * Returns the signed axis along which the hook line extends.
+   */
+  private resolveHookAxis(): AcGeVector3d {
+    const direction = this._horizontalDirection.clone()
+    if (direction.lengthSq() === 0) {
+      direction.set(1, 0, 0)
     } else {
-      return renderer.lines(this._vertices)
+      direction.normalize()
+    }
+    const sign = this._isHookLineSameDirection ? 1 : -1
+    direction.multiplyScalar(sign)
+    return direction
+  }
+
+  /**
+   * Computes hook span from the landing vertex to the far edge of MTEXT bounds.
+   */
+  private resolveHookSpanFromMText(
+    mtext: AcDbMText,
+    lastVertex: AcGePoint3d
+  ): number {
+    const axis = this.resolveHookAxis()
+    const layout = this.resolveMTextLayoutMetrics(mtext)
+    let maxSpan = 0
+
+    for (const corner of acdbCollectMTextOrientedCorners(layout)) {
+      const span =
+        (corner.x - lastVertex.x) * axis.x +
+        (corner.y - lastVertex.y) * axis.y +
+        (corner.z - lastVertex.z) * axis.z
+      if (span > maxSpan) {
+        maxSpan = span
+      }
+    }
+
+    return maxSpan
+  }
+
+  /**
+   * Estimates annotation width from MTEXT content when extents are unavailable.
+   */
+  private resolveAnnotationWidth(mtext: AcDbMText): number {
+    if (mtext.extentsWidth > 0) {
+      return mtext.extentsWidth
+    }
+
+    const lines = acdbStripMTextControlCodes(mtext.contents).split('\n')
+    return Math.max(
+      ...lines.map(line =>
+        acdbEstimatePlainTextWidth(line.trim(), mtext.height)
+      ),
+      0
+    )
+  }
+
+  private resolveMTextLayoutMetrics(mtext: AcDbMText) {
+    return acdbResolveMTextLayoutMetrics({
+      contents: mtext.contents,
+      height: mtext.height,
+      width: mtext.width,
+      extentsWidth: mtext.extentsWidth,
+      lineSpacingFactor: mtext.lineSpacingFactor,
+      attachmentPoint: mtext.attachmentPoint,
+      rotation: mtext.rotation,
+      direction: mtext.direction,
+      location: mtext.location
+    })
+  }
+
+  /**
+   * Scores how closely one MTEXT annotation matches a leader landing vertex.
+   */
+  private scoreMTextAssociation(
+    mtext: AcDbMText,
+    lastVertex: AcGePoint3d
+  ): number | null {
+    const layout = this.resolveMTextLayoutMetrics(mtext)
+    const padX = Math.max(mtext.height * 2, 1)
+    const padYAbove = Math.max(mtext.height, 1)
+    const padYBelow = Math.max(layout.height, mtext.height * 4, 10)
+
+    return acdbScorePointAgainstMTextLayout(lastVertex, layout, {
+      padX,
+      padYAbove,
+      padYBelow
+    })
+  }
+
+  /**
+   * Resolves the dimension style referenced by this leader.
+   */
+  private resolveDimensionStyle(): AcDbDimStyleTableRecord | undefined {
+    const styleName = this._dimensionStyle?.trim()
+    const database = this.tryGetDatabase()
+    if (!styleName || !database) {
+      return undefined
+    }
+    return database.tables.dimStyleTable.getAt(styleName)
+  }
+
+  /**
+   * Resolves the MTEXT annotation associated with this leader.
+   */
+  private resolveAssociatedMText(): AcDbMText | undefined {
+    const database = this.tryGetDatabase()
+    if (!database) {
+      return undefined
+    }
+
+    if (this._associatedAnnotation) {
+      const object = database.getObjectById(this._associatedAnnotation)
+      if (object instanceof AcDbMText) {
+        return object
+      }
+    }
+
+    if (this._vertices.length === 0) {
+      return undefined
+    }
+
+    const ownerId = this.getAttrWithoutException('ownerId')
+    if (!ownerId) {
+      return undefined
+    }
+
+    const owner = database.getObjectById(ownerId)
+    if (!(owner instanceof AcDbBlockTableRecord)) {
+      return undefined
+    }
+
+    const lastVertex = this._vertices[this._vertices.length - 1]
+    let bestMatch: AcDbMText | undefined
+    let bestScore = Number.POSITIVE_INFINITY
+
+    for (const entity of owner.newIterator()) {
+      if (!(entity instanceof AcDbMText)) {
+        continue
+      }
+
+      const score = this.scoreMTextAssociation(entity, lastVertex)
+      if (score == null || score >= bestScore) {
+        continue
+      }
+
+      bestScore = score
+      bestMatch = entity
+    }
+
+    return bestMatch
+  }
+
+  private tryGetDatabase() {
+    try {
+      return this.database
+    } catch {
+      return undefined
     }
   }
 

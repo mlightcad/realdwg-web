@@ -796,7 +796,19 @@ export class AcDbEntityConverter {
     }
     dbEntity.drawingDirection =
       mtext.drawingDirection as unknown as AcGiMTextFlowDirection
+    const extentsWidth = this.readMTextExtentsWidth(mtext)
+    if (extentsWidth != null && extentsWidth > 0) {
+      dbEntity.extentsWidth = extentsWidth
+    }
     return dbEntity
+  }
+
+  private readMTextExtentsWidth(mtext: MTextEntity): number | undefined {
+    const candidate = mtext as MTextEntity & {
+      extentsWidth?: number
+      actualWidth?: number
+    }
+    return candidate.extentsWidth ?? candidate.actualWidth
   }
 
   private convertLeader(leader: LeaderEntity) {
