@@ -3,6 +3,7 @@ import {
   AcCmTransparency,
   AcDb2dPolyline,
   AcDb3dPolyline,
+  AcDb3dSolid,
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
@@ -111,6 +112,7 @@ import {
   PolylineEntity,
   RayEntity,
   ShapeEntity,
+  Solid3DEntity,
   SolidEntity,
   SplineEntity,
   TableEntity,
@@ -258,6 +260,8 @@ export class AcDbEntityConverter {
       return this.convertShape(entity as ShapeEntity)
     } else if (entity.type == 'SOLID') {
       return this.convertSolid(entity as SolidEntity)
+    } else if (entity.type == '3DSOLID') {
+      return this.convert3dSolid(entity as Solid3DEntity)
     } else if (entity.type == 'VIEWPORT') {
       return this.convertViewport(entity as ViewportEntity)
     } else if (entity.type == 'WIPEOUT') {
@@ -480,6 +484,19 @@ export class AcDbEntityConverter {
     solid.points.forEach((point, index) => dbEntity.setPointAt(index, point))
     dbEntity.thickness = solid.thickness
     return dbEntity
+  }
+
+  /**
+   * Converts a 3DSOLID entity (ACIS/ASM B-rep solid).
+   *
+   * Full B-rep tessellation is not supported yet; see {@link AcDb3dSolid} for
+   * what is rendered (a wireframe bounding box derived from the ACIS point
+   * cloud) and why. `entity.data` is missing entirely when the DXF has no
+   * ACIS payload at all, in which case an empty string still produces a
+   * valid (if geometry-less) entity rather than a converter crash.
+   */
+  private convert3dSolid(solid: Solid3DEntity) {
+    return new AcDb3dSolid(solid.data ?? '', solid.version)
   }
 
   private convertPolyline(polyline: PolylineEntity) {

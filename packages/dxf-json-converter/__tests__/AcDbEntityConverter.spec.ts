@@ -1,4 +1,5 @@
 import {
+  AcDb3dSolid,
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
@@ -441,5 +442,31 @@ describe('AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDb3PointAngularDimension)
     expect((result as AcDb3PointAngularDimension).dimBlockId).toBe('*D62')
+  })
+
+  it('converts 3DSOLID entity, preserving raw ACIS data and version', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const acisData = 'body $1 $2 $-1 $-1 #\npoint $-1 1 2 3 #\nEnd-of-ACIS-data'
+    const result = converter.convert({
+      type: '3DSOLID',
+      version: 400,
+      data: acisData
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDb3dSolid)
+    const solid = result as AcDb3dSolid
+    expect(solid.acisData).toBe(acisData)
+    expect(solid.version).toBe(400)
+    expect(solid.hasRenderableGeometry).toBe(true)
+  })
+
+  it('converts 3DSOLID entity with missing ACIS data to an empty (non-crashing) solid', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({ type: '3DSOLID' } as any)
+
+    expect(result).toBeInstanceOf(AcDb3dSolid)
+    expect((result as AcDb3dSolid).hasRenderableGeometry).toBe(false)
   })
 })
