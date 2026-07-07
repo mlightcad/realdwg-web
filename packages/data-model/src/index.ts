@@ -149,6 +149,7 @@ export {
   AcDbEllipse,
   AcDbEntity,
   AcDbFace,
+  AcDbFcf,
   AcDbGradientPatternType,
   AcDbHatch,
   AcDbHatchObjectType,

@@ -108,4 +108,77 @@ describe('AcDbLibreDwgConverter', () => {
       expect.arrayContaining(['tecosymbol', 'romans', 'inline'])
     )
   })
+
+  it('collects fonts from block definitions not referenced by model space inserts', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      header: { TEXTSTYLE: 'Standard' },
+      tables: {
+        STYLE: {
+          entries: [
+            {
+              name: 'Standard',
+              font: 'txt.shx',
+              bigFont: 'gbcbig.shx',
+              standardFlag: 0
+            },
+            {
+              name: 'Romans',
+              font: 'romans.shx',
+              standardFlag: 0
+            }
+          ]
+        },
+        BLOCK_RECORD: {
+          entries: [
+            {
+              name: 'TITLE',
+              entities: [{ type: 'TEXT', styleName: 'Romans' }]
+            }
+          ]
+        }
+      },
+      entities: []
+    })
+
+    expect(fonts).toEqual(
+      expect.arrayContaining(['txt', 'gbcbig', 'romans'])
+    )
+  })
+
+  it('collects fonts from tolerance entities via dim style text style and inline fonts', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      header: { TEXTSTYLE: 'Standard' },
+      tables: {
+        STYLE: {
+          entries: [
+            {
+              name: 'Standard',
+              font: 'txt.shx',
+              standardFlag: 0
+            },
+            {
+              name: 'DimText',
+              font: 'romans.shx',
+              standardFlag: 0
+            }
+          ]
+        },
+        DIMSTYLE: {
+          entries: [{ name: 'Standard', DIMTXSTY: 'DimText' }]
+        },
+        BLOCK_RECORD: { entries: [] }
+      },
+      entities: [
+        {
+          type: 'TOLERANCE',
+          styleName: 'Standard',
+          text: '{\\Fgdt.shx|b0|i0;c134|p6;j}|0.05|A|'
+        }
+      ]
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['romans', 'gdt.shx']))
+  })
 })

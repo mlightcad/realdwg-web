@@ -17,6 +17,7 @@ import {
   AcDbEllipse,
   AcDbEntity,
   AcDbFace,
+  AcDbFcf,
   AcDbHatch,
   AcDbHatchObjectType,
   AcDbHatchPatternType,
@@ -115,6 +116,7 @@ import {
   SplineEntity,
   TableEntity,
   TextEntity,
+  ToleranceEntity,
   ViewportEntity,
   WipeoutEntity,
   XLineEntity
@@ -254,6 +256,8 @@ export class AcDbEntityConverter {
       return this.convertTable(entity as TableEntity)
     } else if (entity.type == 'TEXT') {
       return this.convertText(entity as TextEntity)
+    } else if (entity.type == 'TOLERANCE') {
+      return this.convertTolerance(entity as ToleranceEntity)
     } else if (entity.type == 'SHAPE') {
       return this.convertShape(entity as ShapeEntity)
     } else if (entity.type == 'SOLID') {
@@ -776,6 +780,20 @@ export class AcDbEntityConverter {
     dbEntity.horizontalMode = text.halign as unknown as AcDbTextHorizontalMode
     dbEntity.verticalMode = text.valign as unknown as AcDbTextVerticalMode
     dbEntity.widthFactor = text.xScale ?? 1
+    return dbEntity
+  }
+
+  private convertTolerance(tolerance: ToleranceEntity) {
+    const dbEntity = new AcDbFcf()
+    dbEntity.location.copy(tolerance.position)
+    dbEntity.text = tolerance.text
+    dbEntity.dimensionStyle = tolerance.styleName ?? ''
+    if (tolerance.extrusionDirection) {
+      dbEntity.normal.copy(tolerance.extrusionDirection)
+    }
+    if (tolerance.xAxisDirection) {
+      dbEntity.direction.copy(tolerance.xAxisDirection)
+    }
     return dbEntity
   }
 

@@ -84,6 +84,44 @@ describe('AcDbFontNameCollector', () => {
     expect(fonts).toEqual(expect.arrayContaining(['txt', 'simplex']))
   })
 
+  it('collects inline mtext fonts from both pipe and semicolon overrides', () => {
+    const fonts = new AcDbFontNameCollector({ styles: [] }).collect(
+      [
+        {
+          type: 'TOLERANCE',
+          text: '{\\Fgdt.shx|b0|i0|c134|p6;j}|0.05|A|'
+        },
+        {
+          type: 'TOLERANCE',
+          text: '{\\Fgdt;r}%%v{\\Fgdt;n}0.05%%v%%vA%%v%%v%%v^J'
+        }
+      ],
+      {
+        getEntityFontInfo: entity => ({
+          formattedText: entity.text
+        })
+      }
+    )
+
+    expect(fonts).toEqual(expect.arrayContaining(['gdt.shx', 'gdt']))
+  })
+
+  it('collects fonts from every named style table entry', () => {
+    const fonts = new AcDbFontNameCollector({
+      styles: [
+        { name: 'Standard', font: 'txt.shx', bigFont: 'gbcbig.shx' },
+        { name: 'Romans', font: 'romans.shx', standardFlag: 0 },
+        { name: '', font: 'tecosymbol.shx', standardFlag: 1 }
+      ]
+    }).collect([], {
+      getEntityFontInfo: () => null
+    })
+
+    expect(fonts).toEqual(
+      expect.arrayContaining(['txt', 'gbcbig', 'romans', 'tecosymbol'])
+    )
+  })
+
   it('collects shape-definition fonts from the style table', () => {
     const fonts = new AcDbFontNameCollector({
       styles: [
@@ -94,6 +132,6 @@ describe('AcDbFontNameCollector', () => {
       getEntityFontInfo: () => null
     })
 
-    expect(fonts).toEqual(['tecosymbol'])
+    expect(fonts).toEqual(['tecosymbol', 'romans'])
   })
 })

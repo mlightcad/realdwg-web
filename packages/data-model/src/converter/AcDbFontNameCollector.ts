@@ -1,6 +1,9 @@
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
 
-const MTEXT_INLINE_FONT_PATTERN = /\\f(.*?)\|/g
+/** `\Ffont|b0|i0;...` extended inline font override. */
+const MTEXT_INLINE_FONT_PIPE_PATTERN = /\\[fF](.*?)\|/g
+/** `\Ffont;...` short inline font override (e.g. tolerance `{\Fgdt;r}`). */
+const MTEXT_INLINE_FONT_SEMICOLON_PATTERN = /\\[fF]([^|;]+);/g
 
 /** STYLE table entry protocol used when collecting fonts before conversion. */
 export type AcDbFontNameCollectorStyleEntry = {
@@ -62,6 +65,11 @@ export class AcDbFontNameCollector {
   ): string[] {
     const fonts = new Set<string>()
     for (const fontName of AcDbFontNameCollector.collectShapeDefinitionFonts(
+      this.styles
+    )) {
+      fonts.add(fontName)
+    }
+    for (const fontName of AcDbFontNameCollector.collectNamedStyleTableFonts(
       this.styles
     )) {
       fonts.add(fontName)
@@ -188,6 +196,24 @@ export class AcDbFontNameCollector {
     return fontNames
   }
 
+  /**
+   * Collects primary, big, and extended fonts from every named STYLE entry.
+   * Ensures fonts referenced only in the style table (or in blocks not reached
+   * from model space) are still preloaded when opening a drawing.
+   */
+  private static collectNamedStyleTableFonts(
+    styles: AcDbFontNameCollectorStyleEntry[]
+  ): string[] {
+    const fonts: string[] = []
+    for (const style of styles) {
+      if (style.standardFlag && style.standardFlag & 1) {
+        continue
+      }
+      fonts.push(...AcDbFontNameCollector.collectStyleEntryFontNames(style))
+    }
+    return fonts
+  }
+
   private static collectShapeDefinitionFonts(
     styles: Array<
       Pick<AcDbFontNameCollectorStyleEntry, 'font' | 'standardFlag'>
@@ -208,10 +234,13 @@ export class AcDbFontNameCollector {
   }
 
   private static extractInlineMTextFonts(text: string): string[] {
-    const fonts: string[] = []
-    for (const match of text.matchAll(MTEXT_INLINE_FONT_PATTERN)) {
-      fonts.push(match[1].toLowerCase())
+    const fonts = new Set<string>()
+    for (const match of text.matchAll(MTEXT_INLINE_FONT_PIPE_PATTERN)) {
+      fonts.add(match[1].toLowerCase())
     }
-    return fonts
+    for (const match of text.matchAll(MTEXT_INLINE_FONT_SEMICOLON_PATTERN)) {
+      fonts.add(match[1].toLowerCase())
+    }
+    return Array.from(fonts)
   }
 }
