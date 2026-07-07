@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.10.3
+
+### Patch Changes
+
+- feat: add AcDbFcf and AcDb3dSolid
+
 ## 1.10.2
 
 ### Patch Changes

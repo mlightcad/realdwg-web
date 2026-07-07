@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.10.3
+
+### Patch Changes
+
+- feat: add AcDbFcf and AcDb3dSolid
+- Updated dependencies
+  - @mlightcad/data-model@1.10.3
+  - @mlightcad/dxf-json-converter@1.10.3
+  - @mlightcad/libredwg-converter@3.10.3
+
 ## 0.10.2
 
 ### Patch Changes

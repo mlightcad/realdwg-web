@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.10.3
+
+### Patch Changes
+
+- feat: add AcDbFcf and AcDb3dSolid
+- Updated dependencies
+  - @mlightcad/common@1.10.3
+  - @mlightcad/geometry-engine@3.10.3
+
 ## 3.10.2
 
 ### Patch Changes
