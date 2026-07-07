@@ -132,6 +132,7 @@ export {
   AcDb2dVertexType,
   AcDb3PointAngularDimension,
   AcDb3dPolyline,
+  AcDb3dSolid,
   AcDb3dVertex,
   AcDb3dVertexType,
   AcDbAlignedDimension,
