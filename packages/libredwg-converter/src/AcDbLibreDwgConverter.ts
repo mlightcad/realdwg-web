@@ -104,6 +104,23 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     dwg.tables.BLOCK_RECORD.entries.forEach(btr => {
       blockMap.set(btr.name, btr)
     })
+    const dimStyleTextStyles = new Map<string, string>()
+    for (const entry of dwg.tables.DIMSTYLE?.entries ?? []) {
+      const dimtxsty = entry.DIMTXSTY
+      dimStyleTextStyles.set(
+        entry.name,
+        typeof dimtxsty === 'string' && dimtxsty
+          ? dimtxsty
+          : DEFAULT_TEXT_STYLE
+      )
+    }
+
+    const rootEntities: DwgEntity[] = [...(dwg.entities ?? [])]
+    for (const btr of dwg.tables.BLOCK_RECORD.entries) {
+      if (btr.entities?.length) {
+        rootEntities.push(...btr.entities)
+      }
+    }
 
     return new AcDbFontNameCollector({
       styles: dwg.tables.STYLE.entries.map(style => ({
@@ -114,7 +131,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         standardFlag: style.standardFlag
       })),
       textStyleVar: dwg.header?.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
-    }).collect(dwg.entities, {
+    }).collect(rootEntities, {
       getEntityFontInfo: (entity: DwgEntity) => {
         if (entity.type == 'MTEXT') {
           const mtext = entity as DwgMTextEntity
@@ -124,7 +141,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
             resolveStyle: true
           }
         }
-        if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
+        if (
+          entity.type == 'TEXT' ||
+          entity.type == 'ATTRIB' ||
+          entity.type == 'ATTDEF'
+        ) {
           const text = entity as DwgTextEntity
           return { styleName: text.styleName, resolveStyle: true }
         }
@@ -145,13 +166,53 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
                 : undefined
           return { styleName, formattedText: text, resolveStyle: true }
         }
+        if (entity.type == 'TOLERANCE') {
+          const tolerance = entity as DwgEntity & {
+            styleName?: string
+            text?: string
+          }
+          return {
+            styleName: this.resolveDimStyleTextStyle(
+              dimStyleTextStyles,
+              tolerance.styleName
+            ),
+            formattedText:
+              typeof tolerance.text === 'string' ? tolerance.text : '',
+            resolveStyle: true
+          }
+        }
         if (entity.type == 'INSERT') {
           return { blockName: (entity as DwgInsertEntity).name }
+        }
+        if (entity.type == 'DIMENSION') {
+          const dimension = entity as DwgEntity & { name?: string }
+          return dimension.name ? { blockName: dimension.name } : null
         }
         return null
       },
       getBlockEntities: (blockName: string) => blockMap.get(blockName)?.entities
     })
+  }
+
+  private resolveDimStyleTextStyle(
+    dimStyleTextStyles: Map<string, string>,
+    dimStyleName?: string
+  ): string | undefined {
+    const trimmed = dimStyleName?.trim()
+    if (!trimmed) {
+      return undefined
+    }
+    const exact = dimStyleTextStyles.get(trimmed)
+    if (exact) {
+      return exact
+    }
+    const normalized = trimmed.toUpperCase()
+    for (const [name, textStyle] of dimStyleTextStyles) {
+      if (name.toUpperCase() === normalized) {
+        return textStyle
+      }
+    }
+    return undefined
   }
 
   protected processLineTypes(model: DwgDatabase, db: AcDbDatabase) {

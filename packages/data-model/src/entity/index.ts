@@ -26,6 +26,7 @@ export type {
   AcDbPropertyAccessor
 } from './AcDbEntityProperties'
 export { AcDbFace } from './AcDbFace'
+export { AcDbFcf } from './AcDbFcf'
 export {
   AcDbGradientPatternType,
   AcDbHatch,

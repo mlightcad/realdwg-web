@@ -158,6 +158,33 @@ describe('AcDbDxfConverter', () => {
     expect(fonts).toEqual(expect.arrayContaining(['tecosymbol']))
   })
 
+  it('collects fonts from tolerance entities via dim style text style and inline fonts', () => {
+    const converter = new TestDxfConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      tables: {
+        STYLE: {
+          entries: [
+            { name: 'Standard', font: 'txt.shx' },
+            { name: 'DimText', font: 'romans.shx' }
+          ]
+        },
+        DIMSTYLE: {
+          entries: [{ name: 'Standard', DIMTXSTY: 'DimText' }]
+        }
+      },
+      entities: [
+        {
+          type: 'TOLERANCE',
+          styleName: 'Standard',
+          text: '{\\Fgdt.shx|b0|i0|c134|p6;j}|0.05|A|'
+        }
+      ],
+      blocks: {}
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['romans', 'gdt.shx']))
+  })
+
   it('preserves default table ownership when DXF table metadata omits owner ids', () => {
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db

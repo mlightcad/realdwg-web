@@ -60,6 +60,7 @@ import {
   ParsedDxf,
   StyleTableEntry,
   TextEntity,
+  ToleranceEntity,
   VPortTableEntry
 } from '@mlightcad/dxf-json/types'
 
@@ -138,11 +139,21 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    */
   protected getFonts(dxf: ParsedDxf) {
     const blocks = dxf.blocks ?? {}
+    const dimStyleTextStyles = new Map<string, string>()
+    for (const entry of dxf.tables?.DIMSTYLE?.entries ?? []) {
+      dimStyleTextStyles.set(entry.name, entry.DIMTXSTY || DEFAULT_TEXT_STYLE)
+    }
+    const rootEntities: CommonDxfEntity[] = [...(dxf.entities ?? [])]
+    for (const block of Object.values(blocks)) {
+      if (block.entities?.length) {
+        rootEntities.push(...block.entities)
+      }
+    }
     return new AcDbFontNameCollector({
       styles: dxf.tables.STYLE?.entries ?? [],
       textStyleVar:
         (dxf.header?.['$TEXTSTYLE'] as string | undefined) || DEFAULT_TEXT_STYLE
-    }).collect(dxf.entities, {
+    }).collect(rootEntities, {
       getEntityFontInfo: (entity: CommonDxfEntity) => {
         if (entity.type == 'MTEXT') {
           const mtext = entity as MTextEntity
@@ -152,7 +163,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
             resolveStyle: true
           }
         }
-        if (entity.type == 'TEXT' || entity.type == 'ATTRIB') {
+        if (
+          entity.type == 'TEXT' ||
+          entity.type == 'ATTRIB' ||
+          entity.type == 'ATTDEF'
+        ) {
           const text = entity as TextEntity
           return { styleName: text.styleName, resolveStyle: true }
         }
@@ -168,13 +183,49 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
                 : undefined
           return { styleName, formattedText: text, resolveStyle: true }
         }
+        if (entity.type == 'TOLERANCE') {
+          const tolerance = entity as ToleranceEntity
+          return {
+            styleName: this.resolveDimStyleTextStyle(
+              dimStyleTextStyles,
+              tolerance.styleName
+            ),
+            formattedText: tolerance.text,
+            resolveStyle: true
+          }
+        }
         if (entity.type == 'INSERT') {
           return { blockName: (entity as InsertEntity).name }
+        }
+        if (entity.type == 'DIMENSION') {
+          const dimension = entity as InsertEntity
+          return dimension.name ? { blockName: dimension.name } : null
         }
         return null
       },
       getBlockEntities: (blockName: string) => blocks[blockName]?.entities
     })
+  }
+
+  private resolveDimStyleTextStyle(
+    dimStyleTextStyles: Map<string, string>,
+    dimStyleName?: string
+  ): string | undefined {
+    const trimmed = dimStyleName?.trim()
+    if (!trimmed) {
+      return undefined
+    }
+    const exact = dimStyleTextStyles.get(trimmed)
+    if (exact) {
+      return exact
+    }
+    const normalized = trimmed.toUpperCase()
+    for (const [name, textStyle] of dimStyleTextStyles) {
+      if (name.toUpperCase() === normalized) {
+        return textStyle
+      }
+    }
+    return undefined
   }
 
   /**
