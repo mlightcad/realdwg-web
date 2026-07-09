@@ -9,6 +9,12 @@ import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
 const CHAR_WIDTH_FACTOR = 1
 
+/** `\Ffont|params;symbol` tolerance/GDT inline font override including symbol char. */
+const TOLERANCE_INLINE_FONT_PATTERN =
+  /\\[fF][^\\|{}]*(?:\|[^;\\|{}]*)*;./i
+const TOLERANCE_INLINE_FONT_PATTERN_GLOBAL =
+  /\\[fF][^\\|{}]*(?:\|[^;\\|{}]*)*;./gi
+
 /**
  * Strips MTEXT control codes and returns plain text for width/line estimation.
  */
@@ -17,6 +23,48 @@ export function acdbStripMTextControlCodes(text: string): string {
     .replace(/\\[PpNn]/g, '\n')
     .replace(/\\[A-Za-z][^;]*;/g, '')
     .replace(/[{}]/g, '')
+}
+
+/**
+ * Strips tolerance cell formatting and returns measurable plain text.
+ *
+ * GDT font codes such as `{\Fgdt;r}` or `{\Fgdt;n}0.05` embed a single symbol
+ * character after the font name. That glyph must not contribute to ASCII width
+ * estimation because it is rendered from the GDT SHX font, not the text style.
+ */
+export function acdbStripToleranceCellTextForWidth(text: string): string {
+  return text
+    .replace(/\\[PpNn]/g, '\n')
+    .replace(TOLERANCE_INLINE_FONT_PATTERN_GLOBAL, '')
+    .replace(/\\[A-Za-z][^;]*;/g, '')
+    .replace(/[{}]/g, '')
+    .trim()
+}
+
+/**
+ * Estimates the rendered width of one tolerance frame cell.
+ */
+export function acdbEstimateToleranceCellWidth(
+  cellText: string,
+  textHeight: number,
+  widthFactor = 1
+): number {
+  const trimmed = cellText.trim()
+  if (!trimmed || textHeight <= 0) {
+    return 0
+  }
+
+  const measurableText = acdbStripToleranceCellTextForWidth(trimmed)
+  const hasInlineFont = TOLERANCE_INLINE_FONT_PATTERN.test(trimmed)
+
+  if (!measurableText) {
+    return hasInlineFont ? textHeight : 0
+  }
+
+  return Math.max(
+    textHeight,
+    acdbEstimatePlainTextWidth(measurableText, textHeight, widthFactor)
+  )
 }
 
 /**

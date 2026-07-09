@@ -21,10 +21,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
-import {
-  acdbEstimatePlainTextWidth,
-  acdbStripMTextControlCodes
-} from './AcDbTextExtentsHelpers'
+import { acdbEstimateToleranceCellWidth } from './AcDbTextExtentsHelpers'
 
 interface ToleranceFrameRow {
   cells: string[]
@@ -559,8 +556,7 @@ export class AcDbFcf extends AcDbEntity {
         if (!cell.trim()) {
           continue
         }
-        const plainText = acdbStripMTextControlCodes(cell).trim()
-        const estimatedWidth = acdbEstimatePlainTextWidth(plainText, textHeight)
+        const estimatedWidth = acdbEstimateToleranceCellWidth(cell, textHeight)
         maxWidth = Math.max(maxWidth, estimatedWidth)
       }
       columnWidths.push(maxWidth)

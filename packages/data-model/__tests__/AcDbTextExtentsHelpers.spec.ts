@@ -10,11 +10,13 @@ import {
   acdbCountMTextLines,
   acdbEstimateMTextHeight,
   acdbEstimatePlainTextWidth,
+  acdbEstimateToleranceCellWidth,
   acdbExpandBoxByOrientedTextRect,
   acdbGetLocalBoundsFromAttachment,
   acdbResolveMTextLayoutMetrics,
   acdbScorePointAgainstMTextLayout,
   acdbStripMTextControlCodes,
+  acdbStripToleranceCellTextForWidth,
   acdbWorldPointToMTextLocal
 } from '../src/entity/AcDbTextExtentsHelpers'
 
@@ -23,6 +25,28 @@ describe('AcDbTextExtentsHelpers', () => {
     it('converts paragraph breaks and removes formatting codes', () => {
       expect(acdbStripMTextControlCodes('A\\PB')).toBe('A\nB')
       expect(acdbStripMTextControlCodes('{\\C1;Red}')).toBe('Red')
+    })
+  })
+
+  describe('acdbStripToleranceCellTextForWidth', () => {
+    it('removes GDT font codes and symbol characters from tolerance cells', () => {
+      expect(acdbStripToleranceCellTextForWidth('{\\Fgdt;r}')).toBe('')
+      expect(acdbStripToleranceCellTextForWidth('{\\Fgdt;n}0.05')).toBe('0.05')
+      expect(
+        acdbStripToleranceCellTextForWidth('{\\Fgdt.shx|b0|i0|c134|p6;j}')
+      ).toBe('')
+    })
+  })
+
+  describe('acdbEstimateToleranceCellWidth', () => {
+    it('uses text height for symbol-only GDT cells', () => {
+      expect(acdbEstimateToleranceCellWidth('{\\Fgdt;r}', 3.5)).toBeCloseTo(3.5)
+    })
+
+    it('measures numeric text without the GDT symbol character width', () => {
+      expect(acdbEstimateToleranceCellWidth('{\\Fgdt;n}0.05', 3.5)).toBeCloseTo(
+        14
+      )
     })
   })
 
