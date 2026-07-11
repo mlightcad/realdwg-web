@@ -178,6 +178,28 @@ describe('AcDbFcf', () => {
     expect(rightCenterY).toBeCloseTo(270, 6)
   })
 
+  it('aligns the right edge with leader attachment for GDT tolerance text', () => {
+    const db = createWorkingDb()
+    const dimStyle = db.tables.dimStyleTable.getAt('Standard')
+    if (dimStyle) {
+      dimStyle.dimtxt = 3.5
+      dimStyle.dimscale = 1
+    }
+
+    const fcf = new AcDbFcf()
+    fcf.location = new AcGePoint3d(312.1120452047875, 270.2900270575117, 0)
+    fcf.text = '{\\Fgdt;r}%%v{\\Fgdt;n}0.05%%v%%vA%%v%%v%%v^J'
+    fcf.dimensionStyle = 'Standard'
+
+    const points = fcf.getBoundingPoints()
+    const rightEdgeCenterX = (points[1].x + points[2].x) / 2
+    const leaderAttachX = 343.9410452047876
+
+    expect(rightEdgeCenterX).toBeCloseTo(leaderAttachX, 0)
+    expect(points[0].x).toBeCloseTo(fcf.location.x, 6)
+    expect((points[0].y + points[3].y) / 2).toBeCloseTo(fcf.location.y, 6)
+  })
+
   it('draws frame borders and dividers as separate axis-aligned segments', () => {
     createWorkingDb()
     const fcf = new AcDbFcf()

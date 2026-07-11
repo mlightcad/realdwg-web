@@ -5,6 +5,7 @@ import {
   AcDbBlockReference,
   AcDbCircle,
   AcDbDatabase,
+  AcDbFcf,
   AcDbHatch,
   AcDbLeader,
   AcDbLeaderAnnotationType,
@@ -366,5 +367,28 @@ describe('libredwg AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDbMText)
     expect((result as AcDbMText).extentsWidth).toBeCloseTo(16.25)
+  })
+
+  it('converts libredwg TOLERANCE entity to AcDbFcf', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'TOLERANCE',
+      layer: '0',
+      handle: '1A2B',
+      styleName: 'Standard',
+      insertionPoint: { x: 100, y: 200, z: 0 },
+      text: '{\\Fgdt.shx|b0|i0|c134|p6;j}|0.05|A|',
+      extrusionDirection: { x: 0, y: 0, z: 1 },
+      xAxisDirection: { x: 1, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbFcf)
+    const fcf = result as AcDbFcf
+    expect(fcf.location).toMatchObject({ x: 100, y: 200, z: 0 })
+    expect(fcf.text).toContain('gdt')
+    expect(fcf.dimensionStyle).toBe('Standard')
+    expect(fcf.normal).toMatchObject({ x: 0, y: 0, z: 1 })
+    expect(fcf.direction).toMatchObject({ x: 1, y: 0, z: 0 })
   })
 })
