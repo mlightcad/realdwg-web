@@ -132,6 +132,9 @@ import {
   RadialDiameterDimensionEntity
 } from '@mlightcad/dxf-json/types'
 
+import type { DxfObjectByHandle } from './Acsh3dSolidResolver'
+import { resolveAcshSolidAcisData } from './Acsh3dSolidResolver'
+
 type ParsedMLeaderBreak = {
   index?: number
   start: AcGePoint3dLike
@@ -157,6 +160,41 @@ type ParsedMLeaderLeader = {
 }
 
 /**
+ * Normalizes ACDSDATA `ASM_Data` values into a `Uint8Array`.
+ *
+ * JSON deserialization may yield plain arrays or numeric-keyed objects instead of
+ * typed byte arrays.
+ *
+ * @param value - Raw ACDSDATA payload from parsed DXF JSON.
+ * @returns Normalized byte array, or `undefined` when conversion fails.
+ */
+function normalizeSabBytes(
+  value?: Uint8Array | ArrayLike<number>,
+): Uint8Array | undefined {
+  if (!value) {
+    return undefined
+  }
+  if (value instanceof Uint8Array) {
+    return value
+  }
+  if (Array.isArray(value)) {
+    return Uint8Array.from(value)
+  }
+  if (typeof value === 'object') {
+    const record = value as unknown as Record<string, number>
+    const keys = Object.keys(record).filter(key => /^\d+$/.test(key))
+    if (keys.length > 0) {
+      return Uint8Array.from(
+        keys
+          .sort((a, b) => Number(a) - Number(b))
+          .map(key => record[key]!),
+      )
+    }
+  }
+  return undefined
+}
+
+/**
  * Converts DXF entities to AcDbEntity objects.
  *
  * This class provides functionality to convert various DXF entity types
@@ -172,6 +210,31 @@ type ParsedMLeaderLeader = {
  * ```
  */
 export class AcDbEntityConverter {
+  /** OBJECTS-section entries keyed by handle for ACSH history resolution. */
+  private objectByHandle: DxfObjectByHandle = {}
+  /** ACDSDATA `ASM_Data` payloads keyed by owning entity handle. */
+  private acdsDataByHandle: Record<string, Uint8Array> = {}
+
+  /**
+   * Supplies OBJECTS-section entries keyed by handle so `3DSOLID` entities
+   * that reference `ACSH_HISTORY_CLASS` can be resolved when inline ACIS data
+   * is absent.
+   *
+   * @param objectByHandle - Parsed DXF objects indexed by handle.
+   */
+  setObjectByHandle(objectByHandle: DxfObjectByHandle) {
+    this.objectByHandle = objectByHandle
+  }
+
+  /**
+   * Supplies ACDSDATA `ASM_Data` payloads keyed by owning entity handle.
+   *
+   * @param acdsDataByHandle - Binary ASM payloads from parsed DXF ACDSDATA.
+   */
+  setAcdsDataByHandle(acdsDataByHandle: Record<string, Uint8Array> = {}) {
+    this.acdsDataByHandle = acdsDataByHandle
+  }
+
   /**
    * Converts a DXF entity to an AcDbEntity.
    *
@@ -493,14 +556,33 @@ export class AcDbEntityConverter {
   /**
    * Converts a 3DSOLID entity (ACIS/ASM B-rep solid).
    *
-   * Full B-rep tessellation is not supported yet; see {@link AcDb3dSolid} for
-   * what is rendered (a wireframe bounding box derived from the ACIS point
-   * cloud) and why. `entity.data` is missing entirely when the DXF has no
-   * ACIS payload at all, in which case an empty string still produces a
-   * valid (if geometry-less) entity rather than a converter crash.
+   * Resolves geometry from inline SAT text, ACDSDATA binary SAB payloads, or
+   * ACSH history objects in the OBJECTS section. See {@link AcDb3dSolid} for how
+   * the resolved payload is rendered.
+   *
+   * @param solid - Parsed DXF `3DSOLID` entity.
    */
   private convert3dSolid(solid: Solid3DEntity) {
-    return new AcDb3dSolid(solid.data ?? '', solid.version)
+    const handleKey = solid.handle
+      ? String(solid.handle).trim().toUpperCase()
+      : ''
+    const sabBytes = handleKey
+      ? normalizeSabBytes(this.acdsDataByHandle[handleKey])
+      : undefined
+    let satText = typeof solid.data === 'string' ? solid.data : ''
+
+    if (!sabBytes && !satText && solid.historyObjectSoftId) {
+      satText = resolveAcshSolidAcisData(
+        solid.historyObjectSoftId,
+        this.objectByHandle
+      )
+    }
+
+    return new AcDb3dSolid({
+      sabBytes,
+      satText,
+      version: solid.version
+    })
   }
 
   private convertPolyline(polyline: PolylineEntity) {

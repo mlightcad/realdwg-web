@@ -255,6 +255,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     progress?: AcDbConversionProgressCallback
   ) {
     const converter = new AcDbEntityConverter()
+    converter.setObjectByHandle(dxf.objects.byHandle ?? {})
+    converter.setAcdsDataByHandle(dxf.acdsData?.byOwnerHandle ?? {})
 
     // Create an instance of AcDbBatchProcessing
     let entities = dxf.entities
@@ -349,6 +351,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * @param checkOwner - The flag whether to check the owner of entity is the passed
    * blockTableRecord. If yes, convert it and append it to the block table record.
    * Otherwise, ignore the entity.
+   * @param objectByHandle - OBJECTS-section entries for ACSH `3DSOLID` resolution.
+   * @param acdsDataByHandle - ACDSDATA binary ASM payloads keyed by entity handle.
    *
    * @example
    * ```typescript
@@ -358,9 +362,13 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   private async processEntitiesInBlock(
     entities: CommonDxfEntity[],
     blockTableRecord: AcDbBlockTableRecord,
-    checkOwner = false
+    checkOwner = false,
+    objectByHandle: ParsedDxf['objects']['byHandle'] = {},
+    acdsDataByHandle: Record<string, Uint8Array> = {},
   ) {
     const converter = new AcDbEntityConverter()
+    converter.setObjectByHandle(objectByHandle)
+    converter.setAcdsDataByHandle(acdsDataByHandle)
     const entityCount = entities.length
     const dbEntities: AcDbEntity[] = []
     const btrId = blockTableRecord.objectId
@@ -425,12 +433,24 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       dbBlock.origin.copy(block.position)
       if (block.entities) {
         // Process entities in user-defined blocks
-        this.processEntitiesInBlock(block.entities, dbBlock)
+        this.processEntitiesInBlock(
+          block.entities,
+          dbBlock,
+          false,
+          model.objects?.byHandle ?? {},
+          model.acdsData?.byOwnerHandle ?? {},
+        )
       } else {
         // Process paper space block definiton. Entities in model space are
         // handled in method processEntities
         if (dbBlock.isPaperSapce) {
-          this.processEntitiesInBlock(model.entities, dbBlock, true)
+          this.processEntitiesInBlock(
+            model.entities,
+            dbBlock,
+            true,
+            model.objects?.byHandle ?? {},
+            model.acdsData?.byOwnerHandle ?? {},
+          )
         }
       }
     }

@@ -1,7 +1,7 @@
 export { AcDb2dPolyline, AcDbPoly2dType } from './AcDb2dPolyline'
 export { AcDb2dVertex, AcDb2dVertexType } from './AcDb2dVertex'
 export { AcDb3dPolyline, AcDbPoly3dType } from './AcDb3dPolyline'
-export { AcDb3dSolid } from './AcDb3dSolid'
+export { AcDb3dSolid, type AcDb3dSolidOptions } from './AcDb3dSolid'
 export { AcDb3dVertex, AcDb3dVertexType } from './AcDb3dVertex'
 export { AcDbArc } from './AcDbArc'
 export { AcDbAttribute } from './AcDbAttribute'

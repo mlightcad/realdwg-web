@@ -5,19 +5,64 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
+import {
+  acDbAcisWireframeSegmentsFromSab,
+  acDbAcisWireframeSegmentsFromSatText
+} from '../acis'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
 
 /**
- * Matches every `point` record in an ACIS SAT text stream, e.g.
- * `point $-1 10 0 -10 #`. The `point` record format (attribute pointer
- * followed by x/y/z) has been stable across ACIS SAT versions, unlike the
- * topology records (`face`/`loop`/`coedge`/`edge`), whose field layout and
- * count vary by surface/curve type and ACIS version. Extracting every point
- * this way, independent of the body's topology, is a format detail that's
- * safe to rely on regardless of which faces/edges reference it.
+ * Construction options for {@link AcDb3dSolid} when geometry is supplied as
+ * binary SAB and/or plain SAT/ASM text rather than a single string argument.
  */
-const ACIS_POINT_RECORD = /\bpoint\s+\$-?\d+\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/g
+export interface AcDb3dSolidOptions {
+  /** Binary SAB payload from ACDSDATA or inline modeler geometry. */
+  sabBytes?: Uint8Array
+  /** Plain SAT/ASM text from inline groups 1/3 or ACSH BREP. */
+  satText?: string
+  /** Legacy alias for {@link satText}. */
+  acisData?: string
+  /** DXF group 70 ACIS version number, when present. */
+  version?: number
+}
+
+/**
+ * Matches classic SAT `point` records (`point $-1 x y z`) and ASM-style records
+ * with additional pointer fields (`point $-1 -1 $-1 x y z`).
+ */
+const ACIS_POINT_RECORD =
+  /\bpoint\s+(?:\$-?\d+\s+){1,4}([-\d.eE+]+)\s+([-\d.eE+]+)\s+([-\d.eE+]+)/g
+
+/** Splits SAT text into individual `#`-delimited entity records. */
+function splitAcisRecords(acisData: string): string[] {
+  return acisData
+    .split('#')
+    .map(record => record.trim())
+    .filter(record => record.length > 0)
+}
+
+/**
+ * Reads numeric tokens from one SAT record, skipping pointer and sentinel tokens.
+ *
+ * @param record - One SAT entity record line.
+ * @param skip - Number of leading tokens to skip before scanning (default 1).
+ */
+function readNumericTokens(record: string, skip = 1): number[] {
+  const parts = record.split(/\s+/)
+  const values: number[] = []
+  for (let i = skip; i < parts.length; i++) {
+    const token = parts[i]!
+    if (token.startsWith('$') || token === 'I' || token === 'F') {
+      continue
+    }
+    const value = Number.parseFloat(token)
+    if (Number.isFinite(value)) {
+      values.push(value)
+    }
+  }
+  return values
+}
 
 /**
  * Extracts every vertex position referenced by `point` records in an ACIS
@@ -26,37 +71,82 @@ const ACIS_POINT_RECORD = /\bpoint\s+\$-?\d+\s+([^\s]+)\s+([^\s]+)\s+([^\s]+)/g
  * @param acisData - Raw ACIS SAT text (the concatenated group 1/3 lines of a
  * DXF `3DSOLID`/`REGION`/`BODY` entity).
  * @returns Every point found, in file order. Empty when `acisData` doesn't
- * contain any recognizable `point` records (e.g. binary ASM/SAB data).
+ * contain any recognizable `point` records.
  */
 function extractAcisPointCloud(acisData: string): AcGePoint3d[] {
   const points: AcGePoint3d[] = []
   for (const match of acisData.matchAll(ACIS_POINT_RECORD)) {
-    const x = Number.parseFloat(match[1])
-    const y = Number.parseFloat(match[2])
-    const z = Number.parseFloat(match[3])
+    const x = Number.parseFloat(match[1]!)
+    const y = Number.parseFloat(match[2]!)
+    const z = Number.parseFloat(match[3]!)
     if (Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)) {
+      points.push(new AcGePoint3d(x, y, z))
+    }
+  }
+
+  if (points.length > 0) {
+    return points
+  }
+
+  for (const record of splitAcisRecords(acisData)) {
+    if (!record.startsWith('point ')) {
+      continue
+    }
+    const values = readNumericTokens(record)
+    if (values.length >= 3) {
+      const x = values[values.length - 3]!
+      const y = values[values.length - 2]!
+      const z = values[values.length - 1]!
       points.push(new AcGePoint3d(x, y, z))
     }
   }
   return points
 }
 
+/** Collects unique segment endpoints from a wireframe buffer (`[x,y,z,...]`). */
+function pointsFromWireframe(wireframe: Float32Array): AcGePoint3d[] {
+  const points: AcGePoint3d[] = []
+  for (let i = 0; i < wireframe.length; i += 3) {
+    const x = wireframe[i]!
+    const y = wireframe[i + 1]!
+    const z = wireframe[i + 2]!
+    points.push(new AcGePoint3d(x, y, z))
+  }
+  return points
+}
+
+/**
+ * Normalizes constructor input into SAB bytes, SAT text, and version fields.
+ *
+ * @param input - Raw SAT string or {@link AcDb3dSolidOptions}.
+ * @param version - DXF group 70 version used when `input` is a string.
+ */
+function resolveSolidPayload(
+  input: string | AcDb3dSolidOptions,
+  version?: number,
+): {
+  sabBytes?: Uint8Array
+  satText: string
+  version?: number
+} {
+  if (typeof input === 'string') {
+    return { satText: input, version }
+  }
+  return {
+    sabBytes: input.sabBytes,
+    satText: input.satText ?? input.acisData ?? '',
+    version: input.version ?? version,
+  }
+}
+
 /**
  * Represents a 3D solid (ACIS/ASM B-rep) entity, such as those created by
  * AutoCAD's BOX, WEDGE, EXTRUDE, or boolean solid-modeling commands.
  *
- * Full B-rep tessellation (rendering the solid's actual trimmed
- * NURBS/planar faces) is not yet supported — that requires implementing (or
- * embedding) a real ACIS/ASM geometry kernel, which is out of scope here.
- *
- * Instead, this renders a wireframe bounding box derived from every vertex
- * position embedded in the entity's raw ACIS SAT data, so the solid is at
- * least visible at its correct location and approximate size rather than
- * silently missing from the drawing. The `point` record format is stable
- * across ACIS SAT versions and independent of the (much more variable)
- * topology record layouts, which is why this approach works without a full
- * B-rep parser. When `acisData` holds binary ASM/SAB data instead of SAT
- * text (common in DWG 2013+), no points are found and this renders nothing.
+ * Full B-rep tessellation is not yet supported. When binary SAB or SAT text is
+ * available, this entity renders a best-effort wireframe derived from decoded
+ * edges and curves; otherwise it falls back to a bounding-box wireframe built
+ * from embedded `point` records in the SAT stream.
  */
 export class AcDb3dSolid extends AcDbEntity {
   /** The entity type name */
@@ -66,29 +156,55 @@ export class AcDb3dSolid extends AcDbEntity {
     return '3DSOLID'
   }
 
-  /** Raw ACIS SAT text (or ASM/SAB binary payload) for this solid. */
+  /** Raw ACIS SAT text preserved for DXF round-trip and future B-rep parsing. */
   private _acisData: string
   /** DXF group 70 ACIS version number, when present. */
   private _version?: number
-  /** Vertex positions extracted from `point` records in {@link _acisData}. */
+  /** Vertex positions used for extents and fallback bounding-box rendering. */
   private _points: AcGePoint3d[]
+  /** Line-segment endpoint pairs for wireframe rendering (`[x,y,z,...]`). */
+  private _wireframe: Float32Array
 
   /**
    * Creates a new 3D solid entity from raw ACIS data.
    *
-   * @param acisData - Raw ACIS SAT text (group 1/3 lines) or ASM/SAB binary payload.
+   * @param acisData - Raw ACIS SAT text (group 1/3 lines).
    * @param version - DXF group 70 ACIS version number, when present.
    */
-  constructor(acisData: string, version?: number) {
+  constructor(acisData: string, version?: number)
+  /**
+   * Creates a new 3D solid entity from binary SAB and/or SAT text payloads.
+   *
+   * @param options - Construction options with optional SAB bytes and SAT text.
+   */
+  constructor(options: AcDb3dSolidOptions)
+  constructor(
+    acisDataOrOptions: string | AcDb3dSolidOptions,
+    version?: number,
+  ) {
     super()
-    this._acisData = acisData
-    this._version = version
-    this._points = extractAcisPointCloud(acisData)
+    const payload = resolveSolidPayload(acisDataOrOptions, version)
+    this._acisData = payload.satText
+    this._version = payload.version
+
+    let wireframe = new Float32Array(0)
+    if (payload.sabBytes && payload.sabBytes.length > 0) {
+      wireframe = acDbAcisWireframeSegmentsFromSab(payload.sabBytes) ?? new Float32Array(0)
+    }
+    if (wireframe.length === 0 && payload.satText) {
+      wireframe = acDbAcisWireframeSegmentsFromSatText(payload.satText)
+    }
+    this._wireframe = wireframe
+
+    if (wireframe.length > 0) {
+      this._points = pointsFromWireframe(wireframe)
+    } else {
+      this._points = extractAcisPointCloud(payload.satText)
+    }
   }
 
   /**
-   * Raw ACIS SAT text (or ASM/SAB binary payload) for this solid, preserved
-   * for future full B-rep parsing support.
+   * Raw ACIS SAT text for this solid, preserved for future full B-rep parsing.
    */
   get acisData(): string {
     return this._acisData
@@ -100,11 +216,11 @@ export class AcDb3dSolid extends AcDbEntity {
   }
 
   /**
-   * Whether any vertex positions could be extracted from {@link acisData}.
-   * False when the data is binary (ASM/SAB) rather than SAT text.
+   * Whether wireframe segments or fallback point data could be extracted from
+   * the supplied SAB/SAT payload.
    */
   get hasRenderableGeometry(): boolean {
-    return this._points.length > 0
+    return this._wireframe.length > 0 || this._points.length > 0
   }
 
   /** @inheritdoc */
@@ -116,28 +232,55 @@ export class AcDb3dSolid extends AcDbEntity {
   }
 
   /**
-   * Transforms this solid by the specified matrix.
+   * Transforms the extracted wireframe and point cloud by the specified matrix.
    *
-   * Only the extracted point cloud (and thus the wireframe bounding box) is
-   * transformed; {@link acisData} itself is left untouched since it isn't
-   * fully parsed.
+   * {@link acisData} itself is left untouched since it isn't fully parsed.
+   *
+   * @param matrix - 4×4 transformation matrix.
+   * @returns This instance (for chaining).
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._points.forEach(point => point.applyMatrix4(matrix))
+    if (this._wireframe.length > 0) {
+      const transformed = new Float32Array(this._wireframe.length)
+      for (let i = 0; i < this._wireframe.length; i += 3) {
+        const point = new AcGePoint3d(
+          this._wireframe[i]!,
+          this._wireframe[i + 1]!,
+          this._wireframe[i + 2]!,
+        )
+        point.applyMatrix4(matrix)
+        transformed[i] = point.x
+        transformed[i + 1] = point.y
+        transformed[i + 2] = point.z
+      }
+      this._wireframe = transformed
+    }
     return this
   }
 
   /**
-   * Draws a wireframe bounding box around the solid's extracted point cloud.
+   * Draws decoded wireframe segments when available; otherwise draws a bounding
+   * box around extracted `point` records.
    *
-   * @param renderer - The renderer to use for drawing
-   * @returns The rendered wireframe entity, or `undefined` when no points
-   * could be extracted from {@link acisData}.
+   * @param renderer - The renderer to use for drawing.
+   * @returns The rendered wireframe entity, or `undefined` when no geometry
+   * could be extracted.
    */
   subWorldDraw(renderer: AcGiRenderer) {
+    if (this._wireframe.length >= 6) {
+      const vertexCount = this._wireframe.length / 3
+      const indices = new Uint16Array(vertexCount)
+      for (let i = 0; i < vertexCount; i++) {
+        indices[i] = i
+      }
+      return renderer.lineSegments(this._wireframe, 3, indices)
+    }
+
     if (this._points.length === 0) {
       return undefined
     }
+
     const box = this.geometricExtents
     const min = box.min
     const max = box.max
@@ -157,11 +300,10 @@ export class AcDb3dSolid extends AcDbEntity {
       buffer[i * 3 + 1] = corner.y
       buffer[i * 3 + 2] = corner.z
     })
-    // 12 edges of a box, referencing the 8 corners above.
     const indices = new Uint16Array([
-      0, 1, 1, 2, 2, 3, 3, 0, // bottom face
-      4, 5, 5, 6, 6, 7, 7, 4, // top face
-      0, 4, 1, 5, 2, 6, 3, 7 // vertical edges
+      0, 1, 1, 2, 2, 3, 3, 0,
+      4, 5, 5, 6, 6, 7, 7, 4,
+      0, 4, 1, 5, 2, 6, 3, 7
     ])
     return renderer.lineSegments(buffer, 3, indices)
   }
@@ -178,13 +320,11 @@ export class AcDb3dSolid extends AcDbEntity {
     if (this._version != null) {
       filer.writeInt16(70, this._version)
     }
-    // ACIS text is written as chunked group-3 continuation lines (max 255
-    // chars each per the DXF spec), terminated by a final group-1 line.
     const maxChunkLength = 255
     const lines = this._acisData.split('\n')
     for (let i = 0; i < lines.length; i++) {
       const isLast = i === lines.length - 1
-      let line = lines[i]
+      let line = lines[i]!
       while (line.length > maxChunkLength) {
         filer.writeString(3, line.slice(0, maxChunkLength))
         line = line.slice(maxChunkLength)
