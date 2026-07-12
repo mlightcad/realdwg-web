@@ -33,13 +33,13 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
-          node-version: 22.22.2
+          node-version: 22.14.0
           cache: 'pnpm'
           registry-url: 'https://registry.npmjs.org'
           scope: '@mlightcad'
 
       - name: Upgrade npm for Trusted Publishing
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
