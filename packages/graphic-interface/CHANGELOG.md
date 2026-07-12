@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.10.4
+
+### Patch Changes
+
+- feat: sync latest upstream changes for ACIS SAB decoding, 3DSOLID wireframes, CI update, and FCF GDT/TOLERANCE improvements
+- Updated dependencies
+  - @mlightcad/common@1.10.4
+  - @mlightcad/geometry-engine@3.10.4
+
 ## 3.10.3
 
 ### Patch Changes

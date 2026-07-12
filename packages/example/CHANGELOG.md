@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.10.4
+
+### Patch Changes
+
+- feat: sync latest upstream changes for ACIS SAB decoding, 3DSOLID wireframes, CI update, and FCF GDT/TOLERANCE improvements
+- Updated dependencies
+  - @mlightcad/data-model@1.10.4
+  - @mlightcad/dxf-json-converter@1.10.4
+  - @mlightcad/libredwg-converter@3.10.4
+
 ## 0.10.3
 
 ### Patch Changes

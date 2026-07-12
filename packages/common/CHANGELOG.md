@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.10.4
+
+### Patch Changes
+
+- feat: sync latest upstream changes for ACIS SAB decoding, 3DSOLID wireframes, CI update, and FCF GDT/TOLERANCE improvements
+
 ## 1.10.3
 
 ### Patch Changes
