@@ -18,6 +18,7 @@ import {
 } from '@mlightcad/data-model'
 
 import { AcDbEntityConverter } from '../src/AcDbEntitiyConverter'
+import type { DxfObjectByHandle } from '../src/Acsh3dSolidResolver'
 
 describe('AcDbEntityConverter', () => {
   it('returns null for unsupported type', () => {
@@ -493,5 +494,43 @@ describe('AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDb3dSolid)
     expect((result as AcDb3dSolid).hasRenderableGeometry).toBe(false)
+  })
+
+  it('resolves 3DSOLID via ACSH history when inline ACIS data is absent', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const objectByHandle: DxfObjectByHandle = {
+      '157': {
+        name: 'ACSH_HISTORY_CLASS',
+        handle: '157',
+        ownerObjectId: '154',
+        evalGraphHardId: '156',
+      } as any,
+      '156': {
+        name: 'ACAD_EVALUATION_GRAPH',
+        handle: '156',
+        ownerObjectId: '157',
+        nodeObjectHardIds: ['155'],
+      } as any,
+      '155': {
+        name: 'ACSH_BOX_CLASS',
+        handle: '155',
+        ownerObjectId: '156',
+        transform: [1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1],
+        length: 2,
+        width: 2,
+        height: 2,
+      } as any,
+    }
+
+    converter.setObjectByHandle(objectByHandle)
+
+    const result = converter.convert({
+      type: '3DSOLID',
+      historyObjectSoftId: '157',
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDb3dSolid)
+    expect((result as AcDb3dSolid).hasRenderableGeometry).toBe(true)
   })
 })

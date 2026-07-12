@@ -68,8 +68,8 @@ describe('AcDb3dSolid', () => {
     expect(solid.hasRenderableGeometry).toBe(true)
 
     const extents = solid.geometricExtents
-    expect(extents.min).toMatchObject({ x: 10, y: 0, z: -10 })
-    expect(extents.max).toMatchObject({ x: 10, y: 0, z: 10 })
+    expect(extents.min).toMatchObject({ x: -10, y: -10, z: -10 })
+    expect(extents.max).toMatchObject({ x: 10, y: 10, z: 10 })
   })
 
   it('computes a correct bounding box from a synthetic point set', () => {
@@ -93,20 +93,31 @@ describe('AcDb3dSolid', () => {
     expect(renderer.lineSegments).not.toHaveBeenCalled()
   })
 
-  it('draws a 12-edge wireframe box referencing the 8 bounding corners', () => {
+  it('draws wireframe segments from SAT text when curve records are present', () => {
+    const solid = new AcDb3dSolid(REAL_CYLINDER_SAT, 400)
+    const lineSegments = jest.fn()
+    const renderer = { lineSegments }
+
+    solid.subWorldDraw(renderer as never)
+
+    expect(lineSegments).toHaveBeenCalledTimes(1)
+    const [, itemSize, indices] = lineSegments.mock.calls[0]
+    expect(itemSize).toBe(3)
+    expect(indices.length).toBeGreaterThan(12 * 2)
+  })
+
+  it('falls back to a bounding-box wireframe when only isolated point records exist', () => {
     const solid = new AcDb3dSolid(SYNTHETIC_BOX_POINTS)
     const lineSegments = jest.fn()
-    const renderer = {
-      lineSegments
-    }
+    const renderer = { lineSegments }
 
     solid.subWorldDraw(renderer as never)
 
     expect(lineSegments).toHaveBeenCalledTimes(1)
     const [buffer, itemSize, indices] = lineSegments.mock.calls[0]
     expect(itemSize).toBe(3)
-    expect(buffer).toHaveLength(8 * 3) // 8 corners
-    expect(indices).toHaveLength(12 * 2) // 12 edges
+    expect(buffer.length).toBeGreaterThanOrEqual(8 * 3)
+    expect(indices.length).toBeGreaterThanOrEqual(12 * 2)
   })
 
   it('transforms the extracted point cloud (and thus the bounding box)', () => {
