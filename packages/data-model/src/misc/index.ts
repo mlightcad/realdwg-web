@@ -49,6 +49,16 @@ export {
   decodeMLeaderStyleRawColor,
   encodeMLeaderStyleRawColor
 } from './AcDbMLeaderStyleColorCodec'
+export {
+  acdbEstimateDatabaseMemory,
+  acdbFormatMemoryEstimate,
+  acdbFormatMemoryBytes
+} from './AcDbMemoryEstimator'
+export type {
+  AcDbMemoryEstimate,
+  AcDbMemoryEstimateBucket,
+  AcDbMemoryEstimateOptions
+} from './AcDbMemoryEstimator'
 export { AcDbObjectIterator } from './AcDbObjectIterator'
 export {
   AcDbOsnapMode,
