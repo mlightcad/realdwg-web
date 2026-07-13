@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.10.5
+
+### Patch Changes
+
+- feat: added a heuristic memory estimator for AcDbDatabase and fixed saved view restoration by correctly applying VPORT view target and twist, improving memory estimation and view consistency
+
 ## 1.10.4
 
 ### Patch Changes

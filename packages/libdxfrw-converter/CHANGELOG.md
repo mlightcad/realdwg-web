@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.10.5
+
+### Patch Changes
+
+- feat: added a heuristic memory estimator for AcDbDatabase and fixed saved view restoration by correctly applying VPORT view target and twist, improving memory estimation and view consistency
+- Updated dependencies
+  - @mlightcad/data-model@1.10.5
+
 ## 3.10.4
 
 ### Patch Changes
