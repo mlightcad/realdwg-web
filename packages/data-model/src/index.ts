@@ -251,6 +251,9 @@ export {
   AcDbLinearUnits,
   AcDbObjectIterator,
   AcDbOsnapMode,
+  acdbEstimateDatabaseMemory,
+  acdbFormatMemoryEstimate,
+  acdbFormatMemoryBytes,
   AcDbPatParser,
   AcDbPatSvgRenderer,
   AcDbPredefinedAcadIsoPat,
@@ -302,6 +305,9 @@ export {
 } from './misc'
 export type {
   AcDbFormatterOptions,
+  AcDbMemoryEstimate,
+  AcDbMemoryEstimateBucket,
+  AcDbMemoryEstimateOptions,
   AcDbPatDocument,
   AcDbPatGradientColor,
   AcDbPatGradientPreviewOptions,

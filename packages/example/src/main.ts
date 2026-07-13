@@ -11,7 +11,9 @@
 import {
   AcDbDatabase,
   AcDbDatabaseConverterManager,
+  acdbEstimateDatabaseMemory,
   AcDbFileType,
+  acdbFormatMemoryEstimate,
   acdbHostApplicationServices,
   AcDbOpenDatabaseOptions,
   AcDbPatDocument,
@@ -535,6 +537,10 @@ const runParse = async () => {
       lines.push(`Worker: ${formatMs(result.durationMs)}`)
       lines.push('')
       lines.push(...renderLayers(result.layers))
+      lines.push('')
+      const memory = acdbEstimateDatabaseMemory(result.database)
+      lines.push(acdbFormatMemoryEstimate(memory))
+      console.log(acdbFormatMemoryEstimate(memory))
     }
   } catch (error) {
     console.error(error)
