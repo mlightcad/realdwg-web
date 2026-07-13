@@ -340,10 +340,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
    * Builds the model-space WCS view rectangle from this VPORT record.
    *
    * AutoCAD stores:
-   * - view center in groups 10/20 (mapped to `centerPoint`)
+   * - view center in groups 12/22 (mapped to `centerPoint`) — in DCS
+   *   (display coordinate system), i.e. relative to the view target and
+   *   rotated by the view twist angle, NOT in WCS
+   * - view target in group 17 (`viewTarget`) — in WCS
+   * - view twist angle in group 51 (`viewTwistAngle`)
    * - view height in group 40/45 (`viewHeight`)
    * - aspect ratio in group 41 (`gsView.aspectRatio`) ??the AutoCAD graphics
    *   window width/height at save time, not the model-space view on its own
+   *
+   * The WCS view center is therefore `target + rotate(center, twist)`.
+   * Most drawings save a (0,0,0) target so the distinction is invisible,
+   * but AutoCAD does persist non-zero targets (e.g. after DVIEW/3D orbit
+   * round-trips); ignoring the target restores the view over empty space
+   * arbitrarily far from the drawing.
    *
    * View width = view height ? aspect ratio. The viewer uses the current canvas
    * aspect ratio so DWG/DXF exports of the same drawing frame identically even
@@ -362,6 +372,25 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
       return undefined
     }
 
+    // DCS -> WCS: rotate the stored center by the twist angle, then
+    // translate by the view target. The DCS axes are the WCS axes rotated
+    // counterclockwise by the twist angle about the view direction, so DCS
+    // coordinates map back to WCS by rotating +twist.
+    const twist = this.viewTwistAngle
+    let wcsCenterX = center.x
+    let wcsCenterY = center.y
+    if (Number.isFinite(twist) && twist !== 0) {
+      const cos = Math.cos(twist)
+      const sin = Math.sin(twist)
+      wcsCenterX = center.x * cos - center.y * sin
+      wcsCenterY = center.x * sin + center.y * cos
+    }
+    const target = this.viewTarget
+    if (target && Number.isFinite(target.x) && Number.isFinite(target.y)) {
+      wcsCenterX += target.x
+      wcsCenterY += target.y
+    }
+
     const aspectRatio = resolveViewAspectRatio(this, canvasAspectRatio)
 
     const viewWidth = viewHeight * aspectRatio
@@ -370,12 +399,12 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
 
     return new AcGeBox2d()
       .expandByPoint({
-        x: center.x - halfWidth,
-        y: center.y - halfHeight
+        x: wcsCenterX - halfWidth,
+        y: wcsCenterY - halfHeight
       })
       .expandByPoint({
-        x: center.x + halfWidth,
-        y: center.y + halfHeight
+        x: wcsCenterX + halfWidth,
+        y: wcsCenterY + halfHeight
       })
   }
 
