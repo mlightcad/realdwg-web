@@ -335,6 +335,10 @@ export class AcDbLibdxfrwConverter extends AcDbDatabaseConverter<DRW_Database> {
     }
   }
 
+  protected processClasses(_model: DRW_Database, _db: AcDbDatabase) {
+    // libdxfrw does not expose CLASSES yet.
+  }
+
   protected processHeader(model: DRW_Database, db: AcDbDatabase) {
     const header = model.header
     // TODO: Check not supported versions

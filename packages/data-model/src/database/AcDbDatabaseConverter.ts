@@ -548,6 +548,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
+            this.processClasses(data.model, db)
             this.processHeader(data.model, db)
             // Override system variable values
             if (sysVars) {
@@ -734,6 +735,10 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
   }
 
   protected processHeader(_model: TModel, _db: AcDbDatabase) {
+    throw new Error('Not impelemented yet!')
+  }
+
+  protected processClasses(_model: TModel, _db: AcDbDatabase) {
     throw new Error('Not impelemented yet!')
   }
 

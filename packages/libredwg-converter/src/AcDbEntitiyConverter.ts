@@ -47,13 +47,13 @@ import {
   AcDbRay,
   AcDbRotatedDimension,
   AcDbShape,
+  AcDbSolid,
   AcDbSpline,
   AcDbTable,
   AcDbTableCell,
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode,
-  AcDbTrace,
   AcDbViewport,
   AcDbWipeout,
   AcDbXline,
@@ -233,11 +233,14 @@ export class AcDbEntityConverter {
     if (entity.originalDxfName) {
       proxy.originalDxfName = entity.originalDxfName
     }
-    if (entity.objectDrawingFormat != null) {
-      proxy.graphicsMetafileType = entity.objectDrawingFormat
-    }
     if (entity.applicationEntityClassId != null) {
-      proxy.originalClassName = String(entity.applicationEntityClassId)
+      proxy.applicationEntityClassId = entity.applicationEntityClassId
+    }
+    if (entity.objectDrawingFormat != null) {
+      proxy.objectDrawingFormat = entity.objectDrawingFormat
+    }
+    if (entity.originalDataFormat != null) {
+      proxy.originalDataFormat = entity.originalDataFormat
     }
     if (entity.graphicsData) {
       const bytes = hexStringsToBytes([entity.graphicsData])
@@ -333,7 +336,7 @@ export class AcDbEntityConverter {
   }
 
   private convertSolid(solid: DwgSolidEntity) {
-    const dbEntity = new AcDbTrace()
+    const dbEntity = new AcDbSolid()
     dbEntity.setPointAt(0, { ...solid.corner1, z: 0 })
     dbEntity.setPointAt(1, { ...solid.corner2, z: 0 })
     dbEntity.setPointAt(2, { ...solid.corner3, z: 0 })
@@ -341,7 +344,7 @@ export class AcDbEntityConverter {
       3,
       solid.corner4 ? { ...solid.corner4, z: 0 } : { ...solid.corner3, z: 0 }
     )
-    dbEntity.thickness = solid.thickness
+    dbEntity.thickness = solid.thickness ?? 0
     return dbEntity
   }
 

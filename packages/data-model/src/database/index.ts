@@ -1,4 +1,5 @@
 export { AcDbDatabase } from './AcDbDatabase'
+export type { AcDbClass } from './AcDbClass'
 export type {
   AcDbCreateDefaultDataOptions,
   AcDbDictObjectEventArgs,

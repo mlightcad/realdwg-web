@@ -457,6 +457,27 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
   }
 
   /**
+   * Stores CLASSES section definitions for proxy entity round-trip.
+   *
+   * @param model - Parsed DXF model containing class definitions
+   * @param db - Target database to store classes on
+   */
+  protected processClasses(model: ParsedDxf, db: AcDbDatabase) {
+    if (!model.classes?.length) {
+      return
+    }
+    db.classes = model.classes.map(entry => ({
+      name: entry.name,
+      cppClassName: entry.cppClassName,
+      appName: entry.appName,
+      proxyFlag: entry.proxyFlag,
+      instanceCount: entry.instanceCount,
+      wasProxy: entry.wasProxy,
+      isEntity: entry.isEntity
+    }))
+  }
+
+  /**
    * Processes header variables from the DXF file.
    *
    * This method extracts and sets various header variables such as color settings,

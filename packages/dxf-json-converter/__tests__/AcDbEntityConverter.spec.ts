@@ -433,8 +433,9 @@ describe('AcDbEntityConverter', () => {
     expect(proxy.type).toBe('ProxyEntity')
     expect(proxy.proxyEntityClassId).toBe(498)
     expect(proxy.originalDxfName).toBe('AECC_TIN_SURFACE')
-    expect(proxy.graphicsMetafileType).toBe(29)
-    expect(proxy.originalClassName).toBe('500')
+    expect(proxy.applicationEntityClassId).toBe(500)
+    expect(proxy.objectDrawingFormat).toBe(29)
+    expect(proxy.originalDataFormat).toBe(0)
     expect(proxy.proxyGraphic).toEqual(new Uint8Array([0x01, 0x02, 0x03, 0x04]))
   })
 

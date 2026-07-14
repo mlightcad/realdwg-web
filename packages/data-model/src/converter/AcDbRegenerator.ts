@@ -128,6 +128,13 @@ export class AcDbRegenerator extends AcDbDatabaseConverter<AcDbDatabase> {
   }
 
   /**
+   * Processes class definitions. Already resident on the database.
+   */
+  protected processClasses() {
+    // Do nothing
+  }
+
+  /**
    * Processes block table records.
    */
   protected processBlockTables() {

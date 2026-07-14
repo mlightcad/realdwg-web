@@ -6,7 +6,7 @@ import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbMLeader } from '../src/entity/AcDbMLeader'
 import { AcDbMLine } from '../src/entity/AcDbMLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
-import { AcDbRotatedDimension } from '../src/entity'
+import { AcDbProxyEntity, AcDbRotatedDimension, AcDbSolid } from '../src/entity'
 import { AcDbTable } from '../src/entity/AcDbTable'
 import { AcDbText } from '../src/entity/AcDbText'
 import { AcDbMLeaderStyle } from '../src/object'
@@ -461,5 +461,66 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(valuesByCode(tableRecord!, '302')).toEqual(['A1', 'A2', 'B1', 'B2'])
     expect(valuesByCode(tableRecord!, '140')).toEqual(['6', '6', '6', '6'])
     expect(valuesByCode(tableRecord!, '170')).toEqual(['1', '1', '1', '1'])
+  })
+
+  it('exports SOLID entities with type SOLID (dimension arrowheads)', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+
+    const solid = new AcDbSolid()
+    solid.setPointAt(0, { x: 0, y: 0, z: 0 })
+    solid.setPointAt(1, { x: 1, y: 0, z: 0 })
+    solid.setPointAt(2, { x: 0.5, y: 2, z: 0 })
+    solid.setPointAt(3, { x: 0.5, y: 2, z: 0 })
+    db.tables.blockTable.modelSpace.appendEntity(solid)
+
+    const entities = parseRecords(getSection(db.dxfOut(undefined, 6), 'ENTITIES'))
+    const solidRecord = findRecord(entities, 'SOLID')
+    expect(solidRecord).toBeDefined()
+    expect(valuesByCode(solidRecord!, '100')).toContain('AcDbTrace')
+    expect(findRecord(entities, 'TRACE')).toBeUndefined()
+  })
+
+  it('exports CLASSES and correct ACAD_PROXY_ENTITY group codes', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    db.classes = [
+      {
+        name: 'TH_TOLERANCEENT',
+        cppClassName: 'TH_ToleranceEnt',
+        appName: 'PCCADDIM',
+        proxyFlag: 3071,
+        instanceCount: 1,
+        wasProxy: false,
+        isEntity: true
+      }
+    ]
+
+    const proxy = new AcDbProxyEntity()
+    proxy.proxyEntityClassId = 498
+    proxy.applicationEntityClassId = 500
+    proxy.objectDrawingFormat = 4128797
+    proxy.originalDataFormat = 0
+    proxy.setProxyGraphic(new Uint8Array([0x01, 0x02, 0x03, 0x04]))
+    db.tables.blockTable.modelSpace.appendEntity(proxy)
+
+    const dxf = db.dxfOut(undefined, 6)
+    const headerIndex = dxf.indexOf('0\nSECTION\n2\nHEADER\n')
+    const classesIndex = dxf.indexOf('0\nSECTION\n2\nCLASSES\n')
+    const tablesIndex = dxf.indexOf('0\nSECTION\n2\nTABLES\n')
+    expect(classesIndex).toBeGreaterThan(headerIndex)
+    expect(tablesIndex).toBeGreaterThan(classesIndex)
+    expect(dxf).toContain('0\nCLASS\n1\nTH_TOLERANCEENT\n2\nTH_ToleranceEnt\n')
+
+    const entities = parseRecords(getSection(dxf, 'ENTITIES'))
+    const proxyRecord = findRecord(entities, 'ACAD_PROXY_ENTITY')
+    expect(proxyRecord).toBeDefined()
+    expect(valuesByCode(proxyRecord!, '90')).toContain('498')
+    expect(valuesByCode(proxyRecord!, '91')).toContain('500')
+    expect(valuesByCode(proxyRecord!, '95')).toContain('4128797')
+    expect(valuesByCode(proxyRecord!, '70')).toContain('0')
+    expect(valuesByCode(proxyRecord!, '160')).toContain('4')
+    expect(valuesByCode(proxyRecord!, '310')).toContain('01020304')
+    expect(valuesByCode(proxyRecord!, '1')).toEqual([])
   })
 })
