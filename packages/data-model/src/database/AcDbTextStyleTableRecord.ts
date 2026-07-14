@@ -287,6 +287,23 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord<AcDbTextStyl
   }
 
   /**
+   * Font file name as written to DXF group 3.
+   *
+   * Shape-file STYLE entries used by SHAPE entities need a `.shx` extension in
+   * DXF (CadLib / AutoCAD); DWG often stores the bare base name.
+   */
+  private get dxfFontFileName(): string {
+    const fileName = this.fileName?.trim() ?? ''
+    if (!fileName || !this.isShapeFile) {
+      return fileName
+    }
+    if (/\.[^./\\]+$/i.test(fileName)) {
+      return fileName
+    }
+    return `${fileName}.shx`
+  }
+
+  /**
    * Writes DXF fields for this object.
    *
    * @param filer - DXF output writer.
@@ -302,7 +319,7 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord<AcDbTextStyl
     filer.writeAngle(50, this.obliquingAngle)
     filer.writeInt16(71, this.getAttr('textGenerationFlag'))
     filer.writeDouble(42, this.priorSize)
-    filer.writeString(3, this.fileName)
+    filer.writeString(3, this.dxfFontFileName)
     filer.writeString(4, this.bigFontFileName)
     return this
   }

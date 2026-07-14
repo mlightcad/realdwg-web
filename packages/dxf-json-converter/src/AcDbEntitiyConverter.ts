@@ -540,7 +540,25 @@ export class AcDbEntityConverter {
     const dbEntity = new AcDbShape()
     dbEntity.position.copy(shape.insertionPoint)
     dbEntity.size = shape.size
-    dbEntity.name = shape.shapeName
+    const shapeName = shape.shapeName?.trim() ?? ''
+    // Post-R12 DXF exports from DWG may write the numeric shape index as group 2.
+    // Keep name empty in that case so renderers look up by code (DWG semantics);
+    // a numeric string like "9" is almost never a real SHX shape name.
+    const asNumber = Number(shapeName)
+    if (
+      shapeName !== '' &&
+      Number.isInteger(asNumber) &&
+      asNumber !== 0 &&
+      String(asNumber) === shapeName
+    ) {
+      dbEntity.shapeNumber = asNumber
+    } else {
+      dbEntity.name = shapeName
+    }
+    const styleName = (shape as ShapeEntity & { styleName?: string }).styleName
+    if (styleName) {
+      dbEntity.styleName = styleName
+    }
     dbEntity.rotation = AcGeMathUtil.degToRad(shape.rotation || 0)
     dbEntity.widthFactor = shape.xScale ?? 1
     dbEntity.oblique = AcGeMathUtil.degToRad(shape.obliqueAngle || 0)
