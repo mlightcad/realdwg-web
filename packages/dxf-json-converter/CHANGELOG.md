@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.10.6
+
+### Patch Changes
+
+- feat: improved DXF compatibility and data integrity with corrected group codes, CLASSES and SOLID export support, fixed proxy DXF codes, preserved SHAPE round-trip identity, and maintained circular arc endpoints when reversing loop edges
+- Updated dependencies
+  - @mlightcad/data-model@1.10.6
+
 ## 1.10.5
 
 ### Patch Changes
