@@ -576,6 +576,21 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     })
   }
 
+  protected processClasses(model: DwgDatabase, db: AcDbDatabase) {
+    if (!model.classes?.length) {
+      return
+    }
+    db.classes = model.classes.map(entry => ({
+      name: entry.dxfName,
+      cppClassName: entry.cppName,
+      appName: entry.appName,
+      proxyFlag: entry.capabilitiesFlag,
+      instanceCount: entry.instanceCount,
+      wasProxy: entry.wasAProxyFlag,
+      isEntity: entry.isAnEntityFlag
+    }))
+  }
+
   protected processHeader(model: DwgDatabase, db: AcDbDatabase) {
     const header = model.header
     // Color index 256 is 'ByLayer'

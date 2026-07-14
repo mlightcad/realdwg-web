@@ -48,13 +48,13 @@ import {
   AcDbRay,
   AcDbRotatedDimension,
   AcDbShape,
+  AcDbSolid,
   AcDbSpline,
   AcDbTable,
   AcDbTableCell,
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode,
-  AcDbTrace,
   AcDbViewport,
   AcDbWipeout,
   AcDbXline,
@@ -352,11 +352,14 @@ export class AcDbEntityConverter {
     if (entity.originalDxfName) {
       proxy.originalDxfName = entity.originalDxfName
     }
-    if (entity.objectDrawingFormat != null) {
-      proxy.graphicsMetafileType = entity.objectDrawingFormat
-    }
     if (entity.applicationEntityClassId != null) {
-      proxy.originalClassName = String(entity.applicationEntityClassId)
+      proxy.applicationEntityClassId = entity.applicationEntityClassId
+    }
+    if (entity.objectDrawingFormat != null) {
+      proxy.objectDrawingFormat = entity.objectDrawingFormat
+    }
+    if (entity.originalDataFormat != null) {
+      proxy.originalDataFormat = entity.originalDataFormat
     }
     if (entity.graphicsData) {
       const bytes = hexStringsToBytes([entity.graphicsData])
@@ -547,9 +550,10 @@ export class AcDbEntityConverter {
   }
 
   private convertSolid(solid: SolidEntity) {
-    const dbEntity = new AcDbTrace()
-    solid.points.forEach((point, index) => dbEntity.setPointAt(index, point))
-    dbEntity.thickness = solid.thickness
+    const dbEntity = new AcDbSolid()
+    const points = solid.points ?? []
+    points.forEach((point, index) => dbEntity.setPointAt(index, point))
+    dbEntity.thickness = solid.thickness ?? 0
     return dbEntity
   }
 

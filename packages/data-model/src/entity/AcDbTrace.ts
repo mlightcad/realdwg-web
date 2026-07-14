@@ -62,7 +62,7 @@ export class AcDbTrace extends AcDbCurve {
    * Creates a new trace entity.
    *
    * This constructor initializes a trace with default values.
-   * All vertices are set to the origin, elevation is 0, and thickness is 1.
+   * All vertices are set to the origin, elevation is 0, and thickness is 0.
    *
    * @example
    * ```typescript
@@ -77,7 +77,7 @@ export class AcDbTrace extends AcDbCurve {
   constructor() {
     super()
     this._elevation = 0
-    this._thickness = 1
+    this._thickness = 0
     this._vertices = [
       new AcGePoint3d(),
       new AcGePoint3d(),
@@ -333,8 +333,12 @@ export class AcDbTrace extends AcDbCurve {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbTrace')
-    filer.writeDouble(38, this.elevation)
-    filer.writeDouble(39, this.thickness)
+    // SOLID/TRACE have no group 38 in the DXF reference; Z lives on corner
+    // points (10–13). Writing 38 aborts parsers that stop on unknown codes
+    // (e.g. @mlightcad/dxf-json), leaving `points` unset.
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
     filer.writePoint3d(10, this.getPointAt(0))
     filer.writePoint3d(11, this.getPointAt(1))
     filer.writePoint3d(12, this.getPointAt(2))

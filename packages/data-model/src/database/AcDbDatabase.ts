@@ -63,6 +63,7 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 import { AcDbDwgVersion } from './AcDbDwgVersion'
+import type { AcDbClass } from './AcDbClass'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 import { AcDbRegAppTable } from './AcDbRegAppTable'
 import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
@@ -411,6 +412,8 @@ export class AcDbDatabase extends AcDbObject {
   private _orthomode: number
   /** Tables in the database */
   private _tables: AcDbTables
+  /** Class definitions from DXF CLASSES / DWG class table (needed for proxy entities). */
+  private _classes: AcDbClass[] = []
   /** Nongraphical objects in the database */
   private _objects: {
     readonly dictionary: AcDbDictionary<AcDbDictionary>
@@ -551,6 +554,19 @@ export class AcDbDatabase extends AcDbObject {
    */
   get tables() {
     return this._tables
+  }
+
+  /**
+   * Gets or sets class definitions from the drawing (DXF CLASSES / DWG class table).
+   *
+   * Proxy entities resolve their application class ID (group code **91**)
+   * against this list (IDs start at 500 for the first entry).
+   */
+  get classes(): readonly AcDbClass[] {
+    return this._classes
+  }
+  set classes(classes: readonly AcDbClass[]) {
+    this._classes = classes.map(entry => ({ ...entry }))
   }
 
   /**
@@ -2171,6 +2187,7 @@ export class AcDbDatabase extends AcDbObject {
     })
 
     this.writeDxfHeaderSection(filer)
+    this.writeDxfClassesSection(filer)
     this.writeDxfTablesSection(filer, outVersion)
     this.writeDxfBlocksSection(filer)
     this.writeDxfEntitiesSection(filer)
@@ -2559,6 +2576,33 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Writes the CLASSES section for the DXF export.
+   *
+   * Required for proxy entities whose group code **91** indexes into this
+   * section. Skipped when no classes were loaded from the source drawing.
+   *
+   * @param filer - DXF output writer.
+   */
+  private writeDxfClassesSection(filer: AcDbDxfFiler) {
+    if (this._classes.length === 0) {
+      return
+    }
+
+    filer.startSection('CLASSES')
+    for (const dxfClass of this._classes) {
+      filer.writeStart('CLASS')
+      filer.writeString(1, dxfClass.name)
+      filer.writeString(2, dxfClass.cppClassName)
+      filer.writeString(3, dxfClass.appName)
+      filer.writeInt32(90, dxfClass.proxyFlag)
+      filer.writeInt32(91, dxfClass.instanceCount)
+      filer.writeInt8(280, dxfClass.wasProxy ? 1 : 0)
+      filer.writeInt8(281, dxfClass.isEntity ? 1 : 0)
+    }
+    filer.endSection()
+  }
+
+  /**
    * Writes the TABLES section for the DXF export.
    *
    * @param filer - DXF output writer.
@@ -2824,6 +2868,7 @@ export class AcDbDatabase extends AcDbObject {
   private clear() {
     this.transactionManager.clearUndoStack()
     // Clear all tables and dictionaries
+    this._classes = []
     this._tables.blockTable.removeAll()
     this._tables.dimStyleTable.removeAll()
     this._tables.linetypeTable.removeAll()
