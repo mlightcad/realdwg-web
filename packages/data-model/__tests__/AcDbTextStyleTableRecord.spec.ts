@@ -1,3 +1,4 @@
+import { AcDbDxfFiler } from '../src/base'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -66,5 +67,26 @@ describe('AcDbTextStyleTableRecord', () => {
     record.isVertical = false
     expect(record.isVertical).toBe(false)
     expect(record.textStyle.standardFlag).toBe(0)
+  })
+
+  it('appends .shx to shape-file font names when writing DXF', () => {
+    const record = new AcDbTextStyleTableRecord({
+      name: 'TECOGISSHAPE0',
+      standardFlag: 1,
+      fixedTextHeight: 0,
+      widthFactor: 1,
+      obliqueAngle: 0,
+      textGenerationFlag: 0,
+      lastHeight: 0,
+      font: 'tecosymbol',
+      bigFont: ''
+    })
+    record.ownerId = '0'
+    const filer = new AcDbDxfFiler()
+
+    record.dxfOutFields(filer)
+    const dxf = filer.toString()
+
+    expect(dxf).toContain('3\ntecosymbol.shx\n')
   })
 })

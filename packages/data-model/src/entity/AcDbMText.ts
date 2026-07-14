@@ -715,7 +715,7 @@ export class AcDbMText extends AcDbEntity {
   }
 
   private encodeMTextContentsForDxf(contents: string): string {
-    return contents.replace(/\r\n|\r|\n/g, '\\P')
+    return (contents ?? '').replace(/\r\n|\r|\n/g, '\\P')
   }
 
   /**
@@ -731,10 +731,13 @@ export class AcDbMText extends AcDbEntity {
     filer.writeDouble(40, this.height)
     filer.writeDouble(41, this.width)
     if (this.extentsWidth > 0) {
-      filer.writeDouble(414, this.extentsWidth)
+      filer.writeDouble(42, this.extentsWidth)
     }
     // MTEXT contents use \P for paragraph breaks; raw newlines must not appear in DXF.
-    filer.writeString(1, this.encodeMTextContentsForDxf(this.contents))
+    filer.writeString(
+      1,
+      this.encodeMTextContentsForDxf(this.contents ?? '')
+    )
     filer.writeString(7, this.styleName)
     filer.writeAngle(50, this.rotation)
     filer.writeVector3d(11, this.direction)

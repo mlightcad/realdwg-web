@@ -333,7 +333,7 @@ describe('AcDbMText', () => {
     expect(dxfWithoutBackground).toContain('30\n3')
     expect(dxfWithoutBackground).toContain('40\n2')
     expect(dxfWithoutBackground).toContain('41\n10')
-    expect(dxfWithoutBackground).not.toContain('414\n')
+    expect(dxfWithoutBackground).not.toContain('42\n')
     expect(dxfWithoutBackground).toContain('1\na\\Pb\\Pc\\Pd')
     expect(dxfWithoutBackground).toContain('7\nMyTextStyle')
     expect(dxfWithoutBackground).toContain('50\n90')
@@ -368,7 +368,7 @@ describe('AcDbMText', () => {
     expect(dxfWithBackground).toContain('45\n2.5')
   })
 
-  it('writes actual text width as DXF group 414 when extentsWidth is set', () => {
+  it('writes actual text width as DXF group 42 when extentsWidth is set', () => {
     createWorkingDb()
     const mtext = new AcDbMText()
     mtext.ownerId = 'ABC'
@@ -380,6 +380,7 @@ describe('AcDbMText', () => {
     const filer = new AcDbDxfFiler()
     mtext.dxfOutFields(filer)
 
-    expect(filer.toString()).toContain('414\n18.5')
+    expect(filer.toString()).toContain('42\n18.5')
+    expect(filer.toString()).not.toContain('414\n')
   })
 })

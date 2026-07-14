@@ -617,6 +617,39 @@ describe('AcDbPolyline', () => {
     expect(getDxfGroupValues(dxf, 20)).toEqual(['2', '4'])
   })
 
+  it('writes constant width as group 43 for uniform thick polylines', () => {
+    const polyline = new AcDbPolyline()
+    attachEntityToNewModelSpace(polyline)
+
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 40, 40)
+    polyline.addVertexAt(1, new AcGePoint2d(100, 0), 0, 40, 40)
+
+    const filer = new AcDbDxfFiler()
+    polyline.dxfOutFields(filer)
+
+    const dxf = filer.toString()
+    expect(getDxfGroupValues(dxf, 43)).toEqual(['40'])
+    expect(getDxfGroupValues(dxf, 40)).toEqual([])
+    expect(getDxfGroupValues(dxf, 41)).toEqual([])
+  })
+
+  it('writes per-vertex widths and bulges when width is not constant', () => {
+    const polyline = new AcDbPolyline()
+    attachEntityToNewModelSpace(polyline)
+
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0.5, 10, 20)
+    polyline.addVertexAt(1, new AcGePoint2d(100, 0), 0, 5, 5)
+
+    const filer = new AcDbDxfFiler()
+    polyline.dxfOutFields(filer)
+
+    const dxf = filer.toString()
+    expect(getDxfGroupValues(dxf, 43)).toEqual([])
+    expect(getDxfGroupValues(dxf, 40)).toEqual(['10', '5'])
+    expect(getDxfGroupValues(dxf, 41)).toEqual(['20', '5'])
+    expect(getDxfGroupValues(dxf, 42)).toEqual(['0.5'])
+  })
+
   it('writes closed flag as 0 in dxf fields when polyline is open', () => {
     const polyline = new AcDbPolyline()
     attachEntityToNewModelSpace(polyline)

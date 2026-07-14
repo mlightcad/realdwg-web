@@ -410,6 +410,25 @@ describe('AcDbEntityConverter', () => {
     expect(shape.normal).toMatchObject({ x: 0, y: 0, z: 1 })
   })
 
+  it('converts numeric DXF shape name into shapeNumber', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'SHAPE',
+      subclassMarker: 'AcDbShape',
+      layer: '0',
+      handle: '19AAD4',
+      insertionPoint: { x: 0, y: 0, z: 0 },
+      size: 0.01,
+      shapeName: '9'
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbShape)
+    const shape = result as AcDbShape
+    expect(shape.name).toBe('')
+    expect(shape.shapeNumber).toBe(9)
+  })
+
   it('converts ACAD_PROXY_ENTITY with graphics data to AcDbProxyEntity', () => {
     acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
     const converter = new AcDbEntityConverter()
