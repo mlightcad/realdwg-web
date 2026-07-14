@@ -622,6 +622,8 @@ describe('AcDbHatch', () => {
     expect(dxf).toContain('\n52\n')
     expect(dxf).toContain('\n41\n2.5\n')
     expect(dxf).toContain('\n78\n1\n')
+    // Pattern line base/offset use codes 43/44 and 45/46 (not 43/53, 45/55).
+    expect(dxf).toContain('\n53\n45\n43\n0\n44\n0\n45\n1\n46\n1\n79\n2\n')
     expect(dxf).toContain('\n79\n2\n')
     expect(dxf).toContain('\n98\n0\n')
   })

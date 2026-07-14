@@ -1763,9 +1763,12 @@ export class AcDbHatch extends AcDbEntity {
     filer.writeInt16(77, 0)
     filer.writeInt16(78, this.definitionLines.length)
     this.definitionLines.forEach(line => {
+      // Hatch pattern lines use 43/44 and 45/46 (not code+10 point pairs).
       filer.writeAngle(53, line.angle)
-      filer.writePoint2d(43, line.base)
-      filer.writePoint2d(45, line.offset)
+      filer.writeDouble(43, line.base.x)
+      filer.writeDouble(44, line.base.y)
+      filer.writeDouble(45, line.offset.x)
+      filer.writeDouble(46, line.offset.y)
       filer.writeInt16(79, line.dashLengths.length)
       line.dashLengths.forEach(length => filer.writeDouble(49, length))
     })

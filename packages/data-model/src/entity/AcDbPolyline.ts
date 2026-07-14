@@ -641,11 +641,63 @@ export class AcDbPolyline extends AcDbCurve {
     filer.writeSubclassMarker('AcDbPolyline')
     filer.writeInt32(90, this.numberOfVertices)
     filer.writeInt16(70, this.closed ? 1 : 0)
+
+    const constantWidth = this.resolveConstantWidth()
+    if (constantWidth != null) {
+      // Group 43 replaces per-vertex 40/41 when every segment has the same width.
+      filer.writeDouble(43, constantWidth)
+    }
     filer.writeDouble(38, this.elevation)
-    for (let i = 0; i < this.numberOfVertices; ++i) {
+
+    const vertices = this._geo.vertices
+    for (let i = 0; i < vertices.length; ++i) {
+      const vertex = vertices[i]
       filer.writePoint2d(10, this.getPoint2dAt(i))
+      if (constantWidth == null) {
+        if (vertex.startWidth != null) {
+          filer.writeDouble(40, vertex.startWidth)
+        }
+        if (vertex.endWidth != null) {
+          filer.writeDouble(41, vertex.endWidth)
+        }
+      }
+      const bulge = vertex.bulge ?? 0
+      if (bulge !== 0) {
+        filer.writeDouble(42, bulge)
+      }
     }
     return this
+  }
+
+  /**
+   * Returns a single constant width when every vertex uses that same start and
+   * end width; otherwise `undefined` so per-vertex 40/41 codes are written.
+   */
+  private resolveConstantWidth(): number | undefined {
+    const vertices = this._geo.vertices
+    if (vertices.length === 0) return undefined
+
+    let common: number | undefined
+    for (const vertex of vertices) {
+      const startWidth = vertex.startWidth
+      const endWidth = vertex.endWidth
+      if (startWidth == null && endWidth == null) {
+        if (common != null && common !== 0) return undefined
+        common = common ?? 0
+        continue
+      }
+      const start = startWidth ?? 0
+      const end = endWidth ?? 0
+      if (start !== end) return undefined
+      if (common == null) {
+        common = start
+      } else if (common !== start) {
+        return undefined
+      }
+    }
+
+    // Default LWPOLYLINE width is 0; omit group 43 unless there is actual width.
+    return common != null && common !== 0 ? common : undefined
   }
 
   /**
