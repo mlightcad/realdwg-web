@@ -5,6 +5,7 @@ import {
   AcGePoint2d,
   AcGePoint3d
 } from '../math'
+import { AcGeMathUtil } from '../util'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
 import { AcGeEllipseArc2d } from './AcGeEllipseArc2d'
@@ -297,13 +298,7 @@ export class AcGeLoop2d extends AcGeCurve2d {
       return new AcGeLine2d(edge.endPoint, edge.startPoint)
     }
     if (edge instanceof AcGeCircArc2d) {
-      return new AcGeCircArc2d(
-        edge.center,
-        edge.radius,
-        edge.endAngle,
-        edge.startAngle,
-        !edge.clockwise
-      )
+      return AcGeLoop2d.reverseCircArcEdge(edge)
     }
     if (edge instanceof AcGeEllipseArc2d) {
       return new AcGeEllipseArc2d(
@@ -321,6 +316,42 @@ export class AcGeLoop2d extends AcGeCurve2d {
       return AcGeLoop2d.reverseSplineEdge(edge)
     }
     return edge
+  }
+
+  /**
+   * Reverse a circular arc while preserving physical endpoints.
+   *
+   * `AcGeCircArc2d` uses mirrored public angles when `clockwise` is true, so simply
+   * swapping `startAngle`/`endAngle` and flipping `clockwise` produces a reflected
+   * complementary arc. Rebuild from physical endpoint angles instead.
+   */
+  private static reverseCircArcEdge(edge: AcGeCircArc2d): AcGeCircArc2d {
+    const start = edge.startPoint
+    const end = edge.endPoint
+    const newClockwise = !edge.clockwise
+    // New start is the old end; new end is the old start.
+    const physicalStartAngle = Math.atan2(
+      end.y - edge.center.y,
+      end.x - edge.center.x
+    )
+    const physicalEndAngle = Math.atan2(
+      start.y - edge.center.y,
+      start.x - edge.center.x
+    )
+    // Match AcGeCircArc2d clockwise public-angle convention (mirror ≈ negation).
+    const toPublicAngle = (angle: number) => {
+      const normalized = AcGeMathUtil.normalizeAngle(angle)
+      return newClockwise
+        ? AcGeMathUtil.normalizeAngle(-normalized)
+        : normalized
+    }
+    return new AcGeCircArc2d(
+      edge.center,
+      edge.radius,
+      toPublicAngle(physicalStartAngle),
+      toPublicAngle(physicalEndAngle),
+      newClockwise
+    )
   }
 
   /**
