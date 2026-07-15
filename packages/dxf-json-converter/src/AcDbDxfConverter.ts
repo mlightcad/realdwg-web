@@ -5,6 +5,7 @@ import {
   AcDbBlockReference,
   AcDbBlockScaling,
   AcDbBlockTableRecord,
+  AcDbBlockTableRecordFlag,
   AcDbConversionProgressCallback,
   AcDbDatabase,
   AcDbDatabaseConverter,
@@ -431,6 +432,15 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       // processBlockTables may create the record first without a base point.
       // Always sync origin from the BLOCKS section before expanding entities.
       dbBlock.origin.copy(block.position)
+      const blockFlags = block.type ?? 0
+      dbBlock.flags = blockFlags
+      if (block.xrefPath) {
+        dbBlock.pathName = block.xrefPath
+        // Some files only carry the path without flag bits; treat as xref.
+        if (!dbBlock.isXref) {
+          dbBlock.flags = blockFlags | AcDbBlockTableRecordFlag.Xref
+        }
+      }
       if (block.entities) {
         // Process entities in user-defined blocks
         this.processEntitiesInBlock(

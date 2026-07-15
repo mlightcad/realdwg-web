@@ -17,7 +17,11 @@ export type {
 export { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError'
 export type { AcDbOpenDatabaseErrorCode } from './AcDbOpenDatabaseError'
 export { AcDbBlockTable } from './AcDbBlockTable'
-export { AcDbBlockScaling, AcDbBlockTableRecord } from './AcDbBlockTableRecord'
+export {
+  AcDbBlockScaling,
+  AcDbBlockTableRecord,
+  AcDbBlockTableRecordFlag
+} from './AcDbBlockTableRecord'
 export type { AcDbBlockTableRecordAttrs } from './AcDbBlockTableRecord'
 export { AcDbDatabaseConverter } from './AcDbDatabaseConverter'
 export type {
