@@ -738,8 +738,16 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     throw new Error('Not impelemented yet!')
   }
 
+  /**
+   * Optional stage: CLASSES metadata only augments the database and older
+   * converters predate it. A throwing default (like the mandatory stages
+   * above) would break any converter compiled before this stage existed —
+   * the HEADER task calls it unconditionally, so a data-model upgrade
+   * without a matching converter upgrade aborted every file open with
+   * "Error occurred in conversion stage HEADER" (mlightcad/cad-viewer#437).
+   */
   protected processClasses(_model: TModel, _db: AcDbDatabase) {
-    throw new Error('Not impelemented yet!')
+    // No-op by default; converters that extract CLASSES override this.
   }
 
   protected processBlockTables(_model: TModel, _db: AcDbDatabase) {
