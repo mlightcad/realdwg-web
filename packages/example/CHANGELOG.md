@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.10.7
+
+### Patch Changes
+
+- feat: added block cross-reference flags & unresolved detection, and improved data model flexibility by making the CLASSES conversion stage optional
+- Updated dependencies
+  - @mlightcad/data-model@1.10.7
+  - @mlightcad/dxf-json-converter@1.10.7
+  - @mlightcad/libredwg-converter@3.10.7
+
 ## 0.10.6
 
 ### Patch Changes

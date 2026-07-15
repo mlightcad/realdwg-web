@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.10.7
+
+### Patch Changes
+
+- feat: added block cross-reference flags & unresolved detection, and improved data model flexibility by making the CLASSES conversion stage optional
+
 ## 1.10.6
 
 ### Patch Changes

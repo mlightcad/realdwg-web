@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/dxf-json-converter",
-  "version": "1.10.6",
+  "version": "1.10.7",
   "license": "GPL-3.0",
   "type": "module",
   "repository": {
