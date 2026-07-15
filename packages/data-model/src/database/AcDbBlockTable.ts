@@ -100,6 +100,26 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
   }
 
   /**
+   * Returns all block table records that are external references (or overlays).
+   */
+  getXrefs(): AcDbBlockTableRecord[] {
+    const result: AcDbBlockTableRecord[] = []
+    for (const btr of this.newIterator()) {
+      if (btr.isXref) {
+        result.push(btr)
+      }
+    }
+    return result
+  }
+
+  /**
+   * Returns xref block table records whose external content has not been loaded.
+   */
+  getUnresolvedXrefs(): AcDbBlockTableRecord[] {
+    return this.getXrefs().filter(btr => btr.isUnresolvedXref)
+  }
+
+  /**
    * Normalizes the specified block table record name if it is one paper spacce or model space
    * block table record.
    *

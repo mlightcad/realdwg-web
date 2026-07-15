@@ -479,6 +479,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.name = btr.name
         dbBlock.ownerId = btr.ownerHandle
         dbBlock.layoutId = btr.layout
+        dbBlock.flags = btr.flags ?? 0
         dbBlock.blockInsertUnits = btr.insertionUnits
         dbBlock.explodability = btr.explodability
         dbBlock.blockScaling = btr.scalability as AcDbBlockScaling

@@ -35,6 +35,30 @@ export enum AcDbBlockScaling {
 }
 
 /**
+ * Block-type flags for {@link AcDbBlockTableRecord} (DXF group code 70 on BLOCK).
+ *
+ * Bit values may be combined.
+ */
+export enum AcDbBlockTableRecordFlag {
+  /** No special block type flags apply */
+  None = 0,
+  /** Anonymous block (hatch, associative dimension, etc.) */
+  Anonymous = 1,
+  /** Block has non-constant attribute definitions */
+  HasNonConstantAttributes = 2,
+  /** External reference (xref) */
+  Xref = 4,
+  /** Xref overlay */
+  XrefOverlay = 8,
+  /** Externally dependent */
+  ExternallyDependent = 16,
+  /** Resolved external reference (or dependent of one) */
+  Resolved = 32,
+  /** Referenced external reference */
+  Referenced = 64
+}
+
+/**
  * Interface defining the attributes for block table records.
  */
 export interface AcDbBlockTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
@@ -42,12 +66,22 @@ export interface AcDbBlockTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
   origin: AcGePoint3d
   /** The object id of the associated AcDbLayout object in the Layouts dictionary */
   layoutId: AcDbObjectId
-  /** Block insertion units (DXF group code 70) */
+  /** Block insertion units (DXF group code 70 on BLOCK_RECORD) */
   blockInsertUnits: AcDbUnitsValue
   /** Block explodability flag (DXF group code 280) */
   explodability: number
   /** Block scalability flag (DXF group code 281) */
   blockScaling: AcDbBlockScaling
+  /**
+   * Block-type flags (DXF group code 70 on BLOCK / BLOCK_HEADER).
+   * See {@link AcDbBlockTableRecordFlag}.
+   */
+  flags: number
+  /**
+   * Path name of the externally referenced drawing when this block is an xref
+   * (DXF group code 1 on BLOCK). Empty when not an xref or the path is unknown.
+   */
+  pathName: string
   /** Binary data for bitmap preview (DXF group code 310, optional) */
   bmpPreview?: string
 }
@@ -122,6 +156,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     defaults(attrs, {
       origin: new AcGePoint3d(),
       layoutId: '',
+      flags: AcDbBlockTableRecordFlag.None,
+      pathName: '',
       blockInsertUnits: 0,
       explodability: 1,
       blockScaling: AcDbBlockScaling.Uniform,
@@ -209,6 +245,63 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   }
   set layoutId(value: AcDbObjectId) {
     this.setAttr('layoutId', value)
+  }
+
+  /**
+   * Gets or sets block-type flags (DXF BLOCK group code 70).
+   *
+   * @see {@link AcDbBlockTableRecordFlag}
+   */
+  get flags() {
+    return this.getAttr('flags')
+  }
+  set flags(value: number) {
+    this.setAttr('flags', value)
+  }
+
+  /**
+   * Gets or sets the path of the externally referenced drawing.
+   *
+   * Corresponds to DXF BLOCK group code 1. Empty when this is not an xref.
+   */
+  get pathName() {
+    return this.getAttr('pathName')
+  }
+  set pathName(value: string) {
+    this.setAttr('pathName', value)
+  }
+
+  /**
+   * True when this block is an external reference or an xref overlay.
+   */
+  get isXref() {
+    return (
+      (this.flags &
+        (AcDbBlockTableRecordFlag.Xref |
+          AcDbBlockTableRecordFlag.XrefOverlay)) !==
+      0
+    )
+  }
+
+  /**
+   * True when this block is an xref overlay (flag bit 8).
+   */
+  get isOverlayReference() {
+    return (this.flags & AcDbBlockTableRecordFlag.XrefOverlay) !== 0
+  }
+
+  /**
+   * True when this is an xref whose content has not been loaded into the block.
+   *
+   * Uses the Resolved flag when set by the converter; otherwise treats an empty
+   * xref block as unresolved (the web converters do not yet bind xref content).
+   */
+  get isUnresolvedXref() {
+    if (!this.isXref) return false
+    if ((this.flags & AcDbBlockTableRecordFlag.Resolved) !== 0) {
+      return false
+    }
+    return this._entities.length === 0
   }
 
   /**
@@ -466,9 +559,12 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     filer.writeString(8, '0')
     filer.writeSubclassMarker('AcDbBlockBegin')
     filer.writeString(2, this.name)
-    filer.writeInt16(70, 0)
+    filer.writeInt16(70, this.flags)
     filer.writePoint3d(10, this.origin)
     filer.writeString(3, this.name)
+    if (this.pathName) {
+      filer.writeString(1, this.pathName)
+    }
     return this
   }
 

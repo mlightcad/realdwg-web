@@ -43,6 +43,7 @@ export {
   AcDbBlockScaling,
   AcDbBlockTable,
   AcDbBlockTableRecord,
+  AcDbBlockTableRecordFlag,
   AcDbDatabase,
   AcDbDatabaseConverter,
   AcDbDatabaseConverterManager,
