@@ -258,14 +258,25 @@ export class AcDbBlockReference extends AcDbEntity {
   /**
    * Propagates this INSERT's database association to all attached attributes.
    *
+   * Also refreshes each attribute's {@link AcDbObject.ownerId} and commits a
+   * real database handle. Attributes may have been appended while this INSERT
+   * still had a TEMP_ id; once the INSERT is committed those stale owner ids
+   * (and TEMP_ attribute handles) must be replaced so DXF round-trips and
+   * owner lookups keep working.
+   *
    * @internal
    */
   syncAttributeDatabases() {
     try {
       const db = this.database
+      const next = new Map<string, AcDbAttribute>()
       this._attribs.forEach(attrib => {
         attrib.database = db
+        attrib.ownerId = this.objectId
+        db.commitObjectHandle(attrib)
+        next.set(attrib.objectId, attrib)
       })
+      this._attribs = next
     } catch {
       // INSERT not yet associated with a database.
     }
