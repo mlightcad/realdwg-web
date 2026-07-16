@@ -89,12 +89,15 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     this._attrs = new AcCmObject<ATTRS>(attrs, defaultAttrs)
     this._xDataMap = new Map()
 
-    // Generate objectId from database if not provided
+    // Generate objectId if not provided. Only use a real database handle when this
+    // object is already bound to a database (`_database`). Falling back to the
+    // global working database here would mint a non-TEMP handle for a detached
+    // object, which then fails assertOpenForWrite during secondary-database
+    // imports (e.g. XATTACH) while the host document is recording undo.
     if (!this._attrs.get('objectId')) {
-      try {
-        this._attrs.set('objectId', this.database.generateHandle())
-      } catch {
-        // Fallback: generate a temporary handle, will be reassigned when added to database
+      if (this._database) {
+        this._attrs.set('objectId', this._database.generateHandle())
+      } else {
         this._attrs.set('objectId', this.generateTemporaryHandle())
       }
     }
