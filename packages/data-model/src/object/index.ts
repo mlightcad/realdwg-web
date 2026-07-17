@@ -17,6 +17,16 @@ export type {
   AcDbPlotScale
 } from './layout'
 export { AcDbDictionary } from './AcDbDictionary'
+export { AcDbFilter } from './AcDbFilter'
+export { AcDbIndex } from './AcDbIndex'
+export type {
+  AcDbBlockChangeIterator,
+  AcDbFilteredBlockIterator,
+  AcDbIndexUpdateData
+} from './AcDbIndex'
+export { AcDbLayerFilter } from './AcDbLayerFilter'
+export { AcDbLayerIndex } from './AcDbLayerIndex'
+export type { AcDbLayerIndexEntry } from './AcDbLayerIndex'
 export { AcDbMLeaderStyle } from './AcDbMLeaderStyle'
 export { AcDbMlineStyle } from './AcDbMlineStyle'
 export type { AcDbMlineStyleElement } from './AcDbMlineStyle'

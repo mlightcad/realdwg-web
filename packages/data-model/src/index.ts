@@ -153,6 +153,7 @@ export {
   AcDbEntity,
   AcDbFace,
   AcDbFcf,
+  AcDbFrame,
   AcDbGradientPatternType,
   AcDbHatch,
   AcDbHatchObjectType,
@@ -171,6 +172,10 @@ export {
   AcDbMLineFlags,
   AcDbMLineJustification,
   AcDbMText,
+  AcDbOle2Frame,
+  AcDbOleFrame,
+  AcDbOleObjectType,
+  AcDbOleTileMode,
   AcDbOrdinateDimension,
   AcDbPoint,
   AcDbPoly2dType,
@@ -225,6 +230,7 @@ export type {
   AcDbMLineElementLike,
   AcDbMLineSegment,
   AcDbMLineSegmentLike,
+  AcDbOleRectangle3d,
   AcDbPropertyAccessor,
   AcDbTableBorderColors,
   AcDbTableCell,
@@ -293,6 +299,7 @@ export {
   VPORT_FALLBACK_VIEW_TARGET,
   acdbDisableOsnapMode,
   bytesToHexString,
+  acdbExtractOleImageBlob,
   hexStringsToBytes,
   loadAcDbProxyGraphicFromDxf,
   acdbEnableOsnapMode,
@@ -322,6 +329,10 @@ export type {
 export {
   AcDbDictionary,
   AcDbDuplicateRecordCloning,
+  AcDbFilter,
+  AcDbIndex,
+  AcDbLayerFilter,
+  AcDbLayerIndex,
   AcDbLayout,
   AcDbLayoutDictionary,
   AcDbLayoutManager,
@@ -338,12 +349,41 @@ export {
   AcDbXrecord
 } from './object'
 export type {
+  AcDbBlockChangeIterator,
+  AcDbFilteredBlockIterator,
+  AcDbIndexUpdateData,
+  AcDbLayerIndexEntry,
   AcDbLayoutEventArgs,
   AcDbLayoutRenamedEventArgs,
   AcDbMlineStyleElement,
   AcDbPlotPaperMargins,
   AcDbPlotScale
 } from './object'
+export {
+  AcLyBoolExpr,
+  ACAD_LAYERFILTERS_NAME,
+  ACLY_DICTIONARY_NAME,
+  AcLyLayerFilter,
+  AcLyLayerFilterDialogResult,
+  AcLyLayerFilterTree,
+  AcLyLayerGroup,
+  acdbLayerGroupsToResultBuffer,
+  acdbParseFilterXRecordData,
+  acdbReadLayerFilterTree,
+  acdbResultBufferToLayerGroups,
+  acdbSerializeLayerFilterTree,
+  acdbWriteFilterXRecordData
+} from './ly'
+export type {
+  AcDbLayerFilterGroup,
+  AcDbLayerFilterPersistSource,
+  AcDbParsedFilterXRecord,
+  AcDbPersistDictionary,
+  AcDbPersistXRecord,
+  AcDbSerializedFilterNode,
+  AcDbSerializedFilterTree,
+  AcLyLayerId
+} from './ly'
 export {
   AcCmColor,
   AcCmColorMethod,

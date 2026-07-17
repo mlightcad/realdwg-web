@@ -46,7 +46,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/dxf-json": "^1.2.6"
+    "@mlightcad/dxf-json": "^1.2.7"
   },
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",

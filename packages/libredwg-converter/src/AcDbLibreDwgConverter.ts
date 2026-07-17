@@ -16,6 +16,7 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
   AcDbFontNameCollector,
+  AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLayout,
   AcDbLinetypeTableRecord,
@@ -24,6 +25,7 @@ import {
   AcDbOpenDatabaseError,
   AcDbParsingTaskResult,
   AcDbRasterImageDef,
+  acdbReadLayerFilterTree,
   AcDbSymbolTableRecord,
   AcDbTextStyleTableRecord,
   AcDbTextStyleTableRecordAttrs,
@@ -54,6 +56,10 @@ import {
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
+import type {
+  DwgLayerFilterObject,
+  DwgLayerIndexObject
+} from './AcDbObjectConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
 
 const MODEL_SPACE = '*MODEL_SPACE'
@@ -641,7 +647,90 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   protected processObjects(model: DwgDatabase, db: AcDbDatabase) {
     this.processLayouts(model, db)
     this.processImageDefs(model, db)
+    this.processLayerFilters(model, db)
+    this.processLayerIndexes(model, db)
+    this.processLayerFilterTree(model, db)
     this.processMLeaderStyles(model, db)
+  }
+
+  /**
+   * Reconstructs the Layer Manager filter tree (`AcLy*` classes) from the
+   * `ACAD_LAYERFILTERS` / `ACLYDICTIONARY` dictionaries and their XRecords.
+   *
+   * @remarks
+   * Requires the DWG parser to expose `DICTIONARY` and `XRECORD` objects. When
+   * the current `libredwg-web` build does not surface `XRECORD` objects, the
+   * nested filter payloads are unavailable and this method is a no-op.
+   *
+   * @param model - Parsed DWG database.
+   * @param db - Target database whose {@link AcDbDatabase.layerFilters} is set.
+   */
+  private processLayerFilterTree(model: DwgDatabase, db: AcDbDatabase) {
+    const objects = model.objects as DwgDatabase['objects'] & {
+      DICTIONARY?: {
+        handle: string
+        ownerHandle?: string
+        entries?: Record<string, string>
+      }[]
+      XRECORD?: {
+        handle: string
+        ownerHandle?: string
+        extensionDictionary?: string
+        extensionDictionaryHandle?: string
+        extensionDictionaryId?: string
+        entries?: { code: number; value: unknown }[]
+        data?: { code: number; value: unknown }[]
+      }[]
+    }
+
+    const dictObjects = objects.DICTIONARY
+    const xrecordObjects = objects.XRECORD
+    if (!dictObjects?.length || !xrecordObjects?.length) {
+      return
+    }
+
+    const normalize = (handle?: string) =>
+      handle ? String(handle).trim().toUpperCase() : ''
+
+    const dictionaries: AcDbLayerFilterPersistSource['dictionaries'] = new Map()
+    dictObjects.forEach(dict => {
+      const entries: Record<string, string> = {}
+      const src = dict.entries ?? {}
+      for (const name in src) {
+        const target = src[name]
+        if (name && target) {
+          entries[name] = normalize(String(target))
+        }
+      }
+      dictionaries.set(normalize(dict.handle), {
+        handle: normalize(dict.handle),
+        ownerObjectId: normalize(dict.ownerHandle),
+        entries
+      })
+    })
+
+    const xrecords: AcDbLayerFilterPersistSource['xrecords'] = new Map()
+    xrecordObjects.forEach(xrecord => {
+      const groups = xrecord.data ?? xrecord.entries ?? []
+      xrecords.set(normalize(xrecord.handle), {
+        handle: normalize(xrecord.handle),
+        ownerObjectId: normalize(xrecord.ownerHandle),
+        extensionDictionaryId: normalize(
+          xrecord.extensionDictionary ??
+            xrecord.extensionDictionaryHandle ??
+            xrecord.extensionDictionaryId
+        ),
+        data: groups.map(group => ({
+          code: Number(group.code),
+          value: group.value
+        }))
+      })
+    })
+
+    const tree = acdbReadLayerFilterTree({ dictionaries, xrecords })
+    if (tree.root.getNestedFilters().length > 0) {
+      db.layerFilters = tree
+    }
   }
 
   private processLayouts(model: DwgDatabase, db: AcDbDatabase) {
@@ -695,6 +784,38 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     })
   }
 
+  private processLayerFilters(model: DwgDatabase, db: AcDbDatabase) {
+    const layerFilters = (
+      model.objects as DwgDatabase['objects'] & {
+        LAYER_FILTER?: DwgLayerFilterObject[]
+      }
+    ).LAYER_FILTER
+    if (!layerFilters?.length) return
+
+    const layerFilterDict = db.objects.layerFilter
+    const objectConverter = new AcDbObjectConverter()
+    layerFilters.forEach(filter => {
+      const dbFilter = objectConverter.convertLayerFilter(filter)
+      layerFilterDict.setAt(dbFilter.objectId, dbFilter)
+    })
+  }
+
+  private processLayerIndexes(model: DwgDatabase, db: AcDbDatabase) {
+    const layerIndexes = (
+      model.objects as DwgDatabase['objects'] & {
+        LAYER_INDEX?: DwgLayerIndexObject[]
+      }
+    ).LAYER_INDEX
+    if (!layerIndexes?.length) return
+
+    const layerIndexDict = db.objects.layerIndex
+    const objectConverter = new AcDbObjectConverter()
+    layerIndexes.forEach(index => {
+      const dbIndex = objectConverter.convertLayerIndex(index)
+      layerIndexDict.setAt(dbIndex.objectId, dbIndex)
+    })
+  }
+
   private processMLeaderStyles(model: DwgDatabase, db: AcDbDatabase) {
     const mleaderStyles = model.objects.MLEADERSTYLE
     if (!mleaderStyles?.length) return
@@ -742,7 +863,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       groups[entity.type].push(entity)
     }
 
-    return order.flatMap(type => groups[type])
+    const result: DwgEntity[] = []
+    for (const type of order) {
+      result.push(...groups[type])
+    }
+    return result
   }
 
   private isModelSpace(name: string) {

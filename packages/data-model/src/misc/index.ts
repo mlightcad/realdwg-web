@@ -93,6 +93,7 @@ export {
   bytesToHexString,
   hexStringsToBytes
 } from './proxyGraphic'
+export { acdbExtractOleImageBlob } from './AcDbOleImageExtractor'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,

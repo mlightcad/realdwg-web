@@ -34,6 +34,10 @@ import {
   AcDbMLine,
   AcDbMLineJustification,
   AcDbMText,
+  AcDbOle2Frame,
+  AcDbOleFrame,
+  AcDbOleObjectType,
+  AcDbOleTileMode,
   AcDbOrdinateDimension,
   AcDbPoint,
   AcDbPoly2dType,
@@ -109,6 +113,8 @@ import {
   MLineEntity,
   MTextEntity,
   MultiLeaderEntity,
+  Ole2FrameEntity,
+  OleFrameEntity,
   PointEntity,
   PolylineEntity,
   RayEntity,
@@ -339,6 +345,10 @@ export class AcDbEntityConverter {
       return this.convertBlockReference(entity as InsertEntity)
     } else if (entity.type == 'ACAD_PROXY_ENTITY') {
       return this.convertProxyEntity(entity as AcadProxyEntity)
+    } else if (entity.type == 'OLE2FRAME') {
+      return this.convertOle2Frame(entity as Ole2FrameEntity)
+    } else if (entity.type == 'OLEFRAME') {
+      return this.convertOleFrame(entity as OleFrameEntity)
     }
     return null
   }
@@ -1479,6 +1489,38 @@ export class AcDbEntityConverter {
     const dbWipeout = new AcDbWipeout()
     this.processWipeout(wipeout, dbWipeout)
     return dbWipeout
+  }
+
+  private convertOleFrame(entity: OleFrameEntity) {
+    const dbEntity = new AcDbOleFrame()
+    dbEntity.oleVersion = entity.version ?? 0
+    if (entity.data) {
+      const bytes = hexStringsToBytes([entity.data])
+      dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
+    }
+    return dbEntity
+  }
+
+  private convertOle2Frame(entity: Ole2FrameEntity) {
+    const dbEntity = new AcDbOle2Frame()
+    dbEntity.oleVersion = entity.version ?? 0
+    dbEntity.userType = entity.name ?? ''
+    dbEntity.upperLeftCorner.copy(entity.upperLeftCorner)
+    dbEntity.lowerRightCorner.copy(entity.lowerRightCorner)
+    dbEntity.oleObjectType =
+      (entity.oleObjectType as unknown as AcDbOleObjectType) ??
+      AcDbOleObjectType.Embedded
+    dbEntity.tileMode =
+      (entity.tileMode as unknown as AcDbOleTileMode) ??
+      AcDbOleTileMode.ModelSpace
+    if (entity.quality != null) {
+      dbEntity.setOutputQuality(entity.quality)
+    }
+    if (entity.data) {
+      const bytes = hexStringsToBytes([entity.data])
+      dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
+    }
+    return dbEntity
   }
 
   private convertViewport(viewport: ViewportEntity) {

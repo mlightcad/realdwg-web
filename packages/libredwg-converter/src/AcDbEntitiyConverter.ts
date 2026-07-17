@@ -33,6 +33,10 @@ import {
   AcDbMLine,
   AcDbMLineJustification,
   AcDbMText,
+  AcDbOle2Frame,
+  AcDbOleFrame,
+  AcDbOleObjectType,
+  AcDbOleTileMode,
   AcDbOrdinateDimension,
   AcDbPoint,
   AcDbPoly2dType,
@@ -101,6 +105,8 @@ import type {
   DwgMLineEntity,
   DwgMTextEntity,
   DwgMultiLeaderEntity,
+  DwgOle2FrameEntity,
+  DwgOleFrameEntity,
   DwgOrdinateDimensionEntity,
   DwgPointEntity,
   DwgPolyline2dEntity,
@@ -220,6 +226,10 @@ export class AcDbEntityConverter {
       return this.convertBlockReference(entity as DwgInsertEntity)
     } else if (entity.type == 'ACAD_PROXY_ENTITY') {
       return this.convertProxyEntity(entity as DwgProxyEntity)
+    } else if (entity.type == 'OLE2FRAME') {
+      return this.convertOle2Frame(entity as DwgOle2FrameEntity)
+    } else if (entity.type == 'OLEFRAME') {
+      return this.convertOleFrame(entity as DwgOleFrameEntity)
     }
     return null
   }
@@ -1246,6 +1256,39 @@ export class AcDbEntityConverter {
     const dbWipeout = new AcDbWipeout()
     this.processImage(wipeout, dbWipeout)
     return dbWipeout
+  }
+
+  private convertOleFrame(entity: DwgOleFrameEntity) {
+    const dbEntity = new AcDbOleFrame()
+    dbEntity.oleVersion = entity.flag ?? 0
+    if (entity.binaryData) {
+      const bytes = hexStringsToBytes([entity.binaryData])
+      dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
+    }
+    return dbEntity
+  }
+
+  private convertOle2Frame(entity: DwgOle2FrameEntity) {
+    const dbEntity = new AcDbOle2Frame()
+    dbEntity.oleVersion = entity.oleVersion ?? 0
+    dbEntity.userType = entity.oleClient ?? ''
+    if (entity.leftUpPoint) {
+      dbEntity.upperLeftCorner.copy(entity.leftUpPoint)
+    }
+    if (entity.rightDownPoint) {
+      dbEntity.lowerRightCorner.copy(entity.rightDownPoint)
+    }
+    dbEntity.setLockAspect(entity.lockAspect ?? 0)
+    dbEntity.oleObjectType =
+      (entity.oleObjectType as AcDbOleObjectType) ?? AcDbOleObjectType.Embedded
+    dbEntity.tileMode =
+      (entity.tileModeDescriptor as AcDbOleTileMode) ??
+      AcDbOleTileMode.ModelSpace
+    if (entity.binaryData) {
+      const bytes = hexStringsToBytes([entity.binaryData])
+      dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
+    }
+    return dbEntity
   }
 
   private convertViewport(viewport: DwgViewportEntity) {

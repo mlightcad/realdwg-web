@@ -19,10 +19,12 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
   AcDbFontNameCollector,
+  AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
   AcDbObjectId,
   AcDbOpenDatabaseError,
+  acdbReadLayerFilterTree,
   AcDbSymbolTable,
   AcDbSymbolTableRecord,
   AcDbSystemVariables,
@@ -47,10 +49,13 @@ import {
   BlockRecordTableEntry,
   CommonDxfEntity,
   CommonDxfTableEntry,
+  DictionaryDXFObject,
   DimStylesTableEntry,
   DxfTable,
   ImageDefDXFObject,
   InsertEntity,
+  LayerFilterDXFObject,
+  LayerIndexDXFObject,
   LayerTableEntry,
   LayoutDXFObject,
   LTypeTableEntry,
@@ -62,7 +67,8 @@ import {
   StyleTableEntry,
   TextEntity,
   ToleranceEntity,
-  VPortTableEntry
+  VPortTableEntry,
+  XRecordDXFObject
 } from '@mlightcad/dxf-json/types'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -145,7 +151,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       dimStyleTextStyles.set(entry.name, entry.DIMTXSTY || DEFAULT_TEXT_STYLE)
     }
     const rootEntities: CommonDxfEntity[] = [...(dxf.entities ?? [])]
-    for (const block of Object.values(blocks)) {
+    for (const name in blocks) {
+      const block = blocks[name]
       if (block.entities?.length) {
         rootEntities.push(...block.entities)
       }
@@ -418,7 +425,8 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    */
   protected processBlocks(model: ParsedDxf, db: AcDbDatabase) {
     const blocks = model.blocks
-    for (const [name, block] of Object.entries(blocks)) {
+    for (const name in blocks) {
+      const block = blocks[name]
       let dbBlock = db.tables.blockTable.getAt(block.name)
       if (!dbBlock) {
         dbBlock = new AcDbBlockTableRecord()
@@ -639,6 +647,24 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         imageDefDict.setAt(dbImageDef.objectId, dbImageDef)
       })
     }
+    if ('LAYER_FILTER' in objects) {
+      const layerFilterDict = db.objects.layerFilter
+      objects['LAYER_FILTER'].forEach(filter => {
+        const dbFilter = objectConverter.convertLayerFilter(
+          filter as LayerFilterDXFObject
+        )
+        layerFilterDict.setAt(dbFilter.objectId, dbFilter)
+      })
+    }
+    if ('LAYER_INDEX' in objects) {
+      const layerIndexDict = db.objects.layerIndex
+      objects['LAYER_INDEX'].forEach(index => {
+        const dbIndex = objectConverter.convertLayerIndex(
+          index as LayerIndexDXFObject
+        )
+        layerIndexDict.setAt(dbIndex.objectId, dbIndex)
+      })
+    }
     if ('MLEADERSTYLE' in objects) {
       const mleaderStyleDict = db.objects.mleaderStyle
       objects['MLEADERSTYLE'].forEach(style => {
@@ -656,6 +682,77 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         )
         mlineStyleDict.setAt(dbStyle.styleName || dbStyle.objectId, dbStyle)
       })
+    }
+    this.processLayerFilterTree(model, db)
+  }
+
+  /**
+   * Reconstructs the Layer Manager filter tree (`AcLy*` classes) from the
+   * `ACAD_LAYERFILTERS` / `ACLYDICTIONARY` dictionaries and their XRecords
+   * stored in the Layer Table extension dictionary.
+   *
+   * @param model - Parsed DXF model containing objects section.
+   * @param db - Target database whose {@link AcDbDatabase.layerFilters} is set.
+   */
+  protected processLayerFilterTree(model: ParsedDxf, db: AcDbDatabase) {
+    const objects = model.objects.byName
+    const dictionaries: AcDbLayerFilterPersistSource['dictionaries'] = new Map()
+    const xrecords: AcDbLayerFilterPersistSource['xrecords'] = new Map()
+
+    const normalize = (handle?: string) =>
+      handle ? handle.trim().toUpperCase() : ''
+
+    const dictObjects = objects['DICTIONARY'] as
+      | DictionaryDXFObject[]
+      | undefined
+    if (dictObjects) {
+      dictObjects.forEach(dict => {
+        const entries: Record<string, string> = {}
+        ;(dict.entries ?? []).forEach(entry => {
+          const target = entry.objectHardId ?? entry.objectSoftId
+          if (entry.name && target) {
+            entries[entry.name] = normalize(target)
+          }
+        })
+        dictionaries.set(normalize(dict.handle), {
+          handle: normalize(dict.handle),
+          ownerObjectId: normalize(dict.ownerObjectId),
+          entries
+        })
+      })
+    }
+
+    const xrecordObjects = objects['XRECORD'] as XRecordDXFObject[] | undefined
+    if (xrecordObjects) {
+      xrecordObjects.forEach(xrecord => {
+        const source = xrecord as XRecordDXFObject & {
+          extensionDictionary?: string
+          extensionDictionaryId?: string
+          extensionDictionaryHandle?: string
+        }
+        xrecords.set(normalize(xrecord.handle), {
+          handle: normalize(xrecord.handle),
+          ownerObjectId: normalize(xrecord.ownerObjectId),
+          extensionDictionaryId: normalize(
+            source.extensionDictionary ??
+              source.extensionDictionaryId ??
+              source.extensionDictionaryHandle
+          ),
+          data: (xrecord.data ?? []).map(group => ({
+            code: Number(group.code),
+            value: group.value
+          }))
+        })
+      })
+    }
+
+    if (dictionaries.size === 0 && xrecords.size === 0) {
+      return
+    }
+
+    const tree = acdbReadLayerFilterTree({ dictionaries, xrecords })
+    if (tree.root.getNestedFilters().length > 0) {
+      db.layerFilters = tree
     }
   }
 
@@ -1092,7 +1189,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       groups[entity.type].push(entity)
     }
 
-    return order.flatMap(type => groups[type])
+    const result: CommonDxfEntity[] = []
+    for (const type of order) {
+      result.push(...groups[type])
+    }
+    return result
   }
 
   private normalizeHeaderStringValue(value: unknown) {
