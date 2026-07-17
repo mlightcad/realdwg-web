@@ -56,10 +56,6 @@ import {
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
-import type {
-  DwgLayerFilterObject,
-  DwgLayerIndexObject
-} from './AcDbObjectConverter'
 import { AcDbObjectConverter } from './AcDbObjectConverter'
 
 const MODEL_SPACE = '*MODEL_SPACE'
@@ -658,33 +654,16 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
    * `ACAD_LAYERFILTERS` / `ACLYDICTIONARY` dictionaries and their XRecords.
    *
    * @remarks
-   * Requires the DWG parser to expose `DICTIONARY` and `XRECORD` objects. When
-   * the current `libredwg-web` build does not surface `XRECORD` objects, the
-   * nested filter payloads are unavailable and this method is a no-op.
+   * Reads `DICTIONARY` and `XRECORD` objects from the parsed DWG. When either
+   * collection is empty, nested filter payloads are unavailable and this
+   * method is a no-op.
    *
    * @param model - Parsed DWG database.
    * @param db - Target database whose {@link AcDbDatabase.layerFilters} is set.
    */
   private processLayerFilterTree(model: DwgDatabase, db: AcDbDatabase) {
-    const objects = model.objects as DwgDatabase['objects'] & {
-      DICTIONARY?: {
-        handle: string
-        ownerHandle?: string
-        entries?: Record<string, string>
-      }[]
-      XRECORD?: {
-        handle: string
-        ownerHandle?: string
-        extensionDictionary?: string
-        extensionDictionaryHandle?: string
-        extensionDictionaryId?: string
-        entries?: { code: number; value: unknown }[]
-        data?: { code: number; value: unknown }[]
-      }[]
-    }
-
-    const dictObjects = objects.DICTIONARY
-    const xrecordObjects = objects.XRECORD
+    const dictObjects = model.objects.DICTIONARY
+    const xrecordObjects = model.objects.XRECORD
     if (!dictObjects?.length || !xrecordObjects?.length) {
       return
     }
@@ -711,16 +690,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
     const xrecords: AcDbLayerFilterPersistSource['xrecords'] = new Map()
     xrecordObjects.forEach(xrecord => {
-      const groups = xrecord.data ?? xrecord.entries ?? []
       xrecords.set(normalize(xrecord.handle), {
         handle: normalize(xrecord.handle),
         ownerObjectId: normalize(xrecord.ownerHandle),
-        extensionDictionaryId: normalize(
-          xrecord.extensionDictionary ??
-            xrecord.extensionDictionaryHandle ??
-            xrecord.extensionDictionaryId
-        ),
-        data: groups.map(group => ({
+        extensionDictionaryId: normalize(xrecord.extensionDictionary),
+        data: (xrecord.data ?? []).map(group => ({
           code: Number(group.code),
           value: group.value
         }))
@@ -785,11 +759,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   private processLayerFilters(model: DwgDatabase, db: AcDbDatabase) {
-    const layerFilters = (
-      model.objects as DwgDatabase['objects'] & {
-        LAYER_FILTER?: DwgLayerFilterObject[]
-      }
-    ).LAYER_FILTER
+    const layerFilters = model.objects.LAYER_FILTER
     if (!layerFilters?.length) return
 
     const layerFilterDict = db.objects.layerFilter
@@ -801,11 +771,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   private processLayerIndexes(model: DwgDatabase, db: AcDbDatabase) {
-    const layerIndexes = (
-      model.objects as DwgDatabase['objects'] & {
-        LAYER_INDEX?: DwgLayerIndexObject[]
-      }
-    ).LAYER_INDEX
+    const layerIndexes = model.objects.LAYER_INDEX
     if (!layerIndexes?.length) return
 
     const layerIndexDict = db.objects.layerIndex

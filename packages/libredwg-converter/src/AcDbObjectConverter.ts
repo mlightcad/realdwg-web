@@ -5,39 +5,12 @@ import {
   AcDbObject,
   decodeMLeaderStyleRawColor
 } from '@mlightcad/data-model'
-import { DwgCommonObject, DwgMLeaderStyleObject } from '@mlightcad/libredwg-web'
-
-/**
- * DWG LAYER_FILTER object fields.
- *
- * @remarks
- * `@mlightcad/libredwg-web` currently exposes the DWG type enum for layer
- * filters but does not yet publish a dedicated TypeScript interface. This
- * shape mirrors the DXF LAYER_FILTER mapping used by ObjectARX / dxf-json.
- */
-export interface DwgLayerFilterObject extends DwgCommonObject {
-  /** Layer names included in this filter. */
-  layerNames?: string[]
-}
-
-/**
- * DWG LAYER_INDEX object fields.
- *
- * @remarks
- * `@mlightcad/libredwg-web` currently exposes the DWG type enum for layer
- * indexes but does not yet publish a dedicated TypeScript interface. This
- * shape mirrors the DXF LAYER_INDEX mapping used by ObjectARX / dxf-json.
- */
-export interface DwgLayerIndexObject extends DwgCommonObject {
-  /** Julian / last-updated timestamp. */
-  timeStamp?: number
-  /** Layer names included in this layer index. */
-  layerNames?: string[]
-  /** Hard-owner handles to IDBUFFER objects. */
-  idBufferIds?: string[]
-  /** Number of entries in each referenced IDBUFFER. */
-  idBufferEntryCounts?: number[]
-}
+import {
+  DwgCommonObject,
+  DwgLayerFilterObject,
+  DwgLayerIndexObject,
+  DwgMLeaderStyleObject
+} from '@mlightcad/libredwg-web'
 
 /**
  * Converts libredwg object records to AcDbObject instances.
