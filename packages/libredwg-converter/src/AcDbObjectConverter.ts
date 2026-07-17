@@ -1,9 +1,43 @@
 import {
+  AcDbLayerFilter,
+  AcDbLayerIndex,
   AcDbMLeaderStyle,
   AcDbObject,
   decodeMLeaderStyleRawColor
 } from '@mlightcad/data-model'
 import { DwgCommonObject, DwgMLeaderStyleObject } from '@mlightcad/libredwg-web'
+
+/**
+ * DWG LAYER_FILTER object fields.
+ *
+ * @remarks
+ * `@mlightcad/libredwg-web` currently exposes the DWG type enum for layer
+ * filters but does not yet publish a dedicated TypeScript interface. This
+ * shape mirrors the DXF LAYER_FILTER mapping used by ObjectARX / dxf-json.
+ */
+export interface DwgLayerFilterObject extends DwgCommonObject {
+  /** Layer names included in this filter. */
+  layerNames?: string[]
+}
+
+/**
+ * DWG LAYER_INDEX object fields.
+ *
+ * @remarks
+ * `@mlightcad/libredwg-web` currently exposes the DWG type enum for layer
+ * indexes but does not yet publish a dedicated TypeScript interface. This
+ * shape mirrors the DXF LAYER_INDEX mapping used by ObjectARX / dxf-json.
+ */
+export interface DwgLayerIndexObject extends DwgCommonObject {
+  /** Julian / last-updated timestamp. */
+  timeStamp?: number
+  /** Layer names included in this layer index. */
+  layerNames?: string[]
+  /** Hard-owner handles to IDBUFFER objects. */
+  idBufferIds?: string[]
+  /** Number of entries in each referenced IDBUFFER. */
+  idBufferEntryCounts?: number[]
+}
 
 /**
  * Converts libredwg object records to AcDbObject instances.
@@ -123,6 +157,47 @@ export class AcDbObjectConverter {
     }
     dbObject.unknown2 = style.unknown2
     this.processCommonAttrs(style, dbObject)
+    return dbObject
+  }
+
+  /**
+   * Converts a DWG LAYER_FILTER object to an AcDbLayerFilter.
+   *
+   * @param filter - The DWG layer filter object to convert
+   * @returns The converted AcDbLayerFilter instance
+   */
+  convertLayerFilter(filter: DwgLayerFilterObject) {
+    const dbObject = new AcDbLayerFilter()
+    if (filter.layerNames?.length) {
+      dbObject.layerNames = filter.layerNames
+    }
+    this.processCommonAttrs(filter, dbObject)
+    return dbObject
+  }
+
+  /**
+   * Converts a DWG LAYER_INDEX object to an AcDbLayerIndex.
+   *
+   * @param index - The DWG layer index object to convert
+   * @returns The converted AcDbLayerIndex instance
+   */
+  convertLayerIndex(index: DwgLayerIndexObject) {
+    const dbObject = new AcDbLayerIndex()
+    if (index.timeStamp != null) {
+      dbObject.lastUpdatedAt = index.timeStamp
+      dbObject.lastUpdatedAtU = index.timeStamp
+    }
+    if (index.layerNames?.length) {
+      dbObject.layerNames = index.layerNames
+    }
+    if (index.idBufferIds?.length) {
+      dbObject.idBufferIds = index.idBufferIds
+    }
+    if (index.idBufferEntryCounts?.length) {
+      dbObject.idBufferEntryCounts = index.idBufferEntryCounts
+    }
+    dbObject.isUptoDate = true
+    this.processCommonAttrs(index, dbObject)
     return dbObject
   }
 

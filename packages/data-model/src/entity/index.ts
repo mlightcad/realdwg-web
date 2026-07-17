@@ -66,6 +66,14 @@ export type {
   AcDbMLeaderMTextContentLike
 } from './AcDbMLeader'
 export { AcDbMText } from './AcDbMText'
+export { AcDbFrame } from './AcDbFrame'
+export { AcDbOleFrame } from './AcDbOleFrame'
+export {
+  AcDbOle2Frame,
+  AcDbOleObjectType,
+  AcDbOleTileMode
+} from './AcDbOle2Frame'
+export type { AcDbOleRectangle3d } from './AcDbOle2Frame'
 export { AcDbSpline } from './AcDbSpline'
 export { AcDbTable } from './AcDbTable'
 export type {

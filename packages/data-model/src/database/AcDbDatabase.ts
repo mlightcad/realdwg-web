@@ -34,10 +34,20 @@ import { AcDbFormatter } from '../misc/AcDbFormatter'
 import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbLayerFilter } from '../object/AcDbLayerFilter'
+import { AcDbLayerIndex } from '../object/AcDbLayerIndex'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
 import { AcDbXrecord } from '../object/AcDbXrecord'
+import { AcLyLayerFilterTree } from '../ly/AcLyLayerFilterTree'
+import {
+  ACAD_LAYERFILTERS_NAME,
+  ACLY_DICTIONARY_NAME,
+  acdbLayerGroupsToResultBuffer,
+  acdbSerializeLayerFilterTree,
+  type AcDbSerializedFilterNode
+} from '../ly/AcLyLayerFilterIO'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
@@ -418,6 +428,8 @@ export class AcDbDatabase extends AcDbObject {
   private _objects: {
     readonly dictionary: AcDbDictionary<AcDbDictionary>
     readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
+    readonly layerFilter: AcDbDictionary<AcDbLayerFilter>
+    readonly layerIndex: AcDbDictionary<AcDbLayerIndex>
     readonly layout: AcDbLayoutDictionary
     readonly mleaderStyle: AcDbDictionary<AcDbMLeaderStyle>
     readonly mlineStyle: AcDbDictionary<AcDbMlineStyle>
@@ -438,6 +450,11 @@ export class AcDbDatabase extends AcDbObject {
   private _drawNoPlotLayers = true
   /** Current drawing file name (**DWGNAME**), including extension. */
   private _dwgname: string
+  /**
+   * Layer Properties Manager filter tree (`AcLy*` / .NET `LayerFilterTree`).
+   * Distinct from {@link objects.layerFilter} (`AcDbLayerFilter` index objects).
+   */
+  private _layerFilters: AcLyLayerFilterTree
 
   /** Manages transactions and undo/redo for this database. */
   readonly transactionManager: AcDbDatabaseTransactionManager
@@ -531,11 +548,14 @@ export class AcDbDatabase extends AcDbObject {
     this._objects = {
       dictionary: new AcDbDictionary(this),
       imageDefinition: new AcDbDictionary(this),
+      layerFilter: new AcDbDictionary(this),
+      layerIndex: new AcDbDictionary(this),
       layout: new AcDbLayoutDictionary(this),
       mleaderStyle: new AcDbDictionary(this),
       mlineStyle: new AcDbDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
+    this._layerFilters = new AcLyLayerFilterTree()
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
     this.registerBootstrapHandles()
   }
@@ -582,6 +602,43 @@ export class AcDbDatabase extends AcDbObject {
    */
   get objects() {
     return this._objects
+  }
+
+  /**
+   * Gets the Layer Properties Manager filter tree for this database.
+   *
+   * @remarks
+   * Mirrors AutoCAD .NET `Database.LayerFilters` / ObjectARX `AcLy*` filters.
+   * This is the property/group filter **tree**, not the flat
+   * {@link objects.layerFilter} dictionary used by `AcDbLayerFilter` /
+   * `AcDbLayerIndex`.
+   *
+   * Like AutoCAD, treat this value as retrieved by value: mutate the tree,
+   * then assign it back via the setter if your workflow expects that pattern.
+   *
+   * @returns The current {@link AcLyLayerFilterTree}.
+   *
+   * @example
+   * ```typescript
+   * const tree = db.layerFilters;
+   * const filter = new AcLyLayerFilter();
+   * filter.name = 'Unlocked Layers';
+   * filter.setFilterExpression('LOCKED=="False"');
+   * tree.root.addNested(filter);
+   * db.layerFilters = tree;
+   * ```
+   */
+  get layerFilters(): AcLyLayerFilterTree {
+    return this._layerFilters
+  }
+
+  /**
+   * Sets the Layer Properties Manager filter tree for this database.
+   *
+   * @param value - New filter tree.
+   */
+  set layerFilters(value: AcLyLayerFilterTree) {
+    this._layerFilters = value ?? new AcLyLayerFilterTree()
   }
 
   /**
@@ -700,6 +757,8 @@ export class AcDbDatabase extends AcDbObject {
     return [
       this.objects.dictionary,
       this.objects.imageDefinition,
+      this.objects.layerFilter,
+      this.objects.layerIndex,
       this.objects.layout,
       this.objects.mleaderStyle,
       this.objects.mlineStyle,
@@ -991,10 +1050,28 @@ export class AcDbDatabase extends AcDbObject {
   private registerBootstrapHandles() {
     this._handleRegistry.clear()
     this.registerObjectHandle(this)
-    for (const table of Object.values(this._tables)) {
+    for (const table of [
+      this._tables.blockTable,
+      this._tables.dimStyleTable,
+      this._tables.layerTable,
+      this._tables.linetypeTable,
+      this._tables.appIdTable,
+      this._tables.textStyleTable,
+      this._tables.viewTable,
+      this._tables.viewportTable
+    ]) {
       this.registerObjectHandle(table)
     }
-    for (const dictionary of Object.values(this._objects)) {
+    for (const dictionary of [
+      this._objects.dictionary,
+      this._objects.imageDefinition,
+      this._objects.layerFilter,
+      this._objects.layerIndex,
+      this._objects.layout,
+      this._objects.mleaderStyle,
+      this._objects.mlineStyle,
+      this._objects.xrecord
+    ]) {
       this.registerObjectHandle(dictionary)
     }
   }
@@ -2177,6 +2254,12 @@ export class AcDbDatabase extends AcDbObject {
     _saveThumbnailImage: boolean = false
   ) {
     this.ensureDatabaseDefaults()
+    if (
+      this._layerFilters.root.getNestedFilters().length > 0 &&
+      !this.tables.layerTable.extensionDictionary
+    ) {
+      this.tables.layerTable.extensionDictionary = this.generateHandle()
+    }
 
     const outVersion =
       version instanceof AcDbDwgVersion ? version : new AcDbDwgVersion(version)
@@ -2786,6 +2869,16 @@ export class AcDbDatabase extends AcDbObject {
       imageDef.dxfOut(filer)
     }
 
+    for (const [_, layerFilter] of this.objects.layerFilter.entries()) {
+      filer.writeStart('LAYER_FILTER')
+      layerFilter.dxfOut(filer)
+    }
+
+    for (const [_, layerIndex] of this.objects.layerIndex.entries()) {
+      filer.writeStart('LAYER_INDEX')
+      layerIndex.dxfOut(filer)
+    }
+
     for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
       filer.writeStart('MLEADERSTYLE')
       mleaderStyle.dxfOut(filer)
@@ -2799,7 +2892,149 @@ export class AcDbDatabase extends AcDbObject {
       filer.writeStart('XRECORD')
       xrecord.dxfOut(filer)
     }
+
+    this.writeAcLyLayerFilterObjects(filer)
     filer.endSection()
+  }
+
+  /**
+   * Writes Layer Manager filter tree objects (`ACAD_LAYERFILTERS` /
+   * `ACLYDICTIONARY` + XRecords) into the OBJECTS section and attaches an
+   * extension dictionary to the Layer Table.
+   *
+   * @param filer - DXF output writer.
+   */
+  private writeAcLyLayerFilterObjects(filer: AcDbDxfFiler) {
+    const serialized = acdbSerializeLayerFilterTree(this._layerFilters)
+    if (serialized.nodes.length === 0) {
+      return
+    }
+
+    type BuiltDict = {
+      handle: string
+      ownerId: string
+      entries: { name: string; id: string }[]
+    }
+    type BuiltXRec = {
+      handle: string
+      ownerId: string
+      extensionDictionaryId?: string
+      data: AcDbSerializedFilterNode['data']
+    }
+
+    const dicts: BuiltDict[] = []
+    const xrecs: BuiltXRec[] = []
+    const layerTable = this.tables.layerTable
+    const layerExtHandle =
+      layerTable.extensionDictionary ?? this.generateHandle()
+    layerTable.extensionDictionary = layerExtHandle
+
+    const aclyHandle = this.generateHandle()
+    const acadHandle = this.generateHandle()
+    const rootAclyEntries: { name: string; id: string }[] = []
+    const rootAcadEntries: { name: string; id: string }[] = []
+
+    const emit = (
+      node: AcDbSerializedFilterNode,
+      parentAclyHandle: string,
+      addToLegacy: boolean
+    ): string => {
+      const xHandle = this.generateHandle()
+      let extensionDictionaryId: string | undefined
+      if (node.children.length > 0) {
+        const extHandle = this.generateHandle()
+        const childAclyHandle = this.generateHandle()
+        const childEntries: { name: string; id: string }[] = []
+        for (const child of node.children) {
+          childEntries.push({
+            name: child.key,
+            id: emit(child, childAclyHandle, false)
+          })
+        }
+        dicts.push({
+          handle: extHandle,
+          ownerId: xHandle,
+          entries: [{ name: ACLY_DICTIONARY_NAME, id: childAclyHandle }]
+        })
+        dicts.push({
+          handle: childAclyHandle,
+          ownerId: extHandle,
+          entries: childEntries
+        })
+        extensionDictionaryId = extHandle
+      }
+
+      xrecs.push({
+        handle: xHandle,
+        ownerId: parentAclyHandle,
+        extensionDictionaryId,
+        data: node.data
+      })
+      if (addToLegacy) {
+        rootAcadEntries.push({ name: node.key, id: xHandle })
+      }
+      return xHandle
+    }
+
+    for (const node of serialized.nodes) {
+      rootAclyEntries.push({
+        name: node.key,
+        id: emit(node, aclyHandle, true)
+      })
+    }
+
+    const layerExtEntries = new Map<string, string>()
+    const existingLayerExt = this.getObjectById(layerExtHandle)
+    if (existingLayerExt instanceof AcDbDictionary) {
+      for (const [key, value] of existingLayerExt.entries()) {
+        layerExtEntries.set(key, value.objectId)
+      }
+    }
+    layerExtEntries.set(ACLY_DICTIONARY_NAME, aclyHandle)
+    layerExtEntries.set(ACAD_LAYERFILTERS_NAME, acadHandle)
+
+    dicts.unshift(
+      {
+        handle: layerExtHandle,
+        ownerId: layerTable.objectId,
+        entries: Array.from(layerExtEntries, ([name, id]) => ({ name, id }))
+      },
+      {
+        handle: aclyHandle,
+        ownerId: layerExtHandle,
+        entries: rootAclyEntries
+      },
+      {
+        handle: acadHandle,
+        ownerId: layerExtHandle,
+        entries: rootAcadEntries
+      }
+    )
+
+    for (const dict of dicts) {
+      filer.writeStart('DICTIONARY')
+      filer.writeHandle(5, dict.handle)
+      filer.writeObjectId(330, dict.ownerId)
+      filer.writeSubclassMarker('AcDbDictionary')
+      filer.writeInt16(280, 1)
+      filer.writeInt16(281, 1)
+      for (const entry of dict.entries) {
+        filer.writeString(3, entry.name)
+        filer.writeObjectId(350, entry.id)
+      }
+    }
+
+    for (const item of xrecs) {
+      const xrecord = new AcDbXrecord()
+      xrecord.objectId = item.handle
+      xrecord.ownerId = item.ownerId
+      if (item.extensionDictionaryId) {
+        xrecord.extensionDictionary = item.extensionDictionaryId
+      }
+      xrecord.data = acdbLayerGroupsToResultBuffer(item.data)
+      filer.writeStart('XRECORD')
+      xrecord.dxfOut(filer)
+    }
   }
 
   /**
@@ -2878,9 +3113,12 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.viewportTable.removeAll()
     this._objects.layout.removeAll()
     this._objects.imageDefinition.removeAll()
+    this._objects.layerFilter.removeAll()
+    this._objects.layerIndex.removeAll()
     this._objects.mleaderStyle.removeAll()
     this._objects.mlineStyle.removeAll()
     this._objects.xrecord.removeAll()
+    this._layerFilters = new AcLyLayerFilterTree()
     this._currentSpace = undefined
     this._extents.makeEmpty()
     this.registerBootstrapHandles()

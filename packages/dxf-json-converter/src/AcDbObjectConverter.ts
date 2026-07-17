@@ -1,6 +1,8 @@
 import { AcCmColor } from '@mlightcad/data-model'
 import {
   AcDbBlockTableRecord,
+  AcDbLayerFilter,
+  AcDbLayerIndex,
   AcDbLayout,
   AcDbMLeaderStyle,
   AcDbMlineStyle,
@@ -17,6 +19,8 @@ import {
 import {
   CommonDXFObject,
   ImageDefDXFObject,
+  LayerFilterDXFObject,
+  LayerIndexDXFObject,
   LayoutDXFObject,
   MLeaderStyleDXFObject,
   MLineStyleDXFObject,
@@ -202,6 +206,47 @@ export class AcDbObjectConverter {
     const dbObject = new AcDbRasterImageDef()
     dbObject.sourceFileName = image.fileName
     this.processCommonAttrs(image, dbObject)
+    return dbObject
+  }
+
+  /**
+   * Converts a DXF LAYER_FILTER object to an AcDbLayerFilter.
+   *
+   * @param filter - The DXF layer filter object to convert
+   * @returns The converted AcDbLayerFilter instance
+   */
+  convertLayerFilter(filter: LayerFilterDXFObject) {
+    const dbObject = new AcDbLayerFilter()
+    if (filter.layerNames?.length) {
+      dbObject.layerNames = filter.layerNames
+    }
+    this.processCommonAttrs(filter, dbObject)
+    return dbObject
+  }
+
+  /**
+   * Converts a DXF LAYER_INDEX object to an AcDbLayerIndex.
+   *
+   * @param index - The DXF layer index object to convert
+   * @returns The converted AcDbLayerIndex instance
+   */
+  convertLayerIndex(index: LayerIndexDXFObject) {
+    const dbObject = new AcDbLayerIndex()
+    if (index.timeStamp != null) {
+      dbObject.lastUpdatedAt = index.timeStamp
+      dbObject.lastUpdatedAtU = index.timeStamp
+    }
+    if (index.layerNames?.length) {
+      dbObject.layerNames = index.layerNames
+    }
+    if (index.idBufferIds?.length) {
+      dbObject.idBufferIds = index.idBufferIds
+    }
+    if (index.idBufferEntryCounts?.length) {
+      dbObject.idBufferEntryCounts = index.idBufferEntryCounts
+    }
+    dbObject.isUptoDate = true
+    this.processCommonAttrs(index, dbObject)
     return dbObject
   }
 
