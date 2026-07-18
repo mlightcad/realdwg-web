@@ -1,5 +1,13 @@
 # @mlightcad/libdxfrw-converter
 
+## 3.11.0
+
+### Patch Changes
+
+- feat: adds support for OLE frames and layer filters, improves image frame selection, assigns TEMP handles to unbound AcDbObjects, and refactors helper naming with consistent acdb/acge prefixes for better maintainability
+- Updated dependencies
+  - @mlightcad/data-model@1.11.0
+
 ## 3.10.7
 
 ### Patch Changes
