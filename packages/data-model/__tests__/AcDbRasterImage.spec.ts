@@ -18,7 +18,13 @@ describe('AcDbRasterImage', () => {
   })
   const createRenderer = () => ({
     lines: jest.fn(() => ({ kind: 'lines' })),
-    image: jest.fn(() => ({ kind: 'image' }))
+    image: jest.fn(() => ({ kind: 'image' })),
+    area: jest.fn(() => ({ kind: 'area' })),
+    group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities })),
+    subEntityTraits: {
+      fillType: undefined as unknown,
+      transparency: undefined as unknown
+    }
   })
 
   const parsePairs = (text: string) => {
@@ -221,22 +227,46 @@ describe('AcDbRasterImage', () => {
     expect(perpendicularPoints).toHaveLength(1)
   })
 
-  it('draws via renderer.lines when image data is absent and renderer.image when present', () => {
+  it('draws a pickable frame when image data is absent and renderer.image when shown', () => {
     const { image } = setupInDatabase()
     image.position = new AcGePoint3d(0, 0, 0)
     image.width = 12
     image.height = 6
 
     const renderer = createRenderer()
-    const lineDrawable = image.subWorldDraw(renderer as never)
-    expect(lineDrawable).toEqual({ kind: 'lines' })
+    const frameDrawable = image.subWorldDraw(renderer as never)
+    expect(frameDrawable).toEqual({
+      kind: 'group',
+      entities: [{ kind: 'area' }, { kind: 'lines' }]
+    })
+    expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(renderer.image).not.toHaveBeenCalled()
 
     image.image = new Blob(['raw'], { type: 'application/octet-stream' })
+    image.isImageShown = true
     const imageDrawable = image.subWorldDraw(renderer as never)
     expect(imageDrawable).toEqual({ kind: 'image' })
     expect(renderer.image).toHaveBeenCalledTimes(1)
+  })
+
+  it('draws the pickable frame when isImageShown is false even if image data exists', () => {
+    const { image } = setupInDatabase()
+    image.position = new AcGePoint3d(0, 0, 0)
+    image.width = 12
+    image.height = 6
+    image.image = new Blob(['raw'], { type: 'application/octet-stream' })
+    image.isImageShown = false
+
+    const renderer = createRenderer()
+    const frameDrawable = image.subWorldDraw(renderer as never)
+    expect(frameDrawable).toEqual({
+      kind: 'group',
+      entities: [{ kind: 'area' }, { kind: 'lines' }]
+    })
+    expect(renderer.image).not.toHaveBeenCalled()
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
   })
 
   it('transforms geometry and resets scale', () => {

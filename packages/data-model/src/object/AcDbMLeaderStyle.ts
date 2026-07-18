@@ -3,7 +3,7 @@ import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
-import { encodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
+import { acdbEncodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
 
 /**
  * Represents the nongraphical MLEADERSTYLE object.
@@ -859,7 +859,7 @@ export class AcDbMLeaderStyle extends AcDbObject {
     filer.writeDouble(40, this.firstSegmentAngleConstraint)
     filer.writeDouble(41, this.secondSegmentAngleConstraint)
     filer.writeInt16(173, this.leaderLineType)
-    filer.writeInt32(91, encodeMLeaderStyleRawColor(this.leaderLineColor))
+    filer.writeInt32(91, acdbEncodeMLeaderStyleRawColor(this.leaderLineColor))
     filer.writeHandle(340, this.leaderLineTypeId)
     filer.writeInt32(92, this.leaderLineWeight)
     filer.writeBoolean(290, this.enableLanding)
@@ -875,13 +875,13 @@ export class AcDbMLeaderStyle extends AcDbObject {
     filer.writeInt16(175, this.textAngleType)
     filer.writeInt16(176, this.textAlignmentType)
     filer.writeInt16(178, this.textRightAttachmentType)
-    filer.writeInt32(93, encodeMLeaderStyleRawColor(this.textColor))
+    filer.writeInt32(93, acdbEncodeMLeaderStyleRawColor(this.textColor))
     filer.writeDouble(45, this.textHeight)
     filer.writeBoolean(292, this.enableFrameText)
     filer.writeBoolean(297, this.textAlignAlwaysLeft)
     filer.writeDouble(46, this.alignSpace)
     filer.writeHandle(343, this.blockId)
-    filer.writeInt32(94, encodeMLeaderStyleRawColor(this.blockColor))
+    filer.writeInt32(94, acdbEncodeMLeaderStyleRawColor(this.blockColor))
     filer.writeDouble(47, this._blockScale.x)
     filer.writeDouble(49, this._blockScale.y)
     filer.writeDouble(140, this._blockScale.z)

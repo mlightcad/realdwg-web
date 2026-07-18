@@ -7,7 +7,7 @@ import {
 } from '../src/database/AcDbDatabase'
 import {
   AcDbLayerTableRecord,
-  createLayerTableRecordDefaultAttrs,
+  acdbCreateLayerTableRecordDefaultAttrs,
   LAYER_TABLE_RECORD_DIFF_ATTR_KEYS
 } from '../src/database/AcDbLayerTableRecord'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
@@ -16,7 +16,7 @@ describe('AcDbSymbolTableRecord write access', () => {
   it('derives layer diff keys from default attrs plus name', () => {
     const expected = [
       'name',
-      ...Object.keys(createLayerTableRecordDefaultAttrs())
+      ...Object.keys(acdbCreateLayerTableRecordDefaultAttrs())
     ].sort()
 
     expect([...LAYER_TABLE_RECORD_DIFF_ATTR_KEYS].sort()).toEqual(expected)

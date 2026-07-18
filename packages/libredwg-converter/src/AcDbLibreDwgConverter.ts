@@ -4,6 +4,7 @@ import {
   AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbConversionProgressCallback,
+  acdbCreateWorkerApi,
   AcDbDatabase,
   AcDbDatabaseConverter,
   AcDbDatabaseConverterConfig,
@@ -34,7 +35,6 @@ import {
   AcGiOrthographicType,
   AcGiRenderMode,
   ByLayer,
-  createWorkerApi,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_TEXT_STYLE,
   VPORT_FALLBACK_CENTER_2D,
@@ -77,7 +77,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const resolvedTimeout = this.getParserWorkerTimeout(data, timeout)
 
     if (effectiveConfig.useWorker && effectiveConfig.parserWorkerUrl) {
-      const api = createWorkerApi({
+      const api = acdbCreateWorkerApi({
         workerUrl: effectiveConfig.parserWorkerUrl,
         timeout: resolvedTimeout,
         // One concurrent worker needed for parser

@@ -16,7 +16,7 @@ let hostApplicationServicesProvider:
   | (() => { workingDatabase: AcDbDatabase })
   | undefined
 
-export function setAcDbHostApplicationServicesProvider(
+export function acdbSetHostApplicationServicesProvider(
   provider: () => { workingDatabase: AcDbDatabase }
 ) {
   hostApplicationServicesProvider = provider

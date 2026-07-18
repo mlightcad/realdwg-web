@@ -10,14 +10,14 @@ import {
   AcGeVector3dLike
 } from '../math'
 import { AcGeGeometryUtil } from '../util/AcGeGeometryUtil'
-import { acGeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
+import { acgeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCurve3d } from './AcGeCurve3d'
 import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
 import {
-  isNonZeroDirection,
-  normalizeSplineWeights,
-  resolveControlPointSplineDegree,
-  resolveFitPointSplineDegree
+  acgeIsNonZeroDirection,
+  acgeNormalizeSplineWeights,
+  acgeResolveControlPointSplineDegree,
+  acgeResolveFitPointSplineDegree
 } from './AcGeSplineUtil'
 
 export class AcGeSpline3d extends AcGeCurve3d {
@@ -580,7 +580,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
   get area(): number {
     if (!this._closed) return 0
     const points = this.getPoints(128)
-    return acGeClosedPolygonArea3d(points)
+    return acgeClosedPolygonArea3d(points)
   }
 
   /**
@@ -730,7 +730,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
       return null
     }
 
-    const degree = resolveControlPointSplineDegree(
+    const degree = acgeResolveControlPointSplineDegree(
       declaredDegree,
       controlPoints.length,
       knots.length
@@ -743,7 +743,7 @@ export class AcGeSpline3d extends AcGeCurve3d {
       return new AcGeSpline3d(
         controlPoints,
         knots,
-        normalizeSplineWeights(weights, controlPoints.length),
+        acgeNormalizeSplineWeights(weights, controlPoints.length),
         degree,
         closed
       )
@@ -780,10 +780,10 @@ export class AcGeSpline3d extends AcGeCurve3d {
       return null
     }
 
-    const hasStartTangent = isNonZeroDirection(startTangent)
-    const hasEndTangent = isNonZeroDirection(endTangent)
+    const hasStartTangent = acgeIsNonZeroDirection(startTangent)
+    const hasEndTangent = acgeIsNonZeroDirection(endTangent)
     const tangentCount = (hasStartTangent ? 1 : 0) + (hasEndTangent ? 1 : 0)
-    const degree = resolveFitPointSplineDegree(
+    const degree = acgeResolveFitPointSplineDegree(
       declaredDegree,
       fitPoints.length,
       tangentCount

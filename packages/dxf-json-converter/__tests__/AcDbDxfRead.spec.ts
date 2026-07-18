@@ -25,7 +25,7 @@ jest.mock('@mlightcad/data-model', () => {
   const { AcDbDxfParser: Parser } = jest.requireActual('../src/AcDbDxfParser')
   return {
     ...actual,
-    createWorkerApi: () => ({
+    acdbCreateWorkerApi: () => ({
       execute: async (data: ArrayBuffer) => ({
         success: true,
         data: new Parser().parse(data)

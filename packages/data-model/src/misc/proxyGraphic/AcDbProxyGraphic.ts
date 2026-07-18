@@ -3,18 +3,17 @@ import {
   AcGeArea2d,
   AcGeCircArc3d,
   AcGeEllipseArc3d,
+  acgeGetOcsAngle,
+  acgeGetOcsReferenceVector,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
+  acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike,
-  getOcsAngle,
-  getOcsReferenceVector,
-  TAU,
-  transformOcsPointToWcs,
-  transformWcsPointToOcs
-} from '@mlightcad/geometry-engine'
+  TAU} from '@mlightcad/geometry-engine'
 import {
   AcGiEntity,
   AcGiLineWeight,
@@ -790,12 +789,12 @@ export class AcDbProxyGraphic {
       z: center[2]
     })
     if (!normalVec.equals(Z_AXIS)) {
-      centerPoint = transformWcsPointToOcs(centerPoint, normalVec)
+      centerPoint = acgeTransformWcsPointToOcs(centerPoint, normalVec)
     }
     centerPoint = this.transformPoint(centerPoint)
-    const refVec = getOcsReferenceVector(normalVec)
+    const refVec = acgeGetOcsReferenceVector(normalVec)
     const arc = new AcGeCircArc3d(
-      transformOcsPointToWcs(centerPoint, normalVec),
+      acgeTransformOcsPointToWcs(centerPoint, normalVec),
       radius,
       0,
       TAU,
@@ -865,7 +864,7 @@ export class AcDbProxyGraphic {
     const refVec =
       Number.isFinite(rawStart.lengthSq()) && rawStart.lengthSq() >= 1e-24
         ? rawStart.normalize()
-        : getOcsReferenceVector(normalVec)
+        : acgeGetOcsReferenceVector(normalVec)
     const startAngle = 0
     const endAngle = sweepAngle
     const arc = new AcGeCircArc3d(
@@ -899,8 +898,8 @@ export class AcDbProxyGraphic {
     const center = AcGeCircArc3d.computeCenterPoint(p1, p3, p2)
     if (!center) return
     const radius = center.distanceTo(p1)
-    const startAngle = getOcsAngle(center, p1, Z_AXIS)
-    const endAngle = getOcsAngle(center, p3, Z_AXIS)
+    const startAngle = acgeGetOcsAngle(center, p1, Z_AXIS)
+    const endAngle = acgeGetOcsAngle(center, p3, Z_AXIS)
     const arc = new AcGeCircArc3d(center, radius, startAngle, endAngle, Z_AXIS)
     this.applyTraits(renderer)
     this.pushEntity(entities, renderer.circularArc(arc))
@@ -926,7 +925,7 @@ export class AcDbProxyGraphic {
     const startParam = bs.readFloat()
     const endParam = bs.readFloat()
     const majorAxisAngle = bs.readFloat()
-    const majorAxis = transformOcsPointToWcs(
+    const majorAxis = acgeTransformOcsPointToWcs(
       {
         x: Math.cos(majorAxisAngle) * majorAxisLength,
         y: Math.sin(majorAxisAngle) * majorAxisLength,
@@ -1310,7 +1309,7 @@ export class AcDbProxyGraphic {
  * @param hexChunks - One or more hexadecimal strings from group code **310**.
  * @returns Decoded bytes, or `undefined` when no hex chunks are supplied.
  */
-export function loadAcDbProxyGraphicFromDxf(
+export function acdbLoadProxyGraphicFromDxf(
   length?: number,
   hexChunks?: string[]
 ): Uint8Array | undefined {

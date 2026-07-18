@@ -13,7 +13,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents a polyface mesh vertex in AutoCAD.
@@ -405,7 +405,7 @@ export class AcDbPolyFaceMesh extends AcDbCurve {
    * @returns Offset polyline around the dominant face boundary, or `null` on failure
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return offsetVertexPathAsPolyline(
+    return acdbOffsetVertexPathAsPolyline(
       this.collectLargestFaceBoundary2d(),
       true,
       offsetDist

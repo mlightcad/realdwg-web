@@ -1,6 +1,6 @@
 import type { AcDbAcisModel } from './AcDbAcisEntities'
-import { buildAcDbAcisModel } from './AcDbAcisEntities'
-import { parseAcDbAcisSab } from './AcDbAcisSab'
+import { acdbBuildAcisModel } from './AcDbAcisEntities'
+import { acdbParseAcisSab } from './AcDbAcisSab'
 
 /** Known ACIS/ASM binary file signature strings searched in raw byte payloads. */
 const SAB_SIGNATURES = ['ACIS BinaryFile', 'ASM BinaryFile', 'ASM BinaryFile4'] as const
@@ -35,7 +35,7 @@ function findAscii(data: Uint8Array, needle: string): number {
  * @param data - Raw SAB/ASM byte payload.
  * @returns Zero-based offset, or `-1` when no known signature is found.
  */
-export function findAcDbAcisSabSignatureOffset(data: Uint8Array): number {
+export function acdbFindAcisSabSignatureOffset(data: Uint8Array): number {
   for (const signature of SAB_SIGNATURES) {
     const offset = findAscii(data, signature)
     if (offset >= 0) return offset
@@ -48,8 +48,8 @@ export function findAcDbAcisSabSignatureOffset(data: Uint8Array): number {
  *
  * @param data - Raw SAB/ASM byte payload.
  */
-export function isAcDbAcisSabPayload(data: Uint8Array): boolean {
-  return findAcDbAcisSabSignatureOffset(data) >= 0
+export function acdbIsAcisSabPayload(data: Uint8Array): boolean {
+  return acdbFindAcisSabSignatureOffset(data) >= 0
 }
 
 /**
@@ -59,12 +59,12 @@ export function isAcDbAcisSabPayload(data: Uint8Array): boolean {
  * @returns Resolved model graph, or `null` for empty payloads, missing signatures,
  * or malformed streams.
  */
-export function decodeAcDbAcisModel(data: Uint8Array): AcDbAcisModel | null {
+export function acdbDecodeAcisModel(data: Uint8Array): AcDbAcisModel | null {
   if (data.length === 0) return null
-  const offset = findAcDbAcisSabSignatureOffset(data)
+  const offset = acdbFindAcisSabSignatureOffset(data)
   if (offset < 0) return null
   try {
-    return buildAcDbAcisModel(parseAcDbAcisSab(data.subarray(offset)))
+    return acdbBuildAcisModel(acdbParseAcisSab(data.subarray(offset)))
   } catch {
     return null
   }

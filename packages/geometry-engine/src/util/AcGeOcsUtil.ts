@@ -15,7 +15,7 @@ function createExtrusionMatrix(normal: AcGeVector3dLike) {
   )
 }
 
-export function getOcsReferenceVector(normal: AcGeVector3dLike) {
+export function acgeGetOcsReferenceVector(normal: AcGeVector3dLike) {
   _ocsMatrix.setFromExtrusionDirection(
     new AcGeVector3d(normal.x, normal.y, normal.z)
   )
@@ -23,7 +23,7 @@ export function getOcsReferenceVector(normal: AcGeVector3dLike) {
   return _ocsXAxis.clone()
 }
 
-export function transformOcsPointToWcs(
+export function acgeTransformOcsPointToWcs(
   point: AcGePoint3dLike,
   normal: AcGeVector3dLike
 ) {
@@ -32,7 +32,7 @@ export function transformOcsPointToWcs(
   )
 }
 
-export function transformWcsPointToOcs(
+export function acgeTransformWcsPointToOcs(
   point: AcGePoint3dLike,
   normal: AcGeVector3dLike
 ) {
@@ -41,13 +41,13 @@ export function transformWcsPointToOcs(
   )
 }
 
-export function getOcsAngle(
+export function acgeGetOcsAngle(
   center: AcGePoint3dLike,
   point: AcGePoint3dLike,
   normal: AcGeVector3dLike
 ) {
-  const centerOcs = transformWcsPointToOcs(center, normal)
-  const pointOcs = transformWcsPointToOcs(point, normal)
+  const centerOcs = acgeTransformWcsPointToOcs(center, normal)
+  const pointOcs = acgeTransformWcsPointToOcs(point, normal)
   _ocsPoint.set(
     pointOcs.x - centerOcs.x,
     pointOcs.y - centerOcs.y,

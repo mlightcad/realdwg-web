@@ -12,6 +12,7 @@ import {
   AcDbAttributeMTextFlag,
   AcDbBlockReference,
   AcDbCircle,
+  acdbDecodeMLeaderStyleRawColor,
   AcDbDiametricDimension,
   AcDbDimension,
   AcDbEllipse,
@@ -22,6 +23,7 @@ import {
   AcDbHatchObjectType,
   AcDbHatchPatternType,
   AcDbHatchStyle,
+  acdbHexStringsToBytes,
   AcDbLeader,
   AcDbLeaderAnnotationType,
   AcDbLine,
@@ -71,14 +73,11 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  acgeTransformOcsPointToWcs,
   AcGeVector2d,
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
-  AcGiMTextFlowDirection,
-  decodeMLeaderStyleRawColor,
-  hexStringsToBytes,
-  transformOcsPointToWcs
-} from '@mlightcad/data-model'
+  AcGiMTextFlowDirection} from '@mlightcad/data-model'
 import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
@@ -253,7 +252,7 @@ export class AcDbEntityConverter {
       proxy.originalDataFormat = entity.originalDataFormat
     }
     if (entity.graphicsData) {
-      const bytes = hexStringsToBytes([entity.graphicsData])
+      const bytes = acdbHexStringsToBytes([entity.graphicsData])
       const size = entity.graphicsDataSize ?? bytes.length
       proxy.setProxyGraphic(bytes.subarray(0, size))
     }
@@ -273,7 +272,7 @@ export class AcDbEntityConverter {
   private convertArc(arc: DwgArcEntity) {
     const normal = arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      transformOcsPointToWcs(arc.center, normal),
+      acgeTransformOcsPointToWcs(arc.center, normal),
       arc.radius,
       arc.startAngle,
       arc.endAngle,
@@ -285,7 +284,7 @@ export class AcDbEntityConverter {
   private convertCirle(circle: DwgCircleEntity) {
     const normal = circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbCircle(
-      transformOcsPointToWcs(circle.center, normal),
+      acgeTransformOcsPointToWcs(circle.center, normal),
       circle.radius,
       normal
     )
@@ -331,7 +330,7 @@ export class AcDbEntityConverter {
   private convertShape(shape: DwgShapeEntity) {
     const normal = shape.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbShape()
-    dbEntity.position = transformOcsPointToWcs(shape.insertionPoint, normal)
+    dbEntity.position = acgeTransformOcsPointToWcs(shape.insertionPoint, normal)
     dbEntity.size = shape.size
     dbEntity.shapeNumber = shape.shapeNumber
     if (shape.styleName) {
@@ -1222,9 +1221,9 @@ export class AcDbEntityConverter {
     dbImage.imageSize.copy(image.imageSize)
     dbImage.imageDefId = image.imageDefHandle as string
     dbImage.isClipped = image.clipping > 0
-    dbImage.isShownClipped = (image.flags | 0x0004) > 0
-    dbImage.isImageShown = (image.flags | 0x0003) > 0
-    dbImage.isImageTransparent = (image.flags | 0x0008) > 0
+    dbImage.isShownClipped = (image.flags & 0x0004) !== 0
+    dbImage.isImageShown = (image.flags & 0x0003) !== 0
+    dbImage.isImageTransparent = (image.flags & 0x0008) !== 0
     image.clippingBoundaryPath.forEach(point => {
       dbImage.clipBoundary.push(new AcGePoint2d(point))
     })
@@ -1262,7 +1261,7 @@ export class AcDbEntityConverter {
     const dbEntity = new AcDbOleFrame()
     dbEntity.oleVersion = entity.flag ?? 0
     if (entity.binaryData) {
-      const bytes = hexStringsToBytes([entity.binaryData])
+      const bytes = acdbHexStringsToBytes([entity.binaryData])
       dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
     }
     return dbEntity
@@ -1285,7 +1284,7 @@ export class AcDbEntityConverter {
       (entity.tileModeDescriptor as AcDbOleTileMode) ??
       AcDbOleTileMode.ModelSpace
     if (entity.binaryData) {
-      const bytes = hexStringsToBytes([entity.binaryData])
+      const bytes = acdbHexStringsToBytes([entity.binaryData])
       dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
     }
     return dbEntity
@@ -1492,7 +1491,7 @@ export class AcDbEntityConverter {
   }
 
   private convertMLeaderEntityColor(color: number) {
-    return decodeMLeaderStyleRawColor(color)
+    return acdbDecodeMLeaderStyleRawColor(color)
   }
 
   private readMLeaderEntityColor(
@@ -1502,7 +1501,7 @@ export class AcDbEntityConverter {
     for (const name of names) {
       const value = source[name]
       if (typeof value === 'number' && Number.isFinite(value)) {
-        return decodeMLeaderStyleRawColor(value)
+        return acdbDecodeMLeaderStyleRawColor(value)
       }
     }
     return undefined

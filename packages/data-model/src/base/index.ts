@@ -4,12 +4,12 @@ export type { AcDbDxfFilerOptions } from './AcDbDxfFiler'
 export {
   AcDbHostApplicationServices,
   acdbHostApplicationServices,
-  setAcDbLayoutManagerFactory
+  acdbSetLayoutManagerFactory
 } from './AcDbHostApplicationServices'
 export {
   AcDbObject,
   TEMP_OBJECT_ID_PREFIX,
-  setAcDbHostApplicationServicesProvider
+  acdbSetHostApplicationServicesProvider
 } from './AcDbObject'
 export type { AcDbObjectAttrs, AcDbObjectId } from './AcDbObject'
 export { AcDbOpenMode } from './AcDbOpenMode'

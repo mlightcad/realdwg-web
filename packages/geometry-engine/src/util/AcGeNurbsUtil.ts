@@ -7,7 +7,7 @@ type KnotParameterizationType = 'Uniform' | 'Chord' | 'SqrtChord'
 /**
  * Generate uniform knot vector
  */
-export function generateUniformKnots(
+export function acgeGenerateUniformKnots(
   degree: number,
   numControlPoints: number
 ): number[] {
@@ -36,7 +36,7 @@ export function generateUniformKnots(
 /**
  * Generate chord-length parameterized knots
  */
-export function generateChordKnots(
+export function acgeGenerateChordKnots(
   degree: number,
   points: number[][]
 ): number[] {
@@ -81,7 +81,7 @@ export function generateChordKnots(
 /**
  * Compute parameter values for fit points
  */
-export function computeParameterValues(
+export function acgeComputeParameterValues(
   points: number[][],
   parameterization: KnotParameterizationType = 'Uniform'
 ): number[] {
@@ -121,7 +121,7 @@ export function computeParameterValues(
 /**
  * Generate a clamped knot vector using averaging method
  */
-export function generateAveragedKnots(
+export function acgeGenerateAveragedKnots(
   degree: number,
   parameters: number[]
 ): number[] {
@@ -150,7 +150,7 @@ export function generateAveragedKnots(
 /**
  * Generate sqrt-chord parameterized knots
  */
-export function generateSqrtChordKnots(
+export function acgeGenerateSqrtChordKnots(
   degree: number,
   points: number[][]
 ): number[] {
@@ -250,7 +250,7 @@ function solveLinearSystem(matrix: number[][], rhs: number[]): number[] {
 /**
  * Interpolate a NURBS curve from fit points with optional end tangents
  */
-export function interpolateNurbsCurve(
+export function acgeInterpolateNurbsCurve(
   fitPoints: number[][],
   degree: number,
   parameterization: KnotParameterizationType = 'Uniform',
@@ -275,7 +275,7 @@ export function interpolateNurbsCurve(
     throw new Error('Not enough points to interpolate a curve of this degree.')
   }
 
-  const params = computeParameterValues(safePoints, parameterization)
+  const params = acgeComputeParameterValues(safePoints, parameterization)
   const extendedParams = params.slice()
   if (hasStartTangent) {
     extendedParams.unshift(params[0])
@@ -284,7 +284,7 @@ export function interpolateNurbsCurve(
     extendedParams.push(params[params.length - 1])
   }
 
-  const knots = generateAveragedKnots(degree, extendedParams)
+  const knots = acgeGenerateAveragedKnots(degree, extendedParams)
   const size = n + 1
 
   const matrix = new Array(size)
@@ -304,7 +304,7 @@ export function interpolateNurbsCurve(
     const u = params[i]
     matrix[row] = new Array(size).fill(0)
     for (let j = 0; j <= n; j++) {
-      matrix[row][j] = basisFunction(j, degree, u, knots)
+      matrix[row][j] = acgeBasisFunction(j, degree, u, knots)
     }
     rhsX[row] = safePoints[i][0]
     rhsY[row] = safePoints[i][1]
@@ -360,7 +360,7 @@ export function interpolateNurbsCurve(
 /**
  * Calculate basis function value for NURBS
  */
-export function basisFunction(
+export function acgeBasisFunction(
   i: number,
   k: number,
   u: number,
@@ -377,15 +377,15 @@ export function basisFunction(
   const c2 = d2 > 1e-10 ? (knots[i + k + 1] - u) / d2 : 0.0
 
   return (
-    c1 * basisFunction(i, k - 1, u, knots) +
-    c2 * basisFunction(i + 1, k - 1, u, knots)
+    c1 * acgeBasisFunction(i, k - 1, u, knots) +
+    c2 * acgeBasisFunction(i + 1, k - 1, u, knots)
   )
 }
 
 /**
  * Calculate point on NURBS curve
  */
-export function evaluateNurbsPoint(
+export function acgeEvaluateNurbsPoint(
   u: number,
   degree: number,
   knots: number[],
@@ -412,7 +412,7 @@ export function evaluateNurbsPoint(
   let weight = 0
 
   for (let i = 0; i <= n; i++) {
-    const basis = basisFunction(i, p, u, knots)
+    const basis = acgeBasisFunction(i, p, u, knots)
     const w = weights[i] * basis
 
     point[0] += controlPoints[i][0] * w
@@ -466,10 +466,10 @@ function basisFunctionDeriv1(
   let value = 0
 
   if (denomA > 1e-10) {
-    value += (k / denomA) * basisFunction(i, k - 1, u, knots)
+    value += (k / denomA) * acgeBasisFunction(i, k - 1, u, knots)
   }
   if (denomB > 1e-10) {
-    value -= (k / denomB) * basisFunction(i + 1, k - 1, u, knots)
+    value -= (k / denomB) * acgeBasisFunction(i + 1, k - 1, u, knots)
   }
 
   return value
@@ -503,7 +503,7 @@ function basisFunctionDeriv2(
 /**
  * Evaluates a rational NURBS curve and its first two parametric derivatives.
  */
-export function evaluateNurbsDerivatives(
+export function acgeEvaluateNurbsDerivatives(
   u: number,
   degree: number,
   knots: number[],
@@ -524,7 +524,7 @@ export function evaluateNurbsDerivatives(
   let d2w = 0
 
   for (let i = 0; i <= n; i++) {
-    const basis = basisFunction(i, p, u, knots)
+    const basis = acgeBasisFunction(i, p, u, knots)
     const dbasis = basisFunctionDeriv1(i, p, u, knots)
     const d2basis = basisFunctionDeriv2(i, p, u, knots)
     const weight = weights[i]
@@ -548,7 +548,7 @@ export function evaluateNurbsDerivatives(
   }
 
   if (Math.abs(w) < 1e-10) {
-    const point = evaluateNurbsPoint(u, degree, knots, controlPoints, weights)
+    const point = acgeEvaluateNurbsPoint(u, degree, knots, controlPoints, weights)
     return { point, deriv1: [0, 0, 0], deriv2: [0, 0, 0] }
   }
 
@@ -574,7 +574,7 @@ export function evaluateNurbsDerivatives(
 /**
  * Signed planar curvature from parametric derivatives in XY.
  */
-export function signedPlanarCurvature(
+export function acgeSignedPlanarCurvature(
   deriv1: number[],
   deriv2: number[]
 ): number {
@@ -590,7 +590,7 @@ export function signedPlanarCurvature(
 /**
  * Calculate curve length using numerical integration
  */
-export function calculateCurveLength(
+export function acgeCalculateCurveLength(
   degree: number,
   knots: number[],
   controlPoints: number[][],
@@ -604,7 +604,7 @@ export function calculateCurveLength(
   const steps = 1000
   const step = (endParam - startParam) / steps
 
-  let prevPoint = evaluateNurbsPoint(
+  let prevPoint = acgeEvaluateNurbsPoint(
     startParam,
     degree,
     knots,
@@ -614,7 +614,7 @@ export function calculateCurveLength(
 
   for (let i = 1; i <= steps; i++) {
     const u = startParam + i * step
-    const point = evaluateNurbsPoint(u, degree, knots, controlPoints, weights)
+    const point = acgeEvaluateNurbsPoint(u, degree, knots, controlPoints, weights)
 
     const dx = point[0] - prevPoint[0]
     const dy = point[1] - prevPoint[1]
@@ -625,7 +625,7 @@ export function calculateCurveLength(
   }
 
   // Add the final segment to the end point
-  const finalPoint = evaluateNurbsPoint(
+  const finalPoint = acgeEvaluateNurbsPoint(
     endParam,
     degree,
     knots,
@@ -643,7 +643,7 @@ export function calculateCurveLength(
 /**
  * Generate control points from fit points using interpolation
  */
-export function interpolateControlPoints(
+export function acgeInterpolateControlPoints(
   fitPoints: number[][],
   degree: number = 3,
   parameterization: KnotParameterizationType = 'Uniform',
@@ -654,7 +654,7 @@ export function interpolateControlPoints(
     return []
   }
 
-  return interpolateNurbsCurve(
+  return acgeInterpolateNurbsCurve(
     fitPoints,
     degree,
     parameterization,

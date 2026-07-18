@@ -8,10 +8,9 @@ import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import {
-  AcDbProxyGraphic,
-  bytesToHexString,
-  loadAcDbProxyGraphicFromDxf
-} from '../misc/proxyGraphic'
+  acdbBytesToHexString,
+  acdbLoadProxyGraphicFromDxf,
+  AcDbProxyGraphic} from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
 import {
   acdbForEachGripIndex,
@@ -481,7 +480,7 @@ export class AcDbProxyEntity extends AcDbEntity {
       let index = 0
       while (index < this._proxyGraphic.length) {
         const chunk = this._proxyGraphic.subarray(index, index + 127)
-        filer.writeString(310, bytesToHexString(chunk))
+        filer.writeString(310, acdbBytesToHexString(chunk))
         index += 127
       }
     }
@@ -495,7 +494,7 @@ export class AcDbProxyEntity extends AcDbEntity {
    * @param hexChunks - One or more hexadecimal strings from group code **310**.
    */
   loadProxyGraphicFromDxf(length?: number, hexChunks?: string[]) {
-    const data = loadAcDbProxyGraphicFromDxf(length, hexChunks)
+    const data = acdbLoadProxyGraphicFromDxf(length, hexChunks)
     if (data) {
       this.setProxyGraphic(data)
     }

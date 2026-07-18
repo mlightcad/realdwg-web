@@ -3,7 +3,7 @@ export { AcDbFormatter } from './AcDbFormatter'
 export type { AcDbFormatterOptions } from './AcDbFormatter'
 export { AcDbLinearUnits } from './AcDbLinearUnits'
 export { AcDbRenderingCache } from './AcDbRenderingCache'
-export { AcDbCodePage, dwgCodePageToEncoding } from './AcDbCodePage'
+export { AcDbCodePage, acdbDwgCodePageToEncoding } from './AcDbCodePage'
 export {
   ACAD_APPID,
   ACDB_GRIPCOLOR_DEFAULT,
@@ -46,13 +46,11 @@ export {
   RAW_COLOR_TYPE_BY_LAYER,
   RAW_COLOR_TYPE_RGB,
   RAW_COLOR_TYPE_WINDOW_BG,
-  decodeMLeaderStyleRawColor,
-  encodeMLeaderStyleRawColor
+  acdbDecodeMLeaderStyleRawColor
 } from './AcDbMLeaderStyleColorCodec'
 export {
   acdbEstimateDatabaseMemory,
-  acdbFormatMemoryEstimate,
-  acdbFormatMemoryBytes
+  acdbFormatMemoryEstimate
 } from './AcDbMemoryEstimator'
 export type {
   AcDbMemoryEstimate,
@@ -62,18 +60,12 @@ export type {
 export { AcDbObjectIterator } from './AcDbObjectIterator'
 export {
   AcDbOsnapMode,
-  acdbDisableOsnapMode,
-  acdbEnableOsnapMode,
   acdbHasOsnapMode,
   acdbMaskToOsnapModes,
   acdbOsnapModesToMask,
   acdbToggleOsnapMode
 } from './AcDbOsnapMode'
-export {
-  AcDbUnitsValue,
-  isImperialUnits,
-  isMetricUnits
-} from './AcDbUnitsValue'
+export { AcDbUnitsValue } from './AcDbUnitsValue'
 export {
   AcDbPatParser,
   AcDbPatSvgRenderer,
@@ -83,17 +75,14 @@ export {
 export {
   AcDbProxyGraphic,
   AcDbProxyGraphicType,
-  ACDB_PROXY_GRAPHIC_CHUNK_SIZE,
-  loadAcDbProxyGraphicFromDxf
+  ACDB_PROXY_GRAPHIC_CHUNK_SIZE
 } from './proxyGraphic'
 export {
   AcDbProxyGraphicBitStream,
   AcDbProxyGraphicByteStream,
   AcDbProxyGraphicEndOfBufferError,
-  bytesToHexString,
-  hexStringsToBytes
+  acdbHexStringsToBytes
 } from './proxyGraphic'
-export { acdbExtractOleImageBlob } from './AcDbOleImageExtractor'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,

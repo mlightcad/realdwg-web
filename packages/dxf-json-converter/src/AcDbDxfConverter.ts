@@ -7,6 +7,7 @@ import {
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag,
   AcDbConversionProgressCallback,
+  acdbCreateWorkerApi,
   AcDbDatabase,
   AcDbDatabaseConverter,
   AcDbDatabaseConverterConfig,
@@ -35,7 +36,6 @@ import {
   AcGiOrthographicType,
   AcGiRenderMode,
   ByLayer,
-  createWorkerApi,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE,
@@ -108,7 +108,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
     const resolvedTimeout = this.getParserWorkerTimeout(data, timeout)
 
     if (effectiveConfig.useWorker && effectiveConfig.parserWorkerUrl) {
-      const api = createWorkerApi({
+      const api = acdbCreateWorkerApi({
         workerUrl: effectiveConfig.parserWorkerUrl,
         timeout: resolvedTimeout,
         // One concurrent worker needed for parser

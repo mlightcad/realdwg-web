@@ -93,9 +93,9 @@ export {
   AcDbTransaction,
   AcDbTransactionManager,
   AcDbUndoStack,
-  areChangeContainersEqual,
-  collectChangeEntities,
-  collectDictionaryChanges
+  acdbAreChangeContainersEqual,
+  acdbCollectChangeEntities,
+  acdbCollectDictionaryChanges
 } from './transaction'
 export type {
   AcDbChangeContainer,

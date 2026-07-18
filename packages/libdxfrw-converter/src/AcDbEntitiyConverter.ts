@@ -27,10 +27,9 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  acgeTransformOcsPointToWcs,
   AcGeVector2d,
-  AcGeVector3d,
-  transformOcsPointToWcs
-} from '@mlightcad/data-model'
+  AcGeVector3d} from '@mlightcad/data-model'
 import {
   DRW_Arc,
   DRW_Circle,
@@ -109,7 +108,7 @@ export class AcDbEntityConverter {
   private convertArc(arc: DRW_Arc) {
     const normal = arc.extPoint ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      transformOcsPointToWcs(arc.center(), normal),
+      acgeTransformOcsPointToWcs(arc.center(), normal),
       arc.radius,
       arc.startAngle,
       arc.endAngle,
@@ -121,7 +120,7 @@ export class AcDbEntityConverter {
   private convertCirle(circle: DRW_Circle) {
     const normal = circle.extPoint ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbCircle(
-      transformOcsPointToWcs(circle.basePoint, normal),
+      acgeTransformOcsPointToWcs(circle.basePoint, normal),
       circle.radius,
       normal
     )

@@ -2,12 +2,11 @@ import {
   AcGeBox3d,
   AcGeLine3d,
   AcGeMatrix3d,
+  acgeOffsetPointByDirectionInXY,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
-  AcGeVector3dLike,
-  offsetPointByDirectionInXY
-} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -398,7 +397,7 @@ export class AcDbXline extends AcDbCurve {
    * @returns Parallel xline, or `null` when {@link unitDir} has negligible XY component
    */
   private createOffsetCurve(offsetDist: number): AcDbXline | null {
-    const offsetPoint = offsetPointByDirectionInXY(
+    const offsetPoint = acgeOffsetPointByDirectionInXY(
       this.basePoint,
       this.unitDir,
       offsetDist

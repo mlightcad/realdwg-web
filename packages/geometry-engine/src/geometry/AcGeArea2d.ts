@@ -1,6 +1,6 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math'
 import { AcGeGeometryUtil, AcGeMathUtil } from '../util'
-import { acGeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
+import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
 import { AcGeLoop2d } from './AcGeLoop2d'
 import { AcGePolyline2d } from './AcGePolyline2d'
 import { AcGeShape2d } from './AcGeShape2d'
@@ -162,7 +162,7 @@ export class AcGeArea2d extends AcGeShape2d {
       // Sets the number of points used for curve segmentation to 128
       const points = loop.getPoints(128) as AcGePoint2d[]
 
-      const loopArea = acGeSignedPolygonArea2d(points)
+      const loopArea = acgeSignedPolygonArea2d(points)
 
       if (i === 0) {
         // outter loop

@@ -557,7 +557,7 @@ export class AcDbProxyGraphicBitStream {
  * @param data - Bytes to encode.
  * @returns A contiguous hex string with two digits per byte.
  */
-export function bytesToHexString(data: Uint8Array): string {
+export function acdbBytesToHexString(data: Uint8Array): string {
   return Array.from(data, byte => byte.toString(16).padStart(2, '0'))
     .join('')
     .toUpperCase()
@@ -572,7 +572,7 @@ export function bytesToHexString(data: Uint8Array): string {
  * @param chunks - Hex strings, typically from DXF group code **310**.
  * @returns Concatenated decoded bytes.
  */
-export function hexStringsToBytes(chunks: string[]): Uint8Array {
+export function acdbHexStringsToBytes(chunks: string[]): Uint8Array {
   const totalLength = chunks.reduce(
     (sum, chunk) => sum + Math.floor(chunk.length / 2),
     0

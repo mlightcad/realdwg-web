@@ -1,13 +1,13 @@
-import { decodeAcDbAcisModel } from './AcDbAcisDecode'
+import { acdbDecodeAcisModel } from './AcDbAcisDecode'
 import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
 import {
-  acDbAcisEdgeParamBounds,
+  acdbAcisEdgeParamBounds,
   type AcDbAcisGeometry,
-  acDbAcisParseSurfaceParams,
+  acdbAcisParseSurfaceParams,
   type AcDbAcisVec3,
-  extractAcDbAcisGeometry,
-  sampleAcDbAcisEllipseArc,
-  sampleAcDbAcisSphereWireframe,
+  acdbExtractAcisGeometry,
+  acdbSampleAcisEllipseArc,
+  acdbSampleAcisSphereWireframe,
 } from './AcDbAcisGeometry'
 
 /** Default number of samples when tessellating ellipse edges for wireframe output. */
@@ -41,9 +41,9 @@ function acdbAcisWireframeSegmentsFromSphereFaces(model: AcDbAcisModel): Float32
   for (const face of model.nodesOfType('face')) {
     const surfaceNode = refOfType(face, '-surface')
     if (surfaceNode?.type !== 'sphere-surface') continue
-    const params = acDbAcisParseSurfaceParams(surfaceNode)
+    const params = acdbAcisParseSurfaceParams(surfaceNode)
     if (params.kind !== 'sphere') continue
-    for (const ring of sampleAcDbAcisSphereWireframe(params)) {
+    for (const ring of acdbSampleAcisSphereWireframe(params)) {
       pushPolyline(segments, ring)
     }
   }
@@ -69,12 +69,12 @@ export function acdbAcisWireframeSegmentsFromGeometry(
 
     if (edge.curve?.kind === 'ellipse') {
       const bounds =
-        edgeNode !== undefined ? acDbAcisEdgeParamBounds(edgeNode) : null
+        edgeNode !== undefined ? acdbAcisEdgeParamBounds(edgeNode) : null
       const t0 = bounds?.[0] ?? 0
       const t1 = bounds?.[1] ?? Math.PI * 2
       pushPolyline(
         segments,
-        sampleAcDbAcisEllipseArc(edge.curve, t0, t1, DEFAULT_ELLIPSE_SAMPLES),
+        acdbSampleAcisEllipseArc(edge.curve, t0, t1, DEFAULT_ELLIPSE_SAMPLES),
       )
       continue
     }
@@ -105,9 +105,9 @@ export function acdbAcisWireframeSegmentsFromGeometry(
 export function acdbAcisWireframeSegmentsFromSab(
   sabBytes: Uint8Array,
 ): Float32Array | null {
-  const model = decodeAcDbAcisModel(sabBytes)
+  const model = acdbDecodeAcisModel(sabBytes)
   if (model === null) return null
-  const geometry = extractAcDbAcisGeometry(model)
+  const geometry = acdbExtractAcisGeometry(model)
   const edgeWireframe = acdbAcisWireframeSegmentsFromGeometry(geometry, model)
   if (edgeWireframe.length > 0) {
     return edgeWireframe

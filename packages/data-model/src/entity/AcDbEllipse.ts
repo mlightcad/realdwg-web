@@ -1,11 +1,11 @@
 import {
   AcGeEllipseArc3d,
+  acgeGetOcsAngle,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
   AcGeVector3dLike,
-  getOcsAngle,
   TAU
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -649,7 +649,7 @@ export class AcDbEllipse extends AcDbCurve {
           this.moveQuadrantGripAt(ELLIPSE_QUADRANT_GRIP_ANGLES[0], offset)
         } else {
           const point = this._geo.startPoint
-          this._geo.startAngle = getOcsAngle(
+          this._geo.startAngle = acgeGetOcsAngle(
             this._geo.center,
             {
               x: point.x + offset.x,
@@ -665,7 +665,7 @@ export class AcDbEllipse extends AcDbCurve {
           this.moveQuadrantGripAt(ELLIPSE_QUADRANT_GRIP_ANGLES[1], offset)
         } else {
           const point = this._geo.endPoint
-          this._geo.endAngle = getOcsAngle(
+          this._geo.endAngle = acgeGetOcsAngle(
             this._geo.center,
             {
               x: point.x + offset.x,

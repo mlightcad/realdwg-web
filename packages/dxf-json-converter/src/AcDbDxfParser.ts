@@ -1,8 +1,7 @@
 import {
   AcDbCodePage,
-  AcDbDwgVersion,
-  dwgCodePageToEncoding
-} from '@mlightcad/data-model'
+  acdbDwgCodePageToEncoding,
+  AcDbDwgVersion} from '@mlightcad/data-model'
 import { DxfParser, isBinaryDxf, ParsedDxf } from '@mlightcad/dxf-json'
 
 /**
@@ -89,7 +88,7 @@ export class AcDbDxfParser {
           const value: string | undefined = lines[i + 2]?.trim()
           if (value) {
             const codePage = AcDbCodePage[value as keyof typeof AcDbCodePage]
-            encoding = dwgCodePageToEncoding(codePage)
+            encoding = acdbDwgCodePageToEncoding(codePage)
           }
         }
 
