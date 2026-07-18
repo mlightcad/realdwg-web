@@ -3,7 +3,7 @@
  *
  * @packageDocumentation
  */
-export { parseAcDbAcisSab, AcDbAcisSabTag } from './AcDbAcisSab'
+export { acdbParseAcisSab, AcDbAcisSabTag } from './AcDbAcisSab'
 export type {
   AcDbAcisSabData,
   AcDbAcisSabHeader,
@@ -12,19 +12,19 @@ export type {
   AcDbAcisSabTokenValue,
   AcDbAcisSabVector,
 } from './AcDbAcisSab'
-export { buildAcDbAcisModel } from './AcDbAcisEntities'
+export { acdbBuildAcisModel } from './AcDbAcisEntities'
 export type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
 export {
-  decodeAcDbAcisModel,
-  findAcDbAcisSabSignatureOffset,
-  isAcDbAcisSabPayload,
+  acdbDecodeAcisModel,
+  acdbFindAcisSabSignatureOffset,
+  acdbIsAcisSabPayload,
 } from './AcDbAcisDecode'
 export {
-  acDbAcisEdgeParamBounds,
-  acDbAcisParseSurfaceParams,
-  extractAcDbAcisGeometry,
-  sampleAcDbAcisEllipseArc,
-  sampleAcDbAcisSphereWireframe,
+  acdbAcisEdgeParamBounds,
+  acdbAcisParseSurfaceParams,
+  acdbExtractAcisGeometry,
+  acdbSampleAcisEllipseArc,
+  acdbSampleAcisSphereWireframe,
 } from './AcDbAcisGeometry'
 export type {
   AcDbAcisBBox,
@@ -51,7 +51,7 @@ export type {
   AcDbAcisVertex,
 } from './AcDbAcisGeometry'
 export {
-  acdbAcisWireframeSegmentsFromGeometry as acDbAcisWireframeSegmentsFromGeometry,
-  acdbAcisWireframeSegmentsFromSab as acDbAcisWireframeSegmentsFromSab,
+  acdbAcisWireframeSegmentsFromGeometry,
+  acdbAcisWireframeSegmentsFromSab,
 } from './AcDbAcisWireframe'
-export { acDbAcisWireframeSegmentsFromSatText } from './AcDbAcisSatWireframe'
+export { acdbAcisWireframeSegmentsFromSatText } from './AcDbAcisSatWireframe'

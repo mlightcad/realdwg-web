@@ -311,6 +311,6 @@ export class AcDbWorkerApi {
 /**
  * Create a worker API instance
  */
-export function createWorkerApi(config: AcDbWorkerConfig): AcDbWorkerApi {
+export function acdbCreateWorkerApi(config: AcDbWorkerConfig): AcDbWorkerApi {
   return new AcDbWorkerApi(config)
 }

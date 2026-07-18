@@ -13,7 +13,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a polygon mesh vertex in AutoCAD.
@@ -444,7 +444,7 @@ export class AcDbPolygonMesh extends AcDbCurve {
    * @returns Offset polyline along the mesh boundary, or `null` on failure
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return offsetVertexPathAsPolyline(
+    return acdbOffsetVertexPathAsPolyline(
       this.collectBoundary2d(),
       this.isBoundaryClosed(),
       offsetDist

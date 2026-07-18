@@ -44,7 +44,7 @@ export interface AcDbLayerTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
  * Also serves as the source of layer data attribute keys used when diffing
  * records for {@link LAYER_TABLE_RECORD_DIFF_ATTR_KEYS}.
  */
-export function createLayerTableRecordDefaultAttrs() {
+export function acdbCreateLayerTableRecordDefaultAttrs() {
   return {
     color: new AcCmColor(),
     description: '',
@@ -64,14 +64,14 @@ export function createLayerTableRecordDefaultAttrs() {
 }
 
 type LayerTableRecordDataAttrKey = keyof ReturnType<
-  typeof createLayerTableRecordDefaultAttrs
+  typeof acdbCreateLayerTableRecordDefaultAttrs
 >
 
 /** Layer attribute keys compared when emitting layer-modified events. */
 export const LAYER_TABLE_RECORD_DIFF_ATTR_KEYS = [
   'name',
   ...(Object.keys(
-    createLayerTableRecordDefaultAttrs()
+    acdbCreateLayerTableRecordDefaultAttrs()
   ) as LayerTableRecordDataAttrKey[])
 ] as const satisfies readonly (LayerTableRecordDataAttrKey | 'name')[]
 
@@ -104,7 +104,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     defaultAttrs?: Partial<AcDbLayerTableRecordAttrs>
   ) {
     attrs = attrs || {}
-    defaults(attrs, createLayerTableRecordDefaultAttrs())
+    defaults(attrs, acdbCreateLayerTableRecordDefaultAttrs())
     super(attrs, defaultAttrs)
   }
 

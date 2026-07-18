@@ -16,7 +16,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
 
 /**
  * Represents a trace entity in AutoCAD.
@@ -373,7 +373,7 @@ export class AcDbTrace extends AcDbCurve {
    * @returns Offset polyline around the trace boundary, or `null` on failure
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return offsetVertexPathAsPolyline(
+    return acdbOffsetVertexPathAsPolyline(
       this.collectBoundary2d(),
       true,
       offsetDist

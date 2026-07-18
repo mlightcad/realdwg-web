@@ -6,7 +6,7 @@ import {
   AcGePoint3dLike,
   AcGeVector3d,
   AcGeVector3dLike,
-  offsetPointByDirectionInXY
+  acgeOffsetPointByDirectionInXY
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -409,7 +409,7 @@ export class AcDbRay extends AcDbCurve {
    * @returns Parallel ray, or `null` when {@link unitDir} has negligible XY component
    */
   private createOffsetCurve(offsetDist: number): AcDbRay | null {
-    const offsetPoint = offsetPointByDirectionInXY(
+    const offsetPoint = acgeOffsetPointByDirectionInXY(
       this.basePoint,
       this.unitDir,
       offsetDist

@@ -1,7 +1,7 @@
 import {
   AcDbWorkerApi,
   AcDbWorkerManager,
-  createWorkerApi
+  acdbCreateWorkerApi
 } from '../src/converter/worker/AcDbWorkerManager'
 
 class FakeWorker {
@@ -123,7 +123,7 @@ describe('AcDbWorkerManager / AcDbWorkerApi', () => {
     expect(result.success).toBe(true)
     expect(result.data).toBe('wrapped')
 
-    const viaFactory = createWorkerApi({ workerUrl: 'mock-worker.js' })
+    const viaFactory = acdbCreateWorkerApi({ workerUrl: 'mock-worker.js' })
     expect(viaFactory.getStats().config.workerUrl).toBe('mock-worker.js')
 
     api.destroy()

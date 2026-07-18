@@ -80,7 +80,7 @@ npm install @mlightcad/data-model
 - **AcDbDatabaseConverter**: Base class for file format converters
 - **AcDbDatabaseConverterManager**: Manages registered file converters
 - **AcDbBatchProcessing**: Batch processing utilities
-- **AcDbBaseWorker**, **createWorkerApi**: Web Worker infrastructure for parsers
+- **AcDbBaseWorker**, **acdbCreateWorkerApi**: Web Worker infrastructure for parsers
 
 DXF import is provided by [@mlightcad/dxf-json-converter](../dxf-json-converter/README.md). DWG import is provided by converter packages such as [@mlightcad/libredwg-converter](../libredwg-converter/README.md). Register them with `AcDbDatabaseConverterManager` before calling `AcDbDatabase.read()`.
 

@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObjectId } from '../base/AcDbObject'
+import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
@@ -428,14 +429,14 @@ export class AcDbRasterImage extends AcDbEntity {
    */
   subWorldDraw(renderer: AcGiRenderer) {
     const points = this.boundaryPath()
-    if (this._image) {
+    if (this._image && this.isImageShown) {
       return renderer.image(this._image, {
         boundary: points,
         roation: this._rotation
       })
-    } else {
-      return renderer.lines(points)
     }
+    // Frame-only: transparent fill keeps the interior pickable (AutoCAD IMAGE behavior).
+    return acdbDrawImageFrame(renderer, points)
   }
 
   /**

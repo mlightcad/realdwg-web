@@ -4,7 +4,7 @@ import { AcDbSysVarManager } from '../AcDbSysVarManager'
 import {
   AcDbChangeContainer,
   AcDbDatabaseChange,
-  areChangeContainersEqual
+  acdbAreChangeContainersEqual
 } from './AcDbDatabaseChange'
 
 /**
@@ -235,7 +235,7 @@ export class AcDbChangeRecorder {
       change =>
         change.kind === kind &&
         change.object.objectId === objectId &&
-        areChangeContainersEqual(change.container, container)
+        acdbAreChangeContainersEqual(change.container, container)
     )
   }
 

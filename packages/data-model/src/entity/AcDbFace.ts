@@ -1,6 +1,6 @@
 import {
   AcGeBox3d,
-  acGeClosedPolygonArea3d,
+  acgeClosedPolygonArea3d,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -194,7 +194,7 @@ export class AcDbFace extends AcDbEntity {
     ) {
       points.push(fourth)
     }
-    return acGeClosedPolygonArea3d(points)
+    return acgeClosedPolygonArea3d(points)
   }
 
   /**

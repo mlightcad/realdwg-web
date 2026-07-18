@@ -9,9 +9,10 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
 import { acdbExtractOleImageBlob } from '../misc/AcDbOleImageExtractor'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { bytesToHexString } from '../misc/proxyGraphic'
+import { acdbBytesToHexString } from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
 import {
   acdbForEachGripIndex,
@@ -612,7 +613,8 @@ export class AcDbOle2Frame extends AcDbOleFrame {
 
   /**
    * Draws the embedded OLE picture when an image can be extracted from the
-   * OLE binary payload; otherwise draws the rectangular frame outline.
+   * OLE binary payload; otherwise draws a pickable rectangular frame
+   * (transparent fill + outline).
    */
   subWorldDraw(renderer: AcGiRenderer) {
     const image = this.resolveImage()
@@ -623,7 +625,7 @@ export class AcDbOle2Frame extends AcDbOleFrame {
         roation: this._rotation
       })
     }
-    return renderer.lines(this.boundaryPath())
+    return acdbDrawImageFrame(renderer, this.boundaryPath())
   }
 
   /** @inheritdoc */
@@ -685,7 +687,7 @@ export class AcDbOle2Frame extends AcDbOleFrame {
       let index = 0
       while (index < oleObject.length) {
         const chunk = oleObject.subarray(index, index + 127)
-        filer.writeString(310, bytesToHexString(chunk))
+        filer.writeString(310, acdbBytesToHexString(chunk))
         index += 127
       }
     }

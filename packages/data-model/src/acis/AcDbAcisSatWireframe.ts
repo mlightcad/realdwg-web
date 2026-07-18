@@ -6,7 +6,7 @@
 import {
   type AcDbAcisEllipseCurveParams,
   type AcDbAcisVec3,
-  sampleAcDbAcisEllipseArc,
+  acdbSampleAcisEllipseArc,
 } from './AcDbAcisGeometry'
 
 const DEFAULT_ELLIPSE_SAMPLES = 16
@@ -100,7 +100,7 @@ function parseEllipseCurve(record: string): AcDbAcisEllipseCurveParams | null {
  * @param satText - Plain SAT/ASM text payload.
  * @returns Flat `Float32Array` of line-segment endpoint pairs (`[x,y,z,x,y,z,...]`).
  */
-export function acDbAcisWireframeSegmentsFromSatText(satText: string): Float32Array {
+export function acdbAcisWireframeSegmentsFromSatText(satText: string): Float32Array {
   const segments: number[] = []
   if (!satText || satText.trim().length === 0) {
     return new Float32Array(0)
@@ -115,7 +115,7 @@ export function acDbAcisWireframeSegmentsFromSatText(satText: string): Float32Ar
 
     const ellipse = parseEllipseCurve(record)
     if (ellipse !== null) {
-      const arc = sampleAcDbAcisEllipseArc(ellipse, 0, Math.PI * 2, DEFAULT_ELLIPSE_SAMPLES)
+      const arc = acdbSampleAcisEllipseArc(ellipse, 0, Math.PI * 2, DEFAULT_ELLIPSE_SAMPLES)
       for (let i = 1; i < arc.length; i++) {
         pushSegment(segments, arc[i - 1]!, arc[i]!)
       }

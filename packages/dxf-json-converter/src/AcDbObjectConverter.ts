@@ -14,7 +14,7 @@ import {
   AcDbPlotStdScaleType,
   AcDbPlotType,
   AcDbRasterImageDef,
-  decodeMLeaderStyleRawColor
+  acdbDecodeMLeaderStyleRawColor
 } from '@mlightcad/data-model'
 import {
   CommonDXFObject,
@@ -276,7 +276,7 @@ export class AcDbObjectConverter {
       dbObject.leaderLineType = style.leaderLineType
     }
     if (style.leaderLineColor != null) {
-      dbObject.leaderLineColor = decodeMLeaderStyleRawColor(
+      dbObject.leaderLineColor = acdbDecodeMLeaderStyleRawColor(
         style.leaderLineColor
       )
     }
@@ -311,7 +311,7 @@ export class AcDbObjectConverter {
       dbObject.textRightAttachmentType = style.textRightAttachmentType
     }
     if (style.textColor != null) {
-      dbObject.textColor = decodeMLeaderStyleRawColor(style.textColor)
+      dbObject.textColor = acdbDecodeMLeaderStyleRawColor(style.textColor)
     }
     if (style.textHeight != null) dbObject.textHeight = style.textHeight
     if (style.textFrameEnabled != null) {
@@ -323,7 +323,7 @@ export class AcDbObjectConverter {
     if (style.alignSpace != null) dbObject.alignSpace = style.alignSpace
     dbObject.blockContentId = style.blockContentId
     if (style.blockContentColor != null) {
-      dbObject.blockContentColor = decodeMLeaderStyleRawColor(
+      dbObject.blockContentColor = acdbDecodeMLeaderStyleRawColor(
         style.blockContentColor
       )
     }

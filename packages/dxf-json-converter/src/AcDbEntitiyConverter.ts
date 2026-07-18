@@ -77,9 +77,9 @@ import {
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
   AcGiMTextFlowDirection,
-  decodeMLeaderStyleRawColor,
-  hexStringsToBytes,
-  transformOcsPointToWcs
+  acdbDecodeMLeaderStyleRawColor,
+  acdbHexStringsToBytes,
+  acgeTransformOcsPointToWcs
 } from '@mlightcad/data-model'
 import {
   ArcEntity,
@@ -372,7 +372,7 @@ export class AcDbEntityConverter {
       proxy.originalDataFormat = entity.originalDataFormat
     }
     if (entity.graphicsData) {
-      const bytes = hexStringsToBytes([entity.graphicsData])
+      const bytes = acdbHexStringsToBytes([entity.graphicsData])
       const size = entity.graphicsDataSize ?? bytes.length
       proxy.setProxyGraphic(bytes.subarray(0, size))
     }
@@ -408,7 +408,7 @@ export class AcDbEntityConverter {
   private convertArc(arc: ArcEntity) {
     const normal = arc.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbArc(
-      transformOcsPointToWcs(arc.center, normal),
+      acgeTransformOcsPointToWcs(arc.center, normal),
       arc.radius,
       AcGeMathUtil.degToRad(arc.startAngle),
       AcGeMathUtil.degToRad(arc.endAngle),
@@ -492,7 +492,7 @@ export class AcDbEntityConverter {
   private convertCirle(circle: CircleEntity) {
     const normal = circle.extrusionDirection ?? AcGeVector3d.Z_AXIS
     const dbEntity = new AcDbCircle(
-      transformOcsPointToWcs(circle.center, normal),
+      acgeTransformOcsPointToWcs(circle.center, normal),
       circle.radius,
       normal
     )
@@ -1028,7 +1028,7 @@ export class AcDbEntityConverter {
     dbEntity.leaderLineType = (mleader.leaderLineType ??
       AcDbMLeaderLineType.StraightLeader) as AcDbMLeaderLineType
     if (mleader.leaderLineColor != null) {
-      dbEntity.leaderLineColor = decodeMLeaderStyleRawColor(
+      dbEntity.leaderLineColor = acdbDecodeMLeaderStyleRawColor(
         mleader.leaderLineColor
       )
     }
@@ -1045,7 +1045,7 @@ export class AcDbEntityConverter {
     dbEntity.textAngleType = mleader.textAngleType
     dbEntity.textAlignmentType = mleader.textAlignmentType
     if (mleader.textColor != null) {
-      dbEntity.textColor = decodeMLeaderStyleRawColor(mleader.textColor)
+      dbEntity.textColor = acdbDecodeMLeaderStyleRawColor(mleader.textColor)
     }
     dbEntity.textFrameEnabled = mleader.textFrameEnabled
     dbEntity.landingGap = mleader.landingGap
@@ -1055,7 +1055,7 @@ export class AcDbEntityConverter {
       dbEntity.blockContentId = mleader.blockContentId
     }
     if (mleader.blockContentColor != null) {
-      dbEntity.blockContentColor = decodeMLeaderStyleRawColor(
+      dbEntity.blockContentColor = acdbDecodeMLeaderStyleRawColor(
         mleader.blockContentColor
       )
     }
@@ -1076,7 +1076,7 @@ export class AcDbEntityConverter {
     dbEntity.contentScale = mleader.contentScale
     dbEntity.textLineSpacingStyle = mleader.textLineSpacingStyle
     if (mleader.textBackgroundColor != null) {
-      dbEntity.textBackgroundColor = decodeMLeaderStyleRawColor(
+      dbEntity.textBackgroundColor = acdbDecodeMLeaderStyleRawColor(
         mleader.textBackgroundColor
       )
     }
@@ -1267,7 +1267,7 @@ export class AcDbEntityConverter {
           rotation: this.readNumber(blockRecord, ['rotation']),
           color:
             rawBlockColor != null
-              ? decodeMLeaderStyleRawColor(rawBlockColor)
+              ? acdbDecodeMLeaderStyleRawColor(rawBlockColor)
               : undefined,
           transformationMatrix: Array.isArray(
             mleader.blockContent.transformationMatrix
@@ -1416,9 +1416,9 @@ export class AcDbEntityConverter {
     dbImage.fade = image.fade
     dbImage.imageSize.copy(image.imageSize)
 
-    dbImage.isShownClipped = (image.flags | 0x0004) > 0
-    dbImage.isImageShown = (image.flags | 0x0003) > 0
-    dbImage.isImageTransparent = (image.flags | 0x0008) > 0
+    dbImage.isShownClipped = (image.flags & 0x0004) !== 0
+    dbImage.isImageShown = (image.flags & 0x0003) !== 0
+    dbImage.isImageTransparent = (image.flags & 0x0008) !== 0
     dbImage.imageDefId = image.imageDefHandle
     dbImage.isClipped = image.isClipped
     image.clippingBoundaryPath.forEach(point => {
@@ -1455,9 +1455,9 @@ export class AcDbEntityConverter {
     dbWipeout.fade = wipeout.fade
     dbWipeout.imageSize.copy(wipeout.imageSize)
 
-    dbWipeout.isShownClipped = (wipeout.displayFlag | 0x0004) > 0
-    dbWipeout.isImageShown = (wipeout.displayFlag | 0x0003) > 0
-    dbWipeout.isImageTransparent = (wipeout.displayFlag | 0x0008) > 0
+    dbWipeout.isShownClipped = (wipeout.displayFlag & 0x0004) !== 0
+    dbWipeout.isImageShown = (wipeout.displayFlag & 0x0003) !== 0
+    dbWipeout.isImageTransparent = (wipeout.displayFlag & 0x0008) !== 0
     dbWipeout.imageDefId = wipeout.imageDefHardId
     dbWipeout.isClipped = wipeout.isClipping
     wipeout.boundary.forEach(point => {
@@ -1495,7 +1495,7 @@ export class AcDbEntityConverter {
     const dbEntity = new AcDbOleFrame()
     dbEntity.oleVersion = entity.version ?? 0
     if (entity.data) {
-      const bytes = hexStringsToBytes([entity.data])
+      const bytes = acdbHexStringsToBytes([entity.data])
       dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
     }
     return dbEntity
@@ -1517,7 +1517,7 @@ export class AcDbEntityConverter {
       dbEntity.setOutputQuality(entity.quality)
     }
     if (entity.data) {
-      const bytes = hexStringsToBytes([entity.data])
+      const bytes = acdbHexStringsToBytes([entity.data])
       dbEntity.loadOleObjectFromDxf(entity.dataSize, bytes)
     }
     return dbEntity

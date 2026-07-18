@@ -102,7 +102,7 @@ describe('AcDbOle2Frame image drawing', () => {
     expect(style.boundary[3]).toMatchObject({ x: 0, y: 10, z: 0 })
   })
 
-  it('falls back to frame outline when no image is present', () => {
+  it('falls back to a pickable frame when no image is present', () => {
     const ole = new AcDbOle2Frame()
     ole.upperLeftCorner = new AcGePoint3d(0, 5, 0)
     ole.lowerRightCorner = new AcGePoint3d(5, 0, 0)
@@ -116,11 +116,21 @@ describe('AcDbOle2Frame image drawing', () => {
         ) => ({
           kind: 'image'
         })
-      )
+      ),
+      area: jest.fn(() => ({ kind: 'area' })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities })),
+      subEntityTraits: {
+        fillType: undefined as unknown,
+        transparency: undefined as unknown
+      }
     }
     const drawable = ole.subWorldDraw(renderer as never)
-    expect(drawable).toEqual({ kind: 'lines' })
+    expect(drawable).toEqual({
+      kind: 'group',
+      entities: [{ kind: 'area' }, { kind: 'lines' }]
+    })
     expect(renderer.image).not.toHaveBeenCalled()
+    expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.lines).toHaveBeenCalledTimes(1)
   })
 
@@ -146,7 +156,13 @@ describe('AcDbOle2Frame image drawing', () => {
 
     const outlineRenderer = {
       lines: jest.fn((_points: AcGePoint3d[]) => ({ kind: 'lines' })),
-      image: jest.fn()
+      image: jest.fn(),
+      area: jest.fn(() => ({ kind: 'area' })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities })),
+      subEntityTraits: {
+        fillType: undefined as unknown,
+        transparency: undefined as unknown
+      }
     }
     ole.setOleObject(new Uint8Array([0, 1, 2, 3]))
     ole.subWorldDraw(outlineRenderer as never)

@@ -1,7 +1,7 @@
 export {
   AcDbWorkerApi,
   AcDbWorkerManager,
-  createWorkerApi
+  acdbCreateWorkerApi
 } from './AcDbWorkerManager'
 export type {
   AcDbWorkerConfig,

@@ -6,7 +6,7 @@ import {
   AcGePoint3dLike,
   AcGeSpline3d,
   AcGeVector3dLike,
-  offsetSmoothedSampledPath
+  acgeOffsetSmoothedSampledPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -31,7 +31,7 @@ function createAcDbSplineFromGeo(
     return new AcDbSpline(
       geo.controlPoints,
       geo.knots,
-      normalizeSplineWeights(geo.weights, geo.controlPoints.length),
+      acgeNormalizeSplineWeights(geo.weights, geo.controlPoints.length),
       geo.degree,
       closed
     )
@@ -40,7 +40,7 @@ function createAcDbSplineFromGeo(
   }
 }
 
-function normalizeSplineWeights(
+function acgeNormalizeSplineWeights(
   weights: number[] | undefined,
   controlPointCount: number
 ): number[] | undefined {
@@ -612,7 +612,7 @@ export class AcDbSpline extends AcDbCurve {
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
     const { points, tangents } = this._geo.getOffsetSamplePath2d(offsetDist)
-    const geo = offsetSmoothedSampledPath(
+    const geo = acgeOffsetSmoothedSampledPath(
       points,
       this.closed,
       offsetDist,

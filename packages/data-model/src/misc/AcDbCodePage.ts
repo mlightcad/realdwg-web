@@ -95,6 +95,6 @@ const encodings = [
   'windows-1258' // Vietnamese
 ]
 
-export const dwgCodePageToEncoding = (codepage: AcDbCodePage) => {
+export const acdbDwgCodePageToEncoding = (codepage: AcDbCodePage) => {
   return encodings[codepage]
 }

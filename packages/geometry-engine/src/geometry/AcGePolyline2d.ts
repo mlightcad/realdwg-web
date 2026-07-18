@@ -1,8 +1,8 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math'
-import { acGeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
+import { acgeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
-import { offsetAcGePolyline2d } from './AcGePolyline2dOffset'
+import { acgeOffsetPolyline2d } from './AcGePolyline2dOffset'
 
 /**
  * The class represents one vertex of the polyline geometry.
@@ -121,7 +121,7 @@ export class AcGePolyline2d<
   get area(): number {
     if (!this._closed || this._vertices.length < 3) return 0
     const points = this.getPoints(128) as AcGePoint2d[]
-    return acGeClosedPolygonArea2d(points)
+    return acgeClosedPolygonArea2d(points)
   }
 
   /**
@@ -301,6 +301,6 @@ export class AcGePolyline2d<
    * @returns Offset polylines; empty when offsetting fails
    */
   offset(offsetDist: number): AcGePolyline2d[] {
-    return offsetAcGePolyline2d(this, offsetDist)
+    return acgeOffsetPolyline2d(this, offsetDist)
   }
 }

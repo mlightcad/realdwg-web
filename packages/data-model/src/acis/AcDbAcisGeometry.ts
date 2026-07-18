@@ -395,7 +395,7 @@ function surfaceParams(surface: AcDbAcisNode): AcDbAcisSurfaceParams {
  * @param surface - Resolved surface node from an ACIS model graph.
  * @returns Discriminated surface parameters, or `{ kind: 'unknown' }`.
  */
-export function acDbAcisParseSurfaceParams(surface: AcDbAcisNode): AcDbAcisSurfaceParams {
+export function acdbAcisParseSurfaceParams(surface: AcDbAcisNode): AcDbAcisSurfaceParams {
   return surfaceParams(surface);
 }
 
@@ -428,7 +428,7 @@ function loopCoedgeCount(loop: AcDbAcisNode): number {
  * @param model - Resolved ACIS model graph.
  * @returns Extracted vertices, edges, faces, bounding box, and diagnostics.
  */
-export function extractAcDbAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry {
+export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry {
   const diagnostics: string[] = [];
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
@@ -502,7 +502,7 @@ const v3norm = (a: AcDbAcisVec3): AcDbAcisVec3 => {
  * @param edge - Resolved `edge` node from an ACIS model graph.
  * @returns Parameter interval `[t0, t1]`, or `null` when unavailable.
  */
-export function acDbAcisEdgeParamBounds(edge: AcDbAcisNode): [number, number] | null {
+export function acdbAcisEdgeParamBounds(edge: AcDbAcisNode): [number, number] | null {
   const values: number[] = []
   for (const token of edge.record.tokens) {
     if (token.tag === AcDbAcisSabTag.Double) {
@@ -524,7 +524,7 @@ export function acDbAcisEdgeParamBounds(edge: AcDbAcisNode): [number, number] | 
  * @param samples - Number of interior segments (≥1).
  * @returns Sampled points along the arc, including both endpoints.
  */
-export function sampleAcDbAcisEllipseArc(
+export function acdbSampleAcisEllipseArc(
   params: AcDbAcisEllipseCurveParams,
   t0: number,
   t1: number,
@@ -555,7 +555,7 @@ export function sampleAcDbAcisEllipseArc(
  * @param segments - Approximate number of samples per full ring (default 16).
  * @returns Closed polylines forming a sphere wireframe scaffold.
  */
-export function sampleAcDbAcisSphereWireframe(
+export function acdbSampleAcisSphereWireframe(
   params: AcDbAcisSphereParams,
   segments = 16,
 ): AcDbAcisVec3[][] {

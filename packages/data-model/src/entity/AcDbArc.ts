@@ -6,9 +6,9 @@ import {
   AcGePoint3dLike,
   AcGeVector3d,
   AcGeVector3dLike,
-  getOcsAngle,
-  getOcsReferenceVector,
-  transformWcsPointToOcs
+  acgeGetOcsAngle,
+  acgeGetOcsReferenceVector,
+  acgeTransformWcsPointToOcs
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -94,7 +94,7 @@ export class AcDbArc extends AcDbCurve {
     normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
-    const refVec = getOcsReferenceVector(normal)
+    const refVec = acgeGetOcsReferenceVector(normal)
     this._geo = new AcGeCircArc3d(
       center,
       radius,
@@ -613,12 +613,12 @@ export class AcDbArc extends AcDbCurve {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    const centerOcs = transformWcsPointToOcs(this.center, this.normal)
+    const centerOcs = acgeTransformWcsPointToOcs(this.center, this.normal)
     filer.writeSubclassMarker('AcDbArc')
     filer.writePoint3d(10, centerOcs)
     filer.writeDouble(40, this.radius)
-    filer.writeAngle(50, getOcsAngle(this.center, this.startPoint, this.normal))
-    filer.writeAngle(51, getOcsAngle(this.center, this.endPoint, this.normal))
+    filer.writeAngle(50, acgeGetOcsAngle(this.center, this.startPoint, this.normal))
+    filer.writeAngle(51, acgeGetOcsAngle(this.center, this.endPoint, this.normal))
     filer.writeVector3d(210, this.normal)
     return this
   }
@@ -641,7 +641,7 @@ export class AcDbArc extends AcDbCurve {
         break
       case 1: {
         const point = this._geo.startPoint
-        this._geo.startAngle = getOcsAngle(
+        this._geo.startAngle = acgeGetOcsAngle(
           this._geo.center,
           {
             x: point.x + offset.x,
@@ -654,7 +654,7 @@ export class AcDbArc extends AcDbCurve {
       }
       case 2: {
         const point = this._geo.endPoint
-        this._geo.endAngle = getOcsAngle(
+        this._geo.endAngle = acgeGetOcsAngle(
           this._geo.center,
           {
             x: point.x + offset.x,

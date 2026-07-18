@@ -9,7 +9,7 @@ import {
   AcGePolyline2d,
   AcGePolyline2dVertex,
   AcGeVector3dLike,
-  offsetVertexPath
+  acgeOffsetVertexPath
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -863,7 +863,7 @@ export class AcDbPolyline extends AcDbCurve {
 }
 
 /**
- * Offsets a planar vertex path using {@link offsetVertexPath} and wraps the
+ * Offsets a planar vertex path using {@link acgeOffsetVertexPath} and wraps the
  * result as an {@link AcDbPolyline}.
  *
  * @param points - Sampled or vertex-derived 2D path in WCS (XY)
@@ -872,12 +872,12 @@ export class AcDbPolyline extends AcDbCurve {
  * @returns The first offset polyline, or `null` when the path has fewer than two points
  * or offsetting fails
  */
-export function offsetVertexPathAsPolyline(
+export function acdbOffsetVertexPathAsPolyline(
   points: AcGePoint2d[],
   closed: boolean,
   offsetDist: number
 ): AcDbPolyline | null {
-  const geo = offsetVertexPath(points, closed, offsetDist)
+  const geo = acgeOffsetVertexPath(points, closed, offsetDist)
   return geo ? AcDbPolyline.fromGePolyline(geo) : null
 }
 

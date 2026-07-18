@@ -2,7 +2,7 @@ import { AcGeBox3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { bytesToHexString } from '../misc/proxyGraphic'
+import { acdbBytesToHexString } from '../misc/proxyGraphic'
 import { AcDbFrame } from './AcDbFrame'
 
 /**
@@ -167,7 +167,7 @@ export class AcDbOleFrame extends AcDbFrame {
       let index = 0
       while (index < this._oleObject.length) {
         const chunk = this._oleObject.subarray(index, index + 127)
-        filer.writeString(310, bytesToHexString(chunk))
+        filer.writeString(310, acdbBytesToHexString(chunk))
         index += 127
       }
     }

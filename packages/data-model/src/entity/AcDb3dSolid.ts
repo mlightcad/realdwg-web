@@ -6,8 +6,8 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import {
-  acDbAcisWireframeSegmentsFromSab,
-  acDbAcisWireframeSegmentsFromSatText
+  acdbAcisWireframeSegmentsFromSab,
+  acdbAcisWireframeSegmentsFromSatText
 } from '../acis'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
@@ -189,10 +189,10 @@ export class AcDb3dSolid extends AcDbEntity {
 
     let wireframe = new Float32Array(0)
     if (payload.sabBytes && payload.sabBytes.length > 0) {
-      wireframe = acDbAcisWireframeSegmentsFromSab(payload.sabBytes) ?? new Float32Array(0)
+      wireframe = acdbAcisWireframeSegmentsFromSab(payload.sabBytes) ?? new Float32Array(0)
     }
     if (wireframe.length === 0 && payload.satText) {
-      wireframe = acDbAcisWireframeSegmentsFromSatText(payload.satText)
+      wireframe = acdbAcisWireframeSegmentsFromSatText(payload.satText)
     }
     this._wireframe = wireframe
 

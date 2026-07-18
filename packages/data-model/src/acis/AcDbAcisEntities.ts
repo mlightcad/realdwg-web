@@ -56,10 +56,10 @@ interface AcDbAcisMutableNode {
  * Builds a resolved B-rep DAG from parsed SAB data by wiring pointer tokens
  * between records.
  *
- * @param sab - Parsed SAB header and record list from {@link parseAcDbAcisSab}.
+ * @param sab - Parsed SAB header and record list from {@link acdbParseAcisSab}.
  * @returns Resolved model graph with indexed nodes and type-based lookups.
  */
-export function buildAcDbAcisModel(sab: AcDbAcisSabData): AcDbAcisModel {
+export function acdbBuildAcisModel(sab: AcDbAcisSabData): AcDbAcisModel {
   const records = sab.records
   const nodes: AcDbAcisMutableNode[] = records.map((record, index) => ({
     index,

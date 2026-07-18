@@ -24,7 +24,7 @@ import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers'
-import { AcDbPolyline, offsetVertexPathAsPolyline } from './AcDbPolyline'
+import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,
@@ -865,7 +865,7 @@ export class AcDbLeader extends AcDbCurve {
    * @returns Offset polyline along the leader path, or `null` when offset fails
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return offsetVertexPathAsPolyline(this.collectPath2d(), false, offsetDist)
+    return acdbOffsetVertexPathAsPolyline(this.collectPath2d(), false, offsetDist)
   }
 
   /**

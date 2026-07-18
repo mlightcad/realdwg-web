@@ -230,7 +230,7 @@ function readVec(r: AcDbAcisSabByteReader): AcDbAcisSabVector {
  * @returns Parsed header and records.
  * @throws `RangeError` on a malformed or truncated stream.
  */
-export function parseAcDbAcisSab(data: Uint8Array): AcDbAcisSabData {
+export function acdbParseAcisSab(data: Uint8Array): AcDbAcisSabData {
   const r = new AcDbAcisSabByteReader(data);
   const header = readHeader(r, data);
   const records: AcDbAcisSabRecord[] = [];
