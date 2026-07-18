@@ -2,12 +2,11 @@ import {
   AcGeBox3d,
   AcGeLine3d,
   AcGeMatrix3d,
+  acgeOffsetPointByDirectionInXY,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
-  AcGeVector3dLike,
-  acgeOffsetPointByDirectionInXY
-} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'

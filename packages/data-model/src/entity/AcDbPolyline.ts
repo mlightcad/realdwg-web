@@ -3,14 +3,13 @@ import {
   AcGeBox3d,
   AcGeCircArc2d,
   AcGeMatrix3d,
+  acgeOffsetVertexPath,
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
-  AcGeVector3dLike,
-  acgeOffsetVertexPath
-} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'

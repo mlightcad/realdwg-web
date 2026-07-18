@@ -1,6 +1,7 @@
 import { AcCmColor } from '@mlightcad/data-model'
 import {
   AcDbBlockTableRecord,
+  acdbDecodeMLeaderStyleRawColor,
   AcDbLayerFilter,
   AcDbLayerIndex,
   AcDbLayout,
@@ -13,9 +14,7 @@ import {
   AcDbPlotShadePlotType,
   AcDbPlotStdScaleType,
   AcDbPlotType,
-  AcDbRasterImageDef,
-  acdbDecodeMLeaderStyleRawColor
-} from '@mlightcad/data-model'
+  AcDbRasterImageDef} from '@mlightcad/data-model'
 import {
   CommonDXFObject,
   ImageDefDXFObject,

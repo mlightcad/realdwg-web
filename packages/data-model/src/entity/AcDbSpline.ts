@@ -2,12 +2,11 @@ import { AcCmErrors } from '@mlightcad/common'
 import {
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
+  acgeOffsetSmoothedSampledPath,
   AcGePoint2d,
   AcGePoint3dLike,
   AcGeSpline3d,
-  AcGeVector3dLike,
-  acgeOffsetSmoothedSampledPath
-} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'

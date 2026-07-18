@@ -27,10 +27,9 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  acgeTransformOcsPointToWcs,
   AcGeVector2d,
-  AcGeVector3d,
-  acgeTransformOcsPointToWcs
-} from '@mlightcad/data-model'
+  AcGeVector3d} from '@mlightcad/data-model'
 import {
   DRW_Arc,
   DRW_Circle,

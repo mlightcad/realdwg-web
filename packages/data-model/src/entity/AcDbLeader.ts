@@ -24,7 +24,7 @@ import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers'
-import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,

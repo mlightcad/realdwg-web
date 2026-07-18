@@ -2,10 +2,9 @@ import { AcDbObject } from '../../base'
 import { AcDbDatabase } from '../AcDbDatabase'
 import { AcDbSysVarManager } from '../AcDbSysVarManager'
 import {
+  acdbAreChangeContainersEqual,
   AcDbChangeContainer,
-  AcDbDatabaseChange,
-  acdbAreChangeContainersEqual
-} from './AcDbDatabaseChange'
+  AcDbDatabaseChange} from './AcDbDatabaseChange'
 
 /**
  * Accumulates structured database changes during an active transaction.

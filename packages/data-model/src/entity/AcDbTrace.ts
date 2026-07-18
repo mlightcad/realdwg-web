@@ -16,7 +16,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
-import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents a trace entity in AutoCAD.

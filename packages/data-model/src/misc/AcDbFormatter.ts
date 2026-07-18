@@ -8,10 +8,9 @@ import { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbAngleUnits } from './AcDbAngleUnits'
 import { AcDbLinearUnits } from './AcDbLinearUnits'
 import {
-  AcDbUnitsValue,
   acdbIsImperialUnits,
-  acdbIsMetricUnits
-} from './AcDbUnitsValue'
+  acdbIsMetricUnits,
+  AcDbUnitsValue} from './AcDbUnitsValue'
 
 /**
  * Per-call options for {@link AcDbFormatter} methods.

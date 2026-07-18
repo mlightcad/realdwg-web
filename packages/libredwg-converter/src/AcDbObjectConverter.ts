@@ -1,10 +1,9 @@
 import {
+  acdbDecodeMLeaderStyleRawColor,
   AcDbLayerFilter,
   AcDbLayerIndex,
   AcDbMLeaderStyle,
-  AcDbObject,
-  acdbDecodeMLeaderStyleRawColor
-} from '@mlightcad/data-model'
+  AcDbObject} from '@mlightcad/data-model'
 import {
   DwgCommonObject,
   DwgLayerFilterObject,

@@ -13,7 +13,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
 
 /**
  * Represents a polygon mesh vertex in AutoCAD.

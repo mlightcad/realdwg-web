@@ -1,8 +1,7 @@
 import {
   AcDbCodePage,
-  AcDbDwgVersion,
-  acdbDwgCodePageToEncoding
-} from '@mlightcad/data-model'
+  acdbDwgCodePageToEncoding,
+  AcDbDwgVersion} from '@mlightcad/data-model'
 import { DxfParser, isBinaryDxf, ParsedDxf } from '@mlightcad/dxf-json'
 
 /**

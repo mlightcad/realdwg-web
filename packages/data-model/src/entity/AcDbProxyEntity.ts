@@ -8,10 +8,9 @@ import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import {
-  AcDbProxyGraphic,
   acdbBytesToHexString,
-  acdbLoadProxyGraphicFromDxf
-} from '../misc/proxyGraphic'
+  acdbLoadProxyGraphicFromDxf,
+  AcDbProxyGraphic} from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
 import {
   acdbForEachGripIndex,
