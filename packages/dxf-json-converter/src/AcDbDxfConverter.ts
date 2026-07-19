@@ -20,6 +20,7 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
   AcDbFontNameCollector,
+  acdbHexStringsToBytes,
   AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLinetypeTableRecord,
@@ -604,7 +605,7 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
         dbBlock.explodability = btr.explodability
         dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
         if (btr.bmpPreview) {
-          dbBlock.bmpPreview = btr.bmpPreview
+          dbBlock.previewIcon = acdbHexStringsToBytes([btr.bmpPreview])
         }
         db.tables.blockTable.add(dbBlock)
       })

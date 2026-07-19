@@ -82,8 +82,11 @@ export interface AcDbBlockTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
    * (DXF group code 1 on BLOCK). Empty when not an xref or the path is unknown.
    */
   pathName: string
-  /** Binary data for bitmap preview (DXF group code 310, optional) */
-  bmpPreview?: string
+  /**
+   * PreviewIcon binary payload (DXF BLOCK_RECORD group 310), typically a DIB
+   * (BITMAPINFO + bits). Stored as raw bytes rather than hex to save memory.
+   */
+  previewIcon?: Uint8Array
 }
 
 export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRecordAttrs> {
@@ -161,7 +164,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
       blockInsertUnits: 0,
       explodability: 1,
       blockScaling: AcDbBlockScaling.Uniform,
-      bmpPreview: undefined
+      previewIcon: undefined
     })
     super(attrs, defaultAttrs)
     this._entities = []
@@ -347,17 +350,23 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   }
 
   /**
-   * Gets or sets the bitmap preview data.
+   * Gets or sets the PreviewIcon binary payload for this block definition.
    *
-   * This corresponds to DXF group code 310 in BLOCK_RECORD entries.
+   * Corresponds to AutoCAD .NET `BlockTableRecord.PreviewIcon` and DXF
+   * BLOCK_RECORD group code 310. The payload is typically a DIB (BITMAPINFO +
+   * bits), not a full BMP file. Stored as raw bytes to avoid hex doubling.
    *
-   * @returns The bitmap preview data
+   * @returns Preview icon bytes, or `undefined` when none exist
    */
-  get bmpPreview() {
-    return this.getAttrWithoutException('bmpPreview')
+  get previewIcon(): Uint8Array | undefined {
+    return this.getAttrWithoutException('previewIcon')
   }
-  set bmpPreview(value: string | undefined) {
-    this.setAttr('bmpPreview', value)
+  set previewIcon(value: Uint8Array | undefined) {
+    if (!value || value.length === 0) {
+      this.setAttr('previewIcon', undefined)
+      return
+    }
+    this.setAttr('previewIcon', value)
   }
 
   /**
@@ -605,8 +614,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     filer.writeInt16(70, this.blockInsertUnits)
     filer.writeInt16(280, this.explodability)
     filer.writeInt16(281, this.blockScaling)
-    // TODO: Oupput preview bitmap with the correct format
-    // filer.writeString(310, this.bmpPreview)
+    // TODO: Output PreviewIcon (group 310) with the correct DIB/hex format
+    // if (this.previewIcon?.length) { ... }
     if (this.isModelSapce || this.isPaperSapce) {
       filer.writeObjectId(340, this.layoutId)
     }

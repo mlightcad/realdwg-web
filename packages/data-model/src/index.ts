@@ -297,6 +297,7 @@ export {
   VPORT_FALLBACK_VIEW_DIR,
   VPORT_FALLBACK_VIEW_TARGET,
   acdbHexStringsToBytes,
+  acdbPreviewIconToDataUrl,
   acdbHasOsnapMode,
   acdbMaskToOsnapModes,
   acdbOsnapModesToMask,

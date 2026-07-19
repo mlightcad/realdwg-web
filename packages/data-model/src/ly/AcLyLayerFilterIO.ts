@@ -290,10 +290,20 @@ function findNestedFilterHandles(
   parent: AcDbPersistXRecord
 ): { key: string; handle: string }[] {
   const result: { key: string; handle: string }[] = []
+  const seen = new Set<string>()
   const parentHandle = normalizeHandle(parent.handle)
   const extensionId = parent.extensionDictionaryId
     ? normalizeHandle(parent.extensionDictionaryId)
     : undefined
+
+  const pushEntry = (key: string, handle: string) => {
+    const normalized = normalizeHandle(handle)
+    if (seen.has(normalized)) {
+      return
+    }
+    seen.add(normalized)
+    result.push({ key, handle })
+  }
 
   for (const dict of source.dictionaries.values()) {
     const owner = dict.ownerObjectId
@@ -309,18 +319,20 @@ function findNestedFilterHandles(
       const nestedDict = source.dictionaries.get(normalizeHandle(nestedAcly))
       if (nestedDict) {
         for (const [key, handle] of Object.entries(nestedDict.entries)) {
-          result.push({ key, handle })
+          pushEntry(key, handle)
         }
         continue
       }
     }
 
     // Direct children listed on a dictionary owned by the parent.
+    // Skip ACLYDICTIONARY itself: its entries were already collected above when
+    // the parent/extension dictionary pointed at it (avoids duplicate children).
     for (const [key, handle] of Object.entries(dict.entries)) {
       if (key === ACLY_DICTIONARY_NAME || key === ACAD_LAYERFILTERS_NAME) {
         continue
       }
-      result.push({ key, handle })
+      pushEntry(key, handle)
     }
   }
 
