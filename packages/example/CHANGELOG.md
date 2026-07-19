@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.11.1
+
+### Patch Changes
+
+- feat: upgraded to Vite 6 & dxf-json 1.2.8, and improved data model by storing block PreviewIcons as bytes and fixed nested layer filter behavior
+- Updated dependencies
+  - @mlightcad/data-model@1.11.1
+  - @mlightcad/dxf-json-converter@1.11.1
+  - @mlightcad/libredwg-converter@3.11.1
+
 ## 0.11.0
 
 ### Patch Changes

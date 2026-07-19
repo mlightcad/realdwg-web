@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.11.1
+
+### Patch Changes
+
+- feat: upgraded to Vite 6 & dxf-json 1.2.8, and improved data model by storing block PreviewIcons as bytes and fixed nested layer filter behavior
+- Updated dependencies
+  - @mlightcad/common@1.11.1
+
 ## 3.11.0
 
 ### Patch Changes
