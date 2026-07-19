@@ -43,7 +43,7 @@
   "dependencies": {},
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",
-    "vite": "^5.2.10"
+    "vite": "^6.4.3"
   },
   "peerDependencies": {
     "@mlightcad/data-model": "workspace:*",
