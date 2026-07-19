@@ -17,6 +17,7 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
   AcDbFontNameCollector,
+  acdbHexStringsToBytes,
   AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLayout,
@@ -485,10 +486,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.blockInsertUnits = btr.insertionUnits
         dbBlock.explodability = btr.explodability
         dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
-        if (btr.bmpPreview) {
-          dbBlock.bmpPreview = btr.bmpPreview
-        }
         db.tables.blockTable.add(dbBlock)
+      }
+      // Always sync PreviewIcon (DXF/DWG group 310) — including when the BTR
+      // already existed (e.g. lazily created model/paper space).
+      if (btr.bmpPreview) {
+        dbBlock.previewIcon = acdbHexStringsToBytes([btr.bmpPreview])
       }
       dbBlock.origin.copy(btr.basePoint)
 

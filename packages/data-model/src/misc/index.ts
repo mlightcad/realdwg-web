@@ -81,8 +81,10 @@ export {
   AcDbProxyGraphicBitStream,
   AcDbProxyGraphicByteStream,
   AcDbProxyGraphicEndOfBufferError,
+  acdbBytesToHexString,
   acdbHexStringsToBytes
 } from './proxyGraphic'
+export { acdbPreviewIconToDataUrl } from './AcDbPreviewIcon'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,
