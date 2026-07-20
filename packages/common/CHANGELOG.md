@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.11.2
+
+### Patch Changes
+
+- fix: draw ATTDEF per AutoCAD semantics and fix DXF flags
+
 ## 1.11.1
 
 ### Patch Changes

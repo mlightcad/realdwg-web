@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.11.2
+
+### Patch Changes
+
+- fix: draw ATTDEF per AutoCAD semantics and fix DXF flags
+- Updated dependencies
+  - @mlightcad/data-model@1.11.2
+
 ## 1.11.1
 
 ### Patch Changes

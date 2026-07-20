@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.11.2
+
+### Patch Changes
+
+- fix: draw ATTDEF per AutoCAD semantics and fix DXF flags
+- Updated dependencies
+  - @mlightcad/data-model@1.11.2
+  - @mlightcad/dxf-json-converter@1.11.2
+  - @mlightcad/libredwg-converter@3.11.2
+
 ## 0.11.1
 
 ### Patch Changes

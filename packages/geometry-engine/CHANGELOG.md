@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.11.2
+
+### Patch Changes
+
+- fix: draw ATTDEF per AutoCAD semantics and fix DXF flags
+- Updated dependencies
+  - @mlightcad/common@1.11.2
+
 ## 3.11.1
 
 ### Patch Changes
