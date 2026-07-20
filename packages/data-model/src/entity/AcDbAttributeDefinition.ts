@@ -1,9 +1,8 @@
-import { AcGiRenderer } from '@mlightcad/graphic-interface'
+import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbMText } from './AcDbMText'
 import { AcDbText } from './AcDbText'
-
 /**
  * Attribute definition flags.
  *
@@ -322,15 +321,69 @@ export class AcDbAttributeDefinition extends AcDbText {
   }
 
   /**
-   * Draws nothing for attribute definition.
-   *
-   * @param renderer - The renderer to use for drawing
-   * @returns Always return undefined because of drawing nothing for attribute definition.
+   * Returns true when this ATTDEF is loose in model/paper space rather than
+   * stored inside a named block definition.
    */
-  subWorldDraw(_renderer: AcGiRenderer): undefined {
-    return undefined
+  private isLooseInDrawingSpace(): boolean {
+    const db = this.database
+    if (!db || !this.ownerId) {
+      return true
+    }
+    const owner = db.tables.blockTable.getIdAt(this.ownerId)
+    if (!owner) {
+      return true
+    }
+    return owner.isModelSapce || owner.isPaperSapce
   }
 
+  /**
+   * Resolves the on-screen glyph for this ATTDEF.
+   *
+   * - Loose in model/paper space: tag (placeholder while editing)
+   * - Inside a block definition: default attribute value
+   * - Invisible: not drawn
+   */
+  private resolveDisplayText(): string | undefined {
+    if (this.isInvisible) {
+      return undefined
+    }
+    if (this.isLooseInDrawingSpace()) {
+      return this.tag || this.textString
+    }
+    return this.textString
+  }
+
+  /**
+   * Draws an attribute definition following AutoCAD ATTDEF semantics.
+   *
+   * Loose definitions in model/paper space show the tag; definitions inside a
+   * block show the default value. Invisible definitions are not drawn.
+   *
+   * @param renderer - The renderer to use for drawing
+   * @param delay - When true, the renderer may defer heavy work
+   * @returns The rendered text entity, or undefined when not drawn
+   */
+  override subWorldDraw(
+    renderer: AcGiRenderer,
+    delay?: boolean
+  ): AcGiEntity | undefined {
+    const display = this.resolveDisplayText()
+    if (display === undefined) {
+      return undefined
+    }
+
+    if (display === this.textString) {
+      return super.subWorldDraw(renderer, delay)
+    }
+
+    const saved = this.textString
+    this.textString = display
+    try {
+      return super.subWorldDraw(renderer, delay)
+    } finally {
+      this.textString = saved
+    }
+  }
   /**
    * Writes DXF fields for this object.
    *
@@ -342,9 +395,11 @@ export class AcDbAttributeDefinition extends AcDbText {
     filer.writeSubclassMarker('AcDbAttributeDefinition')
     filer.writeString(3, this.prompt)
     filer.writeString(2, this.tag)
-    filer.writeInt16(70, this.isInvisible ? 1 : 0)
+    // Group 70: Invisible | Constant | Verifiable | Preset bit flags
+    filer.writeInt16(70, this._flags)
     filer.writeInt16(73, this.fieldLength)
-    filer.writeInt16(74, this.isReallyLocked ? 1 : 0)
+    // Group 74: lock position within the block (not isReallyLocked)
+    filer.writeInt16(74, this.lockPositionInBlock ? 1 : 0)
     return this
   }
 }
