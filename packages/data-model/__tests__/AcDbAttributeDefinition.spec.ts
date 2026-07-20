@@ -1,6 +1,6 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
-import { AcDbDatabase } from '../src/database'
+import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import {
   AcDbAttributeDefinition,
   AcDbMText,
@@ -99,11 +99,84 @@ describe('AcDbAttributeDefinition', () => {
     expect(attDef.isMTextAttribute).toBe(false)
   })
 
-  it('returns undefined in subWorldDraw', () => {
+  it('draws the tag for loose ATTDEFs and skips invisible ones', () => {
+    const db = setWorkingDb()
     const attDef = new AcDbAttributeDefinition()
-    expect(attDef.subWorldDraw({} as never)).toBeUndefined()
+    db.tables.blockTable.modelSpace.appendEntity(attDef)
+    attDef.tag = 'TAG_01'
+    attDef.textString = 'default value'
+    attDef.height = 2.5
+
+    const giEntity = { objectId: 'ATTDEF' }
+    const renderer = {
+      mtext: jest.fn(() => giEntity)
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
+    expect(attDef.subWorldDraw(renderer as never, true)).toBe(giEntity)
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
+    expect(renderer.mtext.mock.calls[0][0]).toMatchObject({ text: 'TAG_01' })
+    expect(attDef.textString).toBe('default value')
+
+    attDef.isInvisible = true
+    expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
   })
 
+  it('draws the default value for ATTDEFs inside a block definition', () => {
+    const db = setWorkingDb()
+    const blockRecord = new AcDbBlockTableRecord()
+    blockRecord.name = 'ATTDEF_BLOCK'
+    db.tables.blockTable.add(blockRecord)
+
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = 'TAG_01'
+    attDef.textString = 'default value'
+    attDef.height = 2.5
+    blockRecord.appendEntity(attDef)
+
+    const giEntity = { objectId: 'ATTDEF' }
+    const renderer = {
+      mtext: jest.fn(() => giEntity)
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
+    expect(attDef.subWorldDraw(renderer as never)).toBe(giEntity)
+    expect(renderer.mtext.mock.calls[0][0]).toMatchObject({
+      text: 'default value'
+    })
+  })
+
+  it('draws constant default values inside a block and still hides invisible ones', () => {
+    const db = setWorkingDb()
+    const blockRecord = new AcDbBlockTableRecord()
+    blockRecord.name = 'CONST_BLOCK'
+    db.tables.blockTable.add(blockRecord)
+
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = 'TAG_01'
+    attDef.textString = 'fixed value'
+    attDef.isConst = true
+    attDef.height = 2.5
+    blockRecord.appendEntity(attDef)
+
+    const renderer = {
+      mtext: jest.fn(() => ({ objectId: 'ATTDEF' }))
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
+    expect(attDef.subWorldDraw(renderer as never)).toBeDefined()
+    expect(renderer.mtext.mock.calls[0][0]).toMatchObject({
+      text: 'fixed value'
+    })
+
+    attDef.isInvisible = true
+    expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
+    expect(renderer.mtext).toHaveBeenCalledTimes(1)
+  })
   it('writes expected ATTDEF-specific fields in dxfOutFields', () => {
     const db = setWorkingDb()
     const attDef = new AcDbAttributeDefinition()
@@ -116,8 +189,12 @@ describe('AcDbAttributeDefinition', () => {
     attDef.prompt = 'Prompt text'
     attDef.tag = 'A_TAG'
     attDef.isInvisible = true
+    attDef.isConst = true
+    attDef.isVerifiable = true
+    attDef.isPreset = true
     attDef.fieldLength = 42
-    attDef.isReallyLocked = true
+    attDef.lockPositionInBlock = true
+    attDef.isReallyLocked = false
 
     const result = attDef.dxfOutFields(filer)
     const out = filer.toString()
@@ -126,7 +203,8 @@ describe('AcDbAttributeDefinition', () => {
     expect(out).toContain('AcDbAttributeDefinition')
     expect(out).toContain('\n3\nPrompt text\n')
     expect(out).toContain('\n2\nA_TAG\n')
-    expect(out).toContain('\n70\n1\n')
+    // Invisible(1) | Const(2) | Verifiable(4) | Preset(8) = 15
+    expect(out).toContain('\n70\n15\n')
     expect(out).toContain('\n73\n42\n')
     expect(out).toContain('\n74\n1\n')
   })
