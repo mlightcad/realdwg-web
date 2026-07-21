@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.11.3
+
+### Patch Changes
+
+- feat: support drawing thumbnails and viewport DCS-to-WCS mapping
+- Updated dependencies
+  - @mlightcad/common@1.11.3
+
 ## 3.11.2
 
 ### Patch Changes

@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.11.3
+
+### Patch Changes
+
+- feat: support drawing thumbnails and viewport DCS-to-WCS mapping
+
 ## 1.11.2
 
 ### Patch Changes

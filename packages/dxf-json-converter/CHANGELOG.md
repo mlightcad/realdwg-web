@@ -1,5 +1,13 @@
 # @mlightcad/dxf-json-converter
 
+## 1.11.3
+
+### Patch Changes
+
+- feat: support drawing thumbnails and viewport DCS-to-WCS mapping
+- Updated dependencies
+  - @mlightcad/data-model@1.11.3
+
 ## 1.11.2
 
 ### Patch Changes
