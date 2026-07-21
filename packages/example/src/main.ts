@@ -20,7 +20,8 @@ import {
   AcDbPatParser,
   AcDbPatSvgRenderer,
   AcDbPredefinedAcadIsoPat,
-  AcDbPredefinedAcadPat
+  AcDbPredefinedAcadPat,
+  acdbThumbnailImageToDataUrl
 } from '@mlightcad/data-model'
 import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
@@ -30,6 +31,7 @@ const runButton = document.getElementById('runButton') as HTMLButtonElement
 const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
 const exportButton = document.createElement('button')
+const thumbnailPreviewPanel = document.createElement('section')
 const linetypePreviewPanel = document.createElement('section')
 const patSourceSelect = document.getElementById(
   'patSourceSelect'
@@ -49,8 +51,11 @@ exportButton.hidden = true
 exportButton.disabled = true
 exportButton.style.marginLeft = '8px'
 runButton.insertAdjacentElement('afterend', exportButton)
+status.insertAdjacentElement('afterend', thumbnailPreviewPanel)
 output.insertAdjacentElement('afterend', linetypePreviewPanel)
 
+thumbnailPreviewPanel.style.marginTop = '12px'
+thumbnailPreviewPanel.style.display = 'none'
 linetypePreviewPanel.style.marginTop = '16px'
 linetypePreviewPanel.style.display = 'none'
 
@@ -229,6 +234,53 @@ const renderLayers = (layerInfo?: { count: number; names: string[] }) => {
   const lines = [`Layers (${layerInfo.count})`]
   layerInfo.names.forEach(name => lines.push(`- ${name}`))
   return lines
+}
+
+/**
+ * Renders the drawing thumbnail preview when the parsed database contains one.
+ *
+ * Clears and hides the panel when `database` is null or has no thumbnail bytes.
+ *
+ * @param database - Parsed drawing database, or `null` to reset the panel.
+ */
+const renderThumbnailPreview = (database: AcDbDatabase | null) => {
+  thumbnailPreviewPanel.innerHTML = ''
+  if (!database?.thumbnailImage?.length) {
+    thumbnailPreviewPanel.style.display = 'none'
+    return
+  }
+
+  const dataUrl = acdbThumbnailImageToDataUrl(database.thumbnailImage)
+  if (!dataUrl) {
+    thumbnailPreviewPanel.style.display = 'none'
+    return
+  }
+
+  const title = document.createElement('h3')
+  title.textContent = 'Drawing preview'
+  title.style.margin = '0 0 8px 0'
+  title.style.fontSize = '16px'
+
+  const image = document.createElement('img')
+  image.src = dataUrl
+  image.alt = 'Drawing thumbnail preview'
+  image.style.display = 'block'
+  image.style.maxWidth = 'min(100%, 512px)'
+  image.style.height = 'auto'
+  image.style.border = '1px solid #dadada'
+  image.style.borderRadius = '6px'
+  image.style.background = '#f8f9fa'
+
+  const caption = document.createElement('div')
+  caption.textContent = `${database.thumbnailImage.length.toLocaleString()} bytes`
+  caption.style.marginTop = '6px'
+  caption.style.fontSize = '12px'
+  caption.style.color = '#5f6368'
+
+  thumbnailPreviewPanel.appendChild(title)
+  thumbnailPreviewPanel.appendChild(image)
+  thumbnailPreviewPanel.appendChild(caption)
+  thumbnailPreviewPanel.style.display = 'block'
 }
 
 /**
@@ -507,6 +559,7 @@ const applyPatSource = () => {
 const runParse = async () => {
   if (!lastFile || !lastBuffer) {
     output.textContent = 'Please select a DWG or DXF file first.'
+    renderThumbnailPreview(null)
     renderLinetypePreviews(null)
     return
   }
@@ -549,6 +602,7 @@ const runParse = async () => {
     lastParsedDatabase = parsedDatabase
     setStatus('')
     output.textContent = lines.join('\n')
+    renderThumbnailPreview(lastParsedDatabase)
     renderLinetypePreviews(lastParsedDatabase)
     runButton.disabled = false
     fileInput.disabled = false
@@ -561,6 +615,7 @@ fileInput.addEventListener('change', async () => {
   if (!file) return
   lastFile = file
   lastParsedDatabase = null
+  renderThumbnailPreview(null)
   renderLinetypePreviews(null)
   updateExportButton()
   output.textContent = 'Loading file...\n'

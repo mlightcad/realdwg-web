@@ -36,6 +36,22 @@ describe('AcDbDatabase', () => {
     )
   })
 
+  it('stores and clears thumbnailImage bytes', () => {
+    const db = new AcDbDatabase()
+    expect(db.thumbnailImage).toBeUndefined()
+
+    const bytes = new Uint8Array([0x42, 0x4d, 0x00, 0x01])
+    db.thumbnailImage = bytes
+    expect(db.thumbnailImage).toBe(bytes)
+
+    db.thumbnailImage = new Uint8Array()
+    expect(db.thumbnailImage).toBeUndefined()
+
+    db.thumbnailImage = bytes
+    db.thumbnailImage = undefined
+    expect(db.thumbnailImage).toBeUndefined()
+  })
+
   it('reassigns symbol-table handles that collide across tables', () => {
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db

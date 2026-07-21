@@ -1,7 +1,8 @@
 import {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
-  AcDbDwgVersion} from '@mlightcad/data-model'
+  AcDbDwgVersion
+} from '@mlightcad/data-model'
 import { DxfParser, isBinaryDxf, ParsedDxf } from '@mlightcad/dxf-json'
 
 /**
@@ -20,7 +21,7 @@ export interface AcDbDxfHeaderInfo {
 export class AcDbDxfParser {
   parse(data: ArrayBuffer): ParsedDxf {
     const bytes = new Uint8Array(data)
-    const parser = new DxfParser()
+    const parser = new DxfParser({ thumbnailImageFormat: 'buffer' })
 
     if (isBinaryDxf(bytes)) {
       return parser.parseBuffer(bytes)

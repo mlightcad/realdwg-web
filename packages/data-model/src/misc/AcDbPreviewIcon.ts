@@ -17,11 +17,57 @@ export function acdbPreviewIconToDataUrl(
   const bmpBytes = ensureBmpFileBytes(data)
   if (!bmpBytes) return undefined
 
-  let binary = ''
-  for (let i = 0; i < bmpBytes.length; i++) {
-    binary += String.fromCharCode(bmpBytes[i])
+  return bytesToDataUrl(bmpBytes, 'image/bmp')
+}
+
+/**
+ * Converts drawing thumbnail bytes to a browser-displayable data URL.
+ *
+ * Accepts PNG, JPEG, full BMP files, and DIB payloads (same wrapping as
+ * {@link acdbPreviewIconToDataUrl}). Used for DXF `THUMBNAILIMAGE` and DWG
+ * preview bitmaps (`Database.ThumbnailBitmap`).
+ *
+ * @param data - Raw thumbnail bytes, or an empty buffer when none exist.
+ * @returns A data URL, or `undefined` when the payload is empty/unsupported.
+ */
+export function acdbThumbnailImageToDataUrl(
+  data: Uint8Array | undefined | null
+): string | undefined {
+  if (!data || data.length === 0) return undefined
+
+  // PNG signature: 89 50 4E 47 0D 0A 1A 0A
+  if (
+    data.length >= 8 &&
+    data[0] === 0x89 &&
+    data[1] === 0x50 &&
+    data[2] === 0x4e &&
+    data[3] === 0x47
+  ) {
+    return bytesToDataUrl(data, 'image/png')
   }
-  return `data:image/bmp;base64,${btoa(binary)}`
+
+  // JPEG signature: FF D8 FF
+  if (
+    data.length >= 3 &&
+    data[0] === 0xff &&
+    data[1] === 0xd8 &&
+    data[2] === 0xff
+  ) {
+    return bytesToDataUrl(data, 'image/jpeg')
+  }
+
+  return acdbPreviewIconToDataUrl(data)
+}
+
+/**
+ * Encodes raw bytes as a `data:` URL for the given MIME type.
+ */
+function bytesToDataUrl(data: Uint8Array, mime: string): string {
+  let binary = ''
+  for (let i = 0; i < data.length; i++) {
+    binary += String.fromCharCode(data[i])
+  }
+  return `data:${mime};base64,${btoa(binary)}`
 }
 
 /**

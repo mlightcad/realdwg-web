@@ -1298,6 +1298,32 @@ export class AcDbEntityConverter {
     dbViewport.width = viewport.width
     dbViewport.viewCenter.copy(viewport.displayCenter)
     dbViewport.viewHeight = viewport.viewHeight
+    if (viewport.targetPoint) {
+      dbViewport.viewTarget.copy(viewport.targetPoint)
+    }
+    if (viewport.viewTwistAngle != null) {
+      dbViewport.viewTwistAngle = viewport.viewTwistAngle
+    }
+
+    // LibreDWG sometimes leaves the default paper-space viewport's paper
+    // center at (0,0) while displayCenter still holds the sheet-local
+    // center. Repair that so downstream default detection
+    // (centerPoint == viewCenter) and zoom bounds stay on the sheet.
+    const eps = 1e-6
+    const centerAtOrigin =
+      Math.abs(dbViewport.centerPoint.x) < eps &&
+      Math.abs(dbViewport.centerPoint.y) < eps
+    const target = dbViewport.viewTarget
+    const targetAtOrigin =
+      Math.abs(target.x) < eps && Math.abs(target.y) < eps
+    const oneToOne =
+      Number.isFinite(dbViewport.height) &&
+      Number.isFinite(dbViewport.viewHeight) &&
+      Math.abs(dbViewport.viewHeight - dbViewport.height) < eps
+    if (centerAtOrigin && targetAtOrigin && oneToOne) {
+      dbViewport.centerPoint.copy(dbViewport.viewCenter)
+    }
+
     return dbViewport
   }
 
