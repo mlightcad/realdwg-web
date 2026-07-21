@@ -511,6 +511,14 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
    * ```
    */
   protected processHeader(model: ParsedDxf, db: AcDbDatabase) {
+    const thumbnail = model.thumbnailImage?.data
+    if (thumbnail instanceof Uint8Array && thumbnail.length > 0) {
+      db.thumbnailImage = thumbnail
+    } else if (typeof thumbnail === 'string' && /^[0-9A-Fa-f]+$/.test(thumbnail)) {
+      // Fallback when thumbnailImageFormat is 'hex' (group 310).
+      db.thumbnailImage = acdbHexStringsToBytes([thumbnail])
+    }
+
     const header = model.header
     if (header['$ACADVER']) {
       db.version = header['$ACADVER']

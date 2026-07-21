@@ -45,6 +45,10 @@ class TestDxfConverter extends AcDbDxfConverter {
   processBlocksPublic(model: any, db: AcDbDatabase) {
     return this.processBlocks(model, db)
   }
+
+  processHeaderPublic(model: any, db: AcDbDatabase) {
+    return this.processHeader(model, db)
+  }
 }
 
 describe('AcDbDxfConverter', () => {
@@ -327,5 +331,30 @@ describe('AcDbDxfConverter', () => {
 
     expect(block.origin.x).toBeCloseTo(129.7483812685847)
     expect(block.origin.y).toBeCloseTo(191.3692592886388)
+  })
+
+  it('sets thumbnailImage from THUMBNAILIMAGE buffer or hex payload', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestDxfConverter({ useWorker: false })
+    const bytes = new Uint8Array([0x42, 0x4d, 0x01, 0x02])
+
+    converter.processHeaderPublic(
+      {
+        header: {},
+        thumbnailImage: { size: bytes.length, data: bytes }
+      },
+      db
+    )
+    expect(db.thumbnailImage).toEqual(bytes)
+
+    const dbHex = new AcDbDatabase()
+    converter.processHeaderPublic(
+      {
+        header: {},
+        thumbnailImage: { size: 2, data: 'AABB' }
+      },
+      dbHex
+    )
+    expect(dbHex.thumbnailImage).toEqual(new Uint8Array([0xaa, 0xbb]))
   })
 })

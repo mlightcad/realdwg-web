@@ -1530,6 +1530,29 @@ export class AcDbEntityConverter {
     dbViewport.width = viewport.width
     dbViewport.viewCenter.copy(viewport.displayCenter)
     dbViewport.viewHeight = viewport.viewHeight
+    if (viewport.targetPoint) {
+      dbViewport.viewTarget.copy(viewport.targetPoint)
+    }
+    if (viewport.viewTwistAngle != null) {
+      dbViewport.viewTwistAngle = viewport.viewTwistAngle
+    }
+
+    // Mirror libredwg-converter: repair collapsed default paper centers.
+    const eps = 1e-6
+    const centerAtOrigin =
+      Math.abs(dbViewport.centerPoint.x) < eps &&
+      Math.abs(dbViewport.centerPoint.y) < eps
+    const target = dbViewport.viewTarget
+    const targetAtOrigin =
+      Math.abs(target.x) < eps && Math.abs(target.y) < eps
+    const oneToOne =
+      Number.isFinite(dbViewport.height) &&
+      Number.isFinite(dbViewport.viewHeight) &&
+      Math.abs(dbViewport.viewHeight - dbViewport.height) < eps
+    if (centerAtOrigin && targetAtOrigin && oneToOne) {
+      dbViewport.centerPoint.copy(dbViewport.viewCenter)
+    }
+
     return dbViewport
   }
 

@@ -598,6 +598,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   protected processHeader(model: DwgDatabase, db: AcDbDatabase) {
+    const thumbnail = model.thumbnailImage
+    if (thumbnail?.length) {
+      db.thumbnailImage = thumbnail
+    }
+
     const header = model.header
     // Color index 256 is 'ByLayer'
     if (header.CECOLOR) {

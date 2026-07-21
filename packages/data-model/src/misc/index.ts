@@ -84,7 +84,7 @@ export {
   acdbBytesToHexString,
   acdbHexStringsToBytes
 } from './proxyGraphic'
-export { acdbPreviewIconToDataUrl } from './AcDbPreviewIcon'
+export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,

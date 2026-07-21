@@ -451,6 +451,11 @@ export class AcDbDatabase extends AcDbObject {
   /** Current drawing file name (**DWGNAME**), including extension. */
   private _dwgname: string
   /**
+   * Drawing thumbnail preview image (DXF `THUMBNAILIMAGE` / DWG preview).
+   * Raw image bytes (typically BMP/DIB or PNG), or `undefined` when absent.
+   */
+  private _thumbnailImage?: Uint8Array
+  /**
    * Layer Properties Manager filter tree (`AcLy*` / .NET `LayerFilterTree`).
    * Distinct from {@link objects.layerFilter} (`AcDbLayerFilter` index objects).
    */
@@ -1556,6 +1561,26 @@ export class AcDbDatabase extends AcDbObject {
         this._dwgname = nextValue
       }
     )
+  }
+
+  /**
+   * Gets or sets the drawing thumbnail preview image.
+   *
+   * Corresponds to AutoCAD .NET `Database.ThumbnailBitmap`, DXF
+   * `THUMBNAILIMAGE` section (group codes 90/310), and the DWG file preview.
+   * Stored as raw image bytes (typically BMP/DIB or PNG).
+   *
+   * @returns Thumbnail image bytes, or `undefined` when none exist.
+   */
+  get thumbnailImage(): Uint8Array | undefined {
+    return this._thumbnailImage
+  }
+  set thumbnailImage(value: Uint8Array | undefined) {
+    if (!value || value.length === 0) {
+      this._thumbnailImage = undefined
+      return
+    }
+    this._thumbnailImage = value
   }
 
   /**

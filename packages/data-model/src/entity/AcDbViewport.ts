@@ -49,6 +49,8 @@ export class AcDbViewport extends AcDbEntity {
   private _height: number
   private _width: number
   private _viewCenter: AcGePoint3d
+  private _viewTarget: AcGePoint3d
+  private _viewTwistAngle: number
   private _viewHeight: number
   private _number: number
 
@@ -60,6 +62,8 @@ export class AcDbViewport extends AcDbEntity {
    * - height: 0
    * - width: 0
    * - viewCenter: origin (0,0,0)
+   * - viewTarget: origin (0,0,0)
+   * - viewTwistAngle: 0
    * - viewHeight: 0
    * - number: -1 (indicating inactive viewport)
    */
@@ -69,6 +73,8 @@ export class AcDbViewport extends AcDbEntity {
     this._height = 0
     this._width = 0
     this._viewCenter = new AcGePoint3d()
+    this._viewTarget = new AcGePoint3d()
+    this._viewTwistAngle = 0
     this._viewHeight = 0
     this._number = -1
   }
@@ -159,6 +165,30 @@ export class AcDbViewport extends AcDbEntity {
   }
   set viewCenter(value: AcGePoint3d) {
     this._viewCenter = value
+  }
+
+  /**
+   * Gets or sets the view target in WCS coordinates (DXF group 17).
+   *
+   * The model view center stored in {@link viewCenter} is in DCS; the WCS
+   * center shown through the viewport is `viewTarget + rotate(viewCenter,
+   * viewTwistAngle)`.
+   */
+  get viewTarget() {
+    return this._viewTarget
+  }
+  set viewTarget(value: AcGePoint3d) {
+    this._viewTarget = value
+  }
+
+  /**
+   * Gets or sets the view twist angle in radians (DXF group 51).
+   */
+  get viewTwistAngle() {
+    return this._viewTwistAngle
+  }
+  set viewTwistAngle(value: number) {
+    this._viewTwistAngle = value
   }
 
   /**
@@ -338,6 +368,8 @@ export class AcDbViewport extends AcDbEntity {
     viewport.height = this.height
     viewport.viewHeight = this.viewHeight
     viewport.viewCenter = this.viewCenter
+    viewport.viewTarget = this.viewTarget
+    viewport.viewTwistAngle = this.viewTwistAngle
     return viewport
   }
 
@@ -427,7 +459,9 @@ export class AcDbViewport extends AcDbEntity {
     filer.writeDouble(40, this.height)
     filer.writeDouble(41, this.width)
     filer.writePoint3d(12, this.viewCenter)
+    filer.writePoint3d(17, this.viewTarget)
     filer.writeDouble(45, this.viewHeight)
+    filer.writeAngle(51, this.viewTwistAngle)
     filer.writeInt32(69, this.number)
     return this
   }
