@@ -333,6 +333,37 @@ describe('AcDbDxfConverter', () => {
     expect(block.origin.y).toBeCloseTo(191.3692592886388)
   })
 
+  it('strips Resolved bit so attached xrefs stay unresolved', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const converter = new TestDxfConverter({ useWorker: false })
+    // AutoCAD writes type 36 (Xref|Resolved) for attached, empty xref blocks.
+    converter.processBlocksPublic(
+      {
+        blocks: {
+          xref1: {
+            name: 'xref1',
+            handle: '298',
+            type: 36,
+            xrefPath: '.\\xref1.dwg',
+            position: { x: 0, y: 0, z: 0 },
+            entities: []
+          }
+        },
+        entities: []
+      },
+      db
+    )
+
+    const xref = db.tables.blockTable.getAt('xref1')
+    expect(xref).toBeDefined()
+    expect(xref!.pathName).toBe('.\\xref1.dwg')
+    expect(xref!.isXref).toBe(true)
+    expect(xref!.flags & 32).toBe(0)
+    expect(xref!.isUnresolvedXref).toBe(true)
+  })
+
   it('sets thumbnailImage from THUMBNAILIMAGE buffer or hex payload', () => {
     const db = new AcDbDatabase()
     const converter = new TestDxfConverter({ useWorker: false })

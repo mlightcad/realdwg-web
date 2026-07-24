@@ -142,6 +142,28 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   }
 
   /**
+   * Clears AutoCAD-internal xref status bits from BLOCK flags read from a file.
+   *
+   * DXF group 70 bits 32 ({@link AcDbBlockTableRecordFlag.Resolved}) and 64
+   * ({@link AcDbBlockTableRecordFlag.Referenced}) are documented as AutoCAD
+   * internal and ignored on input. Web converters do not bind xref geometry, so
+   * those bits must not suppress {@link isUnresolvedXref}. Runtime code (for
+   * example XATTACH overlay load) may set Resolved after content is available.
+   *
+   * @param flags - Raw block-type flags from DXF/DWG.
+   * @returns Flags with Resolved and Referenced cleared.
+   */
+  static sanitizeImportedFlags(flags: number) {
+    return (
+      flags &
+      ~(
+        AcDbBlockTableRecordFlag.Resolved |
+        AcDbBlockTableRecordFlag.Referenced
+      )
+    )
+  }
+
+  /**
    * Creates a new AcDbBlockTableRecord instance.
    *
    * @param attrs - Input attribute values for this block table record
@@ -297,8 +319,10 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   /**
    * True when this is an xref whose content has not been loaded into the block.
    *
-   * Uses the Resolved flag when set by the converter; otherwise treats an empty
-   * xref block as unresolved (the web converters do not yet bind xref content).
+   * File importers clear the Resolved bit via {@link sanitizeImportedFlags}
+   * because AutoCAD often writes Resolved even though web converters do not bind
+   * xref geometry. Runtime loaders (for example XATTACH) may set Resolved once
+   * an overlay session is available, even when the BTR stays empty.
    */
   get isUnresolvedXref() {
     if (!this.isXref) return false
