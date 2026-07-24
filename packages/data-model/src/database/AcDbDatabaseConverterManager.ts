@@ -39,6 +39,11 @@ export interface AcDbDatabaseConverterManagerEventArgs {
  * for a given file type. It implements the singleton pattern and provides
  * event notifications when converters are registered or unregistered.
  *
+ * Importing `@mlightcad/data-model` registers a native DXF converter
+ * (`AcDbNativeDxfConverter`) for {@link AcDbFileType.DXF} by default. Calling
+ * {@link register} again for the same file type replaces the previous converter
+ * (e.g. with `@mlightcad/dxf-json-converter`).
+ *
  * @example
  * ```typescript
  * const manager = AcDbDatabaseConverterManager.instance;

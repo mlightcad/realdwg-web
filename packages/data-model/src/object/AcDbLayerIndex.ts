@@ -269,4 +269,46 @@ export class AcDbLayerIndex extends AcDbIndex {
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbLayerIndex')
+
+    const layerNames: string[] = []
+    const idBufferIds: AcDbObjectId[] = []
+    const idBufferEntryCounts: number[] = []
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      switch (code) {
+        case 8:
+          layerNames.push(String(item.value))
+          break
+        case 360:
+          idBufferIds.push(String(item.value))
+          break
+        case 90:
+          idBufferEntryCounts.push(Number(item.value))
+          break
+        case 100:
+          filer.pushBackItem(item)
+          this.layerNames = layerNames
+          this.idBufferIds = idBufferIds
+          this.idBufferEntryCounts = idBufferEntryCounts
+          this.isUptoDate = true
+          return this
+        default:
+          break
+      }
+    }
+
+    this.layerNames = layerNames
+    this.idBufferIds = idBufferIds
+    this.idBufferEntryCounts = idBufferEntryCounts
+    this.isUptoDate = true
+    return this
+  }
 }
+

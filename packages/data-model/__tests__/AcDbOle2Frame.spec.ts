@@ -1,7 +1,14 @@
 import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
+import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
+import { AcDbDatabase } from '../src/database'
+import { acdbDxfInEntity } from '../src/dxf/AcDbDxfEntityFactory'
 import { AcDbOle2Frame } from '../src/entity'
 import { acdbExtractOleImageBlob } from '../src/misc/AcDbOleImageExtractor'
+import {
+  acdbBytesToHexString,
+  acdbCombineDxfBinaryChunks
+} from '../src/misc/proxyGraphic'
 
 /**
  * Builds a minimal 1x1 24-bit BMP (white pixel).
@@ -132,6 +139,73 @@ describe('AcDbOle2Frame image drawing', () => {
     expect(renderer.image).not.toHaveBeenCalled()
     expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.lines).toHaveBeenCalledTimes(1)
+  })
+
+  it('dxfInFields keeps OLE binary when group 310 is Uint8Array', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+
+    const bmp = createMinimalBmp()
+    const hex = acdbBytesToHexString(bmp)
+    // Native ASCII pair reader yields Uint8Array for group 310. Calling
+    // String(Uint8Array) would corrupt the CFB/image payload.
+    const dxf = [
+      '0',
+      'OLE2FRAME',
+      '5',
+      '1A',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbOle2Frame',
+      '70',
+      '1',
+      '3',
+      'Paintbrush Picture',
+      '10',
+      '0.0',
+      '20',
+      '10.0',
+      '30',
+      '0.0',
+      '11',
+      '20.0',
+      '21',
+      '0.0',
+      '31',
+      '0.0',
+      '71',
+      '2',
+      '72',
+      '1',
+      '90',
+      String(bmp.length),
+      '310',
+      hex,
+      '1',
+      'OLE',
+      '0',
+      'ENDSEC'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf)
+    const entity = acdbDxfInEntity(filer)
+    expect(entity).toBeInstanceOf(AcDbOle2Frame)
+    const ole = entity as AcDbOle2Frame
+
+    const payload = ole.getOleObject()
+    expect(payload).toBeDefined()
+    expect(Array.from(payload!)).toEqual(Array.from(bmp))
+    expect(ole.image).toBeDefined()
+    expect(ole.image?.type).toBe('image/bmp')
+  })
+
+  it('acdbCombineDxfBinaryChunks accepts mixed hex and Uint8Array chunks', () => {
+    const a = new Uint8Array([0xd0, 0xcf])
+    const b = '11E0'
+    const combined = acdbCombineDxfBinaryChunks([a, b])
+    expect(Array.from(combined)).toEqual([0xd0, 0xcf, 0x11, 0xe0])
   })
 
   it('keeps transformed image and frame boundaries aligned', () => {

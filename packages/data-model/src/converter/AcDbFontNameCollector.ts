@@ -243,4 +243,11 @@ export class AcDbFontNameCollector {
     }
     return Array.from(fonts)
   }
+
+  /**
+   * Extracts normalized font names from MTEXT inline overrides (`\f…|` / `\F…;`).
+   */
+  static collectInlineMTextFonts(text: string): string[] {
+    return AcDbFontNameCollector.extractInlineMTextFonts(text)
+  }
 }

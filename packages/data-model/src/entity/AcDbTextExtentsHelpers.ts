@@ -116,6 +116,22 @@ export function acdbEstimateMTextHeight(
   return textHeight + (lineCount - 1) * textHeight * spacing
 }
 
+/**
+ * Converts AutoCAD DXF group-44 line spacing factor to the gap factor expected
+ * by `@mlightcad/mtext-renderer`.
+ *
+ * AutoCAD: baseline distance = `factor × (5/3) × textHeight`
+ * (factor is a multiple of default 3-on-5 single-line spacing).
+ *
+ * Renderer: `lineHeight ≈ textHeight × (1 + gapFactor × 5/3)`
+ *
+ * Therefore `gapFactor = factor - 3/5`.
+ */
+export function acdbMTextRendererLineSpaceFactor(dxfFactor: number): number {
+  if (!Number.isFinite(dxfFactor)) return 0
+  return Math.max(0, dxfFactor - 0.6)
+}
+
 interface LocalBounds {
   minX: number
   minY: number

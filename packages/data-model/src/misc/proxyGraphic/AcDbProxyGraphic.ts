@@ -34,9 +34,9 @@ import {
   RAW_COLOR_TYPE_RGB
 } from '../AcDbMLeaderStyleColorCodec'
 import {
+  acdbCombineDxfBinaryChunks,
   AcDbProxyGraphicBitStream,
-  AcDbProxyGraphicByteStream
-} from './AcDbProxyGraphicBinaryStream'
+  AcDbProxyGraphicByteStream} from './AcDbProxyGraphicBinaryStream'
 
 /**
  * Maximum number of bytes written to each DXF group code **310** chunk when
@@ -1302,29 +1302,22 @@ export class AcDbProxyGraphic {
 /**
  * Loads proxy-graphic bytes from DXF group codes **160** and **310**.
  *
- * Hex chunks are concatenated in order and optionally truncated to the declared
- * byte length from group code **160**.
+ * Chunks are concatenated in order (hex strings and/or `Uint8Array`) and
+ * optionally truncated to the declared byte length from group code **160**.
  *
  * @param length - Expected byte length from group code **160**.
- * @param hexChunks - One or more hexadecimal strings from group code **310**.
- * @returns Decoded bytes, or `undefined` when no hex chunks are supplied.
+ * @param chunks - One or more hexadecimal strings or binary chunks from
+ *   group code **310**.
+ * @returns Decoded bytes, or `undefined` when no chunks are supplied.
  */
 export function acdbLoadProxyGraphicFromDxf(
   length?: number,
-  hexChunks?: string[]
+  chunks?: Array<string | Uint8Array>
 ): Uint8Array | undefined {
-  if (!hexChunks?.length) {
+  if (!chunks?.length) {
     return undefined
   }
-  const bytes = new Uint8Array(
-    hexChunks.reduce((sum, chunk) => sum + Math.floor(chunk.length / 2), 0)
-  )
-  let offset = 0
-  for (const chunk of hexChunks) {
-    for (let i = 0; i < chunk.length; i += 2) {
-      bytes[offset++] = parseInt(chunk.slice(i, i + 2), 16)
-    }
-  }
+  const bytes = acdbCombineDxfBinaryChunks(chunks)
   if (length != null && length > 0 && bytes.length >= length) {
     return bytes.subarray(0, length)
   }

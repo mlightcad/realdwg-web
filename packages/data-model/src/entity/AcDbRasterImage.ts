@@ -115,6 +115,12 @@ export class AcDbRasterImage extends AcDbEntity {
   private _isImageShown: boolean
   /** Whether the image is transparent */
   private _isImageTransparent: boolean
+  /** Class version (DXF group 90) */
+  private _classVersion = 0
+  /**
+   * Clip mode (DXF group 290): 0 = outside mode, 1 = inside mode.
+   */
+  private _clipMode = 0
   /** The image data as a Blob */
   private _image?: Blob
 
@@ -310,6 +316,24 @@ export class AcDbRasterImage extends AcDbEntity {
   }
   set isImageTransparent(value: boolean) {
     this._isImageTransparent = value
+  }
+
+  /** Class version (DXF group 90). */
+  get classVersion() {
+    return this._classVersion
+  }
+  set classVersion(value: number) {
+    this._classVersion = value
+  }
+
+  /**
+   * Clip mode (DXF group 290): 0 = outside, 1 = inside.
+   */
+  get clipMode() {
+    return this._clipMode
+  }
+  set clipMode(value: number) {
+    this._clipMode = value
   }
 
   /**
@@ -598,6 +622,7 @@ export class AcDbRasterImage extends AcDbEntity {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbRasterImage')
+    filer.writeInt32(90, this.classVersion)
     filer.writePoint3d(10, this.position)
     const wcsWidth = this.width * this.scale.x
     const wcsHeight = this.height * this.scale.y
@@ -633,9 +658,165 @@ export class AcDbRasterImage extends AcDbEntity {
         filer.writePoint2d(14, point)
       }
     }
+    filer.writeInt16(290, this.clipMode)
     return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbRasterImage')
+
+    let px = this.position.x
+    let py = this.position.y
+    let pz = this.position.z
+    let ux = 1
+    let uy = 0
+    let uz = 0
+    let vx = 0
+    let vy = 1
+    let vz = 0
+    let sx = this.imageSize.x
+    let sy = this.imageSize.y
+    const clipPts: AcGePoint2d[] = []
+    let pendingClip: { x: number; y: number } | null = null
+
+    const flushClip = () => {
+      if (pendingClip) {
+        clipPts.push(new AcGePoint2d(pendingClip.x, pendingClip.y))
+        pendingClip = null
+      }
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          px = n
+          break
+        case 20:
+          py = n
+          break
+        case 30:
+          pz = n
+          break
+        case 11:
+          ux = n
+          break
+        case 21:
+          uy = n
+          break
+        case 31:
+          uz = n
+          break
+        case 12:
+          vx = n
+          break
+        case 22:
+          vy = n
+          break
+        case 32:
+          vz = n
+          break
+        case 13:
+          sx = n
+          break
+        case 23:
+          sy = n
+          break
+        case 14:
+          flushClip()
+          pendingClip = { x: n, y: 0 }
+          break
+        case 24:
+          if (pendingClip) pendingClip.y = n
+          break
+        case 70: {
+          this.isImageShown = (n & 0x0003) !== 0
+          this.isShownClipped = (n & AcDbRasterImageImageDisplayOpt.Clip) !== 0
+          this.isImageTransparent =
+            (n & AcDbRasterImageImageDisplayOpt.Transparent) !== 0
+          break
+        }
+        case 71:
+          this.clipBoundaryType = n as AcDbRasterImageClipBoundaryType
+          break
+        case 90:
+          this.classVersion = n
+          break
+        case 91:
+          // Clip vertex count — informational.
+          break
+        case 280:
+          this.isClipped = n !== 0
+          break
+        case 281:
+          this.brightness = n
+          break
+        case 282:
+          this.contrast = n
+          break
+        case 283:
+          this.fade = n
+          break
+        case 290:
+          this.clipMode = n
+          break
+        case 340:
+          this.imageDefId = String(item.value)
+          break
+        default:
+          break
+      }
+    }
+
+    flushClip()
+    this.applyRasterImageDxfIn(
+      px,
+      py,
+      pz,
+      ux,
+      uy,
+      uz,
+      vx,
+      vy,
+      vz,
+      sx,
+      sy,
+      clipPts
+    )
+    return this
+  }
+
+  private applyRasterImageDxfIn(
+    px: number,
+    py: number,
+    pz: number,
+    ux: number,
+    uy: number,
+    uz: number,
+    vx: number,
+    vy: number,
+    vz: number,
+    sx: number,
+    sy: number,
+    clipPts: AcGePoint2d[]
+  ) {
+    this.position.copy({ x: px, y: py, z: pz })
+    this.imageSize.copy({ x: sx, y: sy })
+    const uLen = Math.hypot(ux, uy, uz)
+    const vLen = Math.hypot(vx, vy, vz)
+    this.width = uLen * (sx || 1)
+    this.height = vLen * (sy || 1)
+    this.rotation = Math.atan2(uy, ux)
+    if (clipPts.length > 0) {
+      this.clipBoundary = clipPts
+    }
   }
 }
 
 const _point1 = /*@__PURE__*/ new AcGePoint2d()
 const _point2 = /*@__PURE__*/ new AcGePoint2d()
+

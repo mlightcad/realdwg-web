@@ -375,6 +375,51 @@ export class AcDbRay extends AcDbCurve {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbRay')
+
+    let bx = this.basePoint.x
+    let by = this.basePoint.y
+    let bz = this.basePoint.z
+    let dx = this.unitDir.x
+    let dy = this.unitDir.y
+    let dz = this.unitDir.z
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          bx = n
+          break
+        case 20:
+          by = n
+          break
+        case 30:
+          bz = n
+          break
+        case 11:
+          dx = n
+          break
+        case 21:
+          dy = n
+          break
+        case 31:
+          dz = n
+          break
+        default:
+          break
+      }
+    }
+
+    this.basePoint = new AcGePoint3d(bx, by, bz)
+    this.unitDir = new AcGeVector3d(dx, dy, dz)
+    return this
+  }
+
   /**
    * {@inheritDoc AcDbCurve.getOffsetCurves}
    *
@@ -420,3 +465,4 @@ export class AcDbRay extends AcDbCurve {
     return ray
   }
 }
+

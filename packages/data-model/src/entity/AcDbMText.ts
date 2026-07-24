@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -89,6 +90,22 @@ export class AcDbMText extends AcDbEntity {
   private _direction: AcGeVector3d
   /** The drawing direction of the text */
   private _drawingDirection: AcGiMTextFlowDirection
+  /** Extrusion / plane normal (DXF group 210). */
+  private _normal = new AcGeVector3d(0, 0, 1)
+  /** Annotation height when embedded in ATTRIB (DXF group 46). */
+  private _annotationHeight = 0
+  /** Column type (DXF group 75). */
+  private _columnType = 0
+  /** Column count (DXF group 76). */
+  private _columnCount = 0
+  /** Column flow reversed (DXF group 78). */
+  private _columnFlowReversed = false
+  /** Column auto height (DXF group 79). */
+  private _columnAutoHeight = false
+  /** Column width (DXF group 48). */
+  private _columnWidth = 0
+  /** Column gutter (DXF group 49). */
+  private _columnGutter = 0
 
   /**
    * Creates a new multiline text entity.
@@ -365,6 +382,70 @@ export class AcDbMText extends AcDbEntity {
   }
   set drawingDirection(value: AcGiMTextFlowDirection) {
     this._drawingDirection = value
+  }
+
+  /** Extrusion / plane normal (DXF group 210). */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
+  }
+
+  /** Annotation height when MTEXT is embedded in ATTRIB (DXF group 46). */
+  get annotationHeight() {
+    return this._annotationHeight
+  }
+  set annotationHeight(value: number) {
+    this._annotationHeight = value
+  }
+
+  /** Column type (DXF group 75). */
+  get columnType() {
+    return this._columnType
+  }
+  set columnType(value: number) {
+    this._columnType = value
+  }
+
+  /** Column count (DXF group 76). */
+  get columnCount() {
+    return this._columnCount
+  }
+  set columnCount(value: number) {
+    this._columnCount = value
+  }
+
+  /** Whether column flow is reversed (DXF group 78). */
+  get columnFlowReversed() {
+    return this._columnFlowReversed
+  }
+  set columnFlowReversed(value: boolean) {
+    this._columnFlowReversed = value
+  }
+
+  /** Whether columns use auto height (DXF group 79). */
+  get columnAutoHeight() {
+    return this._columnAutoHeight
+  }
+  set columnAutoHeight(value: boolean) {
+    this._columnAutoHeight = value
+  }
+
+  /** Column width (DXF group 48). */
+  get columnWidth() {
+    return this._columnWidth
+  }
+  set columnWidth(value: number) {
+    this._columnWidth = value
+  }
+
+  /** Column gutter (DXF group 49). */
+  get columnGutter() {
+    return this._columnGutter
+  }
+  set columnGutter(value: number) {
+    this._columnGutter = value
   }
 
   /**
@@ -734,10 +815,9 @@ export class AcDbMText extends AcDbEntity {
       filer.writeDouble(42, this.extentsWidth)
     }
     // MTEXT contents use \P for paragraph breaks; raw newlines must not appear in DXF.
-    filer.writeString(
-      1,
-      this.encodeMTextContentsForDxf(this.contents ?? '')
-    )
+    // AutoCAD splits strings longer than 250 chars into group-3 chunks, with the
+    // final remainder in group 1.
+    filer.writeMTextContents(this.encodeMTextContentsForDxf(this.contents ?? ''))
     filer.writeString(7, this.styleName)
     filer.writeAngle(50, this.rotation)
     filer.writeVector3d(11, this.direction)
@@ -751,6 +831,214 @@ export class AcDbMText extends AcDbEntity {
       filer.writeInt32(441, this.backgroundFillTransparency)
       filer.writeDouble(45, this.backgroundScaleFactor)
     }
+    if (this.annotationHeight !== 0) {
+      filer.writeDouble(46, this.annotationHeight)
+    }
+    if (this.columnType !== 0) {
+      filer.writeInt16(75, this.columnType)
+      filer.writeInt16(76, this.columnCount)
+      filer.writeInt16(78, this.columnFlowReversed ? 1 : 0)
+      filer.writeInt16(79, this.columnAutoHeight ? 1 : 0)
+      filer.writeDouble(48, this.columnWidth)
+      filer.writeDouble(49, this.columnGutter)
+    }
+    filer.writeVector3d(210, this.normal)
     return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbMText')
+
+    let lx = this.location.x
+    let ly = this.location.y
+    let lz = this.location.z
+    let dx = this.direction.x
+    let dy = this.direction.y
+    let dz = this.direction.z
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+    let hasDirection = false
+    const contentParts: string[] = []
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          lx = n
+          break
+        case 20:
+          ly = n
+          break
+        case 30:
+          lz = n
+          break
+        case 11:
+          dx = n
+          hasDirection = true
+          break
+        case 21:
+          dy = n
+          hasDirection = true
+          break
+        case 31:
+          dz = n
+          hasDirection = true
+          break
+        case 1:
+        case 3:
+          contentParts.push(String(item.value))
+          break
+        case 7:
+          this.styleName = String(item.value)
+          break
+        case 40:
+          this.height = n
+          break
+        case 41:
+          this.width = n
+          break
+        case 42:
+          if (n > 0) this.extentsWidth = n
+          break
+        case 43:
+          // Vertical character height — documented as unused by AutoCAD; skip.
+          break
+        case 44:
+          // DXF group 44 is AutoCAD's "multiple of 3-on-5" line spacing (~1.0).
+          // AcDbMText.lineSpacingFactor is passed straight to mtext-renderer as a
+          // gap coefficient (ctor default 0.25). Applying group 44 here makes
+          // multi-line MTEXT far too tall. dxf-json convertMText also never
+          // copied this field. Keep the renderer-compatible default until the
+          // renderer accepts AutoCAD group-44 semantics.
+          break
+        case 45:
+          this.backgroundScaleFactor = n
+          break
+        case 46:
+          this.annotationHeight = n
+          break
+        case 48:
+          this.columnWidth = n
+          break
+        case 49:
+          this.columnGutter = n
+          break
+        case 50:
+          this.rotation = AcGeMathUtil.degToRad(n)
+          break
+        case 71:
+          this.attachmentPoint = n as AcGiMTextAttachmentPoint
+          break
+        case 72:
+          this.drawingDirection = n as AcGiMTextFlowDirection
+          break
+        case 73:
+          this.lineSpacingStyle = n
+          break
+        case 75:
+          this.columnType = n
+          break
+        case 76:
+          this.columnCount = n
+          break
+        case 78:
+          this.columnFlowReversed = n !== 0
+          break
+        case 79:
+          this.columnAutoHeight = n !== 0
+          break
+        case 90:
+          this.backgroundFill = n !== 0
+          break
+        case 63:
+          this.backgroundFillColor = n
+          break
+        case 441:
+          this.backgroundFillTransparency = n
+          break
+        case 101:
+          // Embedded object marker — drain remaining pairs until end of entity
+          // (AutoCAD DXF / dxf-json skipEmbeddedObject behavior).
+          while (!filer.atEndOfObject && !filer.atEof) {
+            if (!filer.readItem()) break
+          }
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        case 100:
+          // Unexpected further subclass — hand off.
+          filer.pushBackItem(item)
+          this.finishMTextDxfIn(
+            contentParts,
+            lx,
+            ly,
+            lz,
+            dx,
+            dy,
+            dz,
+            hasDirection,
+            nx,
+            ny,
+            nz
+          )
+          return this
+        default:
+          // Unknown optional MTEXT codes — keep scanning (do not abort).
+          break
+      }
+    }
+
+    this.finishMTextDxfIn(
+      contentParts,
+      lx,
+      ly,
+      lz,
+      dx,
+      dy,
+      dz,
+      hasDirection,
+      nx,
+      ny,
+      nz
+    )
+    return this
+  }
+
+  private finishMTextDxfIn(
+    contentParts: string[],
+    lx: number,
+    ly: number,
+    lz: number,
+    dx: number,
+    dy: number,
+    dz: number,
+    hasDirection: boolean,
+    nx: number,
+    ny: number,
+    nz: number
+  ) {
+    if (contentParts.length > 0) {
+      this.contents = contentParts.join('')
+    }
+    this.location = { x: lx, y: ly, z: lz }
+    if (hasDirection) {
+      this.direction = { x: dx, y: dy, z: dz }
+    }
+    const normal = new AcGeVector3d(nx, ny, nz)
+    if (normal.lengthSq() > 0) {
+      this.normal.copy(normal.normalize())
+    }
   }
 }

@@ -187,4 +187,27 @@ export class AcDbLayerFilter extends AcDbFilter {
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbLayerFilter')
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      switch (code) {
+        case 8:
+          this.add(String(item.value))
+          break
+        case 100:
+          filer.pushBackItem(item)
+          return this
+        default:
+          break
+      }
+    }
+    return this
+  }
 }
+

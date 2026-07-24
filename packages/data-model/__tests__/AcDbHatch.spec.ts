@@ -644,6 +644,155 @@ describe('AcDbHatch', () => {
     expect(dxf).toContain('\n70\n1\n')
   })
 
+  it('dxfInFields reads gradient colors, name, angle (radians), and tint', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+    const dxf = [
+      '0',
+      'HATCH',
+      '5',
+      '1A',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbHatch',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '30',
+      '0.0',
+      '2',
+      'SOLID',
+      '70',
+      '1',
+      '71',
+      '0',
+      '91',
+      '1',
+      '92',
+      '2',
+      '72',
+      '0',
+      '73',
+      '1',
+      '93',
+      '4',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '10',
+      '10.0',
+      '20',
+      '0.0',
+      '10',
+      '10.0',
+      '20',
+      '5.0',
+      '10',
+      '0.0',
+      '20',
+      '5.0',
+      '97',
+      '0',
+      '75',
+      '0',
+      '76',
+      '1',
+      '98',
+      '0',
+      '450',
+      '1',
+      '451',
+      '0',
+      '460',
+      '1.5707963267948966',
+      '461',
+      '0.25',
+      '452',
+      '0',
+      '462',
+      '0.0',
+      '453',
+      '2',
+      '463',
+      '0.0',
+      '63',
+      '5',
+      '421',
+      '255',
+      '463',
+      '1.0',
+      '63',
+      '2',
+      '421',
+      '16776960',
+      '470',
+      'LINEAR',
+      '0',
+      'ENDSEC'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf, { database: db })
+    expect(filer.readItem()?.value).toBe('HATCH')
+    hatch.dxfIn(filer)
+
+    expect(hatch.hatchObjectType).toBe(AcDbHatchObjectType.GradientObject)
+    expect(hatch.isGradient).toBe(true)
+    expect(hatch.gradientName).toBe('LINEAR')
+    expect(hatch.gradientAngle).toBeCloseTo(Math.PI / 2)
+    expect(hatch.gradientShift).toBeCloseTo(0.25)
+    expect(hatch.gradientOneColorMode).toBe(false)
+    expect(hatch.gradientStartColor).toBe(255)
+    expect(hatch.gradientEndColor).toBe(16776960)
+  })
+
+  it('dxfOutFields writes gradient colors and round-trips through dxfInFields', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    hatch.isSolidFill = true
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.hatchObjectType = AcDbHatchObjectType.GradientObject
+    hatch.gradientName = 'CYLINDER'
+    hatch.gradientAngle = Math.PI / 3
+    hatch.gradientShift = 0.4
+    hatch.gradientOneColorMode = false
+    hatch.shadeTintValue = 0.1
+    hatch.gradientStartColor = 0x0000ff
+    hatch.gradientEndColor = 0xffff00
+    hatch.add(createRectLoop(0, 0, 2, 1))
+
+    const outFiler = new AcDbDxfFiler().setVersion(27)
+    hatch.dxfOutFields(outFiler)
+    const body = outFiler.toString()
+
+    expect(body).toContain('\n450\n1\n')
+    expect(body).toContain('\n421\n255\n')
+    expect(body).toContain('\n421\n16776960\n')
+    expect(body).toContain('\n470\nCYLINDER\n')
+    // Group 460 must be radians, not degrees.
+    expect(body).toMatch(/\n460\n1\.047\d*\n/)
+
+    const dxf = ['0', 'HATCH', '5', '2B', body, '0', 'ENDSEC'].join('\n')
+    const roundTrip = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(roundTrip)
+    const inFiler = AcDbDxfFiler.fromString(dxf, { database: db })
+    expect(inFiler.readItem()?.value).toBe('HATCH')
+    roundTrip.dxfIn(inFiler)
+
+    expect(roundTrip.gradientName).toBe('CYLINDER')
+    expect(roundTrip.gradientAngle).toBeCloseTo(Math.PI / 3)
+    expect(roundTrip.gradientShift).toBeCloseTo(0.4)
+    expect(roundTrip.gradientStartColor).toBe(0x0000ff)
+    expect(roundTrip.gradientEndColor).toBe(0xffff00)
+  })
+
   it('clone creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbHatch())
   })
@@ -675,5 +824,168 @@ describe('AcDbHatch', () => {
     hatch.add(createRectLoop(0, 0, 10, 5))
 
     expect(hatch.subGetGripPoints()).toEqual([])
+  })
+
+  it('dxfInFields keeps single-spline paths when fit-count and source-count are both 0', () => {
+    // LOGO hatches use edge paths with one spline each, terminated by
+    // `97=0` (fit count) then `97=0` (source boundary objects). The native
+    // reader must not treat the first 97 as ending the path.
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+    const dxf = [
+      '0',
+      'HATCH',
+      '5',
+      '35B',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbHatch',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '30',
+      '0.0',
+      '2',
+      'SOLID',
+      '70',
+      '1',
+      '71',
+      '0',
+      '91',
+      '2',
+      // Path 1: single closed-ish cubic spline, 0 fit points
+      '92',
+      '0',
+      '93',
+      '1',
+      '72',
+      '4',
+      '94',
+      '3',
+      '73',
+      '0',
+      '74',
+      '1',
+      '95',
+      '8',
+      '96',
+      '4',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '1',
+      '40',
+      '1',
+      '40',
+      '1',
+      '40',
+      '1',
+      '10',
+      '0',
+      '20',
+      '0',
+      '10',
+      '1',
+      '20',
+      '0',
+      '10',
+      '1',
+      '20',
+      '1',
+      '10',
+      '0',
+      '20',
+      '1',
+      '97',
+      '0',
+      '97',
+      '0',
+      // Path 2: another single spline (must not drop path 1 when seeing 92)
+      '92',
+      '0',
+      '93',
+      '1',
+      '72',
+      '4',
+      '94',
+      '3',
+      '73',
+      '0',
+      '74',
+      '1',
+      '95',
+      '8',
+      '96',
+      '4',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '0',
+      '40',
+      '1',
+      '40',
+      '1',
+      '40',
+      '1',
+      '40',
+      '1',
+      '10',
+      '2',
+      '20',
+      '2',
+      '10',
+      '3',
+      '20',
+      '2',
+      '10',
+      '3',
+      '20',
+      '3',
+      '10',
+      '2',
+      '20',
+      '3',
+      '97',
+      '0',
+      '97',
+      '0',
+      '75',
+      '0',
+      '76',
+      '1',
+      '0',
+      'ENDSEC'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf, { database: db })
+    expect(filer.readItem()?.value).toBe('HATCH')
+    hatch.dxfIn(filer)
+
+    expect(hatch.associative).toBe(false)
+    expect(hatch.isSolidFill).toBe(true)
+    expect(hatch.area).toBeGreaterThan(0)
+    expect(hatch.geometricExtents.isEmpty()).toBe(false)
+
+    // Two single-spline paths must both survive the dual group-97 trailer.
+    // Before the fix, path 1 was dropped when the next `92` arrived.
+    const out = new AcDbDxfFiler()
+    hatch.dxfOutFields(out)
+    expect(out.toString()).toContain('\n91\n2\n')
   })
 })

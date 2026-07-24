@@ -4,6 +4,9 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
+  AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -45,6 +48,10 @@ export class AcDbLine extends AcDbCurve {
 
   /** The underlying geometric line object */
   private _geo: AcGeLine3d
+  /** Extrusion / OCS normal (DXF group 210) */
+  private _normal: AcGeVector3d = new AcGeVector3d(0, 0, 1)
+  /** Thickness along the normal (DXF group 39) */
+  private _thickness = 0
 
   /**
    * Creates a new line entity.
@@ -124,6 +131,26 @@ export class AcDbLine extends AcDbCurve {
    */
   set endPoint(value: AcGePoint3dLike) {
     this._geo.endPoint = value
+  }
+
+  /**
+   * Thickness along the entity normal (DXF group 39).
+   */
+  get thickness() {
+    return this._thickness
+  }
+  set thickness(value: number) {
+    this._thickness = value
+  }
+
+  /**
+   * Extrusion direction / OCS normal (DXF group 210).
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value).normalize()
   }
 
   /**
@@ -419,8 +446,80 @@ export class AcDbLine extends AcDbCurve {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbLine')
-    filer.writePoint3d(10, this.startPoint)
-    filer.writePoint3d(11, this.endPoint)
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
+    const startOcs = acgeTransformWcsPointToOcs(this.startPoint, this.normal)
+    const endOcs = acgeTransformWcsPointToOcs(this.endPoint, this.normal)
+    filer.writePoint3d(10, startOcs)
+    filer.writePoint3d(11, endOcs)
+    filer.writeVector3d(210, this.normal)
+    return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbLine')
+
+    let x1 = this.startPoint.x
+    let y1 = this.startPoint.y
+    let z1 = this.startPoint.z
+    let x2 = this.endPoint.x
+    let y2 = this.endPoint.y
+    let z2 = this.endPoint.z
+    let thickness = this.thickness
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          x1 = n
+          break
+        case 20:
+          y1 = n
+          break
+        case 30:
+          z1 = n
+          break
+        case 11:
+          x2 = n
+          break
+        case 21:
+          y2 = n
+          break
+        case 31:
+          z2 = n
+          break
+        case 39:
+          thickness = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    const normal = new AcGeVector3d(nx, ny, nz)
+    if (normal.lengthSq() > 0) {
+      this.normal.copy(normal.normalize())
+    }
+    this.thickness = thickness
+    this.startPoint = acgeTransformOcsPointToWcs({ x: x1, y: y1, z: z1 }, this.normal)
+    this.endPoint = acgeTransformOcsPointToWcs({ x: x2, y: y2, z: z2 }, this.normal)
     return this
   }
 
@@ -437,3 +536,4 @@ export class AcDbLine extends AcDbCurve {
       : -1
   }
 }
+

@@ -18,6 +18,7 @@ export type {
 } from './layout'
 export { AcDbDictionary } from './AcDbDictionary'
 export { AcDbFilter } from './AcDbFilter'
+export { AcDbGroup } from './AcDbGroup'
 export { AcDbIndex } from './AcDbIndex'
 export type {
   AcDbBlockChangeIterator,
@@ -31,4 +32,5 @@ export { AcDbMLeaderStyle } from './AcDbMLeaderStyle'
 export { AcDbMlineStyle } from './AcDbMlineStyle'
 export type { AcDbMlineStyleElement } from './AcDbMlineStyle'
 export { AcDbRasterImageDef } from './AcDbRasterImageDef'
+export { AcDbSortentsTable } from './AcDbSortentsTable'
 export { AcDbDuplicateRecordCloning, AcDbXrecord } from './AcDbXrecord'

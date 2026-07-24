@@ -1,21 +1,54 @@
+// Default DXF converter (MIT streaming). Listed in package.json sideEffects so
+// bundlers keep this registration when tree-shaking unused exports.
+import './dxf/registerNativeDxfConverter'
+
 export {
   AcDbDxfCode,
   AcDbDxfFiler,
+  AcDbDxfFilerStatus,
   AcDbHostApplicationServices,
   AcDbObject,
   AcDbOpenMode,
   AcDbResultBuffer,
   TEMP_OBJECT_ID_PREFIX,
+  acdbCreateDxfPairReader,
   acdbHostApplicationServices,
+  acdbIsBinaryDxf,
+  acdbMakeAsciiDxfPairReader,
+  acdbMakeBinaryDxfPairReader,
+  acdbMakeUtf8AsciiDxfPairReader,
+  acdbPeekDxfHeaderInfo,
   acdbSetHostApplicationServicesProvider,
-  acdbSetLayoutManagerFactory
+  acdbSetLayoutManagerFactory,
+  acdbDxfValueType,
+  ACDB_DXF_MTEXT_CHUNK_CHARS,
+  ACDB_DXF_XDATA_BINARY_MAX_BYTES,
+  ACDB_DXF_XDATA_STRING_MAX_BYTES,
+  acdbChunkBinaryByMaxBytes,
+  acdbChunkDxfMTextContents,
+  acdbChunkUtf8ByMaxBytes
 } from './base/'
 export type {
+  AcDbDxfFilerMode,
   AcDbDxfFilerOptions,
+  AcDbDxfHeaderInfo,
+  AcDbDxfOutputFormat,
+  AcDbDxfPair,
+  AcDbDxfPairReader,
+  AcDbDxfValueType,
+  AcDbDxfMTextContentChunk,
   AcDbObjectAttrs,
   AcDbObjectId,
   AcDbTypedValue
 } from './base/'
+export {
+  AcDbDxfDocumentReader,
+  AcDbDxfObjectsReader,
+  AcDbNativeDxfConverter,
+  acdbCreateEntityForDxfIn,
+  acdbDxfInEntity,
+  acdbDxfInHeader
+} from './dxf'
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
@@ -77,6 +110,8 @@ export {
   AcDbOpenDatabaseError,
   AcDbTextStyleTable,
   AcDbTextStyleTableRecord,
+  AcDbUcsTable,
+  AcDbUcsTableRecord,
   AcDbViewTable,
   AcDbViewTableRecord,
   AcDbViewportTable,
@@ -122,6 +157,7 @@ export type {
   AcDbSystemVariableName,
   AcDbTables,
   AcDbTextStyleTableRecordAttrs,
+  AcDbUcsTableRecordAttrs,
   AcDbViewTableRecordAttrs,
   AcDbViewportTableRecordAttrs,
   AcDbChangeContainer,
@@ -326,6 +362,7 @@ export {
   AcDbIndex,
   AcDbLayerFilter,
   AcDbLayerIndex,
+  AcDbGroup,
   AcDbLayout,
   AcDbLayoutDictionary,
   AcDbLayoutManager,
@@ -339,6 +376,7 @@ export {
   AcDbPlotStdScaleType,
   AcDbPlotType,
   AcDbRasterImageDef,
+  AcDbSortentsTable,
   AcDbXrecord
 } from './object'
 export type {

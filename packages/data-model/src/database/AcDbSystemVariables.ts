@@ -169,6 +169,8 @@ export const AcDbSystemVariables = {
   SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
   TEXTSTYLE: 'TEXTSTYLE',
+  /** Current dimension style name used when creating new dimension entities. */
+  DIMSTYLE: 'DIMSTYLE',
   /**
    * Controls feet-inch and fractional display delimiters together with **LUNITS**
    * (`0` = report format, `1` = input format).

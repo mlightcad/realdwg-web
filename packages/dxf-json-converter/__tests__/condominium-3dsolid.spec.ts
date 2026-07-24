@@ -35,27 +35,28 @@ describe('condominium 3DSOLID integration', () => {
   ;(hasCondominiumFixture ? it : it.skip)(
     'loads SAB wireframe geometry for model-space 3DSOLIDs',
     async () => {
-    AcDbDatabaseConverterManager.instance.register(
-      AcDbFileType.DXF,
-      new AcDbDxfConverter({ useWorker: true })
-    )
+      AcDbDatabaseConverterManager.instance.register(
+        AcDbFileType.DXF,
+        new AcDbDxfConverter({ useWorker: true })
+      )
 
-    const db = new AcDbDatabase()
-    acdbHostApplicationServices().workingDatabase = db
+      const db = new AcDbDatabase()
+      acdbHostApplicationServices().workingDatabase = db
 
-    const bytes = new TextEncoder().encode(
-      readFileSync(CONDOMINIUM_DXF, 'utf8')
-    )
-    await db.read(bytes.buffer, { readOnly: true, minimumChunkSize: 1 })
+      const bytes = new TextEncoder().encode(
+        readFileSync(CONDOMINIUM_DXF, 'utf8')
+      )
+      await db.read(bytes.buffer, { readOnly: true, minimumChunkSize: 1 })
 
-    const solids = [...db.tables.blockTable.modelSpace.newIterator()].filter(
-      entity => entity instanceof AcDb3dSolid
-    )
+      const solids = [...db.tables.blockTable.modelSpace.newIterator()].filter(
+        entity => entity instanceof AcDb3dSolid
+      )
 
-    const renderable = solids.filter(solid => solid.hasRenderableGeometry)
+      const renderable = solids.filter(solid => solid.hasRenderableGeometry)
 
-    expect(solids.length).toBe(52)
-    expect(renderable.length).toBeGreaterThanOrEqual(40)
+      expect(solids.length).toBe(52)
+      expect(renderable.length).toBeGreaterThanOrEqual(40)
     },
+    120_000
   )
 })

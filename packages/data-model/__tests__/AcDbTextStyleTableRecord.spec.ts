@@ -1,4 +1,5 @@
-import { AcDbDxfFiler } from '../src/base'
+import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
+import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
@@ -88,5 +89,58 @@ describe('AcDbTextStyleTableRecord', () => {
     const dxf = filer.toString()
 
     expect(dxf).toContain('3\ntecosymbol.shx\n')
+  })
+
+  it('reads TrueType extendedFont from ACAD XData when group 3 is empty', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const dxf = [
+      '0',
+      'STYLE',
+      '5',
+      '61',
+      '100',
+      'AcDbSymbolTableRecord',
+      '100',
+      'AcDbTextStyleTableRecord',
+      '2',
+      '标准',
+      '70',
+      '0',
+      '40',
+      '0.0',
+      '41',
+      '0.667',
+      '50',
+      '0.0',
+      '71',
+      '0',
+      '42',
+      '0.2',
+      '3',
+      '',
+      '4',
+      '',
+      '1001',
+      'ACAD',
+      '1000',
+      'SimSun',
+      '1071',
+      '0',
+      '0',
+      'ENDTAB'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf, { database: db })
+    expect(filer.readItem()?.value).toBe('STYLE')
+
+    const record = new AcDbTextStyleTableRecord()
+    record.dxfIn(filer)
+
+    expect(record.name).toBe('标准')
+    expect(record.textStyle.extendedFont).toBe('SimSun')
+    expect(record.fileName).toBe('SimSun')
   })
 })

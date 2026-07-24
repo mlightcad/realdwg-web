@@ -407,6 +407,78 @@ export class AcDbFcf extends AcDbEntity {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbFcf')
+
+    let lx = this.location.x
+    let ly = this.location.y
+    let lz = this.location.z
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+    let dx = this.direction.x
+    let dy = this.direction.y
+    let dz = this.direction.z
+    let hasNormal = false
+    let hasDirection = false
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 1:
+          this.text = String(item.value)
+          break
+        case 3:
+          this.dimensionStyle = String(item.value)
+          break
+        case 10:
+          lx = n
+          break
+        case 20:
+          ly = n
+          break
+        case 30:
+          lz = n
+          break
+        case 11:
+          dx = n
+          hasDirection = true
+          break
+        case 21:
+          dy = n
+          hasDirection = true
+          break
+        case 31:
+          dz = n
+          hasDirection = true
+          break
+        case 210:
+          nx = n
+          hasNormal = true
+          break
+        case 220:
+          ny = n
+          hasNormal = true
+          break
+        case 230:
+          nz = n
+          hasNormal = true
+          break
+        default:
+          break
+      }
+    }
+
+    this.location = { x: lx, y: ly, z: lz }
+    if (hasNormal) this.normal = { x: nx, y: ny, z: nz }
+    if (hasDirection) this.direction = { x: dx, y: dy, z: dz }
+    return this
+  }
+
   /**
    * Gets the rendered text height derived from the associated dimension style.
    */
@@ -731,3 +803,4 @@ export class AcDbFcf extends AcDbEntity {
     return style.textStyle
   }
 }
+

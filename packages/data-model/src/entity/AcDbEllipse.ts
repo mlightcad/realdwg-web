@@ -617,6 +617,116 @@ export class AcDbEllipse extends AcDbCurve {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbEllipse')
+
+    let cx = this.center.x
+    let cy = this.center.y
+    let cz = this.center.z
+    let mx = this.majorAxis.x * this.majorAxisRadius
+    let my = this.majorAxis.y * this.majorAxisRadius
+    let mz = this.majorAxis.z * this.majorAxisRadius
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+    let axisRatio =
+      this.majorAxisRadius > 0
+        ? this.minorAxisRadius / this.majorAxisRadius
+        : 1
+    let startAngle = this.startAngle
+    let endAngle = this.endAngle
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          cx = n
+          break
+        case 20:
+          cy = n
+          break
+        case 30:
+          cz = n
+          break
+        case 11:
+          mx = n
+          break
+        case 21:
+          my = n
+          break
+        case 31:
+          mz = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        case 40:
+          axisRatio = n
+          break
+        case 41:
+          startAngle = n
+          break
+        case 42:
+          endAngle = n
+          break
+        default:
+          break
+      }
+    }
+
+    this.applyDxfInGeometry(
+      cx,
+      cy,
+      cz,
+      mx,
+      my,
+      mz,
+      nx,
+      ny,
+      nz,
+      axisRatio,
+      startAngle,
+      endAngle
+    )
+    return this
+  }
+
+  private applyDxfInGeometry(
+    cx: number,
+    cy: number,
+    cz: number,
+    mx: number,
+    my: number,
+    mz: number,
+    nx: number,
+    ny: number,
+    nz: number,
+    axisRatio: number,
+    startAngle: number,
+    endAngle: number
+  ) {
+    const majorRadius = Math.hypot(mx, my, mz) || 1
+    this._geo = new AcGeEllipseArc3d(
+      { x: cx, y: cy, z: cz },
+      { x: nx, y: ny, z: nz },
+      { x: mx, y: my, z: mz },
+      majorRadius,
+      majorRadius * axisRatio,
+      startAngle,
+      endAngle
+    )
+  }
+
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {
     const curve = this.createOffsetCurve(offsetDist)
     return curve ? [curve] : []
@@ -740,3 +850,4 @@ export class AcDbEllipse extends AcDbCurve {
     )
   }
 }
+

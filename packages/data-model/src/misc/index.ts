@@ -82,6 +82,7 @@ export {
   AcDbProxyGraphicByteStream,
   AcDbProxyGraphicEndOfBufferError,
   acdbBytesToHexString,
+  acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
 } from './proxyGraphic'
 export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon'

@@ -7,8 +7,10 @@ import {
   AcGePoint3dLike,
   AcGePointLike,
   AcGePolyline2d,
-  AcGeVector3dLike
-} from '@mlightcad/geometry-engine'
+  acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
+  AcGeVector3d,
+  AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -57,6 +59,8 @@ export class AcDbTrace extends AcDbCurve {
   private _vertices: [AcGePoint3d, AcGePoint3d, AcGePoint3d, AcGePoint3d]
   /** The thickness (extrusion) of the trace */
   private _thickness: number
+  /** Extrusion / plane normal (DXF group 210) */
+  private _normal = new AcGeVector3d(0, 0, 1)
 
   /**
    * Creates a new trace entity.
@@ -168,6 +172,16 @@ export class AcDbTrace extends AcDbCurve {
    */
   set thickness(value: number) {
     this._thickness = value
+  }
+
+  /**
+   * Extrusion direction / plane normal (DXF group 210).
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
   }
 
   /**
@@ -339,10 +353,76 @@ export class AcDbTrace extends AcDbCurve {
     if (this.thickness !== 0) {
       filer.writeDouble(39, this.thickness)
     }
-    filer.writePoint3d(10, this.getPointAt(0))
-    filer.writePoint3d(11, this.getPointAt(1))
-    filer.writePoint3d(12, this.getPointAt(2))
-    filer.writePoint3d(13, this.getPointAt(3))
+    filer.writePoint3d(10, acgeTransformWcsPointToOcs(this.getPointAt(0), this.normal))
+    filer.writePoint3d(11, acgeTransformWcsPointToOcs(this.getPointAt(1), this.normal))
+    filer.writePoint3d(12, acgeTransformWcsPointToOcs(this.getPointAt(2), this.normal))
+    filer.writePoint3d(13, acgeTransformWcsPointToOcs(this.getPointAt(3), this.normal))
+    filer.writeVector3d(210, this.normal)
+    return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbTrace')
+
+    const pts = [
+      { x: this.getPointAt(0).x, y: this.getPointAt(0).y, z: this.getPointAt(0).z },
+      { x: this.getPointAt(1).x, y: this.getPointAt(1).y, z: this.getPointAt(1).z },
+      { x: this.getPointAt(2).x, y: this.getPointAt(2).y, z: this.getPointAt(2).z },
+      { x: this.getPointAt(3).x, y: this.getPointAt(3).y, z: this.getPointAt(3).z }
+    ]
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+        case 11:
+        case 12:
+        case 13:
+          pts[code - 10].x = n
+          break
+        case 20:
+        case 21:
+        case 22:
+        case 23:
+          pts[code - 20].y = n
+          break
+        case 30:
+        case 31:
+        case 32:
+        case 33:
+          pts[code - 30].z = n
+          break
+        case 39:
+          this.thickness = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    const normal = new AcGeVector3d(nx, ny, nz)
+    if (normal.lengthSq() > 0) {
+      this.normal.copy(normal.normalize())
+    }
+    pts.forEach((p, i) =>
+      this.setPointAt(i, acgeTransformOcsPointToWcs(p, this.normal))
+    )
     return this
   }
 
@@ -410,3 +490,4 @@ export class AcDbTrace extends AcDbCurve {
     ]
   }
 }
+

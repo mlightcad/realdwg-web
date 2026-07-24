@@ -17,6 +17,7 @@ import {
   AcDbFileType
 } from './AcDbDatabaseConverterManager'
 import { AcDbEntity } from '../entity/AcDbEntity'
+import { AcDbPolyline } from '../entity/AcDbPolyline'
 import {
   ACAD_APPID,
   ACTIVE_VPORT_NAME,
@@ -34,11 +35,13 @@ import { AcDbFormatter } from '../misc/AcDbFormatter'
 import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbGroup } from '../object/AcDbGroup'
 import { AcDbLayerFilter } from '../object/AcDbLayerFilter'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
+import { AcDbSortentsTable } from '../object/AcDbSortentsTable'
 import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcLyLayerFilterTree } from '../ly/AcLyLayerFilterTree'
 import {
@@ -48,6 +51,7 @@ import {
   acdbSerializeLayerFilterTree,
   type AcDbSerializedFilterNode
 } from '../ly/AcLyLayerFilterIO'
+import { acdbBytesToHexString } from '../misc/proxyGraphic'
 import { AcDbBlockTable } from './AcDbBlockTable'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
 import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
@@ -64,6 +68,7 @@ import { AcDbLinetypeTable } from './AcDbLinetypeTable'
 import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
 import { AcDbTextStyleTable } from './AcDbTextStyleTable'
 import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
+import { AcDbUcsTable } from './AcDbUcsTable'
 import { AcDbViewTable } from './AcDbViewTable'
 import { AcDbViewportTable } from './AcDbViewportTable'
 import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
@@ -319,6 +324,8 @@ export interface AcDbTables {
   readonly linetypeTable: AcDbLinetypeTable
   /** Text style table containing text style definitions */
   readonly textStyleTable: AcDbTextStyleTable
+  /** UCS table containing named user coordinate systems */
+  readonly ucsTable: AcDbUcsTable
   /** View table containing named view definitions */
   readonly viewTable: AcDbViewTable
   /** Layer table containing layer definitions */
@@ -400,6 +407,8 @@ export class AcDbDatabase extends AcDbObject {
   private _hptransparency: AcCmTransparency
   /** Current text style name for the database */
   private _textstyle: string
+  /** Current dimension style name for the database ($DIMSTYLE) */
+  private _dimstyle: string
   /** The extents of current Model Space */
   private _extents: AcGeBox3d
   /** Insertion units for the database */
@@ -412,6 +421,10 @@ export class AcDbDatabase extends AcDbObject {
   private _ltscale: number
   /** The flag whether to display line weight */
   private _lwdisplay: boolean
+  /** TILEMODE: true = model space active (1), false = paper space (0) */
+  private _tilemode: boolean
+  /** PSLTSCALE: paper space linetype scaling */
+  private _psltscale: boolean
   /** Point display mode */
   private _pdmode: number
   /** Point display size */
@@ -427,12 +440,14 @@ export class AcDbDatabase extends AcDbObject {
   /** Nongraphical objects in the database */
   private _objects: {
     readonly dictionary: AcDbDictionary<AcDbDictionary>
+    readonly group: AcDbDictionary<AcDbGroup>
     readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
     readonly layerFilter: AcDbDictionary<AcDbLayerFilter>
     readonly layerIndex: AcDbDictionary<AcDbLayerIndex>
     readonly layout: AcDbLayoutDictionary
     readonly mleaderStyle: AcDbDictionary<AcDbMLeaderStyle>
     readonly mlineStyle: AcDbDictionary<AcDbMlineStyle>
+    readonly sortentsTable: AcDbDictionary<AcDbSortentsTable>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
   }
   /** Current space (model space or paper space) */
@@ -528,6 +543,7 @@ export class AcDbDatabase extends AcDbObject {
     this._hplayer = '.'
     this._hptransparency = new AcCmTransparency()
     this._textstyle = DEFAULT_TEXT_STYLE
+    this._dimstyle = DEFAULT_TEXT_STYLE
     this._extents = new AcGeBox3d()
     // TODO: Default value is 1 (imperial) or 4 (metric)
     this._insunits = AcDbUnitsValue.Millimeters
@@ -535,6 +551,8 @@ export class AcDbDatabase extends AcDbObject {
     this._measurement = 1
     this._ltscale = 1
     this._lwdisplay = false
+    this._tilemode = true
+    this._psltscale = true
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
@@ -546,18 +564,21 @@ export class AcDbDatabase extends AcDbObject {
       dimStyleTable: new AcDbDimStyleTable(this),
       linetypeTable: new AcDbLinetypeTable(this),
       textStyleTable: new AcDbTextStyleTable(this),
+      ucsTable: new AcDbUcsTable(this),
       viewTable: new AcDbViewTable(this),
       layerTable: new AcDbLayerTable(this),
       viewportTable: new AcDbViewportTable(this)
     }
     this._objects = {
       dictionary: new AcDbDictionary(this),
+      group: new AcDbDictionary(this),
       imageDefinition: new AcDbDictionary(this),
       layerFilter: new AcDbDictionary(this),
       layerIndex: new AcDbDictionary(this),
       layout: new AcDbLayoutDictionary(this),
       mleaderStyle: new AcDbDictionary(this),
       mlineStyle: new AcDbDictionary(this),
+      sortentsTable: new AcDbDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
     this._layerFilters = new AcLyLayerFilterTree()
@@ -761,12 +782,14 @@ export class AcDbDatabase extends AcDbObject {
   getRootDictionaries(): AcDbDictionary[] {
     return [
       this.objects.dictionary,
+      this.objects.group,
       this.objects.imageDefinition,
       this.objects.layerFilter,
       this.objects.layerIndex,
       this.objects.layout,
       this.objects.mleaderStyle,
       this.objects.mlineStyle,
+      this.objects.sortentsTable,
       this.objects.xrecord
     ]
   }
@@ -1062,6 +1085,7 @@ export class AcDbDatabase extends AcDbObject {
       this._tables.linetypeTable,
       this._tables.appIdTable,
       this._tables.textStyleTable,
+      this._tables.ucsTable,
       this._tables.viewTable,
       this._tables.viewportTable
     ]) {
@@ -1069,12 +1093,14 @@ export class AcDbDatabase extends AcDbObject {
     }
     for (const dictionary of [
       this._objects.dictionary,
+      this._objects.group,
       this._objects.imageDefinition,
       this._objects.layerFilter,
       this._objects.layerIndex,
       this._objects.layout,
       this._objects.mleaderStyle,
       this._objects.mlineStyle,
+      this._objects.sortentsTable,
       this._objects.xrecord
     ]) {
       this.registerObjectHandle(dictionary)
@@ -1609,6 +1635,22 @@ export class AcDbDatabase extends AcDbObject {
     )
   }
 
+  /** TILEMODE: true = model space (1), false = paper space (0). */
+  get tilemode(): boolean {
+    return this._tilemode
+  }
+  set tilemode(value: boolean) {
+    this._tilemode = value
+  }
+
+  /** PSLTSCALE: paper space linetype scaling. */
+  get psltscale(): boolean {
+    return this._psltscale
+  }
+  set psltscale(value: boolean) {
+    this._psltscale = value
+  }
+
   /**
    * Gets the color of new objects as they are created.
    *
@@ -1866,6 +1908,23 @@ export class AcDbDatabase extends AcDbObject {
       value ?? DEFAULT_TEXT_STYLE,
       nextValue => {
         this._textstyle = nextValue
+      }
+    )
+  }
+
+  /**
+   * The dimension style name for new dimension objects (`$DIMSTYLE`).
+   */
+  get dimstyle(): string {
+    return this._dimstyle
+  }
+  set dimstyle(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.DIMSTYLE,
+      this._dimstyle,
+      value ?? DEFAULT_TEXT_STYLE,
+      nextValue => {
+        this._dimstyle = nextValue
       }
     )
   }
@@ -2256,28 +2315,27 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Exports the current database into an ASCII DXF string.
+   * Exports the current database into DXF (ASCII string or binary bytes).
    *
    * The `fileName` parameter is kept for ObjectARX API parity. In this web
    * implementation the method returns the DXF payload instead of writing the
    * filesystem directly.
    *
-   * This is the top-level DXF export entry point. It emits the sectioned
-   * structure in the canonical order: HEADER, TABLES, BLOCKS, ENTITIES,
-   * OBJECTS, and EOF.
-   *
    * @param _fileName - Kept for ObjectARX parity. Ignored in this implementation.
    * @param precision - Numeric precision used by the DXF filer.
    * @param version - Target DXF/DWG version name or value.
-   * @param _saveThumbnailImage - Kept for ObjectARX parity. Ignored here.
-   * @returns The serialized DXF contents.
+   * @param optionsOrThumbnail - Legacy boolean thumbnail flag, or options with
+   *   `saveThumbnailImage` and `format: 'ascii' | 'binary'`.
+   * @returns ASCII DXF string, or `Uint8Array` when format is `'binary'`.
    */
   dxfOut(
     _fileName?: string,
     precision: number = 16,
     version: AcDbDwgVersion | string | number = this.version.name,
-    _saveThumbnailImage: boolean = false
-  ) {
+    optionsOrThumbnail:
+      | boolean
+      | { saveThumbnailImage?: boolean; format?: 'ascii' | 'binary' } = false
+  ): string | Uint8Array {
     this.ensureDatabaseDefaults()
     if (
       this._layerFilters.root.getNestedFilters().length > 0 &&
@@ -2286,12 +2344,24 @@ export class AcDbDatabase extends AcDbObject {
       this.tables.layerTable.extensionDictionary = this.generateHandle()
     }
 
+    const options =
+      typeof optionsOrThumbnail === 'boolean'
+        ? {
+            saveThumbnailImage: optionsOrThumbnail,
+            format: 'ascii' as const
+          }
+        : {
+            saveThumbnailImage: optionsOrThumbnail.saveThumbnailImage ?? false,
+            format: optionsOrThumbnail.format ?? 'ascii'
+          }
+
     const outVersion =
       version instanceof AcDbDwgVersion ? version : new AcDbDwgVersion(version)
     const filer = new AcDbDxfFiler({
       database: this,
       precision,
-      version: outVersion
+      version: outVersion,
+      outputFormat: options.format
     })
 
     this.writeDxfHeaderSection(filer)
@@ -2300,8 +2370,9 @@ export class AcDbDatabase extends AcDbObject {
     this.writeDxfBlocksSection(filer)
     this.writeDxfEntitiesSection(filer)
     this.writeDxfObjectsSection(filer)
+    this.writeDxfThumbnailImageSection(filer, options.saveThumbnailImage)
     filer.writeStart('EOF')
-    return filer.toString()
+    return options.format === 'binary' ? filer.toBinary() : filer.toString()
   }
 
   /**
@@ -2612,7 +2683,7 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(1, filer.version?.name ?? this.version.name)
     filer.writeString(9, '$HANDSEED')
     filer.writeString(5, filer.nextHandle.toString(16).toUpperCase())
-    if (filer.version != null && filer.version.value >= 27) {
+    if (filer.capabilities.supportsUtf8CodePage) {
       filer.writeString(9, '$DWGCODEPAGE')
       filer.writeString(3, 'UTF-8')
     }
@@ -2628,13 +2699,30 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt16(70, this.measurement)
     filer.writeString(9, '$LTSCALE')
     filer.writeDouble(40, this.ltscale)
-    filer.writeString(9, '$LWDISPLAY')
-    filer.writeInt16(70, this.lwdisplay ? 1 : 0)
+    if (filer.capabilities.supportsLineWeight) {
+      filer.writeString(9, '$LWDISPLAY')
+      filer.writeInt16(70, this.lwdisplay ? 1 : 0)
+    }
+    filer.writeString(9, '$CELTSCALE')
+    filer.writeDouble(40, this.celtscale)
+    if (filer.capabilities.supportsLineWeight) {
+      filer.writeString(9, '$CELWEIGHT')
+      filer.writeLineWeight(370, this.celweight)
+    }
+    filer.writeString(9, '$CECOLOR')
+    filer.writeCmColor(this.cecolor)
+    filer.writeString(9, '$TILEMODE')
+    filer.writeInt16(70, this.tilemode ? 1 : 0)
+    filer.writeString(9, '$PSLTSCALE')
+    filer.writeInt16(70, this.psltscale ? 1 : 0)
     filer.writeString(9, '$CLAYER')
     filer.writeString(8, this.clayer)
     filer.writeString(9, '$CELTYPE')
     filer.writeString(6, this.celtype)
-    if (!this.cetransparency.isInvalid) {
+    if (
+      filer.capabilities.supportsTransparency &&
+      !this.cetransparency.isInvalid
+    ) {
       filer.writeString(9, '$CETRANSPARENCY')
       filer.writeTransparency(this.cetransparency)
     }
@@ -2654,12 +2742,17 @@ export class AcDbDatabase extends AcDbObject {
     }
     filer.writeString(9, '$HPLAYER')
     filer.writeString(8, this.hplayer)
-    if (!this.hptransparency.isInvalid) {
+    if (
+      filer.capabilities.supportsTransparency &&
+      !this.hptransparency.isInvalid
+    ) {
       filer.writeString(9, '$HPTRANSPARENCY')
       filer.writeTransparency(this.hptransparency)
     }
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
+    filer.writeString(9, '$DIMSTYLE')
+    filer.writeString(2, this.dimstyle)
     filer.writeString(9, '$ANGBASE')
     filer.writeAngle(50, this.angbase)
     filer.writeString(9, '$ANGDIR')
@@ -2692,7 +2785,10 @@ export class AcDbDatabase extends AcDbObject {
    * @param filer - DXF output writer.
    */
   private writeDxfClassesSection(filer: AcDbDxfFiler) {
-    if (this._classes.length === 0) {
+    if (
+      !filer.capabilities.supportsClassesSection ||
+      this._classes.length === 0
+    ) {
       return
     }
 
@@ -2734,6 +2830,13 @@ export class AcDbDatabase extends AcDbObject {
     )
     this.writeDxfTable(
       filer,
+      'UCS',
+      this.tables.ucsTable,
+      this.tables.ucsTable.newIterator(),
+      'UCS'
+    )
+    this.writeDxfTable(
+      filer,
       'LTYPE',
       this.tables.linetypeTable,
       this.tables.linetypeTable.newIterator(),
@@ -2767,7 +2870,7 @@ export class AcDbDatabase extends AcDbObject {
       this.tables.dimStyleTable.newIterator(),
       'DIMSTYLE'
     )
-    if (version.value >= 19) {
+    if (version.capabilities.supportsBlockRecordTable) {
       this.writeDxfTable(
         filer,
         'BLOCK_RECORD',
@@ -2822,6 +2925,9 @@ export class AcDbDatabase extends AcDbObject {
    * @param filer - DXF output writer.
    */
   private writeDxfObjectsSection(filer: AcDbDxfFiler) {
+    if (!filer.capabilities.supportsObjectsSection) {
+      return
+    }
     filer.startSection('OBJECTS')
     const rootDict = this.objects.dictionary
     rootDict.ownerId = '0'
@@ -2829,7 +2935,7 @@ export class AcDbDatabase extends AcDbObject {
     const writeDictionary = (dict: AcDbDictionary) => {
       // Dictionary entries (3/350 pairs) are embedded in the DICTIONARY object.
       filer.writeStart('DICTIONARY')
-      dict.dxfOut(filer)
+      dict.dxfOut(filer, true)
     }
 
     const ensureRootEntry = (key: string, dict: AcDbDictionary) => {
@@ -2845,6 +2951,16 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     ensureRootEntry('ACAD_LAYOUT', this.objects.layout)
+    if (this.objects.group.numEntries > 0) {
+      ensureRootEntry('ACAD_GROUP', this.objects.group)
+    } else {
+      dropRootEntry('ACAD_GROUP')
+    }
+    if (this.objects.sortentsTable.numEntries > 0) {
+      ensureRootEntry('ACAD_SORTENTS', this.objects.sortentsTable)
+    } else {
+      dropRootEntry('ACAD_SORTENTS')
+    }
     if (this.objects.mleaderStyle.numEntries > 0) {
       ensureRootEntry('ACAD_MLEADERSTYLE', this.objects.mleaderStyle)
     } else {
@@ -2869,6 +2985,12 @@ export class AcDbDatabase extends AcDbObject {
     writeDictionary(rootDict)
     writeDictionary(this.objects.layout)
 
+    if (this.objects.group.numEntries > 0) {
+      writeDictionary(this.objects.group)
+    }
+    if (this.objects.sortentsTable.numEntries > 0) {
+      writeDictionary(this.objects.sortentsTable)
+    }
     if (this.objects.mleaderStyle.numEntries > 0) {
       writeDictionary(this.objects.mleaderStyle)
     }
@@ -2886,36 +3008,47 @@ export class AcDbDatabase extends AcDbObject {
 
     for (const [_, layout] of this.objects.layout.entries()) {
       filer.writeStart('LAYOUT')
-      layout.dxfOut(filer)
+      layout.dxfOut(filer, true)
+    }
+
+    for (const [key, group] of this.objects.group.entries()) {
+      if (!group.name) group.name = key
+      filer.writeStart('GROUP')
+      group.dxfOut(filer, true)
+    }
+
+    for (const [_, sortents] of this.objects.sortentsTable.entries()) {
+      filer.writeStart('SORTENTSTABLE')
+      sortents.dxfOut(filer, true)
     }
 
     for (const [_, imageDef] of this.objects.imageDefinition.entries()) {
       filer.writeStart('IMAGEDEF')
-      imageDef.dxfOut(filer)
+      imageDef.dxfOut(filer, true)
     }
 
     for (const [_, layerFilter] of this.objects.layerFilter.entries()) {
       filer.writeStart('LAYER_FILTER')
-      layerFilter.dxfOut(filer)
+      layerFilter.dxfOut(filer, true)
     }
 
     for (const [_, layerIndex] of this.objects.layerIndex.entries()) {
       filer.writeStart('LAYER_INDEX')
-      layerIndex.dxfOut(filer)
+      layerIndex.dxfOut(filer, true)
     }
 
     for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
       filer.writeStart('MLEADERSTYLE')
-      mleaderStyle.dxfOut(filer)
+      mleaderStyle.dxfOut(filer, true)
     }
     for (const [_, mlineStyle] of this.objects.mlineStyle.entries()) {
       filer.writeStart('MLINESTYLE')
-      mlineStyle.dxfOut(filer)
+      mlineStyle.dxfOut(filer, true)
     }
 
     for (const [_, xrecord] of this.objects.xrecord.entries()) {
       filer.writeStart('XRECORD')
-      xrecord.dxfOut(filer)
+      xrecord.dxfOut(filer, true)
     }
 
     this.writeAcLyLayerFilterObjects(filer)
@@ -3094,7 +3227,7 @@ export class AcDbDatabase extends AcDbObject {
       }
 
       filer.writeStart(recordType)
-      record.dxfOut(filer)
+      record.dxfOut(filer, true)
     }
     filer.endTable()
   }
@@ -3110,8 +3243,41 @@ export class AcDbDatabase extends AcDbObject {
    * @param entity - Entity to serialize.
    */
   private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
+    if (
+      entity instanceof AcDbPolyline &&
+      !filer.capabilities.supportsLwPolyline
+    ) {
+      filer.writeStart('POLYLINE')
+      entity.dxfOutAs2dPolyline(filer, true)
+      return
+    }
     filer.writeStart(entity.dxfTypeName)
-    entity.dxfOut(filer)
+    entity.dxfOut(filer, true)
+  }
+
+  /**
+   * Writes THUMBNAILIMAGE when preview bytes are present and export requested.
+   */
+  private writeDxfThumbnailImageSection(
+    filer: AcDbDxfFiler,
+    saveThumbnailImage = false
+  ) {
+    const bytes = this._thumbnailImage
+    if (!saveThumbnailImage || !bytes || bytes.length === 0) {
+      return
+    }
+    if (!filer.capabilities.supportsObjectsSection) {
+      // Thumbnail section is post-R12; skip for AC1009.
+      return
+    }
+    const chunkSize = 127
+    filer.startSection('THUMBNAILIMAGE')
+    filer.writeInt32(90, bytes.length)
+    for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+      const chunk = bytes.subarray(offset, offset + chunkSize)
+      filer.writeString(310, acdbBytesToHexString(chunk))
+    }
+    filer.endSection()
   }
 
   /**
@@ -3133,15 +3299,19 @@ export class AcDbDatabase extends AcDbObject {
     this._tables.dimStyleTable.removeAll()
     this._tables.linetypeTable.removeAll()
     this._tables.textStyleTable.removeAll()
+    this._tables.ucsTable.removeAll()
     this._tables.viewTable.removeAll()
     this._tables.layerTable.removeAll()
     this._tables.viewportTable.removeAll()
+    this._tables.appIdTable.removeAll()
     this._objects.layout.removeAll()
+    this._objects.group.removeAll()
     this._objects.imageDefinition.removeAll()
     this._objects.layerFilter.removeAll()
     this._objects.layerIndex.removeAll()
     this._objects.mleaderStyle.removeAll()
     this._objects.mlineStyle.removeAll()
+    this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
     this._layerFilters = new AcLyLayerFilterTree()
     this._currentSpace = undefined

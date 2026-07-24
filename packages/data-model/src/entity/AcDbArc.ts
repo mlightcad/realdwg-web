@@ -6,6 +6,7 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  acgeTransformOcsPointToWcs,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike} from '@mlightcad/geometry-engine'
@@ -52,6 +53,8 @@ export class AcDbArc extends AcDbCurve {
 
   /** The underlying geometric circular arc object */
   private _geo: AcGeCircArc3d
+  /** Thickness along the normal (DXF group 39) */
+  private _thickness = 0
 
   /**
    * Creates a new arc entity.
@@ -247,6 +250,16 @@ export class AcDbArc extends AcDbCurve {
    */
   set normal(value: AcGeVector3dLike) {
     this._geo.normal = value
+  }
+
+  /**
+   * Thickness along the entity normal (DXF group 39).
+   */
+  get thickness() {
+    return this._thickness
+  }
+  set thickness(value: number) {
+    this._thickness = value
   }
 
   /**
@@ -613,13 +626,116 @@ export class AcDbArc extends AcDbCurve {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     const centerOcs = acgeTransformWcsPointToOcs(this.center, this.normal)
-    filer.writeSubclassMarker('AcDbArc')
+    // AutoCAD ARC uses AcDbCircle (center/radius/normal) + AcDbArc (angles).
+    filer.writeSubclassMarker('AcDbCircle')
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
     filer.writePoint3d(10, centerOcs)
     filer.writeDouble(40, this.radius)
+    filer.writeVector3d(210, this.normal)
+    filer.writeSubclassMarker('AcDbArc')
     filer.writeAngle(50, acgeGetOcsAngle(this.center, this.startPoint, this.normal))
     filer.writeAngle(51, acgeGetOcsAngle(this.center, this.endPoint, this.normal))
-    filer.writeVector3d(210, this.normal)
     return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+
+    let x = 0
+    let y = 0
+    let z = 0
+    let radius = this.radius
+    let startDeg = AcGeMathUtil.radToDeg(this.startAngle)
+    let endDeg = AcGeMathUtil.radToDeg(this.endAngle)
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    const readGeometryCodes = (
+      stopOnNextSubclass: boolean
+    ): boolean => {
+      while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+        const item = filer.readItem()
+        if (!item) break
+        const code = Number(item.code)
+        if (stopOnNextSubclass && code === 100) {
+          filer.pushBackItem(item)
+          return true
+        }
+        const n = Number(item.value)
+        switch (code) {
+          case 10:
+            x = n
+            break
+          case 20:
+            y = n
+            break
+          case 30:
+            z = n
+            break
+          case 40:
+            radius = n
+            break
+          case 39:
+            this.thickness = n
+            break
+          case 50:
+            startDeg = n
+            break
+          case 51:
+            endDeg = n
+            break
+          case 210:
+            nx = n
+            break
+          case 220:
+            ny = n
+            break
+          case 230:
+            nz = n
+            break
+          default:
+            break
+        }
+      }
+      return false
+    }
+
+    // Prefer AutoCAD layout: AcDbCircle then AcDbArc. Also accept AcDbArc-only
+    // (legacy writers that inlined center/radius under AcDbArc).
+    if (filer.atSubclassData('AcDbCircle')) {
+      readGeometryCodes(true)
+    }
+    if (filer.atSubclassData('AcDbArc')) {
+      readGeometryCodes(false)
+    } else if (!filer.peekItem() || Number(filer.peekItem()?.code) !== 100) {
+      // No subclass markers left — consume remaining geometry codes if present.
+      readGeometryCodes(false)
+    }
+
+    this.applyDxfInGeometry(x, y, z, radius, startDeg, endDeg, nx, ny, nz)
+    return this
+  }
+
+  private applyDxfInGeometry(
+    x: number,
+    y: number,
+    z: number,
+    radius: number,
+    startDeg: number,
+    endDeg: number,
+    nx: number,
+    ny: number,
+    nz: number
+  ) {
+    const normal = new AcGeVector3d(nx, ny, nz)
+    this.normal.copy(normal)
+    this.center = acgeTransformOcsPointToWcs({ x, y, z }, normal)
+    this.radius = radius
+    this.startAngle = AcGeMathUtil.degToRad(startDeg)
+    this.endAngle = AcGeMathUtil.degToRad(endDeg)
   }
 
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {
@@ -681,3 +797,4 @@ export class AcDbArc extends AcDbCurve {
     )
   }
 }
+
