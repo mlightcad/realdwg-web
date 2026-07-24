@@ -82,7 +82,7 @@ npm install @mlightcad/data-model
 - **AcDbBatchProcessing**: Batch processing utilities
 - **AcDbBaseWorker**, **acdbCreateWorkerApi**: Web Worker infrastructure for parsers
 
-DXF import is built in via `AcDbNativeDxfConverter` (registered by default). An optional GPL alternative is [@mlightcad/dxf-json-converter](../dxf-json-converter/README.md). DWG import is provided by converter packages such as [@mlightcad/libredwg-converter](../libredwg-converter/README.md); register a DWG converter with `AcDbDatabaseConverterManager` before calling `AcDbDatabase.read()` on DWG files.
+DXF import is built in via `AcDbNativeDxfConverter` (registered by default). An optional GPL alternative is [@mlightcad/dxf-json-converter](https://github.com/mlightcad/dwg-dxf-converter/tree/main/packages/dxf-json-converter). DWG import is provided by converter packages such as [@mlightcad/libredwg-converter](../libredwg-converter/README.md); register a DWG converter with `AcDbDatabaseConverterManager` before calling `AcDbDatabase.read()` on DWG files.
 
 ### Utilities
 - **AcDbConstants**: Database constants
@@ -259,7 +259,7 @@ newLayout.setPlotCentered(true);
 - **iconv-lite**: For text encoding conversion
 - **uid**: For unique ID generation
 
-DXF reading works out of the box. For DWG, install a converter such as [@mlightcad/libredwg-converter](../libredwg-converter/README.md). An optional GPL DXF alternative is [@mlightcad/dxf-json-converter](../dxf-json-converter/README.md).
+DXF reading works out of the box. For DWG, install a converter such as [@mlightcad/libredwg-converter](../libredwg-converter/README.md). An optional GPL DXF alternative is [@mlightcad/dxf-json-converter](https://github.com/mlightcad/dwg-dxf-converter/tree/main/packages/dxf-json-converter).
 
 ## API Documentation
 

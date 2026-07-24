@@ -117,27 +117,14 @@ importers:
         specifier: ^2.0.2
         version: 2.0.2
 
-  packages/dxf-json-converter:
-    dependencies:
-      '@mlightcad/dxf-json':
-        specifier: ^1.2.8
-        version: 1.2.8
-    devDependencies:
-      '@mlightcad/data-model':
-        specifier: workspace:*
-        version: link:../data-model
-      vite:
-        specifier: ^6.4.3
-        version: 6.4.3(@types/node@20.14.9)(jiti@1.21.6)(sass@1.83.0)(terser@5.31.6)(yaml@2.6.1)
-
   packages/example:
     dependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
         version: link:../data-model
       '@mlightcad/dxf-json-converter':
-        specifier: workspace:*
-        version: link:../dxf-json-converter
+        specifier: ^1.12.0
+        version: 1.12.0(@mlightcad/data-model@packages+data-model)
       '@mlightcad/libredwg-converter':
         specifier: workspace:*
         version: link:../libredwg-converter
@@ -160,19 +147,6 @@ importers:
       '@mlightcad/geometry-engine':
         specifier: workspace:*
         version: link:../geometry-engine
-
-  packages/libdxfrw-converter:
-    dependencies:
-      '@mlightcad/libdxfrw-web':
-        specifier: 0.0.9
-        version: 0.0.9
-    devDependencies:
-      '@mlightcad/data-model':
-        specifier: workspace:*
-        version: link:../data-model
-      vite:
-        specifier: ^6.4.3
-        version: 6.4.3(@types/node@20.14.9)(jiti@1.21.6)(sass@1.83.0)(terser@5.31.6)(yaml@2.6.1)
 
   packages/libredwg-converter:
     dependencies:
@@ -1700,11 +1674,13 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
+  '@mlightcad/dxf-json-converter@1.12.0':
+    resolution: {integrity: sha512-M6domJZaTIrHpzOSAcKd19+SMQm9v3jcRTBfPFcIZzpdPCjK4M3VOp5acgtOfLd+vVSyvD5c/PJoUNuxtLGJBA==}
+    peerDependencies:
+      '@mlightcad/data-model': 1.12.0
+
   '@mlightcad/dxf-json@1.2.8':
     resolution: {integrity: sha512-pn4kY2+cYLq9xVVeUJUwzBPyYGGIuO6uKc+bKAzWfSaZAWTgrbK7WrY+VHR4od9wrWdDwNWknIqVq4KBZPD7SA==}
-
-  '@mlightcad/libdxfrw-web@0.0.9':
-    resolution: {integrity: sha512-6fqGbjKWwI93cq8vwpXiFdAzWfdJjcIlLuAYwUvgTcEjx5jPvbd+tkzY7mX2/a8iMm/b/auGVzkgf1wxezHYIw==}
 
   '@mlightcad/libredwg-web@0.7.9':
     resolution: {integrity: sha512-tqjx0eCiR0CNI3TyO3LVYzl4ptuzSFm7asGn/C1YiJaEk7Vneto+lRrVUco85qw+PZDihaFLwWqdYIEse1swbA==}
@@ -6693,11 +6669,14 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
+  '@mlightcad/dxf-json-converter@1.12.0(@mlightcad/data-model@packages+data-model)':
+    dependencies:
+      '@mlightcad/data-model': link:packages/data-model
+      '@mlightcad/dxf-json': 1.2.8
+
   '@mlightcad/dxf-json@1.2.8':
     dependencies:
       '@fxts/core': 1.26.0
-
-  '@mlightcad/libdxfrw-web@0.0.9': {}
 
   '@mlightcad/libredwg-web@0.7.9': {}
 
