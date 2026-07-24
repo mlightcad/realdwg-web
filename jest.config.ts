@@ -9,18 +9,11 @@ const config: Config = {
     "^@mlightcad/geometry-engine$": "<rootDir>/packages/geometry-engine/src/index.ts",
     "^@mlightcad/graphic-interface$": "<rootDir>/packages/graphic-interface/src/index.ts",
     "^@mlightcad/data-model$": "<rootDir>/packages/data-model/src/index.ts",
-    "^@mlightcad/dxf-json-converter$": "<rootDir>/packages/dxf-json-converter/src/index.ts",
-    "^@mlightcad/dxf-json/types$":
-      "<rootDir>/packages/dxf-json-converter/node_modules/@mlightcad/dxf-json/dist/cjs/types-bundle.cjs",
+    "^@mlightcad/libredwg-converter$": "<rootDir>/packages/libredwg-converter/src/index.ts",
   },
   transform: {
-    ".*packages[\\\\/]dxf-json-converter[\\\\/].+\\.tsx?$": [
-      "ts-jest",
-      { tsconfig: "<rootDir>/packages/dxf-json-converter/tsconfig.json" }
-    ],
     "^.+\\.(ts|tsx)$": "ts-jest",
   },
-  testPathIgnorePatterns: ["packages/dxf-json/"]
 }
 
 export default config

@@ -129,7 +129,7 @@ AutoCAD holds an absolute dominant position in the 2D CAD field. A large number 
 
 ### libdxfrw-converter (DWG file support)
 
-This module provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the drawing database. It is powered by the libdxfrw library compiled to WebAssembly and is designed to be registered with the converter manager for DWG file support.
+DWG support via libdxfrw lives in the separate [dwg-dxf-converter](https://github.com/mlightcad/dwg-dxf-converter) monorepo (`@mlightcad/libdxfrw-converter`). It is powered by libdxfrw compiled to WebAssembly. Note: this converter does **not** provide worker isolation — GPL libdxfrw code runs on the main thread.
 
 ### libredwg-converter (DWG file support)
 
@@ -139,18 +139,18 @@ DWG parsing is provided through a dedicated Web Worker bundle (`libredwg-parser-
 
 ### AcDbNativeDxfConverter vs dxf-json-converter (DXF file support)
 
-`@mlightcad/data-model` now ships a built-in DXF converter, `AcDbNativeDxfConverter`. It is the **recommended** way to read DXF files.
+`@mlightcad/data-model` ships a built-in DXF converter, `AcDbNativeDxfConverter`. It is the **recommended** way to read DXF files. The optional GPL alternative `@mlightcad/dxf-json-converter` lives in [dwg-dxf-converter](https://github.com/mlightcad/dwg-dxf-converter).
 
 | | `AcDbNativeDxfConverter` (built-in) | `@mlightcad/dxf-json-converter` |
 | --- | --- | --- |
-| Where it lives | `@mlightcad/data-model` | Separate package |
+| Where it lives | `@mlightcad/data-model` | [dwg-dxf-converter](https://github.com/mlightcad/dwg-dxf-converter) |
 | License | MIT | GPL-3.0 (via `@mlightcad/dxf-json`) |
 | Default registration | Yes — registered when you import `data-model` | No — must `register()` yourself (replaces the default) |
 | Execution | Main thread, streaming DXF pairs into the database | Web Worker + ParsedDxf JSON intermediate |
 | Worker / assets | Not required | Requires `dxf-parser-worker.js` |
 | Typical use | New apps; prefer speed and MIT-only DXF | Legacy setups or apps that already depend on `dxf-json` |
 
-`dxf-json-converter` was created earlier, when `data-model` did not include a DXF parser and applications had to plug one in. It remains available for compatibility, but new code should use the built-in `AcDbNativeDxfConverter` unless you have a specific reason to keep the GPL worker-based path.
+`dxf-json-converter` remains available for compatibility, but new code should use the built-in `AcDbNativeDxfConverter` unless you have a specific reason to keep the GPL worker-based path.
 
 ## geometry-engine (AcGe classes in AutoCAD ObjectARX)
 
@@ -213,13 +213,9 @@ Contributions are welcome! Please open issues or pull requests for bug fixes, ne
 
 ## License
 
-This project is generally licensed under the [MIT License](LICENSE). However, this license does not apply to the following packages contained within this repository:
+This project is generally licensed under the [MIT License](LICENSE). However, this license does not apply to `@mlightcad/libredwg-converter` (GPL-3.0) in this repository.
 
-- `@mlightcad/dxf-json-converter` (GPL-3.0)
-- `@mlightcad/libredwg-converter` (GPL-3.0)
-- `@mlightcad/libdxfrw-converter` (GPL-2.0)
-
-These packages depend on upstream GPL-licensed parsers (`@mlightcad/dxf-json`, `@mlightcad/libredwg-web`, `@mlightcad/libdxfrw-web`). Please refer to each package's license for details.
+The GPL converters `@mlightcad/dxf-json-converter` and `@mlightcad/libdxfrw-converter` live in the separate [dwg-dxf-converter](https://github.com/mlightcad/dwg-dxf-converter) repository. Please refer to each package's license for details.
 
 ### Prefer the built-in DXF converter
 
