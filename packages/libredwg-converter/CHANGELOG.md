@@ -1,5 +1,16 @@
 # @mlightcad/libredwg-converter
 
+## 3.12.0
+
+### Minor Changes
+
+- Fix xref import, add MIT DXF converter, attach ACDSDATA to 3DSOLIDs, and improve DXF open progress
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.12.0
+
 ## 3.11.3
 
 ### Patch Changes

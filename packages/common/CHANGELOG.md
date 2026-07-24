@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.12.0
+
+### Minor Changes
+
+- Fix xref import, add MIT DXF converter, attach ACDSDATA to 3DSOLIDs, and improve DXF open progress
+
 ## 1.11.3
 
 ### Patch Changes
