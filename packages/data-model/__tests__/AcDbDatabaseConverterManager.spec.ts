@@ -4,13 +4,23 @@ import {
 } from '../src/database/AcDbDatabaseConverterManager'
 
 describe('AcDbDatabaseConverterManager', () => {
-  it('creates singleton instance without default converters', () => {
+  it('creates a singleton instance', () => {
     const manager = AcDbDatabaseConverterManager.instance
     expect(AcDbDatabaseConverterManager.createInstance()).toBe(manager)
-    expect(manager.get(AcDbFileType.DXF)).toBeUndefined()
+  })
 
-    const fileTypes = Array.from(manager.fileTypes)
-    expect(fileTypes).not.toContain(AcDbFileType.DXF)
+  it('replaces a DXF converter when register is called again', () => {
+    // Mirrors production: data-model registers AcDbNativeDxfConverter by default,
+    // then apps may replace it (e.g. with AcDbDxfConverter from dxf-json-converter).
+    const manager = AcDbDatabaseConverterManager.instance
+    const nativeDefault = { read: jest.fn(), name: 'native' } as any
+    const replacement = { read: jest.fn(), name: 'json' } as any
+
+    manager.register(AcDbFileType.DXF, nativeDefault)
+    expect(manager.get(AcDbFileType.DXF)).toBe(nativeDefault)
+
+    manager.register(AcDbFileType.DXF, replacement)
+    expect(manager.get(AcDbFileType.DXF)).toBe(replacement)
   })
 
   it('registers and unregisters converters with events', () => {

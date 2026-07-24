@@ -406,11 +406,64 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     filer.writeCmColor(this.color)
     filer.writeString(6, this.linetype)
     filer.writeInt16(290, this.isPlottable ? 1 : 0)
-    filer.writeInt16(370, this.lineWeight)
+    filer.writeLineWeight(370, this.lineWeight)
     filer.writeTransparency(this.transparency)
     if (this.description) {
       filer.writeString(4, this.description)
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    // Tolerate optional AcDbSymbolTableRecord marker from parent writers.
+    filer.atSubclassData('AcDbSymbolTableRecord')
+    filer.atSubclassData('AcDbLayerTableRecord')
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 100) {
+        filer.pushBackItem(item)
+        break
+      }
+      switch (code) {
+        case 2:
+          this.name = String(item.value)
+          break
+        case 70:
+          this.standardFlags = Number(item.value)
+          break
+        case 62: {
+          const aci = Number(item.value)
+          this.isOff = aci < 0
+          this.color.colorIndex = Math.abs(aci)
+          break
+        }
+        case 420:
+          this.color.setRGBValue(Number(item.value))
+          break
+        case 6:
+          this.linetype = String(item.value)
+          break
+        case 290:
+          this.isPlottable = Number(item.value) !== 0
+          break
+        case 370:
+          this.lineWeight = Number(item.value)
+          break
+        case 440:
+          this.transparency = AcCmTransparency.deserialize(Number(item.value))
+          break
+        case 4:
+          this.description = String(item.value)
+          break
+        default:
+          break
+      }
+    }
+    return this
+  }
 }
+

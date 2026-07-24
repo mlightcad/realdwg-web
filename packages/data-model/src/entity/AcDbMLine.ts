@@ -755,6 +755,176 @@ export class AcDbMLine extends AcDbEntity {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbMline')
+
+    let sx = this._startPosition.x
+    let sy = this._startPosition.y
+    let sz = this._startPosition.z
+    let nx = this._normal.x
+    let ny = this._normal.y
+    let nz = this._normal.z
+
+    const segments: AcDbMLineSegment[] = []
+    let currentSegment: AcDbMLineSegment | null = null
+    let currentElement: AcDbMLineElement | null = null
+    let readingParameters = false
+    let readingFills = false
+    let expectedParams = 0
+    let expectedFills = 0
+
+    const flushElement = () => {
+      if (currentElement && currentSegment) {
+        currentSegment.elements.push(currentElement)
+      }
+      currentElement = null
+      readingParameters = false
+      readingFills = false
+      expectedParams = 0
+      expectedFills = 0
+    }
+
+    const flushSegment = () => {
+      flushElement()
+      if (currentSegment) {
+        segments.push(currentSegment)
+      }
+      currentSegment = null
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 2:
+          this.styleName = String(item.value)
+          break
+        case 340:
+          this.styleObjectHandle = String(item.value)
+          break
+        case 40:
+          this.scale = n
+          break
+        case 70:
+          this.justification = n as AcDbMLineJustification
+          break
+        case 71:
+          this.flags = n
+          break
+        case 72:
+          // Vertex count — informational.
+          break
+        case 73:
+          this.styleCount = n
+          break
+        case 10:
+          sx = n
+          break
+        case 20:
+          sy = n
+          break
+        case 30:
+          sz = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        case 11:
+          flushSegment()
+          currentSegment = {
+            position: new AcGePoint3d(n, 0, 0),
+            direction: new AcGeVector3d(1, 0, 0),
+            miterDirection: new AcGeVector3d(0, 1, 0),
+            elements: []
+          }
+          break
+        case 21:
+          if (currentSegment) currentSegment.position.y = n
+          break
+        case 31:
+          if (currentSegment) currentSegment.position.z = n
+          break
+        case 12:
+          if (currentSegment) currentSegment.direction.x = n
+          break
+        case 22:
+          if (currentSegment) currentSegment.direction.y = n
+          break
+        case 32:
+          if (currentSegment) currentSegment.direction.z = n
+          break
+        case 13:
+          if (currentSegment) currentSegment.miterDirection.x = n
+          break
+        case 23:
+          if (currentSegment) currentSegment.miterDirection.y = n
+          break
+        case 33:
+          if (currentSegment) currentSegment.miterDirection.z = n
+          break
+        case 74:
+          flushElement()
+          expectedParams = n
+          readingParameters = true
+          readingFills = false
+          currentElement = {
+            parameterCount: n,
+            parameters: [],
+            fillCount: 0,
+            fillParameters: []
+          }
+          break
+        case 41:
+          if (currentElement && readingParameters) {
+            currentElement.parameters.push(n)
+            if (
+              expectedParams > 0 &&
+              currentElement.parameters.length >= expectedParams
+            ) {
+              readingParameters = false
+            }
+          }
+          break
+        case 75:
+          if (currentElement) {
+            expectedFills = n
+            currentElement.fillCount = n
+            readingFills = true
+            readingParameters = false
+          }
+          break
+        case 42:
+          if (currentElement && readingFills) {
+            currentElement.fillParameters.push(n)
+            if (
+              expectedFills > 0 &&
+              currentElement.fillParameters.length >= expectedFills
+            ) {
+              readingFills = false
+            }
+          }
+          break
+        default:
+          break
+      }
+    }
+
+    flushSegment()
+    this.startPosition = new AcGePoint3d(sx, sy, sz)
+    this.normal = new AcGeVector3d(nx, ny, nz)
+    this.segments = segments
+    return this
+  }
+
   /**
    * Sets or clears a single MLINE bit flag.
    *
@@ -1881,3 +2051,4 @@ export class AcDbMLine extends AcDbEntity {
     }
   }
 }
+

@@ -84,6 +84,12 @@ function setWorkingDatabase(db: AcDbDatabase) {
   return db
 }
 
+/** ASCII dxfOut result as string (binary mode returns Uint8Array). */
+function asAsciiDxf(dxf: string | Uint8Array): string {
+  expect(typeof dxf).toBe('string')
+  return dxf as string
+}
+
 async function readDxf(dxf: string) {
   registerDxfConverter()
   const db = setWorkingDatabase(new AcDbDatabase())
@@ -148,7 +154,7 @@ describe('DXF read and parse regressions', () => {
     text.styleName = 'Standard'
     sourceDb.tables.blockTable.modelSpace.appendEntity(text)
 
-    let dxf = sourceDb.dxfOut(undefined, 6)
+    let dxf = asAsciiDxf(sourceDb.dxfOut(undefined, 6))
     dxf = addHeaderVariable(dxf, '$ACADVER', '$DWGCODEPAGE', '3', 'ANSI_936')
 
     const parser = new AcDbDxfParser()
@@ -198,7 +204,7 @@ describe('DXF read and parse regressions', () => {
 
     sourceDb.tables.blockTable.modelSpace.appendEntity(insert)
 
-    const targetDb = await readDxf(sourceDb.dxfOut(undefined, 6))
+    const targetDb = await readDxf(asAsciiDxf(sourceDb.dxfOut(undefined, 6)))
     const readBlock = targetDb.tables.blockTable.getAt('TITLE_BLOCK')
 
     expect(readBlock).toBeDefined()
@@ -253,7 +259,7 @@ describe('DXF read and parse regressions', () => {
       new AcDbLine({ x: 100, y: 200, z: 0 }, { x: 140, y: 260, z: 0 })
     )
 
-    const targetDb = await readDxf(sourceDb.dxfOut(undefined, 6))
+    const targetDb = await readDxf(asAsciiDxf(sourceDb.dxfOut(undefined, 6)))
     const readPaperSpace = targetDb.tables.blockTable.getAt('*Paper_Space0')
     const readLayout = targetDb.objects.layout.getAt('Layout1')
 
@@ -295,10 +301,10 @@ describe('DXF read and parse regressions', () => {
     const sourceDb = setWorkingDatabase(new AcDbDatabase())
     sourceDb.createDefaultData()
 
-    let dxf = sourceDb.dxfOut(undefined, 6)
+    let dxf = asAsciiDxf(sourceDb.dxfOut(undefined, 6))
     dxf = replaceHeaderDouble(dxf, '$LTSCALE', 2.5)
     dxf = addHeaderVariable(dxf, '$CLAYER', '$CELTYPE', '6', 'BYLAYER')
-    dxf = addHeaderVariable(dxf, '$LTSCALE', '$CELTSCALE', '40', '0.25')
+    dxf = replaceHeaderDouble(dxf, '$CELTSCALE', 0.25)
     dxf = replaceHeaderString(dxf, '$CMLSTYLE', '2', 'FILL')
     dxf = replaceHeaderDouble(dxf, '$CMLSCALE', 20)
     dxf = replaceHeaderString(dxf, '$CMLEADERSTYLE', '2', 'ANNOTATION')

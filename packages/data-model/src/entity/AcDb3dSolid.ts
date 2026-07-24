@@ -160,6 +160,12 @@ export class AcDb3dSolid extends AcDbEntity {
   private _acisData: string
   /** DXF group 70 ACIS version number, when present. */
   private _version?: number
+  /** Soft-pointer to ACSH history object (DXF group 350). */
+  private _historyObjectSoftId?: string
+  /** Revision GUID for the modeler geometry, when present (DXF group 2). */
+  private _guid?: string
+  /** Whether the ASM/ACIS payload uses SAT text caching (DXF group 290). */
+  private _satCache?: boolean
   /** Vertex positions used for extents and fallback bounding-box rendering. */
   private _points: AcGePoint3d[]
   /** Line-segment endpoint pairs for wireframe rendering (`[x,y,z,...]`). */
@@ -213,6 +219,58 @@ export class AcDb3dSolid extends AcDbEntity {
   /** DXF group 70 ACIS version number, when present. */
   get version(): number | undefined {
     return this._version
+  }
+
+  /**
+   * Soft-pointer handle to `ACSH_HISTORY_CLASS` (DXF group 350), when present.
+   * Resolved later when OBJECTS-section data is available.
+   */
+  get historyObjectSoftId(): string | undefined {
+    return this._historyObjectSoftId
+  }
+
+  set historyObjectSoftId(value: string | undefined) {
+    this._historyObjectSoftId = value
+  }
+
+  /**
+   * Revision GUID for the modeler geometry, when present (DXF group 2).
+   */
+  get guid(): string | undefined {
+    return this._guid
+  }
+
+  set guid(value: string | undefined) {
+    this._guid = value
+  }
+
+  /**
+   * Whether the ASM/ACIS payload uses SAT text caching (DXF group 290).
+   */
+  get satCache(): boolean | undefined {
+    return this._satCache
+  }
+
+  set satCache(value: boolean | undefined) {
+    this._satCache = value
+  }
+
+  /**
+   * Replaces the SAT/ACIS payload and rebuilds wireframe / point caches.
+   * Used by DXF import after constructing an empty solid.
+   */
+  setAcisData(satText: string, version?: number) {
+    this._acisData = satText ?? ''
+    if (version != null) {
+      this._version = version
+    }
+    this._wireframe = this._acisData
+      ? acdbAcisWireframeSegmentsFromSatText(this._acisData)
+      : new Float32Array(0)
+    this._points =
+      this._wireframe.length > 0
+        ? pointsFromWireframe(this._wireframe)
+        : extractAcisPointCloud(this._acisData)
   }
 
   /**
@@ -320,6 +378,12 @@ export class AcDb3dSolid extends AcDbEntity {
     if (this._version != null) {
       filer.writeInt16(70, this._version)
     }
+    if (this._guid != null) {
+      filer.writeString(2, this._guid)
+    }
+    if (this._satCache != null) {
+      filer.writeInt16(290, this._satCache ? 1 : 0)
+    }
     const maxChunkLength = 255
     const lines = this._acisData.split('\n')
     for (let i = 0; i < lines.length; i++) {
@@ -333,4 +397,43 @@ export class AcDb3dSolid extends AcDbEntity {
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDb3dSolid')
+
+    const chunks: string[] = []
+    let version = this._version
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 1:
+        case 3:
+          chunks.push(String(item.value))
+          break
+        case 70:
+          version = n
+          break
+        case 350:
+          this._historyObjectSoftId = String(item.value)
+          break
+        case 2:
+          this._guid = String(item.value)
+          break
+        case 290:
+          this._satCache = n !== 0
+          break
+        default:
+          break
+      }
+    }
+
+    this.setAcisData(chunks.join('\n'), version)
+    return this
+  }
 }
+

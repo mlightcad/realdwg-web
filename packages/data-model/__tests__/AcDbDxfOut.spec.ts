@@ -26,14 +26,21 @@ interface DxfRecord {
   pairs: DxfPair[]
 }
 
-function getSection(dxf: string, name: string) {
+/** ASCII dxfOut result as string (binary mode returns Uint8Array). */
+function asAsciiDxf(dxf: string | Uint8Array): string {
+  expect(typeof dxf).toBe('string')
+  return dxf as string
+}
+
+function getSection(dxf: string | Uint8Array, name: string) {
+  const text = asAsciiDxf(dxf)
   const startMarker = `0\nSECTION\n2\n${name}\n`
-  const start = dxf.indexOf(startMarker)
+  const start = text.indexOf(startMarker)
   expect(start).toBeGreaterThanOrEqual(0)
 
-  const end = dxf.indexOf('\n0\nENDSEC\n', start + startMarker.length)
+  const end = text.indexOf('\n0\nENDSEC\n', start + startMarker.length)
   expect(end).toBeGreaterThan(start)
-  return dxf.slice(start + startMarker.length, end + 1)
+  return text.slice(start + startMarker.length, end + 1)
 }
 
 function parseRecords(content: string): DxfRecord[] {
@@ -87,7 +94,7 @@ describe('AcDbDatabase.dxfOut', () => {
     const db = new AcDbDatabase()
     db.createDefaultData()
 
-    const dxf = db.dxfOut(undefined, 6)
+    const dxf = asAsciiDxf(db.dxfOut(undefined, 6))
 
     const headerIndex = dxf.indexOf('0\nSECTION\n2\nHEADER\n')
     const tablesIndex = dxf.indexOf('0\nSECTION\n2\nTABLES\n')
@@ -301,7 +308,7 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.modelSpace.appendEntity(mline)
 
     expect(mline.styleName).toBe('FILL')
-    expect(db.dxfOut(undefined, 6)).toContain('\n2\nFILL\n')
+    expect(asAsciiDxf(db.dxfOut(undefined, 6))).toContain('\n2\nFILL\n')
   })
 
   it('uses the database CMLEADERSTYLE for new mleader entities without an explicit style', () => {
@@ -324,7 +331,9 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.modelSpace.appendEntity(mleader)
 
     expect(mleader.mleaderStyleId).toBe(activeStyle.objectId)
-    expect(db.dxfOut(undefined, 6)).toContain('9\n$CMLEADERSTYLE\n2\nACTIVE\n')
+    expect(asAsciiDxf(db.dxfOut(undefined, 6))).toContain(
+      '9\n$CMLEADERSTYLE\n2\nACTIVE\n'
+    )
   })
 
   it('writes additional paper space layouts as BLOCK_RECORD, BLOCK, and LAYOUT objects', () => {
@@ -504,7 +513,7 @@ describe('AcDbDatabase.dxfOut', () => {
     proxy.setProxyGraphic(new Uint8Array([0x01, 0x02, 0x03, 0x04]))
     db.tables.blockTable.modelSpace.appendEntity(proxy)
 
-    const dxf = db.dxfOut(undefined, 6)
+    const dxf = asAsciiDxf(db.dxfOut(undefined, 6))
     const headerIndex = dxf.indexOf('0\nSECTION\n2\nHEADER\n')
     const classesIndex = dxf.indexOf('0\nSECTION\n2\nCLASSES\n')
     const tablesIndex = dxf.indexOf('0\nSECTION\n2\nTABLES\n')

@@ -309,6 +309,11 @@ function findNestedFilterHandles(
     const owner = dict.ownerObjectId
       ? normalizeHandle(dict.ownerObjectId)
       : undefined
+    // Require an explicit owner — otherwise `undefined === undefined` would
+    // treat every unowned dictionary as a child of every XRecord.
+    if (!owner) {
+      continue
+    }
     const ownedByParent = owner === parentHandle || owner === extensionId
     if (!ownedByParent) {
       continue

@@ -1,9 +1,10 @@
 /**
  * @fileoverview Example web application entry point for DWG/DXF parsing and PAT preview.
  *
- * This module wires up the demo UI: file selection, web-worker parsing,
- * layer/linetype inspection, DXF export, and hatch pattern (PAT) parsing
- * with SVG previews.
+ * This module wires up the demo UI: DXF converter performance comparison
+ * (native vs dxf-json-converter → AcDbDatabase), file selection, web-worker
+ * parsing, layer/linetype inspection, DXF export, and hatch pattern (PAT)
+ * parsing with SVG previews.
  *
  * @module example/main
  */
@@ -23,8 +24,15 @@ import {
   AcDbPredefinedAcadPat,
   acdbThumbnailImageToDataUrl
 } from '@mlightcad/data-model'
-import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
+
+import type { DxfBenchmarkSample } from './dxfBenchmarkSamples'
+import {
+  benchmarkBuiltinSample,
+  benchmarkBuiltinSamples,
+  benchmarkSample,
+  formatBenchmarkResults
+} from './dxfConverterBenchmark'
 
 const fileInput = document.getElementById('fileInput') as HTMLInputElement
 const runButton = document.getElementById('runButton') as HTMLButtonElement
@@ -44,6 +52,53 @@ const patStatus = document.getElementById('patStatus') as HTMLDivElement
 const patTableOutput = document.getElementById(
   'patTableOutput'
 ) as HTMLDivElement
+const benchBothButton = document.getElementById(
+  'benchBothButton'
+) as HTMLButtonElement
+const benchSmallButton = document.getElementById(
+  'benchSmallButton'
+) as HTMLButtonElement
+const benchLargeButton = document.getElementById(
+  'benchLargeButton'
+) as HTMLButtonElement
+const benchFileInput = document.getElementById(
+  'benchFileInput'
+) as HTMLInputElement
+const benchCustomButton = document.getElementById(
+  'benchCustomButton'
+) as HTMLButtonElement
+const benchStatus = document.getElementById('benchStatus') as HTMLDivElement
+const benchOutput = document.getElementById('benchOutput') as HTMLPreElement
+const tabButtons = Array.from(
+  document.querySelectorAll<HTMLButtonElement>('.tab-button[data-tab]')
+)
+const tabPanels = {
+  benchmark: document.getElementById('panelBenchmark') as HTMLElement,
+  parse: document.getElementById('panelParse') as HTMLElement,
+  pat: document.getElementById('panelPat') as HTMLElement
+} as const
+
+type ExampleTab = keyof typeof tabPanels
+
+/**
+ * Switches the visible example tab (Benchmark / Parse / PAT).
+ */
+const setActiveTab = (tab: ExampleTab) => {
+  for (const button of tabButtons) {
+    const selected = button.dataset.tab === tab
+    button.setAttribute('aria-selected', selected ? 'true' : 'false')
+  }
+  for (const [id, panel] of Object.entries(tabPanels)) {
+    panel.hidden = id !== tab
+  }
+}
+
+for (const button of tabButtons) {
+  button.addEventListener('click', () => {
+    const tab = button.dataset.tab as ExampleTab | undefined
+    if (tab && tab in tabPanels) setActiveTab(tab)
+  })
+}
 
 exportButton.type = 'button'
 exportButton.textContent = 'Export DXF'
@@ -67,26 +122,13 @@ const patSvgRenderer = new AcDbPatSvgRenderer()
 const patParser = new AcDbPatParser()
 
 /**
- * Registers DXF and DWG database converters with the global converter manager.
+ * Registers the DWG database converter with the global converter manager.
  *
- * Both converters run parsing in dedicated web workers for copyleft license isolation.
- * Registration failures are logged to the console but do not throw, so the demo can
- * continue with whichever converters succeeded.
+ * DXF already defaults to AcDbNativeDxfConverter when `@mlightcad/data-model`
+ * is imported. DWG still needs an explicit converter (LibreDWG worker for license
+ * isolation). Registration failures are logged but do not throw.
  */
 const registerConverters = () => {
-  // Register DXF converter
-  try {
-    const converter = new AcDbDxfConverter({
-      convertByEntityType: false,
-      useWorker: true,
-      parserWorkerUrl: './assets/dxf-parser-worker.js'
-    })
-    AcDbDatabaseConverterManager.instance.register(AcDbFileType.DXF, converter)
-  } catch (error) {
-    console.error('Failed to register dxf converter: ', error)
-  }
-
-  // Register DWG converter
   try {
     const converter = new AcDbLibreDwgConverter({
       convertByEntityType: false,
@@ -712,3 +754,75 @@ patSourceSelect.addEventListener('change', () => {
 })
 
 applyPatSource()
+
+/**
+ * Enables/disables all benchmark control buttons.
+ */
+const setBenchControlsDisabled = (disabled: boolean) => {
+  benchBothButton.disabled = disabled
+  benchSmallButton.disabled = disabled
+  benchLargeButton.disabled = disabled
+  benchCustomButton.disabled = disabled
+  benchFileInput.disabled = disabled
+}
+
+/**
+ * Runs one or more DXF converter benchmarks and writes results to the panel.
+ */
+const runBenchmark = async (
+  label: string,
+  runner: () => ReturnType<typeof benchmarkBuiltinSamples>
+) => {
+  setBenchControlsDisabled(true)
+  benchStatus.textContent = label
+  benchOutput.textContent = 'Running…'
+  try {
+    const results = await runner()
+    benchOutput.textContent = formatBenchmarkResults(results)
+    benchStatus.textContent = 'Done.'
+  } catch (error) {
+    console.error(error)
+    benchStatus.textContent = `Benchmark failed: ${(error as Error).message}`
+    benchOutput.textContent = String(error)
+  } finally {
+    setBenchControlsDisabled(false)
+  }
+}
+
+benchBothButton.addEventListener('click', async () => {
+  await runBenchmark('Running Sample A + Sample B…', () =>
+    benchmarkBuiltinSamples()
+  )
+})
+
+benchSmallButton.addEventListener('click', async () => {
+  await runBenchmark('Running Sample A (small)…', async () => [
+    await benchmarkBuiltinSample('small')
+  ])
+})
+
+benchLargeButton.addEventListener('click', async () => {
+  await runBenchmark('Running Sample B (large)…', async () => [
+    await benchmarkBuiltinSample('large')
+  ])
+})
+
+benchCustomButton.addEventListener('click', async () => {
+  const file = benchFileInput.files?.[0]
+  if (!file) {
+    benchStatus.textContent = 'Please select a DXF file first.'
+    return
+  }
+
+  await runBenchmark(`Running custom DXF: ${file.name}…`, async () => {
+    const buffer = await file.arrayBuffer()
+    const sample: DxfBenchmarkSample = {
+      id: 'custom',
+      label: `Custom — ${file.name}`,
+      description: 'User-uploaded DXF',
+      entityCount: 0,
+      buffer
+    }
+    return [await benchmarkSample(sample)]
+  })
+})

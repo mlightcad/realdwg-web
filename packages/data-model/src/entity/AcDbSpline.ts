@@ -6,7 +6,9 @@ import {
   AcGePoint2d,
   AcGePoint3dLike,
   AcGeSpline3d,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3d,
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -255,6 +257,14 @@ export class AcDbSpline extends AcDbCurve {
 
   /** The underlying geometric spline object */
   private _geo!: AcGeSpline3d
+  /** Knot tolerance (DXF group 42) */
+  private _knotTolerance = 1e-6
+  /** Control-point tolerance (DXF group 43) */
+  private _controlTolerance = 1e-6
+  /** Fit tolerance (DXF group 44) */
+  private _fitTolerance = 1e-9
+  /** Extrusion / plane normal (DXF group 210) */
+  private _normal = new AcGeVector3d(0, 0, 1)
 
   /**
    * Creates a new spline entity from control points.
@@ -464,6 +474,38 @@ export class AcDbSpline extends AcDbCurve {
     this._geo.closed = value
   }
 
+  /** Knot tolerance (DXF group 42). */
+  get knotTolerance() {
+    return this._knotTolerance
+  }
+  set knotTolerance(value: number) {
+    this._knotTolerance = value
+  }
+
+  /** Control-point tolerance (DXF group 43). */
+  get controlTolerance() {
+    return this._controlTolerance
+  }
+  set controlTolerance(value: number) {
+    this._controlTolerance = value
+  }
+
+  /** Fit tolerance (DXF group 44). */
+  get fitTolerance() {
+    return this._fitTolerance
+  }
+  set fitTolerance(value: number) {
+    this._fitTolerance = value
+  }
+
+  /** Extrusion direction / plane normal (DXF group 210). */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
+  }
+
   /**
    * Gets the grip points for this spline.
    *
@@ -565,6 +607,9 @@ export class AcDbSpline extends AcDbCurve {
     filer.writeInt16(72, spline.knots.length)
     filer.writeInt16(73, spline.controlPoints.length)
     filer.writeInt16(74, spline.fitPoints?.length ?? 0)
+    filer.writeDouble(42, this.knotTolerance)
+    filer.writeDouble(43, this.controlTolerance)
+    filer.writeDouble(44, this.fitTolerance)
     for (const knot of spline.knots) {
       filer.writeDouble(40, knot)
     }
@@ -577,7 +622,189 @@ export class AcDbSpline extends AcDbCurve {
     for (const point of spline.fitPoints ?? []) {
       filer.writePoint3d(11, point)
     }
+    filer.writeVector3d(210, this.normal)
     return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbSpline')
+
+    let flag = this.closed ? 1 : 0
+    let degree = 3
+    let numberOfKnots = 0
+    let numberOfControlPoints = 0
+    let numberOfFitPoints = 0
+    const knots: number[] = []
+    const weights: number[] = []
+    const controlPoints: AcGePoint3dLike[] = []
+    const fitPoints: AcGePoint3dLike[] = []
+    let startTangent: AcGePoint3dLike | null = null
+    let endTangent: AcGePoint3dLike | null = null
+    let knotTolerance = this.knotTolerance
+    let controlTolerance = this.controlTolerance
+    let fitTolerance = this.fitTolerance
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    let pendingCtrl: AcGePoint3dLike | null = null
+    let pendingFit: AcGePoint3dLike | null = null
+    let pendingStart: AcGePoint3dLike | null = null
+    let pendingEnd: AcGePoint3dLike | null = null
+
+    const flushCtrl = () => {
+      if (pendingCtrl) {
+        controlPoints.push(pendingCtrl)
+        pendingCtrl = null
+      }
+    }
+    const flushFit = () => {
+      if (pendingFit) {
+        fitPoints.push(pendingFit)
+        pendingFit = null
+      }
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 70:
+          flag = n
+          break
+        case 71:
+          degree = n
+          break
+        case 72:
+          numberOfKnots = n
+          break
+        case 73:
+          numberOfControlPoints = n
+          break
+        case 74:
+          numberOfFitPoints = n
+          break
+        case 42:
+          knotTolerance = n
+          break
+        case 43:
+          controlTolerance = n
+          break
+        case 44:
+          fitTolerance = n
+          break
+        case 40:
+          knots.push(n)
+          break
+        case 41:
+          weights.push(n)
+          break
+        case 10:
+          flushCtrl()
+          pendingCtrl = { x: n, y: 0, z: 0 }
+          break
+        case 20:
+          if (pendingCtrl) pendingCtrl.y = n
+          break
+        case 30:
+          if (pendingCtrl) pendingCtrl.z = n
+          break
+        case 11:
+          flushFit()
+          pendingFit = { x: n, y: 0, z: 0 }
+          break
+        case 21:
+          if (pendingFit) pendingFit.y = n
+          break
+        case 31:
+          if (pendingFit) pendingFit.z = n
+          break
+        case 12:
+          pendingStart = { x: n, y: 0, z: 0 }
+          break
+        case 22:
+          if (pendingStart) pendingStart.y = n
+          break
+        case 32:
+          if (pendingStart) {
+            pendingStart.z = n
+            startTangent = pendingStart
+            pendingStart = null
+          }
+          break
+        case 13:
+          pendingEnd = { x: n, y: 0, z: 0 }
+          break
+        case 23:
+          if (pendingEnd) pendingEnd.y = n
+          break
+        case 33:
+          if (pendingEnd) {
+            pendingEnd.z = n
+            endTangent = pendingEnd
+            pendingEnd = null
+          }
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    flushCtrl()
+    flushFit()
+    this.knotTolerance = knotTolerance
+    this.controlTolerance = controlTolerance
+    this.fitTolerance = fitTolerance
+    const normal = new AcGeVector3d(nx, ny, nz)
+    if (normal.lengthSq() > 0) {
+      this.normal.copy(normal.normalize())
+    }
+    this.applyDxfInSpline({
+      flag,
+      degree,
+      numberOfControlPoints: numberOfControlPoints || controlPoints.length,
+      numberOfKnots: numberOfKnots || knots.length,
+      numberOfFitPoints: numberOfFitPoints || fitPoints.length,
+      controlPoints,
+      knots,
+      weights: weights.length > 0 ? weights : undefined,
+      fitPoints,
+      startTangent,
+      endTangent
+    })
+    return this
+  }
+
+  private applyDxfInSpline(data: {
+    flag: number
+    degree?: number
+    numberOfControlPoints: number
+    numberOfKnots: number
+    numberOfFitPoints: number
+    controlPoints: AcGePoint3dLike[]
+    knots: number[]
+    weights?: number[]
+    fitPoints: AcGePoint3dLike[]
+    startTangent?: AcGePoint3dLike | null
+    endTangent?: AcGePoint3dLike | null
+  }) {
+    const built = AcDbSpline.fromDwgSpline(data)
+    if (built) {
+      this._geo = built._geo
+      this.closed = built.closed
+    }
   }
 
   /**
@@ -630,3 +857,4 @@ export class AcDbSpline extends AcDbCurve {
     return this._geo.getOffsetSamplePath2d(offsetDist).points
   }
 }
+

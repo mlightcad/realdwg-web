@@ -12,7 +12,10 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
 import { acdbExtractOleImageBlob } from '../misc/AcDbOleImageExtractor'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { acdbBytesToHexString } from '../misc/proxyGraphic'
+import {
+  acdbBytesToHexString,
+  acdbCombineDxfBinaryChunks
+} from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
 import {
   acdbForEachGripIndex,
@@ -695,6 +698,93 @@ export class AcDbOle2Frame extends AcDbOleFrame {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    // OLE2FRAME uses AcDbEntity fields, not AcDbOleFrame layout.
+    AcDbEntity.prototype.dxfInFields.call(this, filer)
+    filer.atSubclassData('AcDbOle2Frame')
+
+    let ulx = this._upperLeft.x
+    let uly = this._upperLeft.y
+    let ulz = this._upperLeft.z
+    let lrx = this._lowerRight.x
+    let lry = this._lowerRight.y
+    let lrz = this._lowerRight.z
+    // ASCII readers may leave hex as string; typed binary pairs yield Uint8Array.
+    const dataChunks: Array<string | Uint8Array> = []
+    let dataLength: number | undefined
+
+    const commit = () => {
+      this.upperLeftCorner = new AcGePoint3d(ulx, uly, ulz)
+      this.lowerRightCorner = new AcGePoint3d(lrx, lry, lrz)
+      if (dataChunks.length > 0) {
+        this.loadOleObjectFromDxf(
+          dataLength,
+          acdbCombineDxfBinaryChunks(dataChunks)
+        )
+      }
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 1:
+          // Marker "OLE".
+          break
+        case 3:
+          this.userType = String(item.value)
+          break
+        case 10:
+          ulx = n
+          break
+        case 20:
+          uly = n
+          break
+        case 30:
+          ulz = n
+          break
+        case 11:
+          lrx = n
+          break
+        case 21:
+          lry = n
+          break
+        case 31:
+          lrz = n
+          break
+        case 70:
+          this.oleVersion = n
+          break
+        case 71:
+          this.oleObjectType = n as AcDbOleObjectType
+          break
+        case 72:
+          this.tileMode = n as AcDbOleTileMode
+          break
+        case 73:
+          this.setOutputQuality(n)
+          break
+        case 90:
+          dataLength = n
+          break
+        case 310:
+          if (item.value instanceof Uint8Array) {
+            dataChunks.push(item.value)
+          } else {
+            dataChunks.push(String(item.value))
+          }
+          break
+        default:
+          break
+      }
+    }
+
+    commit()
+    return this
+  }
+
   private cornerUpperRight(): AcGePoint3d {
     return new AcGePoint3d(
       this._lowerRight.x,
@@ -752,3 +842,4 @@ export class AcDbOle2Frame extends AcDbOleFrame {
     this._lowerRight.x = this._upperLeft.x + sign * Math.abs(width)
   }
 }
+

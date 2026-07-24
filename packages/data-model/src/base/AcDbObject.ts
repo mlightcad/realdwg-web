@@ -769,11 +769,16 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     this.dxfOutFields(filer)
 
     if (allXdata) {
-      for (const data of this._xDataMap.values()) {
-        filer.writeResultBuffer(data)
-      }
+      this.dxfOutXData(filer)
     }
     return this
+  }
+
+  /** Emit all attached XData buffers (DXF groups 1000–1071). */
+  protected dxfOutXData(filer: AcDbDxfFiler): void {
+    for (const data of this._xDataMap.values()) {
+      filer.writeResultBuffer(data)
+    }
   }
 
   /**
@@ -795,5 +800,131 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     // For better downstream compatibility, the object-level marker (AcDbObject) is omitted.
     // filer.writeSubclassMarker('AcDbObject')
     return this
+  }
+
+  /**
+   * Reads this object from a DXF filer (ObjectARX `dxfIn`).
+   *
+   * Reads common handle/owner fields, then delegates to {@link dxfInFields}.
+   * XData (group 1001+) is consumed when present after object fields.
+   *
+   * Group-102 control strings (`{ACAD_XDICTIONARY`, `{ACAD_REACTORS`, …) are
+   * consumed here so subclass readers still see handle/owner/subclass markers
+   * that follow them. Many real DXF writers emit these blocks on LAYER and
+   * entity records; skipping them would leave `name`/`layer` unset.
+   */
+  dxfIn(filer: AcDbDxfFiler): this {
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 5 || code === 105) {
+        this.objectId = String(item.value)
+      } else if (code === 330) {
+        this.ownerId = String(item.value)
+      } else if (code === 360) {
+        this.extensionDictionary = String(item.value)
+      } else if (code === 102) {
+        this.dxfInControlString(filer, String(item.value))
+      } else if (code === 100) {
+        // Subclass markers belong to dxfInFields — push back and stop common loop.
+        filer.pushBackItem(item)
+        break
+      } else {
+        // Unknown common code — let subclass handle it.
+        filer.pushBackItem(item)
+        break
+      }
+    }
+
+    this.dxfInFields(filer)
+
+    if (filer.atExtendedData) {
+      this.dxfInXData(filer)
+    }
+
+    return this
+  }
+
+  /**
+   * Consumes a DXF group-102 control-string block that was already opened
+   * (the opening `102` value is `startValue`, typically `{ACAD_XDICTIONARY`
+   * or `{ACAD_REACTORS`).
+   *
+   * For `{ACAD_XDICTIONARY`, the first soft-owner handle (360) is stored as
+   * {@link extensionDictionary}. Other control strings are skipped until the
+   * matching closing `102` / `}`.
+   */
+  protected dxfInControlString(filer: AcDbDxfFiler, startValue: string): void {
+    const isExtDict =
+      startValue === '{ACAD_XDICTIONARY' || startValue === 'ACAD_XDICTIONARY'
+
+    while (!filer.atEndOfObject && !filer.atEof) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 102) {
+        const value = String(item.value)
+        if (value === '}' || value === '') {
+          break
+        }
+        // Nested control string — consume it recursively.
+        this.dxfInControlString(filer, value)
+        continue
+      }
+      if (isExtDict && code === 360 && !this.extensionDictionary) {
+        this.extensionDictionary = String(item.value)
+      }
+      // Ignore other pairs inside the control string (e.g. reactor 330s).
+    }
+  }
+
+  /**
+   * Reads object-specific DXF fields (ObjectARX `dxfInFields`).
+   *
+   * Subclasses should override, call `super.dxfInFields(filer)` first when
+   * appropriate, then consume their subclass marker and fields in an
+   * order-independent loop.
+   *
+   * Per the AutoCAD DXF specification, readers must **ignore undefined group
+   * codes** and must not assume field order. Within a subclass loop the
+   * correct unknown-code behavior is `break` (skip and continue). Use
+   * `pushBackItem` only to hand a group-100 subclass marker (or XData) to
+   * another reader — never to abort on an unrecognized optional code.
+   */
+  dxfInFields(_filer: AcDbDxfFiler): this {
+    return this
+  }
+
+  /** Consume XData pairs starting at group 1001 until end of object. */
+  protected dxfInXData(filer: AcDbDxfFiler): void {
+    let buffer: AcDbResultBuffer | undefined
+
+    const flush = () => {
+      if (buffer && buffer.length > 0) {
+        this.setXData(buffer)
+      }
+      buffer = undefined
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 1001) {
+        flush()
+        buffer = new AcDbResultBuffer([{ code: item.code, value: item.value }])
+      } else if (code >= 1000 && code <= 1071) {
+        if (!buffer) {
+          buffer = new AcDbResultBuffer()
+        }
+        buffer.add({ code: item.code, value: item.value })
+      } else {
+        filer.pushBackItem(item)
+        break
+      }
+    }
+
+    flush()
   }
 }

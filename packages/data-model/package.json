@@ -24,7 +24,8 @@
     "package.json"
   ],
   "sideEffects": [
-    "./lib/base/AcDbHostApplicationServices.js"
+    "./lib/base/AcDbHostApplicationServices.js",
+    "./lib/dxf/registerNativeDxfConverter.js"
   ],
   "main": "./dist/data-model.cjs",
   "module": "./lib/index.js",

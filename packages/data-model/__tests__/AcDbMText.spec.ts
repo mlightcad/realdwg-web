@@ -383,4 +383,26 @@ describe('AcDbMText', () => {
     expect(filer.toString()).toContain('42\n18.5')
     expect(filer.toString()).not.toContain('414\n')
   })
+
+  it('splits MTEXT contents longer than 250 chars into group 3 + group 1', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.ownerId = 'ABC'
+    mtext.location = { x: 0, y: 0, z: 0 }
+    mtext.height = 2
+    // 520 chars → two full group-3 chunks (250 each) + group-1 remainder (20).
+    mtext.contents = 'A'.repeat(520)
+
+    const outFiler = new AcDbDxfFiler()
+    mtext.dxfOutFields(outFiler)
+    const dxf = outFiler.toString()
+
+    const group3Matches = dxf.match(/\n3\n[A]{250}/g) ?? []
+    expect(group3Matches).toHaveLength(2)
+    expect(dxf).toContain('\n1\n' + 'A'.repeat(20))
+
+    const roundTrip = new AcDbMText()
+    roundTrip.dxfIn(AcDbDxfFiler.fromString(dxf))
+    expect(roundTrip.contents).toBe('A'.repeat(520))
+  })
 })

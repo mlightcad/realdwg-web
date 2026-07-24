@@ -22,32 +22,30 @@ To support reading both DXF and DWG files (and potentially other formats in the 
 
 - Each file type (e.g., DXF, DWG) is associated with a converter class that knows how to parse and import that file format into the drawing database.
 - The `AcDbDatabaseConverterManager` maintains a registry of these converters, allowing you to register or unregister converters for specific file types at runtime.
-- No converters are registered by default. Register the DXF and DWG converters from their respective packages before calling `AcDbDatabase.read()`.
+- **DXF is registered by default.** Importing `@mlightcad/data-model` registers the built-in MIT `AcDbNativeDxfConverter`. You only need to register a DXF converter if you want to replace that default (for example with `@mlightcad/dxf-json-converter`).
+- **DWG is not registered by default.** Register a DWG converter (typically `@mlightcad/libredwg-converter`) before calling `AcDbDatabase.read()` on DWG files.
 
-Both `@mlightcad/dxf-json-converter` and `@mlightcad/libredwg-converter` are designed to run their parsers in a Web Worker only. This is not a technical or architectural limitation of the converters themselves; it is a deliberate licensing choice. The upstream parsers are copyleft (GPL/LGPL), so keeping them in a separate worker bundle helps isolate that code from the main application and makes license compliance easier for MIT-licensed apps built on RealDWG-Web.
+`@mlightcad/dxf-json-converter` and `@mlightcad/libredwg-converter` are designed to run their parsers in a Web Worker. That is a deliberate licensing choice: their upstream parsers are copyleft (GPL/LGPL), so keeping them in a separate worker bundle helps isolate that code from the main application. The built-in `AcDbNativeDxfConverter` does **not** need a worker — it is MIT-licensed and runs on the main thread.
 
 ### Registering Converters
 
-Register DXF and DWG converters before reading files:
+DXF works out of the box. Register a DWG converter before reading DWG files. Optionally replace the default DXF converter:
 
 ```ts
 import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from '@mlightcad/data-model'
-import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
-// DXF converter (GPL parser is loaded in a separate Web Worker for license isolation)
-const dxfConverter = new AcDbDxfConverter({
-  convertByEntityType: false,
-  useWorker: true,
-  parserWorkerUrl: './assets/dxf-parser-worker.js'
-})
-AcDbDatabaseConverterManager.instance.register(
-  AcDbFileType.DXF,
-  dxfConverter
-)
+// Optional: replace the default MIT AcDbNativeDxfConverter with the GPL worker-based parser
+// import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
+// const dxfConverter = new AcDbDxfConverter({
+//   convertByEntityType: false,
+//   useWorker: true,
+//   parserWorkerUrl: './assets/dxf-parser-worker.js'
+// })
+// AcDbDatabaseConverterManager.instance.register(AcDbFileType.DXF, dxfConverter)
 
 // DWG converter (copyleft parser is loaded in a separate Web Worker for license isolation)
 const dwgConverter = new AcDbLibreDwgConverter({
@@ -61,7 +59,7 @@ AcDbDatabaseConverterManager.instance.register(
 )
 ```
 
-Deploy `dxf-parser-worker.js` and `libredwg-parser-worker.js` from each converter package's `dist/` folder to a public URL (see [example vite config](./packages/example/vite.config.ts)).
+Deploy `libredwg-parser-worker.js` (and `dxf-parser-worker.js` only if you use `dxf-json-converter`) from each converter package's `dist/` folder to a public URL (see [example vite config](./packages/example/vite.config.ts)).
 
 ### Unregistering a Converter
 
@@ -139,11 +137,20 @@ This module provides a DWG file converter for the RealDWG-Web ecosystem, enablin
 
 DWG parsing is provided through a dedicated Web Worker bundle (`libredwg-parser-worker.js`). Worker-only usage is a licensing choice, not a platform constraint: it keeps the copyleft LibreDWG parser separate from the main application bundle so that MIT-licensed apps can integrate DWG support more safely.
 
-### dxf-json-converter (DXF file support)
+### AcDbNativeDxfConverter vs dxf-json-converter (DXF file support)
 
-This module provides a DXF file converter for the RealDWG-Web ecosystem. It is based on [@mlightcad/dxf-json](https://www.npmjs.com/package/@mlightcad/dxf-json) and is designed to be registered with the converter manager for DXF file support.
+`@mlightcad/data-model` now ships a built-in DXF converter, `AcDbNativeDxfConverter`. It is the **recommended** way to read DXF files.
 
-DXF parsing is provided through a dedicated Web Worker bundle (`dxf-parser-worker.js`). Worker-only usage is a licensing choice, not a platform constraint: it keeps the GPL-licensed `@mlightcad/dxf-json` parser separate from the main application bundle. The main `@mlightcad/data-model` package does not depend on `dxf-json`.
+| | `AcDbNativeDxfConverter` (built-in) | `@mlightcad/dxf-json-converter` |
+| --- | --- | --- |
+| Where it lives | `@mlightcad/data-model` | Separate package |
+| License | MIT | GPL-3.0 (via `@mlightcad/dxf-json`) |
+| Default registration | Yes — registered when you import `data-model` | No — must `register()` yourself (replaces the default) |
+| Execution | Main thread, streaming DXF pairs into the database | Web Worker + ParsedDxf JSON intermediate |
+| Worker / assets | Not required | Requires `dxf-parser-worker.js` |
+| Typical use | New apps; prefer speed and MIT-only DXF | Legacy setups or apps that already depend on `dxf-json` |
+
+`dxf-json-converter` was created earlier, when `data-model` did not include a DXF parser and applications had to plug one in. It remains available for compatibility, but new code should use the built-in `AcDbNativeDxfConverter` unless you have a specific reason to keep the GPL worker-based path.
 
 ## geometry-engine (AcGe classes in AutoCAD ObjectARX)
 
@@ -165,11 +172,12 @@ The key classes in this module are as follows.
 
 The same drawing database structure is used in this project so that it is easier for AutoCAD ObjectARX developers to develop their own application based on SDK of this project. Please refer to [AutoCAD Database Overview](https://help.autodesk.com/view/OARX/2024/ENU/?guid=GUID-4F4766EC-7BFC-456E-BE5B-7676B4658E15) to get more information on AutoCAD drawing database structure. 
 
-This module contains the core classes for interacting with AutoCAD's database and entities (e.g., lines, circles, blocks, etc.).
+This module contains the core classes for interacting with AutoCAD's database and entities (e.g., lines, circles, blocks, etc.). It also includes the built-in MIT DXF converter `AcDbNativeDxfConverter`, which is registered by default for `AcDbFileType.DXF`.
 
 - Defining and manipulating AutoCAD entities.
 - Handling entity attributes and geometric data.
 - Storing and retrieving data from the drawing database.
+- Reading DXF files without an extra converter package.
 
 The key classes in this module are as follows.
 
@@ -213,13 +221,26 @@ This project is generally licensed under the [MIT License](LICENSE). However, th
 
 These packages depend on upstream GPL-licensed parsers (`@mlightcad/dxf-json`, `@mlightcad/libredwg-web`, `@mlightcad/libdxfrw-web`). Please refer to each package's license for details.
 
+### Prefer the built-in DXF converter
+
+For DXF files, use the built-in **`AcDbNativeDxfConverter`** in `@mlightcad/data-model` whenever possible:
+
+- **No GPL license issues for DXF** — it is MIT-licensed and part of the core SDK; you do not need `@mlightcad/dxf-json-converter`.
+- **Faster and simpler** — streams DXF into the database on the main thread with no Web Worker and no extra parser assets.
+- **Registered by default** — importing `@mlightcad/data-model` is enough to call `AcDbDatabase.read(..., AcDbFileType.DXF)`.
+
+Reserve `@mlightcad/dxf-json-converter` for legacy apps that already depend on it. For DWG, you still need a separate converter package (prefer `@mlightcad/libredwg-converter` with worker mode).
+
 ### GPL copyleft and Web Worker isolation
 
-The MIT-licensed core (`@mlightcad/data-model`, `@mlightcad/geometry-engine`, `@mlightcad/graphic-interface`, `@mlightcad/common`) does **not** depend on any GPL parser. GPL copyleft therefore does **not** automatically apply to your application merely because you use the RealDWG-Web SDK—**provided that GPL parser code runs only inside separate Web Worker bundles**.
+The MIT-licensed core (`@mlightcad/data-model`, `@mlightcad/geometry-engine`, `@mlightcad/graphic-interface`, `@mlightcad/common`) does **not** depend on any GPL parser. Reading DXF through `AcDbNativeDxfConverter` stays entirely under MIT.
 
-For `@mlightcad/dxf-json-converter` and `@mlightcad/libredwg-converter`, the recommended integration is:
+GPL copyleft therefore does **not** automatically apply to your application merely because you use the RealDWG-Web SDK—**provided that any GPL parser code you do use runs only inside separate Web Worker bundles**.
+
+If you still use `@mlightcad/dxf-json-converter` and/or `@mlightcad/libredwg-converter`, the recommended integration is:
 
 ```ts
+// Optional DXF replacement (not needed if you keep AcDbNativeDxfConverter)
 const dxfConverter = new AcDbDxfConverter({
   useWorker: true,
   parserWorkerUrl: './assets/dxf-parser-worker.js'
@@ -231,13 +252,13 @@ const dwgConverter = new AcDbLibreDwgConverter({
 })
 ```
 
-Deploy the worker scripts (`dxf-parser-worker.js`, `libredwg-parser-worker.js`) from each converter package's `dist/` folder as static assets (see [example vite config](./packages/example/vite.config.ts)).
+Deploy the worker scripts (`dxf-parser-worker.js` if used, `libredwg-parser-worker.js`) from each converter package's `dist/` folder as static assets (see [example vite config](./packages/example/vite.config.ts)).
 
 **How this limits copyleft propagation**
 
 | Component | License | Worker isolation |
 | --- | --- | --- |
-| Core SDK (`data-model`, etc.) | MIT | N/A — no GPL dependency |
+| Core SDK (`data-model`, including `AcDbNativeDxfConverter`) | MIT | N/A — no GPL dependency |
 | `dxf-json-converter` / `libredwg-converter` (main bundle) | GPL | Orchestrates parsing; GPL parser execution stays in worker |
 | `dxf-parser-worker.js` / `libredwg-parser-worker.js` | GPL | Separate bundle; loaded at runtime; communicates via `postMessage` |
 | `libdxfrw-converter` | GPL-2.0 | **No** worker isolation — parser runs on the main thread |
@@ -250,8 +271,9 @@ When `useWorker: true` is configured and the worker scripts are deployed separat
 
 **Important caveats**
 
+- **Prefer `AcDbNativeDxfConverter` for DXF** to avoid GPL entirely for that format.
 - **Worker scripts are still GPL.** You must satisfy GPL obligations for those bundles (e.g., provide corresponding source and license notices when you distribute them).
-- **DXF main-thread parsing does not isolate GPL code.** `@mlightcad/dxf-json-converter` can parse on the main thread when `useWorker: false`; that mode links GPL parser code into the same JavaScript context as your app. Use `useWorker: true` in production if you want worker-based isolation.
+- **DXF via `dxf-json-converter` on the main thread does not isolate GPL code.** That package can parse on the main thread when `useWorker: false`; that mode links GPL parser code into the same JavaScript context as your app. Use `useWorker: true` if you must use it and want worker-based isolation.
 - **DWG via LibreDWG is worker-only.** `@mlightcad/libredwg-converter` requires a Web Worker; it cannot run on the main thread.
 - **`@mlightcad/libdxfrw-converter` is different.** It does not provide a worker-based parser bundle; using it loads GPL libdxfrw code on the main thread. Prefer `@mlightcad/libredwg-converter` with worker mode if copyleft isolation matters for your deployment.
 - **This is an architectural description, not legal advice.** Interpretation of GPL in browser/Web Worker contexts may vary by jurisdiction and use case. Consult qualified legal counsel for your product if license compliance is critical.

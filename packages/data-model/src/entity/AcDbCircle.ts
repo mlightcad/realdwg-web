@@ -5,6 +5,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
+  acgeTransformOcsPointToWcs,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike,
@@ -52,6 +53,8 @@ export class AcDbCircle extends AcDbCurve {
 
   /** The underlying geometric circular arc object */
   private _geo: AcGeCircArc3d
+  /** Thickness along the normal (DXF group 39) */
+  private _thickness = 0
 
   /**
    * Creates a new circle entity.
@@ -163,6 +166,16 @@ export class AcDbCircle extends AcDbCurve {
    */
   get normal() {
     return this._geo.normal
+  }
+
+  /**
+   * Thickness along the entity normal (DXF group 39).
+   */
+  get thickness() {
+    return this._thickness
+  }
+  set thickness(value: number) {
+    this._thickness = value
   }
 
   /**
@@ -450,8 +463,77 @@ export class AcDbCircle extends AcDbCurve {
     filer.writeSubclassMarker('AcDbCircle')
     filer.writePoint3d(10, centerOcs)
     filer.writeDouble(40, this.radius)
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
     filer.writeVector3d(210, this.normal)
     return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbCircle')
+
+    let x = 0
+    let y = 0
+    let z = 0
+    let radius = this.radius
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          x = n
+          break
+        case 20:
+          y = n
+          break
+        case 30:
+          z = n
+          break
+        case 40:
+          radius = n
+          break
+        case 39:
+          this.thickness = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    this.applyDxfInGeometry(x, y, z, radius, nx, ny, nz)
+    return this
+  }
+
+  private applyDxfInGeometry(
+    x: number,
+    y: number,
+    z: number,
+    radius: number,
+    nx: number,
+    ny: number,
+    nz: number
+  ) {
+    const normal = new AcGeVector3d(nx, ny, nz)
+    this.normal.copy(normal)
+    this.center = acgeTransformOcsPointToWcs({ x, y, z }, normal)
+    this.radius = radius
   }
 
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {
@@ -498,3 +580,4 @@ export class AcDbCircle extends AcDbCurve {
     }
   }
 }
+

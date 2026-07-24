@@ -323,4 +323,68 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbSymbolTableRecord')
+    filer.atSubclassData('AcDbLinetypeTableRecord')
+
+    const pattern: AcGiLineTypePatternElement[] = []
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 100) {
+        filer.pushBackItem(item)
+        break
+      }
+      switch (code) {
+        case 2:
+          this.name = String(item.value)
+          break
+        case 70:
+          this.setAttr('standardFlag', Number(item.value))
+          break
+        case 3:
+          this.setAttr('description', String(item.value))
+          break
+        case 72:
+          // Alignment code (always 65 / 'A') — ignored on read.
+          break
+        case 73:
+          // Dash count — derived from pattern; ignored on read.
+          break
+        case 40:
+          this.setAttr('totalPatternLength', Number(item.value))
+          break
+        case 49:
+          pattern.push({
+            elementLength: Number(item.value),
+            elementTypeFlag: 0
+          })
+          break
+        case 74:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].elementTypeFlag = Number(item.value)
+          }
+          break
+        // Complex linetype shape/text extras — skip without ending the record.
+        case 75:
+        case 340:
+        case 46:
+        case 50:
+        case 44:
+        case 45:
+        case 9:
+          break
+        default:
+          break
+      }
+    }
+
+    this.setAttr('pattern', pattern)
+    return this
+  }
 }
+

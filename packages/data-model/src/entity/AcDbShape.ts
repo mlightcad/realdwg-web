@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -580,4 +581,84 @@ export class AcDbShape extends AcDbEntity {
     filer.writeVector3d(210, this.normal)
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbShape')
+
+    let px = this.position.x
+    let py = this.position.y
+    let pz = this.position.z
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 10:
+          px = n
+          break
+        case 20:
+          py = n
+          break
+        case 30:
+          pz = n
+          break
+        case 2: {
+          const shapeName = String(item.value).trim()
+          const asNumber = Number(shapeName)
+          if (
+            shapeName !== '' &&
+            Number.isInteger(asNumber) &&
+            asNumber !== 0 &&
+            String(asNumber) === shapeName
+          ) {
+            this.shapeNumber = asNumber
+            this.name = ''
+          } else {
+            this.name = shapeName
+          }
+          break
+        }
+        case 3:
+          this.styleName = String(item.value)
+          break
+        case 39:
+          this.thickness = n
+          break
+        case 40:
+          this.size = n
+          break
+        case 41:
+          this.widthFactor = n
+          break
+        case 50:
+          this.rotation = AcGeMathUtil.degToRad(n)
+          break
+        case 51:
+          this.oblique = AcGeMathUtil.degToRad(n)
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    this.position = { x: px, y: py, z: pz }
+    this.normal = { x: nx, y: ny, z: nz }
+    return this
+  }
 }
+

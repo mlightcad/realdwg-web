@@ -28,6 +28,10 @@ npm install @mlightcad/dxf-json-converter
 
 ## Usage Example
 
+`@mlightcad/data-model` already registers a default MIT DXF converter
+(`AcDbNativeDxfConverter`). Register `AcDbDxfConverter` only when you want this
+GPL worker-based parser instead — it replaces the default for `AcDbFileType.DXF`.
+
 ```typescript
 import { AcDbDatabaseConverterManager, AcDbFileType } from '@mlightcad/data-model';
 import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter';

@@ -6,6 +6,7 @@ import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
+import { acdbHexStringsToBytes } from '../misc/proxyGraphic/AcDbProxyGraphicBinaryStream'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
@@ -621,4 +622,52 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbSymbolTableRecord')
+    filer.atSubclassData('AcDbBlockTableRecord')
+
+    const previewChunks: string[] = []
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      if (code === 100) {
+        filer.pushBackItem(item)
+        break
+      }
+      switch (code) {
+        case 2:
+          this.name = String(item.value)
+          break
+        case 70:
+          this.blockInsertUnits = Number(item.value)
+          break
+        case 280:
+          this.explodability = Number(item.value)
+          break
+        case 281:
+          this.blockScaling = Number(item.value) as AcDbBlockScaling
+          break
+        case 340:
+          this.layoutId = String(item.value)
+          break
+        case 310: {
+          const hex = String(item.value).replace(/\s+/g, '')
+          if (hex) previewChunks.push(hex)
+          break
+        }
+        default:
+          break
+      }
+    }
+
+    if (previewChunks.length > 0) {
+      this.previewIcon = acdbHexStringsToBytes(previewChunks)
+    }
+    return this
+  }
 }
+

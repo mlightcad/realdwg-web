@@ -402,4 +402,53 @@ export class AcDbAttributeDefinition extends AcDbText {
     filer.writeInt16(74, this.lockPositionInBlock ? 1 : 0)
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbAttributeDefinition')
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 2:
+          this.tag = String(item.value)
+          break
+        case 3:
+          this.prompt = String(item.value)
+          break
+        case 70:
+          this.isInvisible = (n & AcDbAttributeFlags.Invisible) !== 0
+          this.isConst = (n & AcDbAttributeFlags.Const) !== 0
+          this.isVerifiable = (n & AcDbAttributeFlags.Verifiable) !== 0
+          this.isPreset = (n & AcDbAttributeFlags.Preset) !== 0
+          break
+        case 71:
+          this.isMTextAttribute =
+            (n & AcDbAttributeMTextFlag.MultiLine) !== 0
+          this.isConstMTextAttribute =
+            (n & AcDbAttributeMTextFlag.ConstMultiLine) !== 0
+          break
+        case 73:
+          this.fieldLength = n
+          break
+        case 74:
+          // DXF: vertical text justification for ATTDEF.
+          this.verticalMode = n
+          break
+        case 280:
+          this.lockPositionInBlock = n !== 0
+          break
+        case 340:
+          // Soft-pointer ID to FIELD object — optional; keep scanning.
+          break
+        default:
+          break
+      }
+    }
+    return this
+  }
 }
+

@@ -2,7 +2,10 @@ import { AcGeBox3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbBytesToHexString } from '../misc/proxyGraphic'
+import {
+  acdbBytesToHexString,
+  acdbCombineDxfBinaryChunks
+} from '../misc/proxyGraphic'
 import { AcDbFrame } from './AcDbFrame'
 
 /**
@@ -174,4 +177,53 @@ export class AcDbOleFrame extends AcDbFrame {
     filer.writeString(1, 'OLE')
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbOleFrame')
+
+    // ASCII readers may leave hex as string; typed binary pairs yield Uint8Array.
+    const dataChunks: Array<string | Uint8Array> = []
+    let dataLength: number | undefined
+
+    const commit = () => {
+      if (dataChunks.length > 0) {
+        this.loadOleObjectFromDxf(
+          dataLength,
+          acdbCombineDxfBinaryChunks(dataChunks)
+        )
+      }
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 1:
+          // Marker string "OLE" — ignore.
+          break
+        case 70:
+          this.oleVersion = n
+          break
+        case 90:
+          dataLength = n
+          break
+        case 310:
+          if (item.value instanceof Uint8Array) {
+            dataChunks.push(item.value)
+          } else {
+            dataChunks.push(String(item.value))
+          }
+          break
+        default:
+          break
+      }
+    }
+
+    commit()
+    return this
+  }
 }
+

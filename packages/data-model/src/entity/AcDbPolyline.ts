@@ -9,7 +9,9 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3d,
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -38,6 +40,8 @@ interface AcDbPolylineVertex extends AcGePolyline2dVertex {
   startWidth?: number
   /** The ending width at this vertex */
   endWidth?: number
+  /** Vertex identifier (DXF group 91) */
+  identifier?: number
 }
 
 /**
@@ -81,6 +85,10 @@ export class AcDbPolyline extends AcDbCurve {
 
   /** The elevation (Z-coordinate) of the polyline plane */
   private _elevation: number
+  /** Thickness along the normal (DXF group 39) */
+  private _thickness = 0
+  /** Extrusion / plane normal (DXF group 210) */
+  private _normal = new AcGeVector3d(0, 0, 1)
   /** The underlying geometric polyline object */
   private _geo: AcGePolyline2d<AcDbPolylineVertex>
 
@@ -148,6 +156,26 @@ export class AcDbPolyline extends AcDbCurve {
    */
   set elevation(value: number) {
     this._elevation = value
+  }
+
+  /**
+   * Thickness along the entity normal (DXF group 39).
+   */
+  get thickness() {
+    return this._thickness
+  }
+  set thickness(value: number) {
+    this._thickness = value
+  }
+
+  /**
+   * Extrusion direction / plane normal (DXF group 210).
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
   }
 
   /**
@@ -647,6 +675,9 @@ export class AcDbPolyline extends AcDbCurve {
       filer.writeDouble(43, constantWidth)
     }
     filer.writeDouble(38, this.elevation)
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
 
     const vertices = this._geo.vertices
     for (let i = 0; i < vertices.length; ++i) {
@@ -664,6 +695,174 @@ export class AcDbPolyline extends AcDbCurve {
       if (bulge !== 0) {
         filer.writeDouble(42, bulge)
       }
+      if (vertex.identifier != null) {
+        filer.writeInt32(91, vertex.identifier)
+      }
+    }
+    filer.writeVector3d(210, this.normal)
+    return this
+  }
+
+  /**
+   * Writes this LWPOLYLINE as a legacy R12 POLYLINE + VERTEX + SEQEND sequence.
+   *
+   * Used when the target DXF version does not support LWPOLYLINE.
+   */
+  dxfOutAs2dPolyline(filer: AcDbDxfFiler, _allXdata = false) {
+    filer.writeHandle(5, this.objectId)
+    filer.writeObjectId(330, this.ownerId)
+    filer.writeObjectId(360, this.extensionDictionary)
+    filer.writeSubclassMarker('AcDbEntity')
+    filer.writeString(8, this.layer)
+    filer.writeString(6, this.lineType)
+    filer.writeDouble(48, this.linetypeScale)
+    filer.writeInt16(60, this.visibility ? 0 : 1)
+    filer.writeCmColor(this.color)
+    filer.writeLineWeight(370, this.lineWeight)
+    filer.writeTransparency(this.transparency)
+    const owner = this.database?.tables.blockTable.getIdAt(this.ownerId)
+    if (owner?.isPaperSapce) {
+      filer.writeInt16(67, 1)
+    }
+    filer.writeSubclassMarker('AcDb2dPolyline')
+    filer.writeInt16(66, this.numberOfVertices > 0 ? 1 : 0)
+    filer.writeInt16(70, this.closed ? 1 : 0)
+    filer.writeDouble(10, 0)
+    filer.writeDouble(20, 0)
+    filer.writeDouble(30, this.elevation)
+
+    for (let i = 0; i < this.numberOfVertices; ++i) {
+      const vertex = this._geo.vertices[i]
+      filer.writeStart('VERTEX')
+      filer.writeHandle(5, this.database?.generateHandle())
+      filer.writeObjectId(330, this.objectId)
+      filer.writeSubclassMarker('AcDbEntity')
+      filer.writeSubclassMarker('AcDbVertex')
+      filer.writeSubclassMarker('AcDb2dVertex')
+      filer.writePoint3d(10, {
+        x: this.getPoint2dAt(i).x,
+        y: this.getPoint2dAt(i).y,
+        z: this.elevation
+      })
+      const bulge = vertex?.bulge ?? 0
+      if (bulge !== 0) {
+        filer.writeDouble(42, bulge)
+      }
+      filer.writeInt16(70, 0)
+    }
+    filer.writeStart('SEQEND')
+    filer.writeHandle(5, this.database?.generateHandle())
+    filer.writeObjectId(330, this.objectId)
+    filer.writeSubclassMarker('AcDbEntity')
+    return this
+  }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbPolyline')
+
+    this.reset(false)
+    let closed = false
+    let elevation = this.elevation
+    let thickness = this.thickness
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+    let constantWidth = -1
+    let pendingX = 0
+    let pendingY = 0
+    let hasPending = false
+    let bulge = 0
+    let startWidth = -1
+    let endWidth = -1
+    let vertexId: number | undefined
+    let vertexIndex = 0
+
+    const flushVertex = () => {
+      if (!hasPending) return
+      const sw = startWidth < 0 ? constantWidth : startWidth
+      const ew = endWidth < 0 ? constantWidth : endWidth
+      this.addVertexAt(
+        vertexIndex++,
+        new AcGePoint2d(pendingX, pendingY),
+        bulge,
+        sw,
+        ew
+      )
+      if (vertexId != null) {
+        const vertex = this._geo.vertices[vertexIndex - 1]
+        if (vertex) vertex.identifier = vertexId
+      }
+      hasPending = false
+      bulge = 0
+      startWidth = -1
+      endWidth = -1
+      vertexId = undefined
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 90:
+          // Vertex count — informational; ignore.
+          break
+        case 70:
+          closed = (n & 1) !== 0
+          break
+        case 43:
+          constantWidth = n
+          break
+        case 38:
+          elevation = n
+          break
+        case 39:
+          thickness = n
+          break
+        case 10:
+          flushVertex()
+          pendingX = n
+          pendingY = 0
+          hasPending = true
+          break
+        case 20:
+          pendingY = n
+          break
+        case 40:
+          startWidth = n
+          break
+        case 41:
+          endWidth = n
+          break
+        case 42:
+          bulge = n
+          break
+        case 91:
+          vertexId = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        default:
+          break
+      }
+    }
+
+    flushVertex()
+    this.closed = closed
+    this.elevation = elevation
+    this.thickness = thickness
+    const normal = new AcGeVector3d(nx, ny, nz)
+    if (normal.lengthSq() > 0) {
+      this.normal.copy(normal.normalize())
     }
     return this
   }
@@ -1335,3 +1534,4 @@ function isRenderableLoop(points: AcGePolyline2dVertex[]) {
 function lerp(start: number, end: number, t: number) {
   return start + (end - start) * t
 }
+

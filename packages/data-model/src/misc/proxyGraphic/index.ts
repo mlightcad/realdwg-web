@@ -15,5 +15,6 @@ export {
   AcDbProxyGraphicByteStream,
   AcDbProxyGraphicEndOfBufferError,
   acdbBytesToHexString,
+  acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
 } from './AcDbProxyGraphicBinaryStream'

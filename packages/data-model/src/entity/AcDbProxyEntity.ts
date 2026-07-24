@@ -10,7 +10,8 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import {
   acdbBytesToHexString,
   acdbLoadProxyGraphicFromDxf,
-  AcDbProxyGraphic} from '../misc/proxyGraphic'
+  AcDbProxyGraphic
+} from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
 import {
   acdbForEachGripIndex,
@@ -486,17 +487,73 @@ export class AcDbProxyEntity extends AcDbEntity {
     }
     return this
   }
+
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbProxyEntity')
+
+    // ASCII readers may leave hex as string; typed binary pairs yield Uint8Array.
+    const dataChunks: Array<string | Uint8Array> = []
+    let graphicLength: number | undefined
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 1:
+          this.originalDxfName = String(item.value)
+          break
+        case 3:
+          this.originalClassName = String(item.value)
+          break
+        case 70:
+          this.originalDataFormat = n
+          break
+        case 90:
+          this.proxyEntityClassId = n
+          break
+        case 91:
+          this.applicationEntityClassId = n
+          break
+        case 95:
+          this.objectDrawingFormat = n
+          break
+        case 160:
+          graphicLength = n
+          break
+        case 310:
+          if (item.value instanceof Uint8Array) {
+            dataChunks.push(item.value)
+          } else {
+            dataChunks.push(String(item.value))
+          }
+          break
+        default:
+          break
+      }
+    }
+
+    if (dataChunks.length > 0) {
+      this.loadProxyGraphicFromDxf(graphicLength, dataChunks)
+    }
+    return this
+  }
+
   /**
    * Loads proxy-graphic bytes from DXF group codes **160** and **310**.
    *
    * @param length - Expected byte length from group code **160**. When provided
    *   and positive, the result is truncated to this length.
-   * @param hexChunks - One or more hexadecimal strings from group code **310**.
+   * @param chunks - One or more hexadecimal strings or binary chunks from
+   *   group code **310**.
    */
-  loadProxyGraphicFromDxf(length?: number, hexChunks?: string[]) {
-    const data = acdbLoadProxyGraphicFromDxf(length, hexChunks)
+  loadProxyGraphicFromDxf(length?: number, chunks?: Array<string | Uint8Array>) {
+    const data = acdbLoadProxyGraphicFromDxf(length, chunks)
     if (data) {
       this.setProxyGraphic(data)
     }
   }
 }
+

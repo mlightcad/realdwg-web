@@ -264,6 +264,7 @@ describe('AcDbArc', () => {
 
     const out = filer.toString()
     expect(out).toContain('100\nAcDbEntity')
+    expect(out).toContain('100\nAcDbCircle')
     expect(out).toContain('100\nAcDbArc')
     expect(out).toContain('10\n1')
     expect(out).toContain('20\n2')
@@ -274,6 +275,51 @@ describe('AcDbArc', () => {
     expect(out).toContain('210\n0')
     expect(out).toContain('220\n0')
     expect(out).toContain('230\n1')
+  })
+
+  it('reads AutoCAD ARC layout (AcDbCircle then AcDbArc)', () => {
+    createWorkingDb()
+    const dxf = [
+      '0',
+      'ARC',
+      '5',
+      'AA',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbCircle',
+      '10',
+      '1',
+      '20',
+      '2',
+      '30',
+      '0',
+      '40',
+      '5',
+      '100',
+      'AcDbArc',
+      '50',
+      '0',
+      '51',
+      '90',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf)
+    const type = filer.readItem()
+    expect(type?.value).toBe('ARC')
+
+    const arc = new AcDbArc(new AcGePoint3d(), 1, 0, Math.PI)
+    arc.dxfIn(filer)
+
+    expect(arc.center.x).toBeCloseTo(1)
+    expect(arc.center.y).toBeCloseTo(2)
+    expect(arc.radius).toBeCloseTo(5)
+    expect(arc.startAngle).toBeCloseTo(0)
+    expect(arc.endAngle).toBeCloseTo(Math.PI / 2)
   })
 
   it('writes ARC center and angles in OCS for non-default extrusion', () => {

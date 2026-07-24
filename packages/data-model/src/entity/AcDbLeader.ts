@@ -837,6 +837,142 @@ export class AcDbLeader extends AcDbCurve {
     return this
   }
 
+  override dxfInFields(filer: AcDbDxfFiler): this {
+    super.dxfInFields(filer)
+    filer.atSubclassData('AcDbLeader')
+
+    this._vertices.length = 0
+    let pending: { x: number; y: number; z: number } | null = null
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
+    let hx = this.horizontalDirection.x
+    let hy = this.horizontalDirection.y
+    let hz = this.horizontalDirection.z
+    let obx = 0
+    let oby = 0
+    let obz = 0
+    let oax = 0
+    let oay = 0
+    let oaz = 0
+    let hasOffsetBlock = false
+    let hasOffsetAnno = false
+
+    const flushVertex = () => {
+      if (pending) {
+        this.appendVertex(pending)
+        pending = null
+      }
+    }
+
+    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+      const item = filer.readItem()
+      if (!item) break
+      const code = Number(item.code)
+      const n = Number(item.value)
+      switch (code) {
+        case 3:
+          this.dimensionStyle = String(item.value)
+          break
+        case 10:
+          flushVertex()
+          pending = { x: n, y: 0, z: 0 }
+          break
+        case 20:
+          if (pending) pending.y = n
+          break
+        case 30:
+          if (pending) pending.z = n
+          break
+        case 40:
+          this.textHeight = n
+          break
+        case 41:
+          this.textWidth = n
+          break
+        case 71:
+          this.hasArrowHead = n !== 0
+          break
+        case 72:
+          this.isSplined = n !== 0
+          break
+        case 73:
+          this.annoType = n as AcDbLeaderAnnotationType
+          break
+        case 74:
+          this.isHookLineSameDirection = n !== 0
+          break
+        case 75:
+          this.hasHookLine = n !== 0
+          break
+        case 76:
+          // Vertex count — informational.
+          break
+        case 77:
+          this.byBlockColor = n
+          break
+        case 210:
+          nx = n
+          break
+        case 220:
+          ny = n
+          break
+        case 230:
+          nz = n
+          break
+        case 211:
+          hx = n
+          break
+        case 221:
+          hy = n
+          break
+        case 231:
+          hz = n
+          break
+        case 212:
+          obx = n
+          hasOffsetBlock = true
+          break
+        case 222:
+          oby = n
+          hasOffsetBlock = true
+          break
+        case 232:
+          obz = n
+          hasOffsetBlock = true
+          break
+        case 213:
+          oax = n
+          hasOffsetAnno = true
+          break
+        case 223:
+          oay = n
+          hasOffsetAnno = true
+          break
+        case 233:
+          oaz = n
+          hasOffsetAnno = true
+          break
+        case 340:
+          this.associatedAnnotation = String(item.value)
+          break
+        default:
+          break
+      }
+    }
+
+    flushVertex()
+    this.normal = { x: nx, y: ny, z: nz }
+    this.horizontalDirection = { x: hx, y: hy, z: hz }
+    if (hasOffsetBlock) {
+      this.offsetFromBlock = { x: obx, y: oby, z: obz }
+    }
+    if (hasOffsetAnno) {
+      this.offsetFromAnnotation = { x: oax, y: oay, z: oaz }
+    }
+    return this
+  }
+
   /**
    * {@inheritDoc AcDbCurve.getOffsetCurves}
    *
@@ -897,3 +1033,4 @@ export class AcDbLeader extends AcDbCurve {
     )
   }
 }
+
