@@ -944,6 +944,12 @@ export class AcDbEntityConverter {
     }
     dbEntity.drawingDirection =
       mtext.drawingDirection as unknown as AcGiMTextFlowDirection
+    if (mtext.lineSpacing != null) {
+      dbEntity.lineSpacingFactor = mtext.lineSpacing
+    }
+    if (mtext.lineSpacingStyle != null) {
+      dbEntity.lineSpacingStyle = mtext.lineSpacingStyle
+    }
     const extentsWidth = this.readMTextExtentsWidth(mtext)
     if (extentsWidth != null && extentsWidth > 0) {
       dbEntity.extentsWidth = extentsWidth

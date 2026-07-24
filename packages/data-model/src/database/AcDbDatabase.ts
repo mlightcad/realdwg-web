@@ -817,6 +817,68 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Ends the outermost event batch, flushing `entityAppended` notifications in
+   * chunks so converters can report ENTITY progress while the viewer adds/renders.
+   *
+   * Nested batches still require matching {@link endEventBatch} /
+   * {@link endEventBatchChunked} calls; only the outermost close flushes.
+   *
+   * @param chunkSize - Max entities per `entityAppended` dispatch
+   * @param onChunk - Called after each chunk with `(flushed, total)`
+   */
+  async endEventBatchChunked(
+    chunkSize: number,
+    onChunk?: (flushed: number, total: number) => void | Promise<void>
+  ): Promise<void> {
+    if (this._eventBatchDepth <= 0) {
+      return
+    }
+    this._eventBatchDepth--
+    if (this._eventBatchDepth !== 0) {
+      return
+    }
+
+    this.transactionManager.flushPendingEntityModifiedEvents()
+    this.transactionManager.flushPendingLayerModifiedEvents()
+
+    const appended = this._pendingEntityAppended
+    this._pendingEntityAppended = []
+    const total = appended.length
+    const size = Math.max(1, chunkSize)
+
+    if (total === 0) {
+      this.flushEventBatchRemainder()
+      return
+    }
+
+    // Dispatch in chunks; if onChunk throws, still flush remaining appends and
+    // erase/dict queues so catch paths calling endEventBatch() are not needed.
+    let flushed = 0
+    try {
+      for (let i = 0; i < total; i += size) {
+        const end = Math.min(i + size, total)
+        const chunk = appended.slice(i, end)
+        this.events.entityAppended.dispatch({
+          database: this,
+          entity: chunk
+        })
+        flushed = end
+        if (onChunk) {
+          await onChunk(end, total)
+        }
+      }
+    } finally {
+      if (flushed < total) {
+        this.events.entityAppended.dispatch({
+          database: this,
+          entity: appended.slice(flushed)
+        })
+      }
+      this.flushEventBatchRemainder()
+    }
+  }
+
+  /**
    * Returns true when database events are being batched.
    */
   isEventBatched(): boolean {
@@ -908,6 +970,11 @@ export class AcDbDatabase extends AcDbObject {
       })
     }
 
+    this.flushEventBatchRemainder()
+  }
+
+  /** Flushes non-append batch queues (erase / dictionary) after entity appends. */
+  private flushEventBatchRemainder(): void {
     if (this._pendingEntityErased.length > 0) {
       const erased = this._pendingEntityErased
       this._pendingEntityErased = []
@@ -2195,7 +2262,7 @@ export class AcDbDatabase extends AcDbObject {
           ? (data as string[])
           : this.tables.textStyleTable.fonts
         try {
-          await options.fontLoader.load(fonts)
+          await this.loadFontsWithProgress(options.fontLoader, fonts, percentage)
         } catch (error) {
           if (options.failOnFontLoadError) {
             throw error
@@ -2218,6 +2285,40 @@ export class AcDbDatabase extends AcDbObject {
           })
         }
       }
+    }
+  }
+
+  /**
+   * Loads fonts while emitting FONT IN-PROGRESS so the open-file bar keeps
+   * moving during multi-font downloads (native DXF parses on the main thread
+   * and previously appeared stuck at the FONT stage).
+   */
+  private async loadFontsWithProgress(
+    fontLoader: AcDbFontLoader,
+    fonts: string[],
+    basePercentage: number
+  ): Promise<void> {
+    if (fonts.length <= 1) {
+      await fontLoader.load(fonts)
+      return
+    }
+
+    // Leave headroom before ENTITY (native converter starts ENTITY at 20%).
+    const span = Math.max(1, Math.min(5, 19 - basePercentage))
+    for (let i = 0; i < fonts.length; i++) {
+      await fontLoader.load([fonts[i]!])
+      const pct = Math.min(
+        19,
+        basePercentage + Math.round(((i + 1) / fonts.length) * span)
+      )
+      this.events.openProgress.dispatch({
+        database: this,
+        percentage: pct,
+        stage: 'CONVERSION',
+        subStage: 'FONT',
+        subStageStatus: 'IN-PROGRESS',
+        data: fonts
+      })
     }
   }
 

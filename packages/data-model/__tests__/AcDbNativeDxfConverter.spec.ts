@@ -20,7 +20,8 @@ import {
   AcDbSpline,
   AcDbTable,
   AcDbText,
-  AcDbXline
+  AcDbXline,
+  AcDb3dSolid
 } from '../src/entity'
 
 describe('AcDbNativeDxfConverter', () => {
@@ -2174,7 +2175,7 @@ describe('AcDbNativeDxfConverter', () => {
       }
     })
 
-    expect(stages).toEqual([
+    expect(stages.filter(s => !s.endsWith(':IN-PROGRESS'))).toEqual([
       'START:START',
       'PARSE:START',
       'PARSE:END',
@@ -2188,6 +2189,84 @@ describe('AcDbNativeDxfConverter', () => {
 
     const style = db.tables.textStyleTable.getAt('标准')
     expect(style?.fileName).toBe('SimSun')
+  })
+
+  it('emits PARSE IN-PROGRESS while streaming entities', async () => {
+    const lines = [
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES'
+    ]
+    for (let i = 0; i < 40; i++) {
+      lines.push(
+        '0',
+        'LINE',
+        '5',
+        (0x100 + i).toString(16).toUpperCase(),
+        '100',
+        'AcDbEntity',
+        '8',
+        '0',
+        '100',
+        'AcDbLine',
+        '10',
+        String(i),
+        '20',
+        '0',
+        '30',
+        '0',
+        '11',
+        String(i + 1),
+        '20',
+        '1',
+        '30',
+        '0'
+      )
+    }
+    lines.push('0', 'ENDSEC', '0', 'EOF')
+
+    const stages: string[] = []
+    const percentages: number[] = []
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const converter = new AcDbNativeDxfConverter()
+    const buffer = new TextEncoder().encode(lines.join('\n')).buffer
+    await converter.read(buffer, db, 5, async (pct, stage, status) => {
+      stages.push(`${stage}:${status}`)
+      percentages.push(pct)
+    })
+
+    expect(stages).toContain('PARSE:IN-PROGRESS')
+    expect(stages).toContain('ENTITY:IN-PROGRESS')
+    expect(stages.filter(s => !s.endsWith(':IN-PROGRESS'))).toEqual([
+      'START:START',
+      'PARSE:START',
+      'PARSE:END',
+      'FONT:START',
+      'FONT:END',
+      'ENTITY:START',
+      'ENTITY:END',
+      'END:END'
+    ])
+    const parseProgressPcts = percentages.filter(
+      (_, i) => stages[i] === 'PARSE:IN-PROGRESS'
+    )
+    expect(parseProgressPcts.length).toBeGreaterThan(0)
+    for (const pct of parseProgressPcts) {
+      expect(pct).toBeLessThan(12)
+    }
+    for (let i = 1; i < parseProgressPcts.length; i++) {
+      expect(parseProgressPcts[i]!).toBeGreaterThanOrEqual(parseProgressPcts[i - 1]!)
+    }
+    const entityProgressPcts = percentages.filter(
+      (_, i) => stages[i] === 'ENTITY:IN-PROGRESS'
+    )
+    expect(entityProgressPcts.length).toBeGreaterThan(0)
+    expect(entityProgressPcts[0]!).toBeGreaterThanOrEqual(20)
+    expect(entityProgressPcts[entityProgressPcts.length - 1]!).toBeLessThanOrEqual(98)
   })
 
   it('does not count SEQEND as an unknown entity', async () => {
@@ -2432,5 +2511,114 @@ describe('AcDbNativeDxfConverter', () => {
     const result = await reader.read(AcDbDxfFiler.fromString(dxf))
     expect(result.unknownObjectCount).toBe(1)
     expect(result.unknownEntityCount).toBe(0)
+  })
+
+  it('attaches ACDSDATA ASM_Data SAB bytes to matching 3DSOLID entities', async () => {
+    // Hex for ASCII "ACIS BinaryFile...." — enough to verify ownership wiring.
+    const sabHex = '414349532042696E61727946696C65'
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      '3DSOLID',
+      '5',
+      '7E9',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbModelerGeometry',
+      '290',
+      '0',
+      '2',
+      '{00000000-0000-0000-0000-000000000000}',
+      '100',
+      'AcDb3dSolid',
+      '350',
+      '100',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'ACDSDATA',
+      '0',
+      'ACDSRECORD',
+      '320',
+      '7E9',
+      '2',
+      'ASM_Data',
+      '310',
+      sabHex,
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
+      ''
+    ].join('\n')
+
+    const converter = new AcDbNativeDxfConverter()
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    await converter.read(new TextEncoder().encode(dxf).buffer, db, 50)
+
+    const solids = [...db.tables.blockTable.modelSpace.newIterator()].filter(
+      e => e instanceof AcDb3dSolid
+    )
+    expect(solids).toHaveLength(1)
+    const solid = solids[0] as AcDb3dSolid
+    expect(solid.historyObjectSoftId).toBe('100')
+    expect(solid.guid).toBe('{00000000-0000-0000-0000-000000000000}')
+    expect(solid.sabBytes).toBeDefined()
+    expect(String.fromCharCode(...solid.sabBytes!.subarray(0, 4))).toBe('ACIS')
+  })
+
+  it('decrypts obfuscated inline ACIS SAT groups 1/3 on 3DSOLID', async () => {
+    const { acdbDecryptAcisData } = await import('../src/acis')
+    const plain = 'point $-1 1 2 3 #'
+    const encrypted = acdbDecryptAcisData(plain) // involution
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      '3DSOLID',
+      '5',
+      'A1',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbModelerGeometry',
+      '70',
+      '400',
+      '1',
+      encrypted,
+      '100',
+      'AcDb3dSolid',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
+      ''
+    ].join('\n')
+
+    const converter = new AcDbNativeDxfConverter()
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    await converter.read(new TextEncoder().encode(dxf).buffer, db, 50)
+
+    const solid = [...db.tables.blockTable.modelSpace.newIterator()].find(
+      e => e instanceof AcDb3dSolid
+    ) as AcDb3dSolid
+    expect(solid).toBeDefined()
+    expect(solid.version).toBe(400)
+    expect(solid.acisData).toContain('point $-1 1 2 3')
+    expect(solid.hasRenderableGeometry).toBe(true)
   })
 })
