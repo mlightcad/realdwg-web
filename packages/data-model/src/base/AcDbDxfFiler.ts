@@ -256,6 +256,17 @@ export class AcDbDxfFiler {
   }
 
   /**
+   * Current read position in the underlying pair stream.
+   * Useful for byte-based parse progress while streaming a DXF.
+   */
+  position(): { line?: number; byteOffset: number } {
+    if (this._mode !== 'read' || !this._reader) {
+      return { byteOffset: 0 }
+    }
+    return this._reader.position()
+  }
+
+  /**
    * True if the next pair starts a new object (group code 0) or EOF.
    * Does not consume the pair.
    */

@@ -3,6 +3,14 @@
  *
  * @packageDocumentation
  */
+export {
+  acdbAppendAcisPayloadFragment,
+  acdbDecryptAcisData,
+  acdbIsEncryptedAcisData,
+  acdbJoinAcisObjectChunks,
+  acdbJoinAcisPayloadLines,
+  acdbNormalizeAcisData
+} from './AcDbAcisDecrypt'
 export { acdbParseAcisSab, AcDbAcisSabTag } from './AcDbAcisSab'
 export type {
   AcDbAcisSabData,

@@ -9,7 +9,6 @@ import {
 } from '../database/AcDbBlockTableRecord'
 import type { AcDbClass } from '../database/AcDbClass'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
-import type { AcDbConversionProgressCallback } from '../database/AcDbDatabaseConverter'
 import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord'
 import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
 import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord'
@@ -18,11 +17,16 @@ import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord'
 import { AcDbUcsTableRecord } from '../database/AcDbUcsTableRecord'
 import { AcDbViewportTableRecord } from '../database/AcDbViewportTableRecord'
 import { AcDbViewTableRecord } from '../database/AcDbViewTableRecord'
+import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbAttribute } from '../entity/AcDbAttribute'
 import { AcDbBlockReference } from '../entity/AcDbBlockReference'
 import type { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbMText } from '../entity/AcDbMText'
 import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic'
+import {
+  acdbDxfInAcdsData,
+  acdbNormalizeDxfHandle
+} from './AcDbDxfAcdsDataReader'
 import { acdbDxfInEntity } from './AcDbDxfEntityFactory'
 import { acdbDxfInHeader } from './AcDbDxfHeaderReader'
 import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader'
@@ -30,7 +34,13 @@ import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader'
 export interface AcDbDxfDocumentReaderOptions {
   /** Yield to the event loop every N entities (keeps UI responsive). */
   entityBatchSize?: number
-  progress?: AcDbConversionProgressCallback
+  /**
+   * Called with approximate parse completion in `[0, 1]` based on byte
+   * offset. Used by the native converter to emit mid-PARSE progress.
+   */
+  onProgress?: (ratio: number) => void | Promise<void>
+  /** Total DXF byte length for {@link onProgress}. */
+  totalBytes?: number
 }
 
 export interface AcDbDxfDocumentReaderResult {
@@ -113,37 +123,78 @@ export class AcDbDxfDocumentReader {
   private async readSection(filer: AcDbDxfFiler, section: string) {
     switch (section) {
       case 'HEADER':
-        await this.notify('HEADER', 'START')
         acdbDxfInHeader(filer, this._db)
-        await this.notify('HEADER', 'END')
+        await this.reportParseProgress(filer)
         break
       case 'CLASSES':
         this.readClassesSection(filer)
+        await this.reportParseProgress(filer)
         break
       case 'TABLES':
-        await this.readTablesSection(filer)
+        this.readTablesSection(filer)
+        await this.reportParseProgress(filer)
         break
       case 'BLOCKS':
         await this.readBlocksSection(filer)
+        await this.reportParseProgress(filer)
         break
       case 'ENTITIES':
         await this.readEntitiesSection(filer)
+        await this.reportParseProgress(filer)
         break
       case 'OBJECTS':
-        await this.notify('OBJECT', 'START')
         {
           const objectsReader = new AcDbDxfObjectsReader(this._db)
           objectsReader.read(filer)
           this._unknownObjectCount += objectsReader.unknownObjectCount
         }
-        await this.notify('OBJECT', 'END')
+        await this.reportParseProgress(filer)
+        break
+      case 'ACDSDATA':
+        this.applyAcdsDataToSolids(acdbDxfInAcdsData(filer))
+        await this.reportParseProgress(filer)
         break
       case 'THUMBNAILIMAGE':
         this.readThumbnailImageSection(filer)
+        await this.reportParseProgress(filer)
         break
       default:
         this.skipUntilEndSec(filer)
+        await this.reportParseProgress(filer)
         break
+    }
+  }
+
+  /**
+   * Attaches ACDSDATA `ASM_Data` SAB payloads to matching {@link AcDb3dSolid}
+   * entities (keyed by entity handle / group 5).
+   *
+   * Modern DXF files often store 3DSOLID geometry only in ACDSDATA rather than
+   * inline encrypted SAT groups 1/3 — without this step solids render empty.
+   */
+  private applyAcdsDataToSolids(section: {
+    byOwnerHandle: Record<string, Uint8Array>
+  }): void {
+    const ownerHandles = Object.keys(section.byOwnerHandle)
+    if (ownerHandles.length === 0) return
+
+    // Build a handle → solid map once (handles may differ in case from DXF).
+    const solidsByHandle = new Map<string, AcDb3dSolid>()
+    for (const btr of this._db.tables.blockTable.newIterator()) {
+      for (const entity of btr.newIterator()) {
+        if (entity instanceof AcDb3dSolid) {
+          solidsByHandle.set(acdbNormalizeDxfHandle(entity.objectId), entity)
+        }
+      }
+    }
+
+    for (const ownerHandle of ownerHandles) {
+      const sabBytes = section.byOwnerHandle[ownerHandle]
+      if (!sabBytes) continue
+      const solid = solidsByHandle.get(acdbNormalizeDxfHandle(ownerHandle))
+      if (solid) {
+        solid.setSabBytes(sabBytes)
+      }
     }
   }
 
@@ -260,7 +311,7 @@ export class AcDbDxfDocumentReader {
     return result
   }
 
-  private async readTablesSection(filer: AcDbDxfFiler) {
+  private readTablesSection(filer: AcDbDxfFiler) {
     while (!filer.atEof) {
       const item = filer.peekItem()
       if (!item) break
@@ -277,7 +328,7 @@ export class AcDbDxfDocumentReader {
       if (name === 'TABLE') {
         filer.readItem()
         const tableName = this.readTableName(filer)
-        await this.readTable(filer, tableName)
+        this.readTable(filer, tableName)
         continue
       }
 
@@ -301,17 +352,14 @@ export class AcDbDxfDocumentReader {
     return ''
   }
 
-  private async readTable(filer: AcDbDxfFiler, tableName: string) {
+  private readTable(filer: AcDbDxfFiler, tableName: string) {
     switch (tableName) {
       case 'LAYER':
-        await this.notify('LAYER', 'START')
         this.readNamedTable(filer, 'LAYER', () => new AcDbLayerTableRecord(), r => {
           if (r.name) this._db.tables.layerTable.add(r)
         })
-        await this.notify('LAYER', 'END')
         break
       case 'LTYPE':
-        await this.notify('LTYPE', 'START')
         this.readNamedTable(
           filer,
           'LTYPE',
@@ -320,10 +368,8 @@ export class AcDbDxfDocumentReader {
             if (r.name) this._db.tables.linetypeTable.add(r)
           }
         )
-        await this.notify('LTYPE', 'END')
         break
       case 'STYLE':
-        await this.notify('STYLE', 'START')
         this.readNamedTable(
           filer,
           'STYLE',
@@ -334,10 +380,8 @@ export class AcDbDxfDocumentReader {
             this.collectFontFromStyleRecord(r)
           }
         )
-        await this.notify('STYLE', 'END')
         break
       case 'DIMSTYLE':
-        await this.notify('DIMSTYLE', 'START')
         this.readNamedTable(
           filer,
           'DIMSTYLE',
@@ -346,10 +390,8 @@ export class AcDbDxfDocumentReader {
             if (r.name) this._db.tables.dimStyleTable.add(r)
           }
         )
-        await this.notify('DIMSTYLE', 'END')
         break
       case 'VPORT':
-        await this.notify('VPORT', 'START')
         this.readNamedTable(
           filer,
           'VPORT',
@@ -358,7 +400,6 @@ export class AcDbDxfDocumentReader {
             if (r.name) this._db.tables.viewportTable.add(r)
           }
         )
-        await this.notify('VPORT', 'END')
         break
       case 'APPID':
         this.readNamedTable(
@@ -391,9 +432,7 @@ export class AcDbDxfDocumentReader {
         )
         break
       case 'BLOCK_RECORD':
-        await this.notify('BLOCK_RECORD', 'START')
         this.readBlockRecordTable(filer)
-        await this.notify('BLOCK_RECORD', 'END')
         break
       default:
         this.skipUntilEndTab(filer)
@@ -488,7 +527,6 @@ export class AcDbDxfDocumentReader {
   }
 
   private async readBlocksSection(filer: AcDbDxfFiler) {
-    await this.notify('BLOCK', 'START')
     const batchSize = Math.max(1, this._options.entityBatchSize ?? 200)
     let sinceYield = 0
 
@@ -519,8 +557,6 @@ export class AcDbDxfDocumentReader {
       filer.readItem()
       filer.skipToEndOfObject()
     }
-
-    await this.notify('BLOCK', 'END')
   }
 
   /**
@@ -559,7 +595,7 @@ export class AcDbDxfDocumentReader {
         sinceYield += 1
         if (sinceYield >= batchSize) {
           sinceYield = 0
-          await Promise.resolve()
+          await this.yieldAndReportProgress(filer)
         }
         continue
       }
@@ -579,7 +615,7 @@ export class AcDbDxfDocumentReader {
       sinceYield += 1
       if (sinceYield >= batchSize) {
         sinceYield = 0
-        await Promise.resolve()
+        await this.yieldAndReportProgress(filer)
       }
     }
 
@@ -704,7 +740,6 @@ export class AcDbDxfDocumentReader {
   }
 
   private async readEntitiesSection(filer: AcDbDxfFiler) {
-    await this.notify('ENTITY', 'START')
     const batchSize = Math.max(1, this._options.entityBatchSize ?? 200)
     let sinceYield = 0
     const modelSpace = this._db.tables.blockTable.modelSpace
@@ -729,7 +764,7 @@ export class AcDbDxfDocumentReader {
         sinceYield += 1
         if (sinceYield >= batchSize) {
           sinceYield = 0
-          await Promise.resolve()
+          await this.yieldAndReportProgress(filer)
         }
         continue
       }
@@ -745,11 +780,9 @@ export class AcDbDxfDocumentReader {
       sinceYield += 1
       if (sinceYield >= batchSize) {
         sinceYield = 0
-        await Promise.resolve()
+        await this.yieldAndReportProgress(filer)
       }
     }
-
-    await this.notify('ENTITY', 'END')
   }
 
   /**
@@ -917,13 +950,37 @@ export class AcDbDxfDocumentReader {
     }
   }
 
-  private async notify(
-    stage: Parameters<AcDbConversionProgressCallback>[1],
-    status: Parameters<AcDbConversionProgressCallback>[2],
-    data?: unknown
-  ) {
-    const progress = this._options.progress
-    if (!progress) return
-    await progress(0, stage, status, data)
+  private async reportParseProgress(filer: AcDbDxfFiler) {
+    const { onProgress, totalBytes } = this._options
+    if (!onProgress || !totalBytes || totalBytes <= 0) return
+    const ratio = Math.min(1, Math.max(0, filer.position().byteOffset / totalBytes))
+    await onProgress(ratio)
+  }
+
+  /**
+   * Yields to the browser so loading overlays can paint/animate.
+   * `Promise.resolve()` alone stays on the microtask queue and does not paint.
+   */
+  private yieldToUi(): Promise<void> {
+    return new Promise(resolve => {
+      if (
+        typeof globalThis !== 'undefined' &&
+        typeof (globalThis as { requestAnimationFrame?: unknown })
+          .requestAnimationFrame === 'function'
+      ) {
+        ;(
+          globalThis as unknown as {
+            requestAnimationFrame: (cb: () => void) => number
+          }
+        ).requestAnimationFrame(() => resolve())
+      } else {
+        setTimeout(resolve, 0)
+      }
+    })
+  }
+
+  private async yieldAndReportProgress(filer: AcDbDxfFiler) {
+    await this.reportParseProgress(filer)
+    await this.yieldToUi()
   }
 }

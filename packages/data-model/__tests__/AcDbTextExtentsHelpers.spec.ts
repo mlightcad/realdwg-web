@@ -75,9 +75,14 @@ describe('AcDbTextExtentsHelpers', () => {
     })
 
     it('adds inter-line spacing for multiple lines', () => {
-      expect(acdbEstimateMTextHeight(2, 2, 1)).toBeCloseTo(4)
-      expect(acdbEstimateMTextHeight(2, 2, 0.25)).toBeCloseTo(2.5)
-      expect(acdbEstimateMTextHeight(3, 2, 1.5)).toBeCloseTo(8)
+      // Baseline distance = factor × (5/3) × textHeight
+      expect(acdbEstimateMTextHeight(2, 2, 1)).toBeCloseTo(2 + (5 / 3) * 2)
+      expect(acdbEstimateMTextHeight(2, 2, 0.25)).toBeCloseTo(
+        2 + 0.25 * (5 / 3) * 2
+      )
+      expect(acdbEstimateMTextHeight(3, 2, 1.5)).toBeCloseTo(
+        2 + 2 * 1.5 * (5 / 3) * 2
+      )
     })
   })
 

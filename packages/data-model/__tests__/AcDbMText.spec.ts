@@ -95,7 +95,7 @@ describe('AcDbMText', () => {
     mtext.lineSpacingFactor = 1
     mtext.location = { x: 0, y: 0, z: 0 }
 
-    expect(mtext.geometricExtents.min.y).toBeCloseTo(-4)
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(-(2 + (5 / 3) * 2))
     expect(mtext.geometricExtents.max.y).toBeCloseTo(0)
   })
 

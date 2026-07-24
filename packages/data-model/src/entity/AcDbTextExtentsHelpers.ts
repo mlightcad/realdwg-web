@@ -101,8 +101,8 @@ export function acdbCountMTextLines(text: string): number {
 /**
  * Estimates total MTEXT height from line count and line-spacing factor.
  *
- * Line spacing factor multiplies text height to get the distance between
- * consecutive line baselines (AutoCAD DXF group 44 semantics).
+ * Uses AutoCAD DXF group-44 semantics: baseline-to-baseline distance is
+ * `lineSpacingFactor × (5/3) × textHeight`.
  */
 export function acdbEstimateMTextHeight(
   lineCount: number,
@@ -112,24 +112,8 @@ export function acdbEstimateMTextHeight(
   if (textHeight <= 0 || lineCount <= 0) return 0
   if (lineCount === 1) return textHeight
 
-  const spacing = Math.max(lineSpacingFactor, 0)
+  const spacing = Math.max(lineSpacingFactor, 0) * (5 / 3)
   return textHeight + (lineCount - 1) * textHeight * spacing
-}
-
-/**
- * Converts AutoCAD DXF group-44 line spacing factor to the gap factor expected
- * by `@mlightcad/mtext-renderer`.
- *
- * AutoCAD: baseline distance = `factor × (5/3) × textHeight`
- * (factor is a multiple of default 3-on-5 single-line spacing).
- *
- * Renderer: `lineHeight ≈ textHeight × (1 + gapFactor × 5/3)`
- *
- * Therefore `gapFactor = factor - 3/5`.
- */
-export function acdbMTextRendererLineSpaceFactor(dxfFactor: number): number {
-  if (!Number.isFinite(dxfFactor)) return 0
-  return Math.max(0, dxfFactor - 0.6)
 }
 
 interface LocalBounds {

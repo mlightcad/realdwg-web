@@ -7,7 +7,9 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import {
   acdbAcisWireframeSegmentsFromSab,
-  acdbAcisWireframeSegmentsFromSatText
+  acdbAcisWireframeSegmentsFromSatText,
+  acdbAppendAcisPayloadFragment,
+  acdbJoinAcisPayloadLines
 } from '../acis'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
@@ -158,6 +160,8 @@ export class AcDb3dSolid extends AcDbEntity {
 
   /** Raw ACIS SAT text preserved for DXF round-trip and future B-rep parsing. */
   private _acisData: string
+  /** Binary SAB/ASM payload from ACDSDATA, when present. */
+  private _sabBytes?: Uint8Array
   /** DXF group 70 ACIS version number, when present. */
   private _version?: number
   /** Soft-pointer to ACSH history object (DXF group 350). */
@@ -167,9 +171,9 @@ export class AcDb3dSolid extends AcDbEntity {
   /** Whether the ASM/ACIS payload uses SAT text caching (DXF group 290). */
   private _satCache?: boolean
   /** Vertex positions used for extents and fallback bounding-box rendering. */
-  private _points: AcGePoint3d[]
+  private _points: AcGePoint3d[] = []
   /** Line-segment endpoint pairs for wireframe rendering (`[x,y,z,...]`). */
-  private _wireframe: Float32Array
+  private _wireframe: Float32Array = new Float32Array(0)
 
   /**
    * Creates a new 3D solid entity from raw ACIS data.
@@ -191,22 +195,9 @@ export class AcDb3dSolid extends AcDbEntity {
     super()
     const payload = resolveSolidPayload(acisDataOrOptions, version)
     this._acisData = payload.satText
+    this._sabBytes = payload.sabBytes
     this._version = payload.version
-
-    let wireframe = new Float32Array(0)
-    if (payload.sabBytes && payload.sabBytes.length > 0) {
-      wireframe = acdbAcisWireframeSegmentsFromSab(payload.sabBytes) ?? new Float32Array(0)
-    }
-    if (wireframe.length === 0 && payload.satText) {
-      wireframe = acdbAcisWireframeSegmentsFromSatText(payload.satText)
-    }
-    this._wireframe = wireframe
-
-    if (wireframe.length > 0) {
-      this._points = pointsFromWireframe(wireframe)
-    } else {
-      this._points = extractAcisPointCloud(payload.satText)
-    }
+    this.rebuildGeometryCaches()
   }
 
   /**
@@ -264,12 +255,42 @@ export class AcDb3dSolid extends AcDbEntity {
     if (version != null) {
       this._version = version
     }
-    this._wireframe = this._acisData
-      ? acdbAcisWireframeSegmentsFromSatText(this._acisData)
-      : new Float32Array(0)
+    this.rebuildGeometryCaches()
+  }
+
+  /**
+   * Attaches binary SAB/ASM bytes (typically from ACDSDATA) and rebuilds
+   * wireframe / point caches. Preferred over SAT text when both are present.
+   *
+   * @param sabBytes - Raw ASM_Data payload for this solid.
+   */
+  setSabBytes(sabBytes: Uint8Array | undefined) {
+    this._sabBytes =
+      sabBytes && sabBytes.length > 0 ? sabBytes : undefined
+    this.rebuildGeometryCaches()
+  }
+
+  /** Binary SAB/ASM payload attached via ACDSDATA or construction options. */
+  get sabBytes(): Uint8Array | undefined {
+    return this._sabBytes
+  }
+
+  /**
+   * Rebuilds `_wireframe` / `_points` from SAB bytes (preferred) or SAT text.
+   */
+  private rebuildGeometryCaches() {
+    let wireframe = new Float32Array(0)
+    if (this._sabBytes && this._sabBytes.length > 0) {
+      wireframe =
+        acdbAcisWireframeSegmentsFromSab(this._sabBytes) ?? new Float32Array(0)
+    }
+    if (wireframe.length === 0 && this._acisData) {
+      wireframe = acdbAcisWireframeSegmentsFromSatText(this._acisData)
+    }
+    this._wireframe = wireframe
     this._points =
-      this._wireframe.length > 0
-        ? pointsFromWireframe(this._wireframe)
+      wireframe.length > 0
+        ? pointsFromWireframe(wireframe)
         : extractAcisPointCloud(this._acisData)
   }
 
@@ -400,20 +421,39 @@ export class AcDb3dSolid extends AcDbEntity {
 
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
-    filer.atSubclassData('AcDb3dSolid')
 
-    const chunks: string[] = []
+    // DXF order: AcDbModelerGeometry (version + SAT chunks) then AcDb3dSolid
+    // (history / guid / satCache). Consume both subclass markers when present.
+    filer.atSubclassData('AcDbModelerGeometry')
+
+    const lines: string[] = []
     let version = this._version
 
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
-      const item = filer.readItem()
+      const item = filer.peekItem()
       if (!item) break
       const code = Number(item.code)
+
+      // Nested subclass marker for AcDb3dSolid — consume and continue.
+      if (code === 100) {
+        filer.readItem()
+        const marker = String(item.value)
+        if (marker === 'AcDb3dSolid') {
+          continue
+        }
+        // Unknown subclass — push back and stop so callers can handle it.
+        filer.pushBackItem(item)
+        break
+      }
+
+      filer.readItem()
       const n = Number(item.value)
       switch (code) {
         case 1:
+          acdbAppendAcisPayloadFragment(lines, 1, String(item.value))
+          break
         case 3:
-          chunks.push(String(item.value))
+          acdbAppendAcisPayloadFragment(lines, 3, String(item.value))
           break
         case 70:
           version = n
@@ -432,7 +472,8 @@ export class AcDb3dSolid extends AcDbEntity {
       }
     }
 
-    this.setAcisData(chunks.join('\n'), version)
+    // Decrypt obfuscated SAT fragments (DXF groups 1/3) the same way dxf-json does.
+    this.setAcisData(acdbJoinAcisPayloadLines(lines), version)
     return this
   }
 }

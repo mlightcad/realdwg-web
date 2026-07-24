@@ -127,7 +127,7 @@ export class AcDbMText extends AcDbEntity {
     this._height = 0
     this._width = 0
     this._extentsWidth = 0
-    this._lineSpacingFactor = 0.25
+    this._lineSpacingFactor = 1.0
     this._lineSpacingStyle = 0
     this._backgroundFill = false
     this._backgroundFillColor = 0xc8c8c8
@@ -271,7 +271,10 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
-   * The line spacing factor (a value between 0.25 and 4.00).
+   * The line spacing factor (DXF group 44).
+   *
+   * Ratio of actual baseline spacing to AutoCAD single spacing
+   * (`5/3` of text height). Valid range is typically 0.25–4.00; default is 1.0.
    */
   get lineSpacingFactor() {
     return this._lineSpacingFactor
@@ -909,12 +912,7 @@ export class AcDbMText extends AcDbEntity {
           // Vertical character height — documented as unused by AutoCAD; skip.
           break
         case 44:
-          // DXF group 44 is AutoCAD's "multiple of 3-on-5" line spacing (~1.0).
-          // AcDbMText.lineSpacingFactor is passed straight to mtext-renderer as a
-          // gap coefficient (ctor default 0.25). Applying group 44 here makes
-          // multi-line MTEXT far too tall. dxf-json convertMText also never
-          // copied this field. Keep the renderer-compatible default until the
-          // renderer accepts AutoCAD group-44 semantics.
+          this.lineSpacingFactor = n
           break
         case 45:
           this.backgroundScaleFactor = n
