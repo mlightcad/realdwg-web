@@ -723,7 +723,7 @@ export class AcDbDxfDocumentReader {
     }
 
     btr.origin.copy(header.origin)
-    let flags = header.flags
+    let flags = AcDbBlockTableRecord.sanitizeImportedFlags(header.flags)
     if (header.pathName) {
       btr.pathName = header.pathName
       if (

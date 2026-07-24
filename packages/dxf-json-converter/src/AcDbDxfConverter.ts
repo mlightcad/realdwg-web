@@ -441,7 +441,11 @@ export class AcDbDxfConverter extends AcDbDatabaseConverter<ParsedDxf> {
       // processBlockTables may create the record first without a base point.
       // Always sync origin from the BLOCKS section before expanding entities.
       dbBlock.origin.copy(block.position)
-      const blockFlags = block.type ?? 0
+      // Strip AutoCAD-internal Resolved/Referenced bits — converters do not bind
+      // xref geometry, and AutoCAD often writes Resolved on attached xrefs.
+      const blockFlags = AcDbBlockTableRecord.sanitizeImportedFlags(
+        block.type ?? 0
+      )
       dbBlock.flags = blockFlags
       if (block.xrefPath) {
         dbBlock.pathName = block.xrefPath

@@ -877,6 +877,75 @@ describe('AcDbNativeDxfConverter', () => {
     expect(xref).toBeDefined()
     expect(xref!.pathName).toBe('C:\\refs\\other.dwg')
     expect(xref!.flags & AcDbBlockTableRecordFlag.Xref).toBeTruthy()
+    expect(xref!.isUnresolvedXref).toBe(true)
+  })
+
+  it('treats AutoCAD Resolved xref blocks (flag 36) as unresolved', async () => {
+    // Matches attached xrefs written by AutoCAD: empty BLOCK, path on code 1,
+    // flags = Xref|Resolved (36). Geometry is not bound into the host file.
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'BLOCKS',
+      '0',
+      'BLOCK',
+      '5',
+      '298',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbBlockBegin',
+      '2',
+      'xref1',
+      '70',
+      '36',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '30',
+      '0.0',
+      '3',
+      'xref1',
+      '1',
+      '.\\xref1.dwg',
+      '0',
+      'ENDBLK',
+      '5',
+      '299',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbBlockEnd',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
+      ''
+    ].join('\n')
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const converter = new AcDbNativeDxfConverter()
+    const buffer = new TextEncoder().encode(dxf).buffer
+    await converter.read(buffer, db, 50)
+
+    const xref = db.tables.blockTable.getAt('xref1')
+    expect(xref).toBeDefined()
+    expect(xref!.pathName).toBe('.\\xref1.dwg')
+    expect(xref!.isXref).toBe(true)
+    expect(xref!.flags & AcDbBlockTableRecordFlag.Resolved).toBe(0)
+    expect(xref!.isUnresolvedXref).toBe(true)
+    expect(db.tables.blockTable.getUnresolvedXrefs().map(b => b.name)).toEqual([
+      'xref1'
+    ])
   })
 
   it('streams OBJECTS layouts, imagedefs, styles, and ATTRIB→INSERT linking', async () => {
