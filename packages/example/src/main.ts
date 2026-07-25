@@ -124,9 +124,9 @@ const patParser = new AcDbPatParser()
 /**
  * Registers the DWG database converter with the global converter manager.
  *
- * DXF already defaults to AcDbNativeDxfConverter when `@mlightcad/data-model`
- * is imported. DWG still needs an explicit converter (LibreDWG worker for license
- * isolation). Registration failures are logged but do not throw.
+ * DXF already defaults to AcDbNativeDxfConverter, which the converter manager
+ * registers automatically. DWG still needs an explicit converter (LibreDWG worker
+ * for license isolation). Registration failures are logged but do not throw.
  */
 const registerConverters = () => {
   try {

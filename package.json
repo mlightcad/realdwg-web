@@ -24,6 +24,7 @@
     "lint:fix": "nx run-many -t lint:fix",
     "publish:package": "pnpm -r publish --access public --no-git-checks",
     "release": "node tools/release.mjs",
+    "setup:private": "node tools/setup-private-packages.mjs",
     "sync:versions": "node tools/sync-versions.mjs",
     "sync:versions:check": "node tools/sync-versions.mjs --check",
     "test": "jest",
@@ -59,7 +60,7 @@
     "typedoc": "^0.27.4",
     "typescript": "^5.5.2",
     "typescript-eslint": "^8.4.0",
-    "vite": "^6.4.3",
+    "vite": "6.4.3",
     "vite-plugin-strip-comments": "^0.0.10"
   },
   "lint-staged": {

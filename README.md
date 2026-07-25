@@ -207,6 +207,40 @@ The key classes in this module are as follows.
 - AcGiRenderer: Interface used to render entities to drawble objects.
 - ...
 
+## Private packages (maintainers)
+
+`@mlightcad/dwg-converter` is **not** part of this public repository and is never
+built or published by public GitHub CI. Maintainers who need it locally can clone
+it into the workspace:
+
+```bash
+pnpm setup:private
+pnpm install
+pnpm --filter @mlightcad/dwg-converter build
+```
+
+Override the clone URL with `DWG_CONVERTER_REPO_URL` if needed. The directory
+`packages/dwg-converter` is gitignored so it cannot be committed here. Local
+`pnpm install` may temporarily add that package to `pnpm-lock.yaml` — **do not
+commit** those lockfile changes; public CI must keep a lockfile without it.
+
+**Customers** install the same package from GitHub Packages (not public npm). Do
+not point the whole `@mlightcad` scope at GitHub Packages—only authenticate, then
+install with an explicit registry:
+
+```ini
+# .npmrc
+registry=https://registry.npmjs.org/
+//npm.pkg.github.com/:_authToken=${GITHUB_TOKEN}
+```
+
+```bash
+pnpm add @mlightcad/data-model
+pnpm add @mlightcad/dwg-converter --registry https://npm.pkg.github.com
+```
+
+Publishing `@mlightcad/dwg-converter` happens only from its private repository CI.
+
 ## Contributing
 
 Contributions are welcome! Please open issues or pull requests for bug fixes, new features, or suggestions. For bug reports, providing a link to the problematic drawing will help in reproducing and fixing the issue.

@@ -2,6 +2,7 @@ import {
   AcDbDatabaseConverterManager,
   AcDbFileType
 } from '../src/database/AcDbDatabaseConverterManager'
+import { AcDbNativeDxfConverter } from '../src/dxf/AcDbNativeDxfConverter'
 
 describe('AcDbDatabaseConverterManager', () => {
   it('creates a singleton instance', () => {
@@ -9,8 +10,13 @@ describe('AcDbDatabaseConverterManager', () => {
     expect(AcDbDatabaseConverterManager.createInstance()).toBe(manager)
   })
 
+  it('registers a native DXF converter by default', () => {
+    const manager = AcDbDatabaseConverterManager.instance
+    expect(manager.get(AcDbFileType.DXF)).toBeInstanceOf(AcDbNativeDxfConverter)
+  })
+
   it('replaces a DXF converter when register is called again', () => {
-    // Mirrors production: data-model registers AcDbNativeDxfConverter by default,
+    // Mirrors production: the manager registers AcDbNativeDxfConverter by default,
     // then apps may replace it (e.g. with AcDbDxfConverter from dxf-json-converter).
     const manager = AcDbDatabaseConverterManager.instance
     const nativeDefault = { read: jest.fn(), name: 'native' } as any

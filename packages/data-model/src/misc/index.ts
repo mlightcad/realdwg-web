@@ -59,6 +59,11 @@ export type {
 } from './AcDbMemoryEstimator'
 export { AcDbObjectIterator } from './AcDbObjectIterator'
 export {
+  ACDB_OLE2FRAME_GEOMETRY_HEADER_SIZE,
+  acdbParseOle2FrameGeometryHeader
+} from './AcDbOle2FrameGeometry'
+export type { AcDbOle2FrameGeometryHeader } from './AcDbOle2FrameGeometry'
+export {
   AcDbOsnapMode,
   acdbHasOsnapMode,
   acdbMaskToOsnapModes,

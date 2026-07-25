@@ -1,5 +1,6 @@
 import { AcCmEventManager } from '@mlightcad/common'
 
+import { AcDbNativeDxfConverter } from '../dxf/AcDbNativeDxfConverter'
 import { AcDbDatabaseConverter } from './AcDbDatabaseConverter'
 
 /**
@@ -39,8 +40,9 @@ export interface AcDbDatabaseConverterManagerEventArgs {
  * for a given file type. It implements the singleton pattern and provides
  * event notifications when converters are registered or unregistered.
  *
- * Importing `@mlightcad/data-model` registers a native DXF converter
- * (`AcDbNativeDxfConverter`) for {@link AcDbFileType.DXF} by default. Calling
+ * The manager registers a native DXF converter (`AcDbNativeDxfConverter`) for
+ * {@link AcDbFileType.DXF} by default as soon as the singleton is created, so
+ * DXF files can be read without any explicit registration. Calling
  * {@link register} again for the same file type replaces the previous converter
  * (e.g. with `@mlightcad/dxf-json-converter`).
  *
@@ -110,9 +112,14 @@ export class AcDbDatabaseConverterManager {
 
   /**
    * Private constructor to enforce singleton pattern.
+   *
+   * Registers {@link AcDbNativeDxfConverter} as the default DXF converter so
+   * that reading DXF files works out of the box. Applications can override it
+   * later by calling {@link register} with {@link AcDbFileType.DXF}.
    */
   private constructor() {
     this._converters = new Map()
+    this.register(AcDbFileType.DXF, new AcDbNativeDxfConverter())
   }
 
   /**
