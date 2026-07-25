@@ -4,6 +4,7 @@ import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase } from '../src/database'
 import { acdbDxfInEntity } from '../src/dxf/AcDbDxfEntityFactory'
 import { AcDbOle2Frame } from '../src/entity'
+import { acdbParseOle2FrameGeometryHeader } from '../src/misc/AcDbOle2FrameGeometry'
 import { acdbExtractOleImageBlob } from '../src/misc/AcDbOleImageExtractor'
 import {
   acdbBytesToHexString,
@@ -74,7 +75,70 @@ describe('acdbExtractOleImageBlob', () => {
   })
 })
 
+/**
+ * Builds a minimal OLE2FRAME payload: geometry header + MS-CFB signature stub.
+ * Corner values match the first OLE2FRAME in ole-image.dxf.
+ */
+function createOle2FramePayloadWithGeometry() {
+  const data = new Uint8Array(0x80 + 8)
+  const view = new DataView(data.buffer)
+  view.setUint16(0, 0x5580, true)
+  const corners = [
+    [-3680.787802750127, 5561.435617040696, 0],
+    [-472.4008522669919, 5561.435617040696, 0],
+    [-472.4008522669919, 4997.020213510076, 0],
+    [-3680.787802750127, 4997.020213510076, 0]
+  ]
+  for (let i = 0; i < corners.length; i++) {
+    const offset = 2 + i * 24
+    view.setFloat64(offset, corners[i][0], true)
+    view.setFloat64(offset + 8, corners[i][1], true)
+    view.setFloat64(offset + 16, corners[i][2], true)
+  }
+  // MS-CFB signature at 0x80 (compound body intentionally empty for this test)
+  data.set([0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1], 0x80)
+  return data
+}
+
+describe('acdbParseOle2FrameGeometryHeader', () => {
+  it('reads WCS corners from the OLE2FRAME geometry header', () => {
+    const header = acdbParseOle2FrameGeometryHeader(
+      createOle2FramePayloadWithGeometry()
+    )
+    expect(header).toBeDefined()
+    if (!header) {
+      return
+    }
+    expect(header.upperLeft.x).toBeCloseTo(-3680.787802750127)
+    expect(header.upperLeft.y).toBeCloseTo(5561.435617040696)
+    expect(header.lowerRight.x).toBeCloseTo(-472.4008522669919)
+    expect(header.lowerRight.y).toBeCloseTo(4997.020213510076)
+  })
+
+  it('returns undefined for payloads without a CFB geometry header', () => {
+    expect(
+      acdbParseOle2FrameGeometryHeader(createMinimalBmp())
+    ).toBeUndefined()
+  })
+})
+
 describe('AcDbOle2Frame image drawing', () => {
+  it('applies frame corners from the OLE binary geometry header', () => {
+    const ole = new AcDbOle2Frame()
+    // Simulate DWG conversion: payload only, no DXF group 10/11 corners.
+    ole.loadOleObjectFromDxf(
+      undefined,
+      createOle2FramePayloadWithGeometry()
+    )
+
+    expect(ole.upperLeftCorner.x).toBeCloseTo(-3680.787802750127)
+    expect(ole.upperLeftCorner.y).toBeCloseTo(5561.435617040696)
+    expect(ole.lowerRightCorner.x).toBeCloseTo(-472.4008522669919)
+    expect(ole.lowerRightCorner.y).toBeCloseTo(4997.020213510076)
+    expect(ole.wcsWidth()).toBeGreaterThan(0)
+    expect(ole.wcsHeight()).toBeGreaterThan(0)
+  })
+
   it('draws extracted image through renderer.image', () => {
     const ole = new AcDbOle2Frame()
     ole.upperLeftCorner = new AcGePoint3d(0, 10, 0)

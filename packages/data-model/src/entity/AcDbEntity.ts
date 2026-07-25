@@ -174,22 +174,12 @@ export abstract class AcDbEntity extends AcDbObject {
         color = layerColor
       }
     } else if (color.isByBlock) {
-      // For common entities, ByBlock falls back to current entity color (CECOLOR).
-      // If CECOLOR is ByLayer, resolve it further by current layer color.
-      const currentColor = this.database.cecolor
-      if (currentColor) {
-        color = currentColor
-        if (color.isByLayer) {
-          const currentLayerName = this.database.clayer || this.layer
-          const currentLayer =
-            this.database.tables.layerTable.getAt(currentLayerName)
-          if (currentLayer?.color?.RGB != null) {
-            color = currentLayer.color
-          }
-        }
-      }
-      // Nested block ByBlock colours are applied during block rendering. Attributes
-      // override this method to resolve ByBlock against their owning INSERT.
+      // AutoCAD / ODA: ByBlock without an INSERT owner displays as ACI 7
+      // (foreground / black-white), not CECOLOR. CECOLOR only seeds newly
+      // created entities. Nested block ByBlock colours are applied during
+      // block rendering; attributes override this method to resolve against
+      // their owning INSERT.
+      color = new AcCmColor().setForeground()
     }
     return color
   }

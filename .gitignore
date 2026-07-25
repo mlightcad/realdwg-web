@@ -7,9 +7,8 @@ lib
 tmp
 tsconfig.tsbuildinfo
 
-# mlightcad private parser and converter packages
-mlightcad-parser
-mlightcad-converter
+# Private package — clone locally; never commit
+packages/dwg-converter
 
 # dependencies
 node_modules

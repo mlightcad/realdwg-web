@@ -1,7 +1,3 @@
-// Default DXF converter (MIT streaming). Listed in package.json sideEffects so
-// bundlers keep this registration when tree-shaking unused exports.
-import './dxf/registerNativeDxfConverter'
-
 export {
   AcDbDxfCode,
   AcDbDxfFiler,

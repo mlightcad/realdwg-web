@@ -10,6 +10,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
+import { acdbParseOle2FrameGeometryHeader } from '../misc/AcDbOle2FrameGeometry'
 import { acdbExtractOleImageBlob } from '../misc/AcDbOleImageExtractor'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import {
@@ -635,6 +636,26 @@ export class AcDbOle2Frame extends AcDbOleFrame {
   protected override onOleObjectChanged() {
     this._image = undefined
     this._imageResolved = false
+    this.applyGeometryFromOleObjectData()
+  }
+
+  /**
+   * Applies frame corners from the OLE2FRAME binary geometry header when
+   * present.
+   *
+   * AutoCAD stores the drawable rectangle inside the OLE payload (the first
+   * 0x80 bytes before the MS-CFB document). DWG parsers often expose only the
+   * raw blob, and DXF group codes 10/11 are documented as derived from that
+   * header — so recovering corners here keeps OLE frames visible for both
+   * paths.
+   */
+  private applyGeometryFromOleObjectData() {
+    const header = acdbParseOle2FrameGeometryHeader(this.oleObjectData)
+    if (!header) {
+      return
+    }
+    this._upperLeft.copy(header.upperLeft)
+    this._lowerRight.copy(header.lowerRight)
   }
 
   private resolveImage(): Blob | undefined {
