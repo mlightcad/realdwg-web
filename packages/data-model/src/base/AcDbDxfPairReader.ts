@@ -226,8 +226,18 @@ function isUtf8Encoding(encoding: string): boolean {
 }
 
 /**
- * ASCII pair reader that scans UTF-8 bytes line-by-line without allocating a
- * full-file decoded string (peak memory ≈ input bytes + per-line scratch).
+ * Bytes decoded per `TextDecoder` call in {@link acdbMakeUtf8AsciiDxfPairReader}.
+ *
+ * Sized as a compromise: large enough that a multi-MB DXF costs hundreds of
+ * decode calls rather than one per line, small enough that windows still holding
+ * a retained value slice do not pin much memory.
+ */
+const UTF8_DECODE_WINDOW_BYTES = 64 * 1024
+
+/**
+ * ASCII pair reader that decodes UTF-8 bytes one line-aligned window at a time,
+ * instead of allocating a full-file decoded string (peak memory ≈ input bytes
+ * plus one window).
  *
  * Non-UTF-8 code pages still go through {@link acdbMakeAsciiDxfPairReader}
  * after a full `TextDecoder` pass.
@@ -235,33 +245,57 @@ function isUtf8Encoding(encoding: string): boolean {
 export function acdbMakeUtf8AsciiDxfPairReader(
   bytes: Uint8Array
 ): AcDbDxfPairReader {
-  let pos = 0
   // Skip UTF-8 BOM when present.
-  if (
+  const start =
     bytes.length >= 3 &&
     bytes[0] === 0xef &&
     bytes[1] === 0xbb &&
     bytes[2] === 0xbf
-  ) {
-    pos = 3
-  }
+      ? 3
+      : 0
+
   let lineNumber = 1
   let lookahead: AcDbDxfPair | undefined
   let lookaheadValid = false
   const decoder = new TextDecoder('utf-8')
 
+  // Decoded window covering bytes [windowStart, windowEnd), scanned by a
+  // character cursor. Windows end just past a line break, and a break byte can
+  // never appear inside a multi-byte UTF-8 sequence, so each window decodes
+  // standalone and no line ever straddles two windows.
+  let windowStart = start
+  let windowEnd = start
+  let text = ''
+  let textPos = 0
+
+  /** Decodes the next window. Returns `false` once the input is exhausted. */
+  function advanceWindow(): boolean {
+    if (windowEnd >= bytes.length) return false
+    windowStart = windowEnd
+    let end = Math.min(windowStart + UTF8_DECODE_WINDOW_BYTES, bytes.length)
+    while (end < bytes.length && bytes[end] !== 10 && bytes[end] !== 13) end++
+    if (end < bytes.length && bytes[end] === 13) end++
+    if (end < bytes.length && bytes[end] === 10) end++
+    windowEnd = end
+    text = decoder.decode(bytes.subarray(windowStart, windowEnd))
+    textPos = 0
+    return true
+  }
+
   function readLine(): string | undefined {
-    if (pos >= bytes.length) return undefined
-    let end = pos
-    while (end < bytes.length) {
-      const c = bytes[end]!
+    while (textPos >= text.length) {
+      if (!advanceWindow()) return undefined
+    }
+    let end = textPos
+    while (end < text.length) {
+      const c = text.charCodeAt(end)
       if (c === 10 || c === 13) break
       end++
     }
-    const line = decoder.decode(bytes.subarray(pos, end))
-    if (end < bytes.length && bytes[end] === 13) end++
-    if (end < bytes.length && bytes[end] === 10) end++
-    pos = end
+    const line = text.slice(textPos, end)
+    if (end < text.length && text.charCodeAt(end) === 13) end++
+    if (end < text.length && text.charCodeAt(end) === 10) end++
+    textPos = end
     lineNumber++
     return line
   }
@@ -304,7 +338,14 @@ export function acdbMakeUtf8AsciiDxfPairReader(
       return lookahead
     },
     position() {
-      return { line: lineNumber, byteOffset: pos }
+      // Interpolated inside the current window: callers use this only to report
+      // parse progress, so window-level precision is enough.
+      const span = windowEnd - windowStart
+      const byteOffset =
+        span > 0 && text.length > 0
+          ? windowStart + Math.round((textPos / text.length) * span)
+          : windowEnd
+      return { line: lineNumber, byteOffset }
     }
   }
 }
@@ -501,8 +542,8 @@ export interface AcDbCreateDxfPairReaderOptions {
  * Create a pair reader from DXF bytes (ASCII or binary).
  *
  * ASCII path: peek HEADER for version/codepage when needed. UTF-8 drawings
- * scan bytes line-by-line (no full-file string). Legacy code pages still
- * decode once via `TextDecoder`, then scan with a character cursor.
+ * decode one line-aligned window at a time (no full-file string). Legacy code
+ * pages still decode once via `TextDecoder`, then scan with a character cursor.
  */
 export function acdbCreateDxfPairReader(
   data: ArrayBuffer | Uint8Array,
