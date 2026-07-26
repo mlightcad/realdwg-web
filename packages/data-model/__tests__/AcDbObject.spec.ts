@@ -36,4 +36,20 @@ describe('AcDbObject', () => {
       slot.set(previousDb)
     }
   })
+
+  it('accepts a real handle on an unbound object without requiring a working database', () => {
+    const slot = getWorkingDatabaseSlot()
+    const previousDb = slot.get()
+    slot.set(null)
+    try {
+      const obj = new AcDbObject()
+      expect(() => {
+        obj.objectId = '1A2B'
+      }).not.toThrow()
+      expect(obj.objectId).toBe('1A2B')
+      expect(obj.isTemp).toBe(false)
+    } finally {
+      slot.set(previousDb)
+    }
+  })
 })

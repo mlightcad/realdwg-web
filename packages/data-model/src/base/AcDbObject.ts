@@ -22,6 +22,20 @@ export function acdbSetHostApplicationServicesProvider(
   hostApplicationServicesProvider = provider
 }
 
+/**
+ * Assigns the host working database when the services provider is registered.
+ *
+ * No-op when the provider has not been installed yet (e.g. HostApplicationServices
+ * module not loaded). Used by {@link AcDbDatabase.read} so import paths that
+ * touch unbound objects still see a current database.
+ */
+export function acdbAssignWorkingDatabase(database: AcDbDatabase) {
+  if (!hostApplicationServicesProvider) {
+    return
+  }
+  hostApplicationServicesProvider().workingDatabase = database
+}
+
 export function acdbGetWorkingDatabase(): AcDbDatabase {
   if (hostApplicationServicesProvider) {
     return hostApplicationServicesProvider().workingDatabase
@@ -223,9 +237,17 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   set objectId(value: AcDbObjectId) {
     this._attrs.set('objectId', value)
 
-    // Update the database's maxHandle if the new objectId is a valid hex handle
-    if (value && !value.startsWith(TEMP_OBJECT_ID_PREFIX)) {
-      this.database.updateMaxHandle(value)
+    // Update maxHandle only when this object is already bound. Unbound objects
+    // (typical during DXF/DWG import before append/add) must not fall back to
+    // the global working database — that fails when the host DB was never set,
+    // or when a second data-model singleton is in play (e.g. Vite + peer deps).
+    // commitObjectHandle updates maxHandle once the object is added.
+    if (
+      value &&
+      !value.startsWith(TEMP_OBJECT_ID_PREFIX) &&
+      this._database
+    ) {
+      this._database.updateMaxHandle(value)
     }
   }
 
