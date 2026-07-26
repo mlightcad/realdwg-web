@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.12.1
+
+### Patch Changes
+
+- feat: adds time-budgeted UI feedback, block-cache templates, MINSERT parameters, OLE2FRAME geometry, ByBlock ACI7, native DXF registration, and migrates GPL converters
+- Updated dependencies
+  - @mlightcad/common@1.12.1
+  - @mlightcad/geometry-engine@3.12.1
+  - @mlightcad/graphic-interface@3.12.1
+
 ## 1.12.0
 
 ### Minor Changes

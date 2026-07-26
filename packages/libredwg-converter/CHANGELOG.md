@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.12.1
+
+### Patch Changes
+
+- feat: adds time-budgeted UI feedback, block-cache templates, MINSERT parameters, OLE2FRAME geometry, ByBlock ACI7, native DXF registration, and migrates GPL converters
+- Updated dependencies
+  - @mlightcad/data-model@1.12.1
+
 ## 3.12.0
 
 ### Minor Changes
