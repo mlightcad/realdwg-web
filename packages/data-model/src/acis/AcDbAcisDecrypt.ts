@@ -3,8 +3,6 @@
  *
  * AutoCAD applies `chr(159 - ord(c))` to every character above ASCII space.
  * See LibreDWG `dec_sat.pl` and the DXF reference for 3DSOLID/REGION/BODY.
- *
- * Ported from `@mlightcad/dxf-json` `parser/acis/decrypt.ts`.
  */
 
 /**

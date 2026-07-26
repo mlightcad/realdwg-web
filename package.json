@@ -28,7 +28,8 @@
     "sync:versions": "node tools/sync-versions.mjs",
     "sync:versions:check": "node tools/sync-versions.mjs --check",
     "test": "jest",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "use:dwg-converter": "node tools/use-dwg-converter.mjs"
   },
   "engines": {
     "pnpm": ">=10"

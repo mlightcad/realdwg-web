@@ -1,14 +1,3 @@
-// SAB (Standard ACIS Binary) low-level decoder.
-//
-// Decodes the byte-true SAB stream produced by `extractAcisSabStream` (see
-// ../acisDecode.ts) into a typed record list: the binary tag stream → a header
-// + a list of records, each with an entity-type name and its field tokens.
-// This is the foundation for the B-rep entity DAG (./AcDbAcisEntities.ts).
-//
-// The tag/byte layout is ported from ezdxf's `ezdxf/acis/sab.py`
-// (Copyright (c) Manfred Moitzi, MIT License) — the SAB byte format itself is
-// not copyrightable; the field-width conventions follow that reference.
-
 const SIGNATURES = ['ACIS BinaryFile', 'ASM BinaryFile4'] as const;
 const DATA_END_MARKERS = new Set([
   'End-of-ACIS-data',
