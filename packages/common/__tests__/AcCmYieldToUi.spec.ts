@@ -1,11 +1,11 @@
 import {
   ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
   AcCmUiYieldGate,
-  acCmYieldForPaint,
-  acCmYieldToUi
+  accmYieldForPaint,
+  accmYieldToUi
 } from '../src/AcCmYieldToUi'
 
-describe('acCmYieldToUi', () => {
+describe('accmYieldToUi', () => {
   afterEach(() => {
     jest.restoreAllMocks()
   })
@@ -20,13 +20,13 @@ describe('acCmYieldToUi', () => {
       globalThis as unknown as { requestAnimationFrame: typeof raf }
     ).requestAnimationFrame = raf
 
-    const done = acCmYieldToUi()
+    const done = accmYieldToUi()
     expect(raf).toHaveBeenCalledTimes(1)
     callbacks[0]()
     await done
   })
 
-  it('acCmYieldForPaint uses double rAF', async () => {
+  it('accmYieldForPaint uses double rAF', async () => {
     const callbacks: Array<() => void> = []
     const raf = jest.fn((cb: () => void) => {
       callbacks.push(cb)
@@ -36,7 +36,7 @@ describe('acCmYieldToUi', () => {
       globalThis as unknown as { requestAnimationFrame: typeof raf }
     ).requestAnimationFrame = raf
 
-    const done = acCmYieldForPaint()
+    const done = accmYieldForPaint()
     expect(raf).toHaveBeenCalledTimes(1)
     callbacks[0]()
     expect(raf).toHaveBeenCalledTimes(2)

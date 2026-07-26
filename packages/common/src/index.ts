@@ -37,8 +37,8 @@ export type { AcCmCompleteCallback, AcCmTaskError } from './AcCmTaskScheduler'
 export {
   ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
   AcCmUiYieldGate,
-  acCmYieldForPaint,
-  acCmYieldToUi
+  accmYieldForPaint,
+  accmYieldToUi
 } from './AcCmYieldToUi'
 export { AcCmLoader, AcCmLoadingManager, DefaultLoadingManager } from './loader'
 export type {

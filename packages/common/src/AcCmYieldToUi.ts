@@ -15,7 +15,7 @@ export const ACCM_DEFAULT_UI_YIELD_BUDGET_MS = 50
  *
  * @returns Promise that resolves after one frame (or next timer tick).
  */
-export function acCmYieldToUi(): Promise<void> {
+export function accmYieldToUi(): Promise<void> {
   return new Promise(resolve => {
     if (
       typeof globalThis !== 'undefined' &&
@@ -40,7 +40,7 @@ export function acCmYieldToUi(): Promise<void> {
  *
  * @returns Promise that resolves after two animation frames (or one timer tick).
  */
-export function acCmYieldForPaint(): Promise<void> {
+export function accmYieldForPaint(): Promise<void> {
   return new Promise(resolve => {
     if (
       typeof globalThis !== 'undefined' &&
@@ -60,7 +60,7 @@ export function acCmYieldForPaint(): Promise<void> {
 }
 
 /**
- * Time-budgeted cooperative yields: only awaits {@link acCmYieldToUi} when at
+ * Time-budgeted cooperative yields: only awaits {@link accmYieldToUi} when at
  * least `budgetMs` of wall time has elapsed since the previous yield completed.
  *
  * Typical usage: construct one gate per long job, then `await gate.maybeYield()`
@@ -96,11 +96,11 @@ export class AcCmUiYieldGate {
    * Yields when at least {@link budgetMs} has elapsed since the last completed
    * yield (or since construction / {@link mark}).
    *
-   * @param yieldFn - Async yield implementation. Defaults to {@link acCmYieldToUi}.
+   * @param yieldFn - Async yield implementation. Defaults to {@link accmYieldToUi}.
    * @returns Whether a yield actually ran.
    */
   async maybeYield(
-    yieldFn: () => Promise<void> = acCmYieldToUi
+    yieldFn: () => Promise<void> = accmYieldToUi
   ): Promise<boolean> {
     const now = AcCmUiYieldGate.now()
     if (now - this._lastYieldCompletedAt < this._budgetMs) {

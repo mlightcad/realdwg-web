@@ -1,7 +1,7 @@
 import {
   AcCmColor,
   AcCmUiYieldGate,
-  acCmYieldToUi
+  accmYieldToUi
 } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -379,7 +379,7 @@ export class AcDbRenderingCache {
       if (progress) {
         await progress(built, total, block.name)
       }
-      await yieldGate.maybeYield(acCmYieldToUi)
+      await yieldGate.maybeYield(accmYieldToUi)
     }
   }
 

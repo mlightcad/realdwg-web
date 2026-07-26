@@ -1,4 +1,4 @@
-import { acCmYieldToUi } from './AcCmYieldToUi'
+import { accmYieldToUi } from './AcCmYieldToUi'
 
 /**
  * @fileoverview Task scheduling and execution system for the AutoCAD Common library.
@@ -174,14 +174,14 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
   /**
    * Schedules a task to be executed asynchronously.
    *
-   * Yields via {@link acCmYieldToUi} so the browser can paint between tasks,
+   * Yields via {@link accmYieldToUi} so the browser can paint between tasks,
    * then runs `callback` on the resumed turn.
    *
    * @param callback - The callback function to schedule
    * @returns Promise that resolves with the result of the callback
    */
   private async scheduleTask<T>(callback: () => T | Promise<T>): Promise<T> {
-    await acCmYieldToUi()
+    await accmYieldToUi()
     return callback()
   }
 

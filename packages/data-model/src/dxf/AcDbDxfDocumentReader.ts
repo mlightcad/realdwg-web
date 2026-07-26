@@ -1,7 +1,7 @@
 import {
   ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
   AcCmUiYieldGate,
-  acCmYieldToUi
+  accmYieldToUi
 } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
@@ -979,6 +979,6 @@ export class AcDbDxfDocumentReader {
     await this.reportParseProgress(filer)
     // Progress may fire every batch; UI yield is time-budgeted so large DXFs
     // are not dominated by per-batch requestAnimationFrame waits.
-    await this._yieldGate.maybeYield(acCmYieldToUi)
+    await this._yieldGate.maybeYield(accmYieldToUi)
   }
 }

@@ -1,7 +1,7 @@
 import {
   ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
   AcCmUiYieldGate,
-  acCmYieldForPaint
+  accmYieldForPaint
 } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -73,7 +73,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     await emit(0, 'START', 'START')
     await emit(PARSE_START_PCT, 'PARSE', 'START')
     // Let the open-file overlay paint before sync-heavy parse work (once).
-    await acCmYieldForPaint()
+    await accmYieldForPaint()
 
     // Suppress entityAppended (and related) until FONT finishes so the viewer
     // does not worldDraw text before fontLoader.load has run.

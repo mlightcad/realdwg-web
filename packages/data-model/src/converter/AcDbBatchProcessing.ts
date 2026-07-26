@@ -1,4 +1,4 @@
-import { acCmYieldToUi } from '@mlightcad/common'
+import { accmYieldToUi } from '@mlightcad/common'
 
 // Callback function to execute business logic of chunk processing.
 type AcDbChunkProcessingCallback = (start: number, end: number) => Promise<void>
@@ -145,7 +145,7 @@ export class AcDbBatchProcessing {
   /**
    * Schedules a task to be executed asynchronously.
    *
-   * Yields via {@link acCmYieldToUi} so the UI can remain responsive between
+   * Yields via {@link accmYieldToUi} so the UI can remain responsive between
    * chunks, then runs `callback` on the resumed turn.
    *
    * @param callback - The callback function to schedule
@@ -159,7 +159,7 @@ export class AcDbBatchProcessing {
    * ```
    */
   private async scheduleTask(callback: () => void | Promise<void>): Promise<void> {
-    await acCmYieldToUi()
+    await accmYieldToUi()
     await callback()
   }
 
