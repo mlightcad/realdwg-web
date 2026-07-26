@@ -47,6 +47,8 @@ export {
 export {
   AcDbObject,
   TEMP_OBJECT_ID_PREFIX,
+  acdbAssignWorkingDatabase,
+  acdbGetWorkingDatabase,
   acdbSetHostApplicationServicesProvider
 } from './AcDbObject'
 export type { AcDbObjectAttrs, AcDbObjectId } from './AcDbObject'

@@ -141,9 +141,30 @@
     hidden
   >
     <h2>DWG / DXF Parse Demo</h2>
-    <div>
+    <p class="panel-intro">
+      Select a DWG or DXF file, choose a converter when applicable, then click
+      <strong>Run parse</strong>. DWG always uses LibreDWG in a web worker. For
+      DXF you can pick native streaming or dxf-json-converter (worker).
+    </p>
+    <div class="bench-controls">
       <input type="file" id="fileInput" accept=".dwg,.dxf" />
       <button id="runButton" type="button">Run parse</button>
+    </div>
+    <div id="dxfConverterOptions" class="bench-controls" hidden style="margin-top: 8px">
+      <span>DXF converter:</span>
+      <label>
+        <input
+          type="radio"
+          name="dxfConverter"
+          value="native"
+          checked
+        />
+        Native (<code>AcDbNativeDxfConverter</code>)
+      </label>
+      <label>
+        <input type="radio" name="dxfConverter" value="dxf-json" />
+        dxf-json-converter (<code>AcDbDxfConverter</code>, web worker)
+      </label>
     </div>
     <div id="status"></div>
     <pre id="output"></pre>

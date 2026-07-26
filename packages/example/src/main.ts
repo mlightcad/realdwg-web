@@ -2,9 +2,9 @@
  * @fileoverview Example web application entry point for DWG/DXF parsing and PAT preview.
  *
  * This module wires up the demo UI: DXF converter performance comparison
- * (native vs dxf-json-converter → AcDbDatabase), file selection, web-worker
- * parsing, layer/linetype inspection, DXF export, and hatch pattern (PAT)
- * parsing with SVG previews.
+ * (native vs dxf-json-converter → AcDbDatabase), file selection with optional
+ * DXF converter choice, deferred parse on "Run parse", layer/linetype
+ * inspection, DXF export, and hatch pattern (PAT) parsing with SVG previews.
  *
  * @module example/main
  */
@@ -16,6 +16,7 @@ import {
   AcDbFileType,
   acdbFormatMemoryEstimate,
   acdbHostApplicationServices,
+  AcDbNativeDxfConverter,
   AcDbOpenDatabaseOptions,
   AcDbPatDocument,
   AcDbPatParser,
@@ -24,6 +25,7 @@ import {
   AcDbPredefinedAcadPat,
   acdbThumbnailImageToDataUrl
 } from '@mlightcad/data-model'
+import { AcDbDxfConverter } from '@mlightcad/dxf-json-converter'
 import { AcDbLibreDwgConverter } from '@mlightcad/libredwg-converter'
 
 import type { DxfBenchmarkSample } from './dxfBenchmarkSamples'
@@ -31,11 +33,14 @@ import {
   benchmarkBuiltinSample,
   benchmarkBuiltinSamples,
   benchmarkSample,
-  formatBenchmarkResults
-} from './dxfConverterBenchmark'
+  type DxfConverterKind,
+  formatBenchmarkResults} from './dxfConverterBenchmark'
 
 const fileInput = document.getElementById('fileInput') as HTMLInputElement
 const runButton = document.getElementById('runButton') as HTMLButtonElement
+const dxfConverterOptions = document.getElementById(
+  'dxfConverterOptions'
+) as HTMLDivElement
 const status = document.getElementById('status') as HTMLDivElement
 const output = document.getElementById('output') as HTMLPreElement
 const exportButton = document.createElement('button')
@@ -122,13 +127,38 @@ const patSvgRenderer = new AcDbPatSvgRenderer()
 const patParser = new AcDbPatParser()
 
 /**
- * Registers the DWG database converter with the global converter manager.
+ * Reads the DXF converter radio selection from the parse demo UI.
  *
- * DXF already defaults to AcDbNativeDxfConverter, which the converter manager
- * registers automatically. DWG still needs an explicit converter (LibreDWG worker
- * for license isolation). Registration failures are logged but do not throw.
+ * @returns `'native'` for {@link AcDbNativeDxfConverter}, or `'dxf-json'` for
+ *   worker-based {@link AcDbDxfConverter}.
  */
-const registerConverters = () => {
+const getSelectedDxfConverter = (): DxfConverterKind => {
+  const selected = document.querySelector<HTMLInputElement>(
+    'input[name="dxfConverter"]:checked'
+  )
+  return selected?.value === 'dxf-json' ? 'dxf-json' : 'native'
+}
+
+/**
+ * Shows or hides the DXF converter picker based on the selected file type.
+ *
+ * @param fileType - Inferred type of the currently loaded file, or `null` when
+ *   no file is selected.
+ */
+const updateDxfConverterOptionsUi = (fileType: AcDbFileType | null) => {
+  dxfConverterOptions.hidden = fileType !== AcDbFileType.DXF
+}
+
+/**
+ * Registers DWG and (when needed) DXF converters with the global manager.
+ *
+ * DWG always uses LibreDWG in a web worker. For DXF, registers either the native
+ * streaming converter or dxf-json-converter based on {@link getSelectedDxfConverter}.
+ * Registration failures are logged but do not throw.
+ *
+ * @param fileType - Format being parsed; DXF registration is skipped for DWG.
+ */
+const registerConverters = (fileType: AcDbFileType) => {
   try {
     const converter = new AcDbLibreDwgConverter({
       convertByEntityType: false,
@@ -139,6 +169,44 @@ const registerConverters = () => {
   } catch (error) {
     console.error('Failed to register dwg converter: ', error)
   }
+
+  if (fileType !== AcDbFileType.DXF) return
+
+  try {
+    const kind = getSelectedDxfConverter()
+    if (kind === 'dxf-json') {
+      AcDbDatabaseConverterManager.instance.register(
+        AcDbFileType.DXF,
+        new AcDbDxfConverter({
+          convertByEntityType: false,
+          useWorker: true,
+          parserWorkerUrl: './assets/dxf-parser-worker.js'
+        })
+      )
+    } else {
+      AcDbDatabaseConverterManager.instance.register(
+        AcDbFileType.DXF,
+        new AcDbNativeDxfConverter({
+          convertByEntityType: false,
+          useWorker: false
+        })
+      )
+    }
+  } catch (error) {
+    console.error('Failed to register dxf converter: ', error)
+  }
+}
+
+/**
+ * Human-readable label for the converter used in a parse run.
+ */
+const describeConverterMode = (fileType: AcDbFileType): string => {
+  if (fileType === AcDbFileType.DWG) {
+    return 'LibreDWG (web worker)'
+  }
+  return getSelectedDxfConverter() === 'dxf-json'
+    ? 'dxf-json-converter AcDbDxfConverter (web worker)'
+    : 'native AcDbNativeDxfConverter (main thread)'
 }
 
 /**
@@ -209,7 +277,7 @@ const parseOnce = async (
   buffer: ArrayBuffer,
   fileType: AcDbFileType
 ): Promise<ParseResult> => {
-  registerConverters()
+  registerConverters(fileType)
 
   const database = new AcDbDatabase()
   acdbHostApplicationServices().workingDatabase = database
@@ -592,11 +660,12 @@ const applyPatSource = () => {
 }
 
 /**
- * Main parse workflow triggered by file selection or the Run button.
+ * Main parse workflow triggered by the Run parse button.
  *
- * Validates that a file buffer is loaded, parses via web worker, writes timing
- * and layer output, refreshes linetype previews, and updates export button state.
- * UI controls are disabled for the duration of parsing to prevent concurrent runs.
+ * Validates that a file buffer is loaded, registers the selected converter,
+ * parses the drawing, writes timing and layer output, refreshes linetype
+ * previews, and updates export button state. UI controls are disabled for the
+ * duration of parsing to prevent concurrent runs.
  */
 const runParse = async () => {
   if (!lastFile || !lastBuffer) {
@@ -607,6 +676,7 @@ const runParse = async () => {
   }
 
   const fileType = getFileType(lastFile.name)
+  const converterMode = describeConverterMode(fileType)
   const lines: string[] = []
   let parsedDatabase: AcDbDatabase | null = null
 
@@ -615,21 +685,26 @@ const runParse = async () => {
 
   runButton.disabled = true
   fileInput.disabled = true
+  dxfConverterOptions
+    .querySelectorAll<HTMLInputElement>('input[name="dxfConverter"]')
+    .forEach(input => {
+      input.disabled = true
+    })
   exportButton.disabled = true
 
   try {
-    setStatus('Parsing in web worker.')
+    setStatus(`Parsing with ${converterMode}…`)
     lines.push(`File: ${lastFile.name}`)
-    lines.push('Mode: web worker')
+    lines.push(`Converter: ${converterMode}`)
     lines.push('')
 
     const result = await parseOnce(lastBuffer.slice(0), fileType)
     setStatus('')
     if (result.skipped) {
-      lines.push(`Worker: skipped (${result.reason})`)
+      lines.push(`Parse: skipped (${result.reason})`)
     } else {
       parsedDatabase = result.database
-      lines.push(`Worker: ${formatMs(result.durationMs)}`)
+      lines.push(`Parse: ${formatMs(result.durationMs)}`)
       lines.push('')
       lines.push(...renderLayers(result.layers))
       lines.push('')
@@ -648,6 +723,11 @@ const runParse = async () => {
     renderLinetypePreviews(lastParsedDatabase)
     runButton.disabled = false
     fileInput.disabled = false
+    dxfConverterOptions
+      .querySelectorAll<HTMLInputElement>('input[name="dxfConverter"]')
+      .forEach(input => {
+        input.disabled = false
+      })
     updateExportButton()
   }
 }
@@ -660,9 +740,19 @@ fileInput.addEventListener('change', async () => {
   renderThumbnailPreview(null)
   renderLinetypePreviews(null)
   updateExportButton()
+
+  const fileType = getFileType(file.name)
+  updateDxfConverterOptionsUi(fileType)
+
   output.textContent = 'Loading file...\n'
+  setStatus('Loading file…')
   lastBuffer = await file.arrayBuffer()
-  await runParse()
+  output.textContent = `Loaded: ${file.name} (${lastBuffer.byteLength.toLocaleString()} bytes)\n\nClick "Run parse" to start.`
+  setStatus(
+    fileType === AcDbFileType.DXF
+      ? 'DXF loaded. Choose a converter, then click "Run parse".'
+      : 'File loaded. Click "Run parse" to start.'
+  )
 })
 
 runButton.addEventListener('click', async () => {

@@ -8,7 +8,12 @@ import {
 } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId, TEMP_OBJECT_ID_PREFIX } from '../base/AcDbObject'
+import {
+  AcDbObject,
+  AcDbObjectId,
+  TEMP_OBJECT_ID_PREFIX,
+  acdbAssignWorkingDatabase
+} from '../base/AcDbObject'
 import { AcDbOpenMode } from '../base/AcDbOpenMode'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator'
 import {
@@ -2202,6 +2207,12 @@ export class AcDbDatabase extends AcDbObject {
     if (options?.fileName) {
       this.setDwgName(options.fileName)
     }
+
+    // Ensure this database is the host working database for the duration of
+    // conversion. Converters (including peer packages such as dxf-json-converter)
+    // assign real handles on unbound objects; some entity getters still fall
+    // back to the working database before append/add binds them.
+    acdbAssignWorkingDatabase(this)
 
     try {
       await converter.read(

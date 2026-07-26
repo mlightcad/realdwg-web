@@ -14,6 +14,8 @@ export {
   acdbMakeBinaryDxfPairReader,
   acdbMakeUtf8AsciiDxfPairReader,
   acdbPeekDxfHeaderInfo,
+  acdbAssignWorkingDatabase,
+  acdbGetWorkingDatabase,
   acdbSetHostApplicationServicesProvider,
   acdbSetLayoutManagerFactory,
   acdbDxfValueType,
