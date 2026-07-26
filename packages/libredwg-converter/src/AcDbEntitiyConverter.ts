@@ -1412,6 +1412,21 @@ export class AcDbEntityConverter {
     dbBlockReference.scaleFactors.z = blockReference.zScale
     dbBlockReference.rotation = blockReference.rotation
     dbBlockReference.normal.copy(blockReference.extrusionDirection)
+    // MINSERT array parameters (libredwg fills these for TYPE_MINSERT /
+    // multi-column INSERT). Without them every array collapses to 1×1 and
+    // large floor-plan drawings look massively incomplete vs DXF.
+    if (blockReference.columnCount != null) {
+      dbBlockReference.columnCount = blockReference.columnCount
+    }
+    if (blockReference.rowCount != null) {
+      dbBlockReference.rowCount = blockReference.rowCount
+    }
+    if (blockReference.columnSpacing != null) {
+      dbBlockReference.columnSpacing = blockReference.columnSpacing
+    }
+    if (blockReference.rowSpacing != null) {
+      dbBlockReference.rowSpacing = blockReference.rowSpacing
+    }
     // Pre-assign the BlockReference's objectId from the DWG handle so that
     // `appendAttributes` below (which sets `attrib.ownerId = this.objectId`)
     // produces a valid ownerId pointing at this INSERT, matching ObjectARX

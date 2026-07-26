@@ -567,6 +567,17 @@ export class AcDbSysVarManager {
       defaultValue: 0
     })
     /**
+     * Enables open-file performance profiling. When on, stage timings and
+     * block-cache stats are printed to the console after the drawing finishes
+     * converting. Not stored in the DWG (session/registry style).
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.OPENPROF,
+      type: 'boolean',
+      isDbVar: false,
+      defaultValue: false
+    })
+    /**
      * Background color of the paper-space (layout) drawing area.
      * Default: RGB(255, 255, 255)
      */

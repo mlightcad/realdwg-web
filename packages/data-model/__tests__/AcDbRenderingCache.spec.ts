@@ -1,5 +1,14 @@
 jest.mock('../src/database', () => ({
-  AcDbBlockTableRecord: class MockBlockTableRecord {}
+  AcDbBlockTableRecord: class MockBlockTableRecord {
+    static MODEL_SPACE_NAME = '*Model_Space'
+    static PAPER_SPACE_NAME_PREFIX = '*Paper_Space'
+    static isModelSapceName(name: string) {
+      return name.toLowerCase() === '*model_space'
+    }
+    static isPaperSapceName(name: string) {
+      return name.toLowerCase().startsWith('*paper_space')
+    }
+  }
 }))
 
 jest.mock('../src/entity', () => ({
@@ -14,6 +23,28 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { AcDbRenderingCache } from '../src/misc/AcDbRenderingCache'
+
+function createMockGroup(overrides: Record<string, unknown> = {}) {
+  return {
+    applyMatrix: jest.fn(),
+    addChild: jest.fn(),
+    compactForInstancing: jest.fn(),
+    dispose: jest.fn(),
+    fastDeepClone() {
+      return {
+        ...this,
+        applyMatrix: jest.fn(),
+        addChild: jest.fn(),
+        compactForInstancing: jest.fn(),
+        dispose: jest.fn(),
+        fastDeepClone() {
+          return { ...this }
+        }
+      }
+    },
+    ...overrides
+  }
+}
 
 describe('AcDbRenderingCache', () => {
   it('manages cached values and draw fallback', () => {
@@ -30,19 +61,19 @@ describe('AcDbRenderingCache', () => {
     const black = new AcCmColor().setRGBValue(0x000000)
     expect(cache.createKey('B1', black)).toBe('B1_RGB:0,0,0')
 
-    const group = {
-      fastDeepClone() {
-        return { ...this }
-      }
-    } as any
+    const group = createMockGroup()
 
-    const stored = cache.set(key, group)
+    const stored = cache.set(key, group as never)
     expect(stored).not.toBe(group)
     expect(cache.has(key)).toBe(true)
     expect(cache.get(key)).toBeDefined()
 
     const renderer = {
-      group: (items: unknown[]) => ({ items, fastDeepClone: () => ({ items }) })
+      group: (items: unknown[]) => ({
+        items,
+        compactForInstancing: jest.fn(),
+        fastDeepClone: () => ({ items })
+      })
     } as any
 
     const drawn = cache.draw(renderer, null as any, new AcCmColor())
@@ -50,6 +81,180 @@ describe('AcDbRenderingCache', () => {
 
     cache.clear()
     expect(cache.has(key)).toBe(false)
+  })
+
+  it('uses color-independent keys when the block has no ByBlock entities', () => {
+    const cache = new AcDbRenderingCache()
+    const color = new AcCmColor().setRGBValue(0xff0000)
+    expect(cache.createCacheKey('Door', color, false)).toBe('Door')
+    expect(cache.createCacheKey('Door', color, true)).toBe('Door_RGB:255,0,0')
+  })
+
+  it('compacts and caches color-independent templates', () => {
+    const cache = new AcDbRenderingCache()
+    const blockGroup = createMockGroup()
+    const compact = blockGroup.compactForInstancing as jest.Mock
+
+    const renderer = {
+      group: jest.fn(() => blockGroup)
+    }
+
+    const blockRecord = {
+      name: 'WALL',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xff0000),
+      [],
+      true
+    )
+
+    expect(compact).toHaveBeenCalledTimes(1)
+    expect(cache.has('WALL')).toBe(true)
+    // Second INSERT with a different color hits the same template.
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0x00ff00),
+      [],
+      true
+    )
+    expect(renderer.group).toHaveBeenCalledTimes(1)
+  })
+
+  it('keys ByBlock blocks by color and does not share templates', () => {
+    const cache = new AcDbRenderingCache()
+    const renderer = {
+      group: jest.fn(() => createMockGroup())
+    }
+
+    const blockRecord = {
+      name: 'TITLE',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setByBlock(),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+
+    const red = new AcCmColor().setRGBValue(0xff0000)
+    const green = new AcCmColor().setRGBValue(0x00ff00)
+    cache.draw(renderer as never, blockRecord as never, red, [], true)
+    cache.draw(renderer as never, blockRecord as never, green, [], true)
+
+    expect(renderer.group).toHaveBeenCalledTimes(2)
+    expect(cache.has(cache.createKey('TITLE', red))).toBe(true)
+    expect(cache.has(cache.createKey('TITLE', green))).toBe(true)
+    expect(cache.has('TITLE')).toBe(false)
+  })
+
+  it('does not cache anonymous *U blocks', () => {
+    const cache = new AcDbRenderingCache()
+    const renderer = {
+      group: jest.fn(() => createMockGroup())
+    }
+    const blockRecord = {
+      name: '*U12',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xffffff),
+      [],
+      true
+    )
+    expect(cache.has('*U12')).toBe(false)
+  })
+
+  it('disposes cached templates on clear', () => {
+    const cache = new AcDbRenderingCache()
+    const dispose = jest.fn()
+    const group = createMockGroup({
+      dispose,
+      fastDeepClone() {
+        return createMockGroup({ dispose })
+      }
+    })
+    cache.set('B1', group as never)
+    cache.clear()
+    expect(dispose).toHaveBeenCalled()
+    expect(cache.has('B1')).toBe(false)
+  })
+
+  it('prebuildAll builds color-independent blocks and reports progress', async () => {
+    const cache = new AcDbRenderingCache()
+    const renderer = {
+      group: jest.fn(() => createMockGroup())
+    }
+    const progress = jest.fn()
+
+    const wall = {
+      name: 'WALL',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+    const modelSpace = {
+      name: '*Model_Space',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+    const byBlock = {
+      name: 'TITLE',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setByBlock(),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+    const empty = {
+      name: 'EMPTY',
+      newIterator: function* () {
+        /* empty */
+      }
+    }
+
+    await cache.prebuildAll(
+      renderer as never,
+      [wall, modelSpace, byBlock, empty] as never,
+      progress
+    )
+
+    expect(cache.has('WALL')).toBe(true)
+    expect(cache.has('*Model_Space')).toBe(false)
+    expect(cache.has('TITLE')).toBe(false)
+    expect(cache.has('EMPTY')).toBe(false)
+    expect(progress).toHaveBeenCalledWith(1, 1, 'WALL')
   })
 
   it('converts WCS attributes to block-local space instead of baking block transform', () => {
@@ -64,13 +269,7 @@ describe('AcDbRenderingCache', () => {
       fastDeepClone: jest.fn()
     }
 
-    const blockGroup = {
-      applyMatrix: jest.fn(),
-      addChild: jest.fn(),
-      fastDeepClone() {
-        return { ...this }
-      }
-    }
+    const blockGroup = createMockGroup()
 
     const renderer = {
       group: jest.fn((items: unknown[]) => {

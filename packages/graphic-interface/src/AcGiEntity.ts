@@ -67,4 +67,27 @@ export interface AcGiEntity {
    * @returns Return a clone of this object and optionally all descendants.
    */
   fastDeepClone(): AcGiEntity
+
+  /**
+   * Optionally merges same-material drawable leaves so later
+   * {@link fastDeepClone} copies far fewer geometries.
+   *
+   * Used by block-reference template caching. Must be called before the INSERT
+   * transform is applied while the entity is still at identity. Implementations
+   * that do not support compaction may omit this method.
+   *
+   * @returns Nothing.
+   */
+  compactForInstancing?(): void
+
+  /**
+   * Optionally releases GPU/CPU resources owned by this entity.
+   *
+   * Used when clearing the block rendering cache. Implementations that do not
+   * own disposable resources may omit this method. Shared materials from a
+   * style cache should not be disposed here unless the implementation owns them.
+   *
+   * @returns Nothing.
+   */
+  dispose?(): void
 }

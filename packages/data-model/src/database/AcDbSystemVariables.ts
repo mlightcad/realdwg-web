@@ -146,6 +146,12 @@ export const AcDbSystemVariables = {
    * constrained to horizontal or vertical relative to the current UCS.
    */
   ORTHOMODE: 'ORTHOMODE',
+  /**
+   * When `true`, records open-file stage timings (PARSE / FONT / ENTITY /
+   * scene convert / block-cache) and prints a summary to the console when
+   * opening finishes. Session-only (not stored in the drawing). Default `false`.
+   */
+  OPENPROF: 'OPENPROF',
   /** Background color of the paper-space (layout) drawing area. */
   PAPERBKCOLOR: 'PAPERBKCOLOR',
   /** Point display style bitmask that controls how POINT entities are drawn. */
