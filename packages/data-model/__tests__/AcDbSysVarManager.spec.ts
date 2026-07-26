@@ -84,6 +84,12 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.DYNPROMPT, 'false', db)
     expect(manager.getVar(AcDbSystemVariables.DYNPROMPT, db)).toBe(false)
 
+    expect(manager.getVar(AcDbSystemVariables.OPENPROF, db)).toBe(false)
+    manager.setVar(AcDbSystemVariables.OPENPROF, true, db)
+    expect(manager.getVar(AcDbSystemVariables.OPENPROF, db)).toBe(true)
+    manager.setVar(AcDbSystemVariables.OPENPROF, 'false', db)
+    expect(manager.getVar(AcDbSystemVariables.OPENPROF, db)).toBe(false)
+
     manager.setVar(AcDbSystemVariables.MEASUREMENTCOLOR, 'red', db)
     expect(
       manager.getVar(AcDbSystemVariables.MEASUREMENTCOLOR, db)

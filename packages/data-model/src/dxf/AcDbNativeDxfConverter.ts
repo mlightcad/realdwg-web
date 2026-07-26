@@ -1,3 +1,9 @@
+import {
+  ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
+  AcCmUiYieldGate,
+  acCmYieldForPaint
+} from '@mlightcad/common'
+
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import {
@@ -20,28 +26,6 @@ const ENTITY_START_PCT = 20
 const ENTITY_END_PCT = 98
 
 /**
- * Yields so the browser can paint loading UI before main-thread parse work.
- */
-function yieldForPaint(): Promise<void> {
-  return new Promise(resolve => {
-    if (
-      typeof globalThis !== 'undefined' &&
-      typeof (globalThis as { requestAnimationFrame?: unknown })
-        .requestAnimationFrame === 'function'
-    ) {
-      const raf = (
-        globalThis as unknown as {
-          requestAnimationFrame: (cb: () => void) => number
-        }
-      ).requestAnimationFrame
-      raf(() => raf(() => resolve()))
-    } else {
-      setTimeout(resolve, 0)
-    }
-  })
-}
-
-/**
  * Native DXF → database converter.
  *
  * Streams DXF pairs through {@link AcDbDxfFiler} / {@link AcDbDxfDocumentReader}
@@ -54,8 +38,9 @@ function yieldForPaint(): Promise<void> {
  * so the first draw happens with fonts already available — no mid-parse FONT
  * or post-open regen.
  *
- * Mid-PARSE byte progress, chunked ENTITY flush, and paint yields keep the
- * status bar / spinner responsive while main-thread work runs.
+ * Mid-PARSE byte progress, chunked ENTITY flush, and time-budgeted UI yields
+ * keep the status bar / spinner responsive without stalling large files on
+ * per-chunk `requestAnimationFrame` waits.
  */
 export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
   constructor(config: AcDbDatabaseConverterConfig = {}) {
@@ -87,8 +72,8 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
 
     await emit(0, 'START', 'START')
     await emit(PARSE_START_PCT, 'PARSE', 'START')
-    // Let the open-file overlay paint before sync-heavy parse work.
-    await yieldForPaint()
+    // Let the open-file overlay paint before sync-heavy parse work (once).
+    await acCmYieldForPaint()
 
     // Suppress entityAppended (and related) until FONT finishes so the viewer
     // does not worldDraw text before fontLoader.load has run.
@@ -101,6 +86,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
 
       const reader = new AcDbDxfDocumentReader(db, {
         entityBatchSize: Math.max(1, minimumChunkSize || 200),
+        yieldBudgetMs: ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
         totalBytes,
         onProgress: async ratio => {
           const pct = Math.min(
@@ -126,6 +112,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
       await emit(ENTITY_START_PCT, 'ENTITY', 'START')
       const chunkSize = Math.max(1, minimumChunkSize || 200)
       let lastEntityPct = ENTITY_START_PCT
+      const yieldGate = new AcCmUiYieldGate(ACCM_DEFAULT_UI_YIELD_BUDGET_MS)
       // Flush queued entityAppended in chunks → first draw with fonts loaded,
       // while advancing most of the open-file progress bar.
       await db.endEventBatchChunked(chunkSize, async (flushed, total) => {
@@ -139,10 +126,12 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
                     (flushed / total) * (ENTITY_END_PCT - ENTITY_START_PCT)
                   )
               )
-        if (pct <= lastEntityPct) return
-        lastEntityPct = pct
-        await emit(pct, 'ENTITY', 'IN-PROGRESS')
-        await yieldForPaint()
+        if (pct > lastEntityPct) {
+          lastEntityPct = pct
+          await emit(pct, 'ENTITY', 'IN-PROGRESS')
+        }
+        // Time-budgeted single-frame yield — not per progress percent.
+        await yieldGate.maybeYield()
       })
       batchOpen = false
       await emit(ENTITY_END_PCT, 'ENTITY', 'END')

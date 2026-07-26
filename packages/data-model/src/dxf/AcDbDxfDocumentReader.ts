@@ -1,3 +1,8 @@
+import {
+  ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
+  AcCmUiYieldGate,
+  acCmYieldToUi
+} from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -32,8 +37,16 @@ import { acdbDxfInHeader } from './AcDbDxfHeaderReader'
 import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader'
 
 export interface AcDbDxfDocumentReaderOptions {
-  /** Yield to the event loop every N entities (keeps UI responsive). */
+  /**
+   * How often to check parse progress / UI yield while streaming entities
+   * (entity count). Actual yields are time-budgeted via {@link yieldBudgetMs}.
+   */
   entityBatchSize?: number
+  /**
+   * Minimum wall time between cooperative UI yields during parse.
+   * Defaults to {@link ACCM_DEFAULT_UI_YIELD_BUDGET_MS}.
+   */
+  yieldBudgetMs?: number
   /**
    * Called with approximate parse completion in `[0, 1]` based on byte
    * offset. Used by the native converter to emit mid-PARSE progress.
@@ -63,11 +76,16 @@ export class AcDbDxfDocumentReader {
   private readonly _fonts = new Set<string>()
   /** ATTRIB entities waiting for their owning INSERT (keyed by INSERT objectId). */
   private readonly _attributeMap = new Map<AcDbObjectId, AcDbAttribute[]>()
+  private readonly _yieldGate: AcCmUiYieldGate
 
   constructor(
     private readonly _db: AcDbDatabase,
     private readonly _options: AcDbDxfDocumentReaderOptions = {}
-  ) {}
+  ) {
+    this._yieldGate = new AcCmUiYieldGate(
+      this._options.yieldBudgetMs ?? ACCM_DEFAULT_UI_YIELD_BUDGET_MS
+    )
+  }
 
   get unknownEntityCount() {
     return this._unknownEntityCount
@@ -957,30 +975,10 @@ export class AcDbDxfDocumentReader {
     await onProgress(ratio)
   }
 
-  /**
-   * Yields to the browser so loading overlays can paint/animate.
-   * `Promise.resolve()` alone stays on the microtask queue and does not paint.
-   */
-  private yieldToUi(): Promise<void> {
-    return new Promise(resolve => {
-      if (
-        typeof globalThis !== 'undefined' &&
-        typeof (globalThis as { requestAnimationFrame?: unknown })
-          .requestAnimationFrame === 'function'
-      ) {
-        ;(
-          globalThis as unknown as {
-            requestAnimationFrame: (cb: () => void) => number
-          }
-        ).requestAnimationFrame(() => resolve())
-      } else {
-        setTimeout(resolve, 0)
-      }
-    })
-  }
-
   private async yieldAndReportProgress(filer: AcDbDxfFiler) {
     await this.reportParseProgress(filer)
-    await this.yieldToUi()
+    // Progress may fire every batch; UI yield is time-budgeted so large DXFs
+    // are not dominated by per-batch requestAnimationFrame waits.
+    await this._yieldGate.maybeYield(acCmYieldToUi)
   }
 }

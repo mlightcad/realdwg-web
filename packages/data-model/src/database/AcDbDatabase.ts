@@ -2244,14 +2244,10 @@ export class AcDbDatabase extends AcDbObject {
         }
       }
 
-      this.events.openProgress.dispatch({
-        database: this,
-        percentage: percentage,
-        stage: 'CONVERSION',
-        subStage: stage,
-        subStageStatus: stageStatus,
-        data: progressData
-      })
+      // Font download runs on FONT/'END' from converters, but must finish
+      // *before* we advertise FONT END to listeners. Previously END was
+      // dispatched first, so OPENPROF / UI treated font I/O as zero-cost and
+      // attributed that wall time to the gap before ENTITY.
       if (
         options &&
         options.fontLoader &&
@@ -2284,7 +2280,25 @@ export class AcDbDatabase extends AcDbObject {
             data: { fonts, error: message, code: 'font_load_failed' }
           })
         }
+        this.events.openProgress.dispatch({
+          database: this,
+          percentage: percentage,
+          stage: 'CONVERSION',
+          subStage: stage,
+          subStageStatus: 'END',
+          data: fonts
+        })
+        return
       }
+
+      this.events.openProgress.dispatch({
+        database: this,
+        percentage: percentage,
+        stage: 'CONVERSION',
+        subStage: stage,
+        subStageStatus: stageStatus,
+        data: progressData
+      })
     }
   }
 
