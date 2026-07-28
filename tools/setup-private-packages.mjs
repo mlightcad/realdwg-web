@@ -13,7 +13,7 @@ import { fileURLToPath } from 'node:url'
 const toolsDir = path.dirname(fileURLToPath(import.meta.url))
 const rootDir = path.resolve(toolsDir, '..')
 const targetDir = path.join(rootDir, 'packages', 'dwg-converter')
-const defaultRepoUrl = 'https://github.com/mlightcad/dwg-converter.git'
+const defaultRepoUrl = 'https://github.com/mlight-cad/dwg-converter.git'
 const repoUrl = process.env.DWG_CONVERTER_REPO_URL || defaultRepoUrl
 
 function run(command, args) {
@@ -30,7 +30,7 @@ function run(command, args) {
 function printNextSteps(prefix) {
   console.log(prefix)
   console.log('  pnpm install')
-  console.log('  pnpm --filter @mlightcad/dwg-converter build')
+  console.log('  pnpm --filter @mlight-cad/dwg-converter build')
   console.log('')
   console.log(
     'Note: pnpm install may add packages/dwg-converter to pnpm-lock.yaml.'
