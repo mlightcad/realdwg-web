@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.12.2
+
+### Patch Changes
+
+- feat: faster DWG/DXF parsing via zero-copy worker transfers and windowed UTF-8 decoding, plus private dwg-converter setup tooling
+- Updated dependencies
+  - @mlightcad/data-model@1.12.2
+
 ## 3.12.1
 
 ### Patch Changes
