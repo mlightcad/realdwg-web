@@ -154,11 +154,13 @@ export class AcDbWorkerManager {
       worker.addEventListener('message', messageHandler)
       worker.addEventListener('error', errorHandler)
 
-      // Send task to worker
-      worker.postMessage({
-        id: taskId,
-        input
-      })
+      // Zero-copy ArrayBuffer inputs into the worker (DWG file bytes).
+      const message = { id: taskId, input }
+      if (input instanceof ArrayBuffer) {
+        worker.postMessage(message, [input])
+      } else {
+        worker.postMessage(message)
+      }
     })
   }
 
