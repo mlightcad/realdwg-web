@@ -43,6 +43,15 @@ export interface AcGiEntity {
   addChild(child: AcGiEntity): void
 
   /**
+   * Direct child count for group-like nodes.
+   *
+   * Used as a cheap heuristic before {@link compactForInstancing} (skip
+   * compaction for tiny templates). Leaf entities may omit this; callers treat
+   * a missing value as unknown and favor compacting.
+   */
+  readonly childCount?: number
+
+  /**
    * Apply the matrix transform to the object and updates the object's position, rotation and scale.
    * @param matrix Input the matrix to apply
    */

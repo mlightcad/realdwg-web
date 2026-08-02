@@ -28,15 +28,32 @@ export type AcDbFontNameCollectorEntityFontInfo = {
   resolveStyle?: boolean
 }
 
+/**
+ * Entity collections accepted by {@link AcDbFontNameCollector.collect}.
+ * Arrays match LibreDwg-style models; maps match handle→entity stores.
+ */
+export type AcDbFontNameCollectorEntities<TEntity> =
+  | readonly TEntity[]
+  | Map<number, TEntity>
+
 /** Callbacks that map a host-specific entity model to collector input. */
 export type AcDbFontNameCollectorAdapter<TEntity> = {
   getEntityFontInfo(entity: TEntity): AcDbFontNameCollectorEntityFontInfo | null
-  getBlockEntities?(blockName: string): TEntity[] | undefined
+  getBlockEntities?(
+    blockName: string
+  ): AcDbFontNameCollectorEntities<TEntity> | undefined
 }
 
 export type AcDbFontNameCollectorOptions = {
   styles: AcDbFontNameCollectorStyleEntry[]
   textStyleVar?: string
+  /**
+   * When true (default), preload fonts from every named STYLE entry.
+   * Set false to only collect shape-definition fonts plus fonts referenced by
+   * the entity walk (used styles / inline overrides) — better for large DWGs
+   * whose STYLE table lists many unused fonts.
+   */
+  includeAllNamedStyleFonts?: boolean
 }
 
 /**
@@ -49,18 +66,22 @@ export class AcDbFontNameCollector {
   private readonly styles: AcDbFontNameCollectorStyleEntry[]
   private readonly styleMap: Map<string, string[]>
   private readonly textStyleVar: string
+  private readonly includeAllNamedStyleFonts: boolean
 
   constructor(options: AcDbFontNameCollectorOptions) {
     this.styles = options.styles
     this.styleMap = AcDbFontNameCollector.buildStyleFontMap(this.styles)
     this.textStyleVar = options.textStyleVar ?? DEFAULT_TEXT_STYLE
+    this.includeAllNamedStyleFonts = options.includeAllNamedStyleFonts ?? true
   }
 
   /**
    * Walks entities and returns all normalized font names referenced by the drawing.
+   *
+   * @param entities - Entity array, or a handle→entity map (`Map` values are walked).
    */
   collect<TEntity>(
-    entities: TEntity[],
+    entities: AcDbFontNameCollectorEntities<TEntity>,
     adapter: AcDbFontNameCollectorAdapter<TEntity>
   ): string[] {
     const fonts = new Set<string>()
@@ -69,10 +90,12 @@ export class AcDbFontNameCollector {
     )) {
       fonts.add(fontName)
     }
-    for (const fontName of AcDbFontNameCollector.collectNamedStyleTableFonts(
-      this.styles
-    )) {
-      fonts.add(fontName)
+    if (this.includeAllNamedStyleFonts) {
+      for (const fontName of AcDbFontNameCollector.collectNamedStyleTableFonts(
+        this.styles
+      )) {
+        fonts.add(fontName)
+      }
     }
     this.collectFromEntities(entities, adapter, fonts)
     return Array.from(fonts)
@@ -93,11 +116,11 @@ export class AcDbFontNameCollector {
   }
 
   private collectFromEntities<TEntity>(
-    entities: TEntity[],
+    entities: AcDbFontNameCollectorEntities<TEntity>,
     adapter: AcDbFontNameCollectorAdapter<TEntity>,
     fonts: Set<string>
   ) {
-    for (const entity of entities) {
+    for (const entity of AcDbFontNameCollector.iterateEntities(entities)) {
       const info = adapter.getEntityFontInfo(entity)
       if (!info) {
         continue
@@ -122,6 +145,14 @@ export class AcDbFontNameCollector {
         }
       }
     }
+  }
+
+  private static iterateEntities<TEntity>(
+    entities: AcDbFontNameCollectorEntities<TEntity>
+  ): IterableIterator<TEntity> {
+    return entities instanceof Map
+      ? entities.values()
+      : entities[Symbol.iterator]()
   }
 
   /**

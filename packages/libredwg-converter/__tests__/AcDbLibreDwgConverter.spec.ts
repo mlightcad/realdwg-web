@@ -132,6 +132,11 @@ describe('AcDbLibreDwgConverter', () => {
               name: 'Romans',
               font: 'romans.shx',
               standardFlag: 0
+            },
+            {
+              name: 'Unused',
+              font: 'italic.shx',
+              standardFlag: 0
             }
           ]
         },
@@ -147,9 +152,11 @@ describe('AcDbLibreDwgConverter', () => {
       entities: []
     })
 
-    expect(fonts).toEqual(
-      expect.arrayContaining(['txt', 'gbcbig', 'romans'])
-    )
+    // Unused named STYLE fonts are skipped; only used block styles are kept.
+    expect(fonts).toEqual(expect.arrayContaining(['romans']))
+    expect(fonts).not.toContain('txt')
+    expect(fonts).not.toContain('gbcbig')
+    expect(fonts).not.toContain('italic')
   })
 
   it('collects fonts from tolerance entities via dim style text style and inline fonts', () => {

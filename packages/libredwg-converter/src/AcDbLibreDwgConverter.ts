@@ -98,9 +98,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   /**
-   * Gets all of fonts used by entities in model space and paper space
+   * Gets fonts referenced by the drawing: shape-definition STYLE fonts plus
+   * fonts used by entities in model/paper space and block definitions.
+   * Unused named STYLE table fonts are not included.
    * @param dwg dwg database model
-   * @returns Returns all of fonts used by entities in model space and paper space
+   * @returns Normalized font names to preload
    */
   protected getFonts(dwg: DwgDatabase) {
     const blockMap: Map<string, DwgBlockRecordTableEntry> = new Map()
@@ -133,7 +135,10 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         extendedFont: (style as { extendedFont?: string }).extendedFont,
         standardFlag: style.standardFlag
       })),
-      textStyleVar: dwg.header?.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
+      textStyleVar: dwg.header?.TEXTSTYLE ?? DEFAULT_TEXT_STYLE,
+      // Large DWGs often list many unused STYLE fonts; only preload shapes plus
+      // fonts referenced by the entity walk (used styles / inline overrides).
+      includeAllNamedStyleFonts: false
     }).collect(rootEntities, {
       getEntityFontInfo: (entity: DwgEntity) => {
         if (entity.type == 'MTEXT') {

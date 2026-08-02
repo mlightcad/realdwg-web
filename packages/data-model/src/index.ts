@@ -58,6 +58,7 @@ export {
 } from './converter'
 export type {
   AcDbFontNameCollectorAdapter,
+  AcDbFontNameCollectorEntities,
   AcDbFontNameCollectorEntityFontInfo,
   AcDbFontNameCollectorOptions,
   AcDbFontNameCollectorStyleEntry,

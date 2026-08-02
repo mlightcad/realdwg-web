@@ -26,6 +26,8 @@ import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbAttribute } from '../entity/AcDbAttribute'
 import { AcDbBlockReference } from '../entity/AcDbBlockReference'
 import type { AcDbEntity } from '../entity/AcDbEntity'
+import { AcDbFcf } from '../entity/AcDbFcf'
+import { AcDbMLeader } from '../entity/AcDbMLeader'
 import { AcDbMText } from '../entity/AcDbMText'
 import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic'
 import {
@@ -828,20 +830,20 @@ export class AcDbDxfDocumentReader {
   }
 
   /**
-   * Appends an entity (or links ATTRIB → INSERT) and collects font style names.
+   * Appends an entity (or links ATTRIB → INSERT) and collects inline fonts.
    */
   private acceptEntity(
     entity: AcDbEntity,
     owner: AcDbBlockTableRecord
   ): void {
     if (entity instanceof AcDbAttribute) {
-      this.collectFontFromEntity(entity)
+      this.collectInlineFontsFromEntity(entity)
       this.linkOrDeferAttribute(entity, owner)
       return
     }
 
     owner.appendEntity(entity)
-    this.collectFontFromEntity(entity)
+    this.collectInlineFontsFromEntity(entity)
 
     if (entity instanceof AcDbBlockReference) {
       const pending = this._attributeMap.get(entity.objectId)
@@ -893,8 +895,9 @@ export class AcDbDxfDocumentReader {
   }
 
   /**
-   * Collects fonts used by the drawing. The converter emits a single FONT
-   * stage after parse so loaders run before entityAppended is flushed.
+   * Collects fonts from a STYLE table record. Called while reading TABLES so
+   * every style (and shape-definition) font is preloaded; entity handlers only
+   * need to pick up inline overrides that are not in the style table.
    */
   private collectFontFromStyleRecord(record: AcDbTextStyleTableRecord) {
     if (record.fileName) {
@@ -916,43 +919,35 @@ export class AcDbDxfDocumentReader {
     }
   }
 
-  private collectFontFromEntity(entity: {
-    constructor: { name: string }
-    styleName?: string
-    textStyleName?: string
-    textStyleId?: string
-  }) {
-    const addResolvedStyle = (styleName?: string) => {
-      if (!styleName) return
-      const record = this._db.tables.textStyleTable.resolveAt(styleName)
-      if (record) {
-        this.collectFontFromStyleRecord(record)
-        return
-      }
-      // Fall back to the raw name only when the style table has no match.
-      this._fonts.add(styleName)
+  /**
+   * Collects inline font overrides from text-bearing entities.
+   *
+   * STYLE-table fonts are already gathered in {@link collectFontFromStyleRecord};
+   * this only covers `\f` / `\F` overrides in MTEXT, MLEADER, and TOLERANCE.
+   */
+  private collectInlineFontsFromEntity(entity: AcDbEntity) {
+    const formattedText = this.getEntityFormattedTextForFonts(entity)
+    if (!formattedText) return
+    for (const font of AcDbFontNameCollector.collectInlineMTextFonts(
+      formattedText
+    )) {
+      this._fonts.add(font)
     }
+  }
 
-    addResolvedStyle(
-      typeof entity.styleName === 'string' ? entity.styleName : undefined
-    )
-    addResolvedStyle(
-      typeof entity.textStyleName === 'string'
-        ? entity.textStyleName
-        : undefined
-    )
-    // MLEADER stores text style as a handle (340/343).
-    if (typeof entity.textStyleId === 'string' && entity.textStyleId) {
-      const record = this._db.tables.textStyleTable.getIdAt(entity.textStyleId)
-      if (record) this.collectFontFromStyleRecord(record)
+  private getEntityFormattedTextForFonts(
+    entity: AcDbEntity
+  ): string | undefined {
+    if (entity instanceof AcDbMText) {
+      return entity.contents || undefined
     }
-    if (entity instanceof AcDbMText && entity.contents) {
-      for (const font of AcDbFontNameCollector.collectInlineMTextFonts(
-        entity.contents
-      )) {
-        this._fonts.add(font)
-      }
+    if (entity instanceof AcDbMLeader) {
+      return entity.contents || undefined
     }
+    if (entity instanceof AcDbFcf) {
+      return entity.text || undefined
+    }
+    return undefined
   }
 
   private skipUntilEndSec(filer: AcDbDxfFiler) {

@@ -92,16 +92,18 @@ describe('AcDbRenderingCache', () => {
 
   it('compacts and caches color-independent templates', () => {
     const cache = new AcDbRenderingCache()
-    const blockGroup = createMockGroup()
+    const blockGroup = createMockGroup({ childCount: 4 })
     const compact = blockGroup.compactForInstancing as jest.Mock
 
     const renderer = {
       group: jest.fn(() => blockGroup)
     }
 
+    let iterations = 0
     const blockRecord = {
       name: 'WALL',
       newIterator: function* () {
+        iterations++
         yield {
           visibility: true,
           color: new AcCmColor().setRGBValue(0xffffff),
@@ -120,7 +122,9 @@ describe('AcDbRenderingCache', () => {
 
     expect(compact).toHaveBeenCalledTimes(1)
     expect(cache.has('WALL')).toBe(true)
-    // Second INSERT with a different color hits the same template.
+    expect(iterations).toBe(1)
+    // Second INSERT with a different color hits the same template without
+    // rescanning block entities for ByBlock color.
     cache.draw(
       renderer as never,
       blockRecord as never,
@@ -129,6 +133,37 @@ describe('AcDbRenderingCache', () => {
       true
     )
     expect(renderer.group).toHaveBeenCalledTimes(1)
+    expect(iterations).toBe(1)
+  })
+
+  it('skips compactForInstancing for tiny block templates', () => {
+    const cache = new AcDbRenderingCache()
+    const blockGroup = createMockGroup({ childCount: 1 })
+    const compact = blockGroup.compactForInstancing as jest.Mock
+    const renderer = {
+      group: jest.fn(() => blockGroup)
+    }
+    const blockRecord = {
+      name: 'TINY',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xffffff),
+      [],
+      true
+    )
+
+    expect(compact).not.toHaveBeenCalled()
+    expect(cache.has('TINY')).toBe(true)
   })
 
   it('keys ByBlock blocks by color and does not share templates', () => {
