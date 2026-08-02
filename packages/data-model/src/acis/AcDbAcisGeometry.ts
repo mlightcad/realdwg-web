@@ -18,6 +18,14 @@
 import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
 import type { AcDbAcisSabToken, AcDbAcisSabVector } from './AcDbAcisSab'
 import { AcDbAcisSabTag } from './AcDbAcisSab'
+import {
+  type AcDbAcisAffineTransform,
+  acdbAcisBuildNodeTransforms,
+  acdbAcisIdentityTransform,
+  acdbAcisTransformDirection,
+  acdbAcisTransformIsIdentity,
+  acdbAcisTransformPoint,
+} from './AcDbAcisTransform'
 
 /** 3D position or direction vector `[x, y, z]`. */
 export type AcDbAcisVec3 = AcDbAcisSabVector
@@ -422,14 +430,120 @@ function loopCoedgeCount(loop: AcDbAcisNode): number {
 }
 
 /**
+ * Applies a body transform to analytic curve parameters.
+ *
+ * @param curve - Parsed curve parameters in body space.
+ * @param transform - Body-to-model transform.
+ */
+function transformCurveParams(
+  curve: AcDbAcisCurveParams,
+  transform: AcDbAcisAffineTransform,
+): AcDbAcisCurveParams {
+  if (curve.kind === 'straight') {
+    return {
+      kind: 'straight',
+      origin: acdbAcisTransformPoint(curve.origin, transform),
+      direction: acdbAcisTransformDirection(curve.direction, transform),
+    }
+  }
+  if (curve.kind === 'ellipse') {
+    return {
+      kind: 'ellipse',
+      center: acdbAcisTransformPoint(curve.center, transform),
+      normal: acdbAcisTransformDirection(curve.normal, transform),
+      majorAxis: acdbAcisTransformDirection(curve.majorAxis, transform),
+      ratio: curve.ratio,
+    }
+  }
+  if (curve.kind === 'intcurve') {
+    return {
+      kind: 'intcurve',
+      controlPoints: curve.controlPoints.map(p =>
+        acdbAcisTransformPoint(p, transform),
+      ),
+    }
+  }
+  return curve
+}
+
+/**
+ * Applies a body transform to analytic surface parameters.
+ *
+ * @param surface - Parsed surface parameters in body space.
+ * @param transform - Body-to-model transform.
+ */
+function transformSurfaceParams(
+  surface: AcDbAcisSurfaceParams,
+  transform: AcDbAcisAffineTransform,
+): AcDbAcisSurfaceParams {
+  if (surface.kind === 'plane') {
+    return {
+      kind: 'plane',
+      origin: acdbAcisTransformPoint(surface.origin, transform),
+      normal: acdbAcisTransformDirection(surface.normal, transform),
+      ...(surface.uDir
+        ? { uDir: acdbAcisTransformDirection(surface.uDir, transform) }
+        : {}),
+    }
+  }
+  if (surface.kind === 'cone') {
+    return {
+      kind: 'cone',
+      origin: acdbAcisTransformPoint(surface.origin, transform),
+      axis: acdbAcisTransformDirection(surface.axis, transform),
+      majorAxis: acdbAcisTransformDirection(surface.majorAxis, transform),
+      ratio: surface.ratio,
+      sineAngle: surface.sineAngle,
+      cosineAngle: surface.cosineAngle,
+    }
+  }
+  if (surface.kind === 'torus') {
+    return {
+      kind: 'torus',
+      center: acdbAcisTransformPoint(surface.center, transform),
+      axis: acdbAcisTransformDirection(surface.axis, transform),
+      majorRadius: surface.majorRadius * transform.scale,
+      minorRadius: surface.minorRadius * transform.scale,
+    }
+  }
+  if (surface.kind === 'sphere') {
+    return {
+      kind: 'sphere',
+      center: acdbAcisTransformPoint(surface.center, transform),
+      radius: surface.radius * transform.scale,
+      uDir: acdbAcisTransformDirection(surface.uDir, transform),
+      poleAxis: acdbAcisTransformDirection(surface.poleAxis, transform),
+    }
+  }
+  return surface
+}
+
+/**
  * Extract the B-rep geometry from a decoded ACIS model. Never throws; unresolved
  * topology/geometry is reported via `diagnostics` and `'unknown'` type labels.
+ *
+ * Coordinates are returned in model space: each entity is mapped by its owning
+ * body's `transform` (multi-body models with distinct transforms are supported).
  *
  * @param model - Resolved ACIS model graph.
  * @returns Extracted vertices, edges, faces, bounding box, and diagnostics.
  */
 export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry {
   const diagnostics: string[] = [];
+  const transformsByNode = acdbAcisBuildNodeTransforms(model)
+  const identity = acdbAcisIdentityTransform()
+  const transformFor = (nodeIndex: number): AcDbAcisAffineTransform =>
+    transformsByNode.get(nodeIndex) ?? identity
+  const mapPoint = (
+    p: AcDbAcisVec3 | null,
+    nodeIndex: number,
+  ): AcDbAcisVec3 | null => {
+    if (p === null) return null
+    const transform = transformFor(nodeIndex)
+    return acdbAcisTransformIsIdentity(transform)
+      ? p
+      : acdbAcisTransformPoint(p, transform)
+  }
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   const grow = (p: AcDbAcisVec3): void => {
@@ -439,7 +553,7 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
   };
 
   const vertices: AcDbAcisVertex[] = model.nodesOfType('vertex').map(v => {
-    const point = vertexPoint(v);
+    const point = mapPoint(vertexPoint(v), v.index);
     if (point === null) diagnostics.push(`vertex#${String(v.index)}: no resolvable point`);
     else grow(point);
     return { nodeIndex: v.index, point };
@@ -447,11 +561,19 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
 
   const edges: AcDbAcisEdge[] = model.nodesOfType('edge').map(e => {
     const verts = refsOfType(e, 'vertex');
-    const start = vertexPoint(verts[0] ?? null);
-    const end = vertexPoint(verts[1] ?? null);
+    const start = mapPoint(vertexPoint(verts[0] ?? null), e.index);
+    const end = mapPoint(vertexPoint(verts[1] ?? null), e.index);
     const curveNode = refOfType(e, '-curve');
     const curveType: AcDbAcisCurveKind = curveNode ? (CURVE_KIND[curveNode.type] ?? 'unknown') : 'unknown';
-    const curve = curveNode ? curveParams(curveNode) : undefined;
+    let curve = curveNode ? curveParams(curveNode) : undefined;
+    const transform = transformFor(e.index)
+    if (
+      curve !== undefined &&
+      curve.kind !== 'unknown' &&
+      !acdbAcisTransformIsIdentity(transform)
+    ) {
+      curve = transformCurveParams(curve, transform)
+    }
     if (start !== null && end !== null && start[0] === end[0] && start[1] === end[1] && start[2] === end[2]) {
       diagnostics.push(`edge#${String(e.index)}: degenerate (coincident endpoints)`);
     }
@@ -463,7 +585,15 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
   const faces: AcDbAcisFace[] = model.nodesOfType('face').map(f => {
     const surfaceNode = refOfType(f, '-surface');
     const surfaceType: AcDbAcisSurfaceKind = surfaceNode ? (SURFACE_KIND[surfaceNode.type] ?? 'unknown') : 'unknown';
-    const surface = surfaceNode ? surfaceParams(surfaceNode) : undefined;
+    let surface = surfaceNode ? surfaceParams(surfaceNode) : undefined;
+    const transform = transformFor(f.index)
+    if (
+      surface !== undefined &&
+      surface.kind !== 'unknown' &&
+      !acdbAcisTransformIsIdentity(transform)
+    ) {
+      surface = transformSurfaceParams(surface, transform)
+    }
     // Walk the next-loop chain (loop-typed ref), guarded against cycles.
     const loops: AcDbAcisFaceLoop[] = [];
     const seen = new Set<number>();

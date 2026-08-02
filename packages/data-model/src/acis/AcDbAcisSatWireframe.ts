@@ -8,6 +8,12 @@ import {
   type AcDbAcisVec3,
   acdbSampleAcisEllipseArc,
 } from './AcDbAcisGeometry'
+import {
+  type AcDbAcisAffineTransform,
+  acdbAcisIdentityTransform,
+  acdbAcisTransformSegments,
+  acdbAcisTransformsEqual,
+} from './AcDbAcisTransform'
 
 const DEFAULT_ELLIPSE_SAMPLES = 16
 
@@ -54,6 +60,95 @@ function splitSatRecords(satText: string): string[] {
     .filter(record => record.length > 0)
 }
 
+/**
+ * Indexes SAT entity records by pointer index.
+ *
+ * Uses an explicit `-N` sequence number when present; otherwise falls back to
+ * appearance order (ACIS files without sequence numbers).
+ *
+ * @param records - `#`-split SAT entity records.
+ */
+function indexSatRecords(records: readonly string[]): (string | undefined)[] {
+  const byIndex: (string | undefined)[] = []
+  records.forEach((record, appearanceIndex) => {
+    const match = /^-(\d+)\b/.exec(record)
+    const index = match ? Number(match[1]) : appearanceIndex
+    byIndex[index] = record
+  })
+  return byIndex
+}
+
+/**
+ * Parses a SAT `transform` record into an affine transform.
+ *
+ * Layout after pointers: three axis vectors (9 doubles), translation (3),
+ * then uniform scale.
+ *
+ * @param record - One SAT entity record.
+ */
+function parseSatTransform(record: string): AcDbAcisAffineTransform | null {
+  if (!/(?:^|\s)transform\b/.test(record)) return null
+  const values = readSatNumericTokens(record)
+  if (values.length < 13) return null
+  return {
+    xAxis: [values[0]!, values[1]!, values[2]!],
+    yAxis: [values[3]!, values[4]!, values[5]!],
+    zAxis: [values[6]!, values[7]!, values[8]!],
+    translation: [values[9]!, values[10]!, values[11]!],
+    scale: values[12]!,
+  }
+}
+
+/**
+ * Resolves the shared body-to-model transform from SAT text.
+ *
+ * Returns identity when bodies disagree (per-curve ownership is not available
+ * in this best-effort text path). When no body references a transform but
+ * exactly one transform record exists, that transform is used.
+ *
+ * @param satText - Plain SAT/ASM text payload.
+ */
+function satModelSpaceTransform(satText: string): AcDbAcisAffineTransform {
+  const identity = acdbAcisIdentityTransform()
+  const byIndex = indexSatRecords(splitSatRecords(satText))
+  const bodyTransforms: AcDbAcisAffineTransform[] = []
+
+  for (const record of byIndex) {
+    if (record == null || !/(?:^|\s)body\b/.test(record)) continue
+    const pointers = [...record.matchAll(/\$(-?\d+)/g)].map(match =>
+      Number(match[1]),
+    )
+    for (const pointer of pointers) {
+      if (pointer < 0) continue
+      const target = byIndex[pointer]
+      if (target == null) continue
+      const transform = parseSatTransform(target)
+      if (transform != null) {
+        bodyTransforms.push(transform)
+        break
+      }
+    }
+  }
+
+  if (bodyTransforms.length === 0) {
+    const transforms: AcDbAcisAffineTransform[] = []
+    for (const record of byIndex) {
+      if (record == null) continue
+      const transform = parseSatTransform(record)
+      if (transform != null) transforms.push(transform)
+    }
+    return transforms.length === 1 ? transforms[0]! : identity
+  }
+
+  const first = bodyTransforms[0]!
+  for (let i = 1; i < bodyTransforms.length; i++) {
+    if (!acdbAcisTransformsEqual(bodyTransforms[i]!, first)) {
+      return identity
+    }
+  }
+  return first
+}
+
 /** Parses a `straight-curve` SAT record into start/end segment endpoints. */
 function parseStraightCurve(record: string): [AcDbAcisVec3, AcDbAcisVec3] | null {
   if (!record.includes('straight-curve')) {
@@ -97,6 +192,9 @@ function parseEllipseCurve(record: string): AcDbAcisEllipseCurveParams | null {
  * Extract wireframe segments from a SAT text stream by matching common curve
  * records. This is a fallback when SAB decoding is unavailable.
  *
+ * Curve geometry is sampled in body space, then mapped through the shared body
+ * `transform` when one can be resolved.
+ *
  * @param satText - Plain SAT/ASM text payload.
  * @returns Flat `Float32Array` of line-segment endpoint pairs (`[x,y,z,x,y,z,...]`).
  */
@@ -122,5 +220,11 @@ export function acdbAcisWireframeSegmentsFromSatText(satText: string): Float32Ar
     }
   }
 
-  return new Float32Array(segments)
+  if (segments.length === 0) {
+    return new Float32Array(0)
+  }
+  return acdbAcisTransformSegments(
+    new Float32Array(segments),
+    satModelSpaceTransform(satText),
+  )
 }

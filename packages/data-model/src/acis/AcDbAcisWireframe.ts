@@ -9,6 +9,12 @@ import {
   acdbSampleAcisEllipseArc,
   acdbSampleAcisSphereWireframe,
 } from './AcDbAcisGeometry'
+import {
+  acdbAcisBuildNodeTransforms,
+  acdbAcisIdentityTransform,
+  acdbAcisTransformIsIdentity,
+  acdbAcisTransformPoint,
+} from './AcDbAcisTransform'
 
 /** Default number of samples when tessellating ellipse edges for wireframe output. */
 const DEFAULT_ELLIPSE_SAMPLES = 16
@@ -33,18 +39,30 @@ function pushPolyline(segments: number[], points: readonly AcDbAcisVec3[]): void
 /**
  * Builds wireframe rings for sphere faces when edge-based wireframe is empty.
  *
+ * Samples in body space, then maps each face through its owning body transform.
+ *
  * @param model - Resolved ACIS model graph.
  * @returns Line-segment endpoint pairs for sphere surface scaffolds.
  */
 function acdbAcisWireframeSegmentsFromSphereFaces(model: AcDbAcisModel): Float32Array {
   const segments: number[] = []
+  const transformsByNode = acdbAcisBuildNodeTransforms(model)
+  const identity = acdbAcisIdentityTransform()
   for (const face of model.nodesOfType('face')) {
     const surfaceNode = refOfType(face, '-surface')
     if (surfaceNode?.type !== 'sphere-surface') continue
     const params = acdbAcisParseSurfaceParams(surfaceNode)
     if (params.kind !== 'sphere') continue
+    const transform = transformsByNode.get(face.index) ?? identity
     for (const ring of acdbSampleAcisSphereWireframe(params)) {
-      pushPolyline(segments, ring)
+      if (acdbAcisTransformIsIdentity(transform)) {
+        pushPolyline(segments, ring)
+        continue
+      }
+      pushPolyline(
+        segments,
+        ring.map(p => acdbAcisTransformPoint(p, transform)),
+      )
     }
   }
   return new Float32Array(segments)
@@ -107,11 +125,13 @@ export function acdbAcisWireframeSegmentsFromSab(
 ): Float32Array | null {
   const model = acdbDecodeAcisModel(sabBytes)
   if (model === null) return null
+  // Edge wireframe uses geometry already mapped to model space by extract.
   const geometry = acdbExtractAcisGeometry(model)
   const edgeWireframe = acdbAcisWireframeSegmentsFromGeometry(geometry, model)
   if (edgeWireframe.length > 0) {
     return edgeWireframe
   }
+  // Sphere fallback samples raw surfaces and applies per-face body transforms.
   const sphereWireframe = acdbAcisWireframeSegmentsFromSphereFaces(model)
   return sphereWireframe.length > 0 ? sphereWireframe : null
 }

@@ -15,7 +15,7 @@ const REAL_CYLINDER_SAT = `400 0 1 0
 -0 body $1 $2 $-1 $3 #
 -1 display_attribute-st-attrib $-1 $4 $-1 $0 1 #
 -2 lump $-1 $-1 $5 $0 #
--3 transform $-1 1 0 0 0 -1 0 1 0 0 10 0 1 rotate no_reflect no_shear #
+-3 transform $-1 1 0 0 0 0 -1 0 1 0 0 10 0 1 rotate no_reflect no_shear #
 -4 rgb_color-st-attrib $-1 $6 $1 $0 0 1 0 #
 -5 shell $-1 $-1 $-1 $7 $-1 $2 #
 -6 id_attribute-st-attrib $-1 $-1 $-1 $4 $0 1 #
@@ -67,9 +67,15 @@ describe('AcDb3dSolid', () => {
     expect(solid.version).toBe(400)
     expect(solid.hasRenderableGeometry).toBe(true)
 
+    // Body transform maps (x,y,z) → (x, z+10, -y), so the two ellipse rings
+    // land at y=0 and y=20 with radius 10 in the XZ plane.
     const extents = solid.geometricExtents
-    expect(extents.min).toMatchObject({ x: -10, y: -10, z: -10 })
-    expect(extents.max).toMatchObject({ x: 10, y: 10, z: 10 })
+    expect(extents.min.x).toBeCloseTo(-10, 5)
+    expect(extents.min.y).toBeCloseTo(0, 5)
+    expect(extents.min.z).toBeCloseTo(-10, 5)
+    expect(extents.max.x).toBeCloseTo(10, 5)
+    expect(extents.max.y).toBeCloseTo(20, 5)
+    expect(extents.max.z).toBeCloseTo(10, 5)
   })
 
   it('computes a correct bounding box from a synthetic point set', () => {
