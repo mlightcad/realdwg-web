@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.12.3
+
+### Patch Changes
+
+- feat: improve block rendering cache hits, trim font preload, and correctly apply ACIS body transforms to solid geometry
+- Updated dependencies
+  - @mlightcad/common@1.12.3
+  - @mlightcad/geometry-engine@3.12.3
+  - @mlightcad/graphic-interface@3.12.3
+
 ## 1.12.2
 
 ### Patch Changes

@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.12.3
+
+### Patch Changes
+
+- feat: improve block rendering cache hits, trim font preload, and correctly apply ACIS body transforms to solid geometry
+- Updated dependencies
+  - @mlightcad/data-model@1.12.3
+
 ## 3.12.2
 
 ### Patch Changes
