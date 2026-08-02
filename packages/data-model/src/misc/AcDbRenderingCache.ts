@@ -431,14 +431,22 @@ export class AcDbRenderingCache {
     try {
       if (blockTableRecord != null) {
         const blockRgb = blockColor.RGB ?? 0
-        const hasByBlockColor = this.blockHasByBlockColor(blockTableRecord)
-        const key = this.createCacheKey(
-          blockTableRecord.name,
-          blockColor,
-          hasByBlockColor
-        )
+        const blockName = blockTableRecord.name
+        // Resolve cache hits without scanning block entities for ByBlock color.
+        // Color-independent templates are keyed by name; ByBlock templates use
+        // name+color. Miss path discovers ByBlock while building (one walk).
+        let key: string | undefined
+        if (blockName && this.has(blockName)) {
+          key = blockName
+        } else if (blockName) {
+          const colorKey = this.createKey(blockName, blockColor)
+          if (this.has(colorKey)) {
+            key = colorKey
+          }
+        }
+
         let block: AcGiEntity | undefined
-        if (this.has(key)) {
+        if (key !== undefined) {
           const tHit0 = profile ? performance.now() : 0
           block = this.get(key)
           if (profile) {
@@ -452,16 +460,17 @@ export class AcDbRenderingCache {
           }
         } else {
           const tBuild0 = profile ? performance.now() : 0
+          let sawByBlockColor = false
           const entities = blockTableRecord.newIterator()
           for (const entity of entities) {
             if (!entity.visibility) {
               continue
             }
             // ByBlock entities temporarily inherit the INSERT color for material
-            // creation. Use a local saved color so nested draw() calls cannot
-            // corrupt a shared module-level scratch buffer.
+            // creation. Scratch stack is nest-safe across recursive draw().
             if (entity.color.isByBlock) {
-              const savedColor = new AcCmColor().copy(entity.color)
+              sawByBlockColor = true
+              const savedColor = pushByBlockColorScratch(entity.color)
               try {
                 if (blockColor.isForeground) {
                   entity.color.setForeground()
@@ -471,6 +480,7 @@ export class AcDbRenderingCache {
                 this.addEntity(entity, results, renderer)
               } finally {
                 entity.color.copy(savedColor)
+                popByBlockColorScratch(savedColor)
               }
             } else {
               this.addEntity(entity, results, renderer)
@@ -486,8 +496,13 @@ export class AcDbRenderingCache {
             }
           }
           // Merge same-material leaves before caching so INSERT clones are cheap.
+          // Tiny templates gain little from merging and still pay syncDraw +
+          // classify cost across thousands of one-off anonymous blocks.
           let compactMs = 0
-          if (block?.compactForInstancing) {
+          if (
+            block?.compactForInstancing &&
+            entityChildCount(block) >= MIN_CHILDREN_TO_COMPACT
+          ) {
             const tCompact0 = profile ? performance.now() : 0
             block.compactForInstancing()
             if (profile) {
@@ -498,13 +513,11 @@ export class AcDbRenderingCache {
               }
             }
           }
+          key = this.createCacheKey(blockName, blockColor, sawByBlockColor)
           const setCloneBefore = profile ? stats.setCloneMs : 0
           if (block && cache) {
             // Transient anonymous blocks (*U…) are not reused across INSERTs.
-            if (
-              blockTableRecord.name &&
-              !blockTableRecord.name.startsWith('*U')
-            ) {
+            if (blockName && !blockName.startsWith('*U')) {
               this.set(key, block)
             }
           }
@@ -514,7 +527,7 @@ export class AcDbRenderingCache {
               stats.topLevel.misses++
             }
             stats.blockMisses.push({
-              blockName: blockTableRecord.name || '(unnamed)',
+              blockName: blockName || '(unnamed)',
               buildMs,
               compactMs,
               setCloneMs: stats.setCloneMs - setCloneBefore
@@ -653,3 +666,48 @@ const _tmpWorldTransform = /*@__PURE__*/ new AcGeMatrix3d()
 const _tmpExtrusion = /*@__PURE__*/ new AcGeMatrix3d()
 /** Scratch inverse of the world transform used to bring ATTRIB geometry into block space. */
 const _tmpInverse = /*@__PURE__*/ new AcGeMatrix3d()
+
+/**
+ * Minimum direct child count before {@link AcGiEntity.compactForInstancing} is
+ * worth running on a freshly built block template.
+ */
+const MIN_CHILDREN_TO_COMPACT = 3
+
+/**
+ * Nest-safe ByBlock color save/restore pool for {@link AcDbRenderingCache.draw}.
+ * Avoids allocating a new {@link AcCmColor} per ByBlock entity on cache misses.
+ */
+const _byBlockColorScratch: AcCmColor[] = []
+
+/**
+ * Returns the direct child count of a graphic entity when available.
+ *
+ * @param entity - Group or entity produced by the renderer.
+ * @returns {@link AcGiEntity.childCount}, or a large sentinel when unknown
+ *   (favor compacting).
+ */
+function entityChildCount(entity: AcGiEntity): number {
+  const count = entity.childCount
+  return typeof count === 'number' ? count : Number.POSITIVE_INFINITY
+}
+
+/**
+ * Copies `color` into a pooled scratch and returns it.
+ *
+ * @param color - Entity color to snapshot before temporary ByBlock override.
+ * @returns Pooled color holding a copy of `color`.
+ */
+function pushByBlockColorScratch(color: AcCmColor): AcCmColor {
+  const scratch = _byBlockColorScratch.pop() ?? new AcCmColor()
+  scratch.copy(color)
+  return scratch
+}
+
+/**
+ * Returns a scratch color from {@link pushByBlockColorScratch} to the pool.
+ *
+ * @param scratch - Color previously returned by {@link pushByBlockColorScratch}.
+ */
+function popByBlockColorScratch(scratch: AcCmColor): void {
+  _byBlockColorScratch.push(scratch)
+}

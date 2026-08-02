@@ -122,6 +122,26 @@ describe('AcDbFontNameCollector', () => {
     )
   })
 
+  it('can skip unused named STYLE fonts and only keep used + shapes', () => {
+    const fonts = new AcDbFontNameCollector({
+      styles: [
+        { name: 'Standard', font: 'txt.shx' },
+        { name: 'Unused', font: 'romans.shx' },
+        { name: '', font: 'tecosymbol.shx', standardFlag: 1 }
+      ],
+      textStyleVar: 'Standard',
+      includeAllNamedStyleFonts: false
+    }).collect([{ type: 'TEXT', styleName: 'Standard' }], {
+      getEntityFontInfo: entity =>
+        entity.type === 'TEXT'
+          ? { styleName: entity.styleName, resolveStyle: true }
+          : null
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['txt', 'tecosymbol']))
+    expect(fonts).not.toContain('romans')
+  })
+
   it('collects shape-definition fonts from the style table', () => {
     const fonts = new AcDbFontNameCollector({
       styles: [
@@ -133,5 +153,42 @@ describe('AcDbFontNameCollector', () => {
     })
 
     expect(fonts).toEqual(['tecosymbol', 'romans'])
+  })
+
+  it('collects fonts from a handle→entity map', () => {
+    const entities = new Map<number, { type: string; styleName?: string; text?: string; name?: string }>([
+      [1, { type: 'TEXT', styleName: 'A' }],
+      [2, { type: 'MTEXT', styleName: 'A', text: '{\\fCustom|b0|i0;Hello}' }],
+      [3, { type: 'INSERT', name: 'B1' }]
+    ])
+    const blockEntities = new Map<number, { type: string; styleName?: string }>([
+      [10, { type: 'TEXT', styleName: 'A' }]
+    ])
+
+    const fonts = new AcDbFontNameCollector({
+      styles: [{ name: 'A', font: 'Arial.ttf' }],
+      textStyleVar: 'A'
+    }).collect(entities, {
+      getEntityFontInfo: entity => {
+        if (entity.type === 'TEXT') {
+          return { styleName: entity.styleName, resolveStyle: true }
+        }
+        if (entity.type === 'MTEXT') {
+          return {
+            styleName: entity.styleName,
+            formattedText: entity.text,
+            resolveStyle: true
+          }
+        }
+        if (entity.type === 'INSERT') {
+          return { blockName: entity.name }
+        }
+        return null
+      },
+      getBlockEntities: blockName =>
+        blockName === 'B1' ? blockEntities : undefined
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['arial', 'custom']))
   })
 })
