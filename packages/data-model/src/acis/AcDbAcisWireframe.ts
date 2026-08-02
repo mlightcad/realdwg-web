@@ -9,6 +9,10 @@ import {
   acdbSampleAcisEllipseArc,
   acdbSampleAcisSphereWireframe,
 } from './AcDbAcisGeometry'
+import {
+  acdbAcisModelSpaceTransform,
+  acdbAcisTransformSegments,
+} from './AcDbAcisTransform'
 
 /** Default number of samples when tessellating ellipse edges for wireframe output. */
 const DEFAULT_ELLIPSE_SAMPLES = 16
@@ -107,11 +111,17 @@ export function acdbAcisWireframeSegmentsFromSab(
 ): Float32Array | null {
   const model = acdbDecodeAcisModel(sabBytes)
   if (model === null) return null
+  // Edge wireframe uses geometry already mapped to model space by extract.
   const geometry = acdbExtractAcisGeometry(model)
   const edgeWireframe = acdbAcisWireframeSegmentsFromGeometry(geometry, model)
   if (edgeWireframe.length > 0) {
     return edgeWireframe
   }
+  // Sphere fallback reads raw surface records — apply the body transform here.
   const sphereWireframe = acdbAcisWireframeSegmentsFromSphereFaces(model)
-  return sphereWireframe.length > 0 ? sphereWireframe : null
+  if (sphereWireframe.length === 0) return null
+  return acdbAcisTransformSegments(
+    sphereWireframe,
+    acdbAcisModelSpaceTransform(model),
+  )
 }
