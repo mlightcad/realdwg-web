@@ -33,10 +33,43 @@ const IDENTITY: AcDbAcisAffineTransform = {
   scale: 1,
 }
 
+const NEAR_EPS = 1e-12
+
 const VEC_TAGS = new Set<number>([
   AcDbAcisSabTag.LocationVec,
   AcDbAcisSabTag.DirectionVec,
 ])
+
+const near = (a: number, b: number): boolean => Math.abs(a - b) <= NEAR_EPS
+
+const nearVec = (v: AcDbAcisSabVector, e: AcDbAcisSabVector): boolean =>
+  near(v[0], e[0]) && near(v[1], e[1]) && near(v[2], e[2])
+
+/**
+ * Returns the identity body transform.
+ */
+export function acdbAcisIdentityTransform(): AcDbAcisAffineTransform {
+  return IDENTITY
+}
+
+/**
+ * Returns true when two affine transforms are numerically equal.
+ *
+ * @param a - First transform.
+ * @param b - Second transform.
+ */
+export function acdbAcisTransformsEqual(
+  a: AcDbAcisAffineTransform,
+  b: AcDbAcisAffineTransform,
+): boolean {
+  return (
+    near(a.scale, b.scale) &&
+    nearVec(a.xAxis, b.xAxis) &&
+    nearVec(a.yAxis, b.yAxis) &&
+    nearVec(a.zAxis, b.zAxis) &&
+    nearVec(a.translation, b.translation)
+  )
+}
 
 /**
  * Parses an ACIS `transform` node into an affine transform.
@@ -97,16 +130,7 @@ export function acdbAcisTransformFromBody(
 export function acdbAcisTransformIsIdentity(
   transform: AcDbAcisAffineTransform,
 ): boolean {
-  const near = (a: number, b: number) => Math.abs(a - b) <= 1e-12
-  const nearVec = (v: AcDbAcisSabVector, e: AcDbAcisSabVector) =>
-    near(v[0], e[0]) && near(v[1], e[1]) && near(v[2], e[2])
-  return (
-    near(transform.scale, 1) &&
-    nearVec(transform.xAxis, IDENTITY.xAxis) &&
-    nearVec(transform.yAxis, IDENTITY.yAxis) &&
-    nearVec(transform.zAxis, IDENTITY.zAxis) &&
-    nearVec(transform.translation, IDENTITY.translation)
-  )
+  return acdbAcisTransformsEqual(transform, IDENTITY)
 }
 
 /**
@@ -150,11 +174,46 @@ export function acdbAcisTransformDirection(
 }
 
 /**
- * Picks the single body transform to apply to a whole model.
+ * Walks each body DAG and records the owning body's transform per node index.
+ *
+ * Attribute entities are skipped so owner back-pointers cannot cross bodies.
+ * Shared nodes keep the first body's transform.
+ *
+ * @param model - Resolved ACIS model graph.
+ */
+export function acdbAcisBuildNodeTransforms(
+  model: AcDbAcisModel,
+): ReadonlyMap<number, AcDbAcisAffineTransform> {
+  const map = new Map<number, AcDbAcisAffineTransform>()
+
+  const visit = (
+    node: AcDbAcisNode | null | undefined,
+    transform: AcDbAcisAffineTransform,
+    seen: Set<number>,
+  ): void => {
+    if (node == null || seen.has(node.index)) return
+    if (node.type.includes('attrib')) return
+    seen.add(node.index)
+    if (!map.has(node.index)) {
+      map.set(node.index, transform)
+    }
+    for (const ref of node.refs) {
+      visit(ref, transform, seen)
+    }
+  }
+
+  for (const body of model.bodies) {
+    visit(body, acdbAcisTransformFromBody(body), new Set())
+  }
+  return map
+}
+
+/**
+ * Picks a single body transform shared by every body in the model.
  *
  * Returns identity when there is no body, or when bodies disagree on
- * transform (multi-body with distinct transforms is not yet supported for
- * global application — callers keep body-space coords and can specialize).
+ * transform (callers that need per-body mapping should use
+ * {@link acdbAcisBuildNodeTransforms}).
  *
  * @param model - Resolved ACIS model graph.
  */
@@ -165,22 +224,7 @@ export function acdbAcisModelSpaceTransform(
   const transforms = model.bodies.map(acdbAcisTransformFromBody)
   const first = transforms[0]!
   for (let i = 1; i < transforms.length; i++) {
-    const other = transforms[i]!
-    if (
-      other.scale !== first.scale ||
-      other.xAxis[0] !== first.xAxis[0] ||
-      other.xAxis[1] !== first.xAxis[1] ||
-      other.xAxis[2] !== first.xAxis[2] ||
-      other.yAxis[0] !== first.yAxis[0] ||
-      other.yAxis[1] !== first.yAxis[1] ||
-      other.yAxis[2] !== first.yAxis[2] ||
-      other.zAxis[0] !== first.zAxis[0] ||
-      other.zAxis[1] !== first.zAxis[1] ||
-      other.zAxis[2] !== first.zAxis[2] ||
-      other.translation[0] !== first.translation[0] ||
-      other.translation[1] !== first.translation[1] ||
-      other.translation[2] !== first.translation[2]
-    ) {
+    if (!acdbAcisTransformsEqual(transforms[i]!, first)) {
       return IDENTITY
     }
   }

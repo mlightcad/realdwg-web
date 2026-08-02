@@ -20,7 +20,8 @@ import type { AcDbAcisSabToken, AcDbAcisSabVector } from './AcDbAcisSab'
 import { AcDbAcisSabTag } from './AcDbAcisSab'
 import {
   type AcDbAcisAffineTransform,
-  acdbAcisModelSpaceTransform,
+  acdbAcisBuildNodeTransforms,
+  acdbAcisIdentityTransform,
   acdbAcisTransformDirection,
   acdbAcisTransformIsIdentity,
   acdbAcisTransformPoint,
@@ -521,19 +522,28 @@ function transformSurfaceParams(
  * Extract the B-rep geometry from a decoded ACIS model. Never throws; unresolved
  * topology/geometry is reported via `diagnostics` and `'unknown'` type labels.
  *
- * Coordinates are returned in model space: when the model has a single shared
- * body `transform`, it is applied to vertices, edge endpoints, and analytic
- * curve/surface parameters.
+ * Coordinates are returned in model space: each entity is mapped by its owning
+ * body's `transform` (multi-body models with distinct transforms are supported).
  *
  * @param model - Resolved ACIS model graph.
  * @returns Extracted vertices, edges, faces, bounding box, and diagnostics.
  */
 export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry {
   const diagnostics: string[] = [];
-  const transform = acdbAcisModelSpaceTransform(model)
-  const applyTransform = !acdbAcisTransformIsIdentity(transform)
-  const mapPoint = (p: AcDbAcisVec3 | null): AcDbAcisVec3 | null =>
-    p === null || !applyTransform ? p : acdbAcisTransformPoint(p, transform)
+  const transformsByNode = acdbAcisBuildNodeTransforms(model)
+  const identity = acdbAcisIdentityTransform()
+  const transformFor = (nodeIndex: number): AcDbAcisAffineTransform =>
+    transformsByNode.get(nodeIndex) ?? identity
+  const mapPoint = (
+    p: AcDbAcisVec3 | null,
+    nodeIndex: number,
+  ): AcDbAcisVec3 | null => {
+    if (p === null) return null
+    const transform = transformFor(nodeIndex)
+    return acdbAcisTransformIsIdentity(transform)
+      ? p
+      : acdbAcisTransformPoint(p, transform)
+  }
   let minX = Infinity, minY = Infinity, minZ = Infinity;
   let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
   const grow = (p: AcDbAcisVec3): void => {
@@ -543,7 +553,7 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
   };
 
   const vertices: AcDbAcisVertex[] = model.nodesOfType('vertex').map(v => {
-    const point = mapPoint(vertexPoint(v));
+    const point = mapPoint(vertexPoint(v), v.index);
     if (point === null) diagnostics.push(`vertex#${String(v.index)}: no resolvable point`);
     else grow(point);
     return { nodeIndex: v.index, point };
@@ -551,12 +561,17 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
 
   const edges: AcDbAcisEdge[] = model.nodesOfType('edge').map(e => {
     const verts = refsOfType(e, 'vertex');
-    const start = mapPoint(vertexPoint(verts[0] ?? null));
-    const end = mapPoint(vertexPoint(verts[1] ?? null));
+    const start = mapPoint(vertexPoint(verts[0] ?? null), e.index);
+    const end = mapPoint(vertexPoint(verts[1] ?? null), e.index);
     const curveNode = refOfType(e, '-curve');
     const curveType: AcDbAcisCurveKind = curveNode ? (CURVE_KIND[curveNode.type] ?? 'unknown') : 'unknown';
     let curve = curveNode ? curveParams(curveNode) : undefined;
-    if (curve !== undefined && curve.kind !== 'unknown' && applyTransform) {
+    const transform = transformFor(e.index)
+    if (
+      curve !== undefined &&
+      curve.kind !== 'unknown' &&
+      !acdbAcisTransformIsIdentity(transform)
+    ) {
       curve = transformCurveParams(curve, transform)
     }
     if (start !== null && end !== null && start[0] === end[0] && start[1] === end[1] && start[2] === end[2]) {
@@ -571,7 +586,12 @@ export function acdbExtractAcisGeometry(model: AcDbAcisModel): AcDbAcisGeometry 
     const surfaceNode = refOfType(f, '-surface');
     const surfaceType: AcDbAcisSurfaceKind = surfaceNode ? (SURFACE_KIND[surfaceNode.type] ?? 'unknown') : 'unknown';
     let surface = surfaceNode ? surfaceParams(surfaceNode) : undefined;
-    if (surface !== undefined && surface.kind !== 'unknown' && applyTransform) {
+    const transform = transformFor(f.index)
+    if (
+      surface !== undefined &&
+      surface.kind !== 'unknown' &&
+      !acdbAcisTransformIsIdentity(transform)
+    ) {
       surface = transformSurfaceParams(surface, transform)
     }
     // Walk the next-loop chain (loop-typed ref), guarded against cycles.

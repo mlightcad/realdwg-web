@@ -64,6 +64,8 @@ export {
 } from './AcDbAcisWireframe'
 export { acdbAcisWireframeSegmentsFromSatText } from './AcDbAcisSatWireframe'
 export {
+  acdbAcisBuildNodeTransforms,
+  acdbAcisIdentityTransform,
   acdbAcisModelSpaceTransform,
   acdbAcisParseTransform,
   acdbAcisTransformDirection,
@@ -71,5 +73,6 @@ export {
   acdbAcisTransformIsIdentity,
   acdbAcisTransformPoint,
   acdbAcisTransformSegments,
+  acdbAcisTransformsEqual,
 } from './AcDbAcisTransform'
 export type { AcDbAcisAffineTransform } from './AcDbAcisTransform'
