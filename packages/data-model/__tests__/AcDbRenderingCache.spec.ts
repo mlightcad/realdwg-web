@@ -25,25 +25,26 @@ import {
 import { AcDbRenderingCache } from '../src/misc/AcDbRenderingCache'
 
 function createMockGroup(overrides: Record<string, unknown> = {}) {
-  return {
+  const group = {
     applyMatrix: jest.fn(),
     addChild: jest.fn(),
-    compactForInstancing: jest.fn(),
+    isCompacted: false,
+    compactForInstancing: jest.fn(function (this: {
+      isCompacted: boolean
+    }) {
+      this.isCompacted = true
+    }),
+    prepareCacheTemplate: jest.fn(),
     dispose: jest.fn(),
     fastDeepClone() {
-      return {
-        ...this,
-        applyMatrix: jest.fn(),
-        addChild: jest.fn(),
-        compactForInstancing: jest.fn(),
-        dispose: jest.fn(),
-        fastDeepClone() {
-          return { ...this }
-        }
-      }
+      return createMockGroup({
+        ...overrides,
+        isCompacted: group.isCompacted
+      })
     },
     ...overrides
   }
+  return group
 }
 
 describe('AcDbRenderingCache', () => {
@@ -64,7 +65,7 @@ describe('AcDbRenderingCache', () => {
     const group = createMockGroup()
 
     const stored = cache.set(key, group as never)
-    expect(stored).not.toBe(group)
+    expect(stored).toBe(group)
     expect(cache.has(key)).toBe(true)
     expect(cache.get(key)).toBeDefined()
 
@@ -90,9 +91,9 @@ describe('AcDbRenderingCache', () => {
     expect(cache.createCacheKey('Door', color, true)).toBe('Door_RGB:255,0,0')
   })
 
-  it('compacts and caches color-independent templates', () => {
+  it('defers mid-size compact until the first cache hit', () => {
     const cache = new AcDbRenderingCache()
-    const blockGroup = createMockGroup({ childCount: 4 })
+    const blockGroup = createMockGroup({ childCount: 10 })
     const compact = blockGroup.compactForInstancing as jest.Mock
 
     const renderer = {
@@ -120,11 +121,11 @@ describe('AcDbRenderingCache', () => {
       true
     )
 
-    expect(compact).toHaveBeenCalledTimes(1)
+    expect(compact).not.toHaveBeenCalled()
     expect(cache.has('WALL')).toBe(true)
     expect(iterations).toBe(1)
-    // Second INSERT with a different color hits the same template without
-    // rescanning block entities for ByBlock color.
+
+    // Second INSERT hits the template and triggers lazy compact.
     cache.draw(
       renderer as never,
       blockRecord as never,
@@ -132,8 +133,41 @@ describe('AcDbRenderingCache', () => {
       [],
       true
     )
+    expect(compact).toHaveBeenCalledTimes(1)
     expect(renderer.group).toHaveBeenCalledTimes(1)
     expect(iterations).toBe(1)
+  })
+
+  it('compacts huge templates eagerly on cache miss', () => {
+    const cache = new AcDbRenderingCache()
+    const blockGroup = createMockGroup({ childCount: 40 })
+    const compact = blockGroup.compactForInstancing as jest.Mock
+
+    const renderer = {
+      group: jest.fn(() => blockGroup)
+    }
+
+    const blockRecord = {
+      name: 'HUGE',
+      newIterator: function* () {
+        yield {
+          visibility: true,
+          color: new AcCmColor().setRGBValue(0xffffff),
+          worldDraw: () => ({ id: 'line' })
+        }
+      }
+    }
+
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xff0000),
+      [],
+      true
+    )
+
+    expect(compact).toHaveBeenCalledTimes(1)
+    expect(cache.has('HUGE')).toBe(true)
   })
 
   it('skips compactForInstancing for tiny block templates', () => {
@@ -154,6 +188,13 @@ describe('AcDbRenderingCache', () => {
       }
     }
 
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xffffff),
+      [],
+      true
+    )
     cache.draw(
       renderer as never,
       blockRecord as never,

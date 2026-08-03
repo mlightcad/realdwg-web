@@ -114,8 +114,10 @@ const emptyProfileStats = (): AcDbRenderingCacheProfileStats => ({
  * Blocks that contain ByBlock entities still key by block name and color because
  * different INSERT colors produce different materials.
  *
- * Templates are compacted (same-material leaves merged) before caching so each
- * INSERT clones O(material) geometries instead of O(entity) geometries.
+ * Templates may be compacted (same-material leaves merged) before or on first
+ * reuse so each INSERT clones O(material) geometries instead of O(entity)
+ * geometries. Mid-size templates defer compaction until the first cache hit so
+ * one-shot blocks skip merge work; tiny templates never compact.
  *
  * @internal
  *
@@ -236,12 +238,15 @@ export class AcDbRenderingCache {
   /**
    * Stores rendering results of a block in the cache.
    *
-   * Deep-clones `group` so later mutations of the live instance cannot corrupt
-   * the cached template.
+   * Stores `group` by reference as an immutable template. Callers must not
+   * mutate the stored object after this call; {@link get} / miss-path draws
+   * return {@link AcGiEntity.fastDeepClone} instances for scene use. Compacted
+   * templates share geometry buffers across clones (see three-renderer
+   * `AcTrGroup.fastDeepClone`).
    *
    * @param key - The key for the rendering results
    * @param group - The rendering results to store
-   * @returns The stored rendering results (deep cloned)
+   * @returns The stored rendering results (same reference as `group`)
    *
    * @example
    * ```typescript
@@ -249,17 +254,8 @@ export class AcDbRenderingCache {
    * ```
    */
   set(key: string, group: AcGiEntity) {
-    if (AcDbRenderingCache.profiling) {
-      const t0 = performance.now()
-      group = group.fastDeepClone()
-      const dt = performance.now() - t0
-      AcDbRenderingCache._profileStats.setCloneMs += dt
-      if (AcDbRenderingCache._drawDepth === 1) {
-        AcDbRenderingCache._profileStats.topLevel.setCloneMs += dt
-      }
-    } else {
-      group = group.fastDeepClone()
-    }
+    // Templates are immutable after insert. Avoid a deep clone here — miss
+    // path returns a per-INSERT clone, and compacted clones share buffers.
     this._blocks.set(key, group)
     return group
   }
@@ -268,7 +264,8 @@ export class AcDbRenderingCache {
    * Gets rendering results with the specified key.
    *
    * Returns a deep clone so callers can transform the instance without
-   * mutating the cached template.
+   * mutating the cached template. Compacted templates share geometry buffers
+   * with the clone (Object3D wrappers are still unique per INSERT).
    *
    * @param name - The key of the rendering results
    * @returns The cloned rendering results, or `undefined` if not found
@@ -282,21 +279,33 @@ export class AcDbRenderingCache {
    * ```
    */
   get(name: string) {
-    let block = this._blocks.get(name)
-    if (block) {
-      if (AcDbRenderingCache.profiling) {
-        const t0 = performance.now()
-        block = block.fastDeepClone()
-        const dt = performance.now() - t0
-        AcDbRenderingCache._profileStats.cloneMs += dt
-        if (AcDbRenderingCache._drawDepth === 1) {
-          AcDbRenderingCache._profileStats.topLevel.cloneMs += dt
-        }
-      } else {
-        block = block.fastDeepClone()
-      }
+    const template = this._blocks.get(name)
+    if (!template) {
+      return undefined
     }
-    return block
+    // Compact mid-size templates on first reuse so one-shot blocks never pay
+    // compactForInstancing, while repeated INSERTs still clone O(material) leaves.
+    if (AcDbRenderingCache.profiling) {
+      const tCompact0 = performance.now()
+      const compacted = this.maybeCompactTemplate(template, true)
+      if (compacted) {
+        const dt = performance.now() - tCompact0
+        AcDbRenderingCache._profileStats.missCompactMs += dt
+        if (AcDbRenderingCache._drawDepth === 1) {
+          AcDbRenderingCache._profileStats.topLevel.missCompactMs += dt
+        }
+      }
+      const t0 = performance.now()
+      const block = template.fastDeepClone()
+      const dt = performance.now() - t0
+      AcDbRenderingCache._profileStats.cloneMs += dt
+      if (AcDbRenderingCache._drawDepth === 1) {
+        AcDbRenderingCache._profileStats.topLevel.cloneMs += dt
+      }
+      return block
+    }
+    this.maybeCompactTemplate(template, true)
+    return template.fastDeepClone()
   }
 
   /**
@@ -495,17 +504,18 @@ export class AcDbRenderingCache {
               stats.topLevel.missBuildMs += buildMs
             }
           }
-          // Merge same-material leaves before caching so INSERT clones are cheap.
-          // Tiny templates gain little from merging and still pay syncDraw +
-          // classify cost across thousands of one-off anonymous blocks.
+          // Adaptive compact for cached templates only:
+          // - Tiny: never compact.
+          // - Huge: compact eagerly on miss (clone cost dominates).
+          // - Mid-size: defer until first cache hit so one-shot blocks skip it.
+          // Anonymous *U / cache:false draws are one-shot — never compact.
           let compactMs = 0
-          if (
-            block?.compactForInstancing &&
-            entityChildCount(block) >= MIN_CHILDREN_TO_COMPACT
-          ) {
+          const willCache =
+            !!cache && !!blockName && !blockName.startsWith('*U')
+          if (block && willCache) {
             const tCompact0 = profile ? performance.now() : 0
-            block.compactForInstancing()
-            if (profile) {
+            const compacted = this.maybeCompactTemplate(block, false)
+            if (profile && compacted) {
               compactMs = performance.now() - tCompact0
               stats.missCompactMs += compactMs
               if (isTop) {
@@ -515,10 +525,21 @@ export class AcDbRenderingCache {
           }
           key = this.createCacheKey(blockName, blockColor, sawByBlockColor)
           const setCloneBefore = profile ? stats.setCloneMs : 0
-          if (block && cache) {
-            // Transient anonymous blocks (*U…) are not reused across INSERTs.
-            if (blockName && !blockName.startsWith('*U')) {
-              this.set(key, block)
+          if (block && willCache) {
+            prepareCacheTemplate(block)
+            // Store the immutable template by reference, then hand the scene a
+            // per-INSERT clone so applyMatrix cannot mutate the cache entry.
+            this.set(key, block)
+            if (profile) {
+              const tClone0 = performance.now()
+              block = block.fastDeepClone()
+              const dt = performance.now() - tClone0
+              stats.setCloneMs += dt
+              if (isTop) {
+                stats.topLevel.setCloneMs += dt
+              }
+            } else {
+              block = block.fastDeepClone()
             }
           }
           if (profile) {
@@ -658,6 +679,32 @@ export class AcDbRenderingCache {
     target.layerName = source.layer
     target.visible = source.visibility
   }
+
+  /**
+   * Optionally runs {@link AcGiEntity.compactForInstancing} using the adaptive
+   * thresholds in {@link shouldCompactTemplate}.
+   *
+   * @param entity - Block template group to consider compacting.
+   * @param onCacheHit - When true, mid-size templates become eligible (first
+   *   reuse). When false, only huge templates compact eagerly on miss.
+   * @returns `true` when compaction ran.
+   */
+  private maybeCompactTemplate(
+    entity: AcGiEntity,
+    onCacheHit: boolean
+  ): boolean {
+    if (!entity.compactForInstancing) {
+      return false
+    }
+    if (isTemplateCompacted(entity)) {
+      return false
+    }
+    if (!shouldCompactTemplate(entity, onCacheHit)) {
+      return false
+    }
+    entity.compactForInstancing()
+    return true
+  }
 }
 
 /** Scratch matrix for the INSERT world transform applied in {@link AcDbRenderingCache.draw}. */
@@ -669,9 +716,20 @@ const _tmpInverse = /*@__PURE__*/ new AcGeMatrix3d()
 
 /**
  * Minimum direct child count before {@link AcGiEntity.compactForInstancing} is
- * worth running on a freshly built block template.
+ * worth running on a block template.
+ *
+ * Raised above the historical value of 3 so high-block-count drawings with many
+ * tiny symbols skip classify/merge work that never pays back on clone.
  */
-const MIN_CHILDREN_TO_COMPACT = 3
+const MIN_CHILDREN_TO_COMPACT = 8
+
+/**
+ * Direct child count at which compaction runs eagerly on cache miss.
+ *
+ * Below this (but at/above {@link MIN_CHILDREN_TO_COMPACT}), compaction is
+ * deferred until the first cache hit so one-shot blocks skip it entirely.
+ */
+const EAGER_COMPACT_CHILDREN = 32
 
 /**
  * Nest-safe ByBlock color save/restore pool for {@link AcDbRenderingCache.draw}.
@@ -689,6 +747,57 @@ const _byBlockColorScratch: AcCmColor[] = []
 function entityChildCount(entity: AcGiEntity): number {
   const count = entity.childCount
   return typeof count === 'number' ? count : Number.POSITIVE_INFINITY
+}
+
+/**
+ * Returns whether `entity` has already been compacted for instancing.
+ *
+ * Duck-types optional `isCompacted` from three-renderer `AcTrGroup`.
+ *
+ * @param entity - Cached or freshly built block template.
+ * @returns `true` when compaction has already run.
+ */
+function isTemplateCompacted(entity: AcGiEntity): boolean {
+  const flag = (entity as AcGiEntity & { isCompacted?: boolean }).isCompacted
+  return flag === true
+}
+
+/**
+ * Decides whether a template should run {@link AcGiEntity.compactForInstancing}.
+ *
+ * @param entity - Block template to evaluate.
+ * @param onCacheHit - When true, mid-size templates are eligible (lazy compact).
+ * @returns `true` when compaction should run now.
+ */
+function shouldCompactTemplate(
+  entity: AcGiEntity,
+  onCacheHit: boolean
+): boolean {
+  const count = entityChildCount(entity)
+  if (count < MIN_CHILDREN_TO_COMPACT) {
+    return false
+  }
+  if (count >= EAGER_COMPACT_CHILDREN) {
+    return true
+  }
+  // Mid-size: only on first cache hit so one-shot blocks skip merge work.
+  return onCacheHit
+}
+
+/**
+ * Finalizes deferred geometry and drops detached source shells before caching.
+ *
+ * Duck-types optional `prepareCacheTemplate` from three-renderer `AcTrGroup`.
+ *
+ * @param entity - Block template about to be stored in the cache.
+ */
+function prepareCacheTemplate(entity: AcGiEntity): void {
+  const prepare = (
+    entity as AcGiEntity & { prepareCacheTemplate?: () => void }
+  ).prepareCacheTemplate
+  if (typeof prepare === 'function') {
+    prepare.call(entity)
+  }
 }
 
 /**
