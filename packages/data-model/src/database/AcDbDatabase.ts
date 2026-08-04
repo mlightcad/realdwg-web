@@ -2314,28 +2314,23 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Loads fonts while emitting FONT IN-PROGRESS so the open-file bar keeps
-   * moving during multi-font downloads (native DXF parses on the main thread
-   * and previously appeared stuck at the FONT stage).
+   * Loads drawing fonts in one batch so {@link AcDbFontLoader.load} /
+   * FontManager can fetch+parse them in parallel (`Promise.allSettled`).
+   *
+   * Previously each font was awaited serially for finer progress ticks; on
+   * CDN-backed opens that turned FONT into a sum of download times (often
+   * tens of seconds). A single IN-PROGRESS event still nudges the open-file
+   * bar off FONT START before the batch wait.
    */
   private async loadFontsWithProgress(
     fontLoader: AcDbFontLoader,
     fonts: string[],
     basePercentage: number
   ): Promise<void> {
-    if (fonts.length <= 1) {
-      await fontLoader.load(fonts)
-      return
-    }
-
-    // Leave headroom before ENTITY (native converter starts ENTITY at 20%).
-    const span = Math.max(1, Math.min(5, 19 - basePercentage))
-    for (let i = 0; i < fonts.length; i++) {
-      await fontLoader.load([fonts[i]!])
-      const pct = Math.min(
-        19,
-        basePercentage + Math.round(((i + 1) / fonts.length) * span)
-      )
+    if (fonts.length > 1) {
+      // Leave headroom before ENTITY (native converter starts ENTITY at 20%).
+      const span = Math.max(1, Math.min(5, 19 - basePercentage))
+      const pct = Math.min(19, basePercentage + Math.round(span / 2))
       this.events.openProgress.dispatch({
         database: this,
         percentage: pct,
@@ -2345,6 +2340,8 @@ export class AcDbDatabase extends AcDbObject {
         data: fonts
       })
     }
+
+    await fontLoader.load(fonts)
   }
 
   /**
