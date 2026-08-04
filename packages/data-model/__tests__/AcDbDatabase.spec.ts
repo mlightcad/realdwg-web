@@ -84,6 +84,52 @@ describe('AcDbDatabase', () => {
     expect(db.generateHandle()).toBe('FFFF')
   })
 
+  it('loads multiple fonts in one batch during FONT END', async () => {
+    const db = new AcDbDatabase()
+    const fileType = 'test-font-load-batch'
+    const fontLoader = {
+      load: jest.fn().mockResolvedValue(undefined),
+      getAvaiableFonts: jest.fn().mockResolvedValue([])
+    }
+    const converter = {
+      read: jest.fn(
+        async (
+          _data: ArrayBuffer,
+          _db: AcDbDatabase,
+          _minimumChunkSize: number,
+          progress?: (
+            percentage: number,
+            stage: string,
+            stageStatus: string,
+            data?: unknown
+          ) => Promise<void>
+        ) => {
+          if (progress) {
+            await progress(5, 'FONT', 'END', ['arial', 'simsun', 'hztxt'])
+          }
+        }
+      )
+    }
+    const manager = AcDbDatabaseConverterManager.instance
+    manager.register(fileType, converter as never)
+
+    try {
+      await db.read(
+        new ArrayBuffer(0),
+        { fontLoader, readOnly: true },
+        fileType
+      )
+      expect(fontLoader.load).toHaveBeenCalledTimes(1)
+      expect(fontLoader.load).toHaveBeenCalledWith([
+        'arial',
+        'simsun',
+        'hztxt'
+      ])
+    } finally {
+      manager.unregister(fileType)
+    }
+  })
+
   it('continues reading when font loading fails by default', async () => {
     const db = new AcDbDatabase()
     const fileType = 'test-font-load'
