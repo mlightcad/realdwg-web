@@ -1,6 +1,6 @@
 import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbArc } from '../entity/AcDbArc'
 import { AcDbAttribute } from '../entity/AcDbAttribute'
@@ -34,6 +34,10 @@ import { AcDbViewport } from '../entity/AcDbViewport'
 import { AcDbWipeout } from '../entity/AcDbWipeout'
 import { AcDbXline } from '../entity/AcDbXline'
 import { acdbDxfInDimension } from './AcDbDxfDimensionAssembler'
+import {
+  acdbDrainDxfObjectPairs,
+  AcDbDxfPairArrayReader
+} from './AcDbDxfPairArrayReader'
 import { acdbDxfInPolyline } from './AcDbDxfPolylineAssembler'
 
 /**
@@ -43,7 +47,10 @@ import { acdbDxfInPolyline } from './AcDbDxfPolylineAssembler'
 export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
   const type = typeName.toUpperCase()
   switch (type) {
+    // DXF R10 wrote 3D lines as 3DLINE, with the same 10/20/30 + 11/21/31
+    // group codes AutoCAD later folded back into LINE.
     case 'LINE':
+    case '3DLINE':
       return new AcDbLine(new AcGePoint3d(), new AcGePoint3d())
     case 'CIRCLE':
       return new AcDbCircle(new AcGePoint3d(), 1)
@@ -134,6 +141,33 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
 }
 
 /**
+ * Reads a HELIX through its AcDbSpline base class.
+ *
+ * AcDbHelix derives from AcDbSpline, and the DXF record carries the complete
+ * `(100, AcDbSpline)` block, so the curve itself is fully described there.
+ * The trailing `(100, AcDbHelix)` fields have to be cut off first: they reuse
+ * groups 10/20/30 (axis base point) and 40 (radius), which the spline reader
+ * would otherwise append as a spurious control point and a knot that breaks
+ * the knot vector's ordering.
+ */
+function acdbDxfInHelix(filer: AcDbDxfFiler): AcDbEntity | null {
+  const pairs = acdbDrainDxfObjectPairs(filer)
+  const helixMarker = pairs.findIndex(
+    pair => pair.code === 100 && pair.value === 'AcDbHelix'
+  )
+  const spline = acdbCreateEntityForDxfIn('SPLINE')
+  if (!spline) return null
+  const replay = AcDbDxfFiler.forReading(
+    new AcDbDxfPairArrayReader(
+      helixMarker < 0 ? pairs : pairs.slice(0, helixMarker)
+    ),
+    { database: filer.database }
+  )
+  spline.dxfIn(replay)
+  return spline
+}
+
+/**
  * Create entity from the current filer position.
  * Expects the filer to be at (or just past) the type name pair (0, TYPENAME).
  * When `typeName` is omitted, reads the next (0, name) pair.
@@ -157,8 +191,14 @@ export function acdbDxfInEntity(
   if (upper === 'POLYLINE') {
     return acdbDxfInPolyline(filer)
   }
-  if (upper === 'DIMENSION') {
+  // ARC_DIMENSION is a DIMENSION record written under its own type name
+  // (AutoCAD 2004+ arc-length dimension). The assembler already dispatches
+  // AcDbArcDimension from the (100, subclass) marker, so it only needs routing.
+  if (upper === 'DIMENSION' || upper === 'ARC_DIMENSION') {
     return acdbDxfInDimension(filer)
+  }
+  if (upper === 'HELIX') {
+    return acdbDxfInHelix(filer)
   }
 
   const entity = acdbCreateEntityForDxfIn(name)
