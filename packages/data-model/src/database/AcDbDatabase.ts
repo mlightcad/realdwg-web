@@ -342,6 +342,30 @@ export interface AcDbTables {
 /**
  * Options used to specify default data to create
  */
+/**
+ * Parses a DXF handle (hexadecimal) into a bigint.
+ *
+ * Handles are 64-bit and real drawings use the full range — `$HANDSEED` of
+ * `D9B071D01A0CB6A8` appears in the wild. `parseInt` returns a double there, so
+ * `value + 1` is a no-op above 2^53 and a handle generator built on it repeats
+ * the same handle forever.
+ *
+ * Mirrors `parseInt(handle, 16)` by reading the leading hex run and ignoring
+ * whatever follows.
+ *
+ * @param handle - Handle text from a drawing
+ * @returns The value, or null when the text has no leading hex digits
+ */
+function acdbParseHandleValue(handle: string): bigint | null {
+  const match = /^[0-9A-Fa-f]+/.exec(handle.trim())
+  if (!match) return null
+  try {
+    return BigInt(`0x${match[0]}`)
+  } catch {
+    return null
+  }
+}
+
 export interface AcDbCreateDefaultDataOptions {
   layer?: boolean
   lineType?: boolean
@@ -458,7 +482,7 @@ export class AcDbDatabase extends AcDbObject {
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
   /** The maximum handle value in the database, used for generating unique object IDs */
-  private _maxHandle: number
+  private _maxHandle: bigint
   /** Global registry of committed object handles across all database-resident objects */
   private _handleRegistry = new Map<AcDbObjectId, AcDbObject>()
   /** Lazily created formatter for lengths, angles, and coordinates */
@@ -562,7 +586,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdsize = 0
     this._osmode = 0
     this._orthomode = 0
-    this._maxHandle = 0
+    this._maxHandle = BigInt(0)
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
       blockTable: new AcDbBlockTable(this),
@@ -1042,7 +1066,7 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   generateHandle(): AcDbObjectId {
-    this._maxHandle++
+    this._maxHandle += BigInt(1)
     return this._maxHandle.toString(16).toUpperCase()
   }
 
@@ -1068,9 +1092,9 @@ export class AcDbDatabase extends AcDbObject {
    * @param seed - Hexadecimal handle seed from the drawing header
    */
   initializeHandleSeed(seed: string) {
-    const next = parseInt(seed, 16)
-    if (!isNaN(next) && next > 0) {
-      const baseline = next - 1
+    const next = acdbParseHandleValue(seed)
+    if (next != null && next > BigInt(0)) {
+      const baseline = next - BigInt(1)
       if (baseline > this._maxHandle) {
         this._maxHandle = baseline
       }
@@ -1208,8 +1232,8 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   updateMaxHandle(handle: string): void {
-    const handleValue = parseInt(handle, 16)
-    if (!isNaN(handleValue) && handleValue > this._maxHandle) {
+    const handleValue = acdbParseHandleValue(handle)
+    if (handleValue != null && handleValue > this._maxHandle) {
       this._maxHandle = handleValue
     }
   }
@@ -2274,8 +2298,7 @@ export class AcDbDatabase extends AcDbObject {
           if (options.failOnFontLoadError) {
             throw error
           }
-          const message =
-            error instanceof Error ? error.message : String(error)
+          const message = error instanceof Error ? error.message : String(error)
           console.warn(
             'Failed to load fonts; continuing without them. ' +
               'Check your network or configure a local baseUrl. See ' +

@@ -84,6 +84,29 @@ describe('AcDbDatabase', () => {
     expect(db.generateHandle()).toBe('FFFF')
   })
 
+  it('keeps generating fresh handles past the 2^53 safe-integer limit', () => {
+    // Handles are 64-bit and real drawings use the range: this $HANDSEED comes
+    // from a file in the wild. Held as a double, `value + 1` is a no-op above
+    // 2^53, so the generator repeats one handle and generateUniqueHandle spins
+    // forever the moment that handle is taken — a synchronous hang.
+    const db = new AcDbDatabase()
+    db.initializeHandleSeed('D9B071D01A0CB6A8')
+
+    const first = db.generateHandle()
+    const second = db.generateHandle()
+    expect(first).toBe('D9B071D01A0CB6A8')
+    expect(second).toBe('D9B071D01A0CB6A9')
+    expect(second).not.toBe(first)
+  })
+
+  it('tracks the maximum handle beyond the safe-integer limit', () => {
+    const db = new AcDbDatabase()
+    db.updateMaxHandle('20000000000000')
+    db.updateMaxHandle('1FFFFFFFFFFFFF')
+    // The smaller second value must not lower the ceiling.
+    expect(db.generateHandle()).toBe('20000000000001')
+  })
+
   it('loads multiple fonts in one batch during FONT END', async () => {
     const db = new AcDbDatabase()
     const fileType = 'test-font-load-batch'
@@ -120,11 +143,7 @@ describe('AcDbDatabase', () => {
         fileType
       )
       expect(fontLoader.load).toHaveBeenCalledTimes(1)
-      expect(fontLoader.load).toHaveBeenCalledWith([
-        'arial',
-        'simsun',
-        'hztxt'
-      ])
+      expect(fontLoader.load).toHaveBeenCalledWith(['arial', 'simsun', 'hztxt'])
     } finally {
       manager.unregister(fileType)
     }
@@ -235,7 +254,11 @@ describe('AcDbDatabase', () => {
             stage: string,
             stageStatus: string,
             data?: unknown,
-            taskError?: { error: unknown; task: { name: string }; taskIndex: number }
+            taskError?: {
+              error: unknown
+              task: { name: string }
+              taskIndex: number
+            }
           ) => Promise<void>
         ) => {
           if (progress) {
