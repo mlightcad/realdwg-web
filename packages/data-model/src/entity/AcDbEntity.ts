@@ -433,6 +433,8 @@ export abstract class AcDbEntity extends AcDbObject {
       }
     }
 
+    let sawAciColor = false
+
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
       if (!item) break
@@ -459,9 +461,20 @@ export abstract class AcDbEntity extends AcDbObject {
           break
         case 62:
           this.color.colorIndex = Number(item.value)
+          sawAciColor = true
           break
         case 420:
-          this.color.setRGBValue(Number(item.value))
+          // Group 420 packs a 24-bit RGB, so 0 is indistinguishable from
+          // "no true colour was written". Some generators emit `420 0`
+          // unconditionally next to a real ACI — every entity in the
+          // deskproto CNC sample pairs `62 18` with `420 0`. Taking that
+          // literally repaints the whole drawing black, which is invisible
+          // against AutoCAD's black model space. When an explicit ACI came
+          // first, keep it; a genuinely black true colour is unreadable
+          // there anyway.
+          if (Number(item.value) !== 0 || !sawAciColor) {
+            this.color.setRGBValue(Number(item.value))
+          }
           break
         case 370:
           this.lineWeight = Number(item.value)
