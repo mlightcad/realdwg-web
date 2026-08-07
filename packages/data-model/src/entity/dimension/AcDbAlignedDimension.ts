@@ -108,12 +108,12 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
     if (dimText) {
       this.dimensionText = dimText
-    } else {
-      // TODO: Decide the umber of digits after the decimal point
-      this.dimensionText = this._xLine1Point
-        .distanceTo(this._xLine2Point)
-        .toFixed(3)
     }
+    // No default text otherwise: the measured value is formatted on demand by
+    // `resolvedDimensionText`. Baking it in here froze the value the entity was
+    // constructed with, and the DXF reader builds every dimension from three
+    // origins before filling in the real points — so a file that omits group 1
+    // ended up permanently labelled "0.000".
 
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
     this.dimensionStyleName = dimStyle
@@ -352,7 +352,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
     return false
   }
 
-  createDimBlock(blockName: string) {
+  /**
+   * Overall scale applied to every annotation feature (DIMSCALE), floored at 1
+   * so a drawing that leaves it at 0 still produces visible arrows and text.
+   */
+  private get annotationScale() {
+    const scale = this.dimensionStyle.dimscale
+    return Number.isFinite(scale) && scale > 0 ? scale : 1
+  }
+
+  protected override createDimBlock(blockName: string) {
     // Create block and add the hatch entity in this block
     const block = new AcDbBlockTableRecord()
     block.name = blockName
@@ -382,14 +391,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
       }
     }
 
-    if (this.dimensionText) {
+    const contents = this.resolvedDimensionText
+    if (contents) {
       const mtext = new AcDbMText()
       mtext.attachmentPoint = this.attachmentPoint
       mtext.layer = '0'
       mtext.color = new AcCmColor(AcCmColorMethod.ByBlock)
       mtext.location = pos
-      mtext.contents = this.dimensionText ?? ''
-      mtext.height = 10
+      mtext.contents = contents
+      // DIMTXT is the text height in drawing units before DIMSCALE.
+      mtext.height = this.dimensionStyle.dimtxt * this.annotationScale
       mtext.direction = angleDegToUnitVector(rotation)
       mtext.styleName = this.dimensionStyle.dimtxsty
       return mtext
@@ -399,10 +410,14 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   private createArrows(dimensionLine: AcGeLine3d) {
     const arrows: AcDbBlockReference[] = []
+    // The arrow block is authored one unit long, so DIMASZ (scaled by
+    // DIMSCALE) is the scale factor directly.
+    const size = this.dimensionStyle.dimasz * this.annotationScale
+    if (size <= 0) return arrows
     arrows.push(
-      this.createArrow(dimensionLine.startPoint, this.rotation + Math.PI, 10)
+      this.createArrow(dimensionLine.startPoint, this.rotation + Math.PI, size)
     )
-    arrows.push(this.createArrow(dimensionLine.endPoint, this.rotation, 10))
+    arrows.push(this.createArrow(dimensionLine.endPoint, this.rotation, size))
     return arrows
   }
 
@@ -457,7 +472,13 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   private createExtensionLine(point: AcGePoint3d) {
     const angle = this.rotation + Math.PI / 2
-    const anotherPoint = this.findPointOnLine2(point, angle, 100)
+    // Long enough to always cross the dimension line; the segment is trimmed
+    // to the real intersection right after, so only the sign matters here.
+    const reach = Math.max(
+      100,
+      point.distanceTo(this._dimLinePoint) * 2 + this.dimensionStyle.dimexe
+    )
+    const anotherPoint = this.findPointOnLine2(point, angle, reach)
     return new AcGeLine3d(point, { ...anotherPoint, z: point.z })
   }
 
@@ -507,7 +528,53 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   protected override getMeasurementPropertyValue() {
-    return this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
+    const cached = this.measurement
+    return cached != null && Number.isFinite(cached) && cached >= 0
+      ? cached
+      : this.measuredLength
+  }
+
+  /**
+   * Distance the dimension reports, measured along the dimension line.
+   *
+   * For an aligned dimension that is the straight distance between the two
+   * definition points. For a rotated one the dimension line has its own
+   * direction (DXF group 50) and only the component along it is measured, so a
+   * 30x10 offset dimensioned horizontally reads 30, not 31.6.
+   */
+  protected get measuredLength() {
+    const dx = this._xLine2Point.x - this._xLine1Point.x
+    const dy = this._xLine2Point.y - this._xLine1Point.y
+    return Math.abs(
+      dx * Math.cos(this._rotation) + dy * Math.sin(this._rotation)
+    )
+  }
+
+  /**
+   * Text drawn on the dimension line.
+   *
+   * DXF group 1 carries an override; it is absent, empty or the literal `<>`
+   * when the measured value should be shown instead.
+   */
+  protected get resolvedDimensionText() {
+    const override = this.dimensionText
+    if (override && override !== '<>') {
+      return override.replace('<>', this.formatMeasurement())
+    }
+    return this.formatMeasurement()
+  }
+
+  private formatMeasurement() {
+    // QCAD writes group 42 = -1 to mean "no cached measurement"; only a
+    // non-negative value is a real one.
+    const cached = this.measurement
+    const value =
+      cached != null && Number.isFinite(cached) && cached >= 0
+        ? cached
+        : this.measuredLength
+    const decimals = this.dimensionStyle.dimdec
+    const digits = Number.isFinite(decimals) && decimals >= 0 ? decimals : 2
+    return (value * (this.dimensionStyle.dimlfac || 1)).toFixed(digits)
   }
 
   /**

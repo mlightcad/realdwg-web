@@ -348,6 +348,8 @@ export interface AcDbCreateDefaultDataOptions {
   textStyle?: boolean
   dimStyle?: boolean
   layout?: boolean
+  /** Create the `_CAXARROW` block used by generated dimension arrow heads. */
+  arrowBlock?: boolean
 }
 
 /**
@@ -2549,6 +2551,11 @@ export class AcDbDatabase extends AcDbObject {
     // Create default layout for model space
     if (options.layout) {
       generator.createDefaultLayout()
+    }
+
+    // Create the arrow block referenced by generated dimension geometry
+    if (options.arrowBlock) {
+      generator.createArrowBlock()
     }
   }
 

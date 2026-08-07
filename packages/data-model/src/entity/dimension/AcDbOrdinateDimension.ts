@@ -1,3 +1,4 @@
+import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
   AcGeMatrix3d,
   AcGePoint3d,
@@ -5,7 +6,10 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base'
+import { AcDbBlockTableRecord } from '../../database'
 import { AcDbEntityProperties } from '../AcDbEntityProperties'
+import { AcDbLine } from '../AcDbLine'
+import { AcDbMText } from '../AcDbMText'
 import { AcDbDimension } from './AcDbDimension'
 
 /**
@@ -153,6 +157,83 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    */
   protected get arrowLineCount() {
     return 0
+  }
+
+  /**
+   * Lays the ordinate dimension out as a leader plus its annotation.
+   *
+   * AutoCAD draws a doglegged leader from the defining point to the leader end
+   * point and puts the text just beyond it. The dogleg is only visible when the
+   * two points are offset on both axes; when they line up the leader collapses
+   * to a straight segment, which is the common case.
+   */
+  protected override createDimBlock(blockName: string) {
+    const block = new AcDbBlockTableRecord()
+    block.name = blockName
+
+    const start = this.definingPoint
+    const end = this.leaderEndPoint
+    const scale = this.dimensionStyle.dimscale
+    const annotationScale = Number.isFinite(scale) && scale > 0 ? scale : 1
+    const gap = this.dimensionStyle.dimgap * annotationScale
+
+    // Ordinate leaders run along the measured axis, so the elbow sits at the
+    // end point's coordinate on that axis and the start point's on the other.
+    const alongX = Math.abs(end.x - start.x) >= Math.abs(end.y - start.y)
+    const elbow = alongX
+      ? new AcGePoint3d(end.x, start.y, start.z)
+      : new AcGePoint3d(start.x, end.y, start.z)
+
+    const addSegment = (from: AcGePoint3d, to: AcGePoint3d) => {
+      if (from.distanceTo(to) > 0) {
+        block.appendEntity(new AcDbLine(from.clone(), to.clone()))
+      }
+    }
+    addSegment(start, elbow)
+    addSegment(elbow, new AcGePoint3d(end.x, end.y, start.z))
+
+    const text = this.resolvedText(alongX)
+    if (text) {
+      const mtext = new AcDbMText()
+      mtext.attachmentPoint = this.attachmentPoint
+      mtext.layer = '0'
+      mtext.color = new AcCmColor(AcCmColorMethod.ByBlock)
+      mtext.contents = text
+      mtext.height = this.dimensionStyle.dimtxt * annotationScale
+      // Nudge the label clear of the leader tip along the leader direction.
+      const dx = alongX ? Math.sign(end.x - start.x) || 1 : 0
+      const dy = alongX ? 0 : Math.sign(end.y - start.y) || 1
+      mtext.location = new AcGePoint3d(
+        end.x + dx * gap,
+        end.y + dy * gap,
+        start.z
+      )
+      mtext.styleName = this.dimensionStyle.dimtxsty
+      block.appendEntity(mtext)
+    }
+
+    return block
+  }
+
+  /**
+   * Label for an ordinate dimension: the measured coordinate of the defining
+   * point along the dimensioned axis, unless the file overrides it via group 1.
+   *
+   * @param alongX - True when the dimension measures the X ordinate.
+   */
+  private resolvedText(alongX: boolean) {
+    const override = this.dimensionText
+    if (override && override !== '<>') return override
+    const cached = this.measurement
+    const value =
+      cached != null && Number.isFinite(cached) && cached >= 0
+        ? cached
+        : alongX
+          ? this.definingPoint.x
+          : this.definingPoint.y
+    const decimals = this.dimensionStyle.dimdec
+    const digits = Number.isFinite(decimals) && decimals >= 0 ? decimals : 2
+    return (value * (this.dimensionStyle.dimlfac || 1)).toFixed(digits)
   }
 
   /**
