@@ -1,4 +1,8 @@
-import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import {
+  AcGeMatrix3d,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
 import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -161,7 +165,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 15, y: 5, z: 0 })
   })
@@ -186,7 +192,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2]).toMatchObject({ x: 28, y: 5, z: 0 })
   })
 
@@ -209,7 +217,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 30, y: 6, z: 0 })
   })
@@ -233,7 +243,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 26, y: 6, z: 0 })
   })
@@ -249,7 +261,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2]).toMatchObject({ x: 5, y: 5, z: 0 })
   })
 
@@ -279,7 +293,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2].x).toBeGreaterThan(100)
     expect(points[2].x).not.toBeCloseTo(20)
   })
@@ -325,7 +341,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2].x).toBeCloseTo(14)
     expect(points[2].y).toBeCloseTo(20)
@@ -476,5 +494,43 @@ describe('AcDbLeader', () => {
       nearestPoints
     )
     expect(nearestPoints).toHaveLength(1)
+  })
+  it.each([
+    [
+      'two',
+      [
+        [0, 0, 0],
+        [4, 3, 0]
+      ]
+    ],
+    [
+      'three',
+      [
+        [9.57, 10.07, 0],
+        [12.44, 12.75, 0],
+        [15.39, 12.75, 0]
+      ]
+    ]
+  ])('draws a splined leader with only %s vertices', (_label, points) => {
+    // AcGeSpline3d defaults to a cubic and needs degree + 1 fit points, so
+    // these used to throw ILLEGAL_PARAMETERS out of subWorldDraw and the
+    // leader disappeared. Seen on LibreDWG's 2000/2004/.../r14_Leader.dxf,
+    // which write group 72 = 1 with group 76 = 3.
+    const leader = new AcDbLeader()
+    for (const [x, y, z] of points as number[][]) {
+      leader.appendVertex(new AcGePoint3d(x, y, z))
+    }
+    leader.isSplined = true
+
+    const renderer = createRenderer()
+    expect(() => leader.subWorldDraw(renderer as never)).not.toThrow()
+    expect(renderer.lines).toHaveBeenCalled()
+
+    const extents = leader.geometricExtents
+    expect(extents.isEmpty()).toBe(false)
+    // The curve interpolates the vertices, so it spans their full width.
+    const xs = (points as number[][]).map(p => p[0])
+    expect(extents.min.x).toBeCloseTo(Math.min(...xs), 1)
+    expect(extents.max.x).toBeCloseTo(Math.max(...xs), 1)
   })
 })

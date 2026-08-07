@@ -24,7 +24,7 @@ import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
+import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,
@@ -605,8 +605,7 @@ export class AcDbLeader extends AcDbCurve {
   private resolveHookLineLength(lastVertex: AcGePoint3d): number {
     const dimStyle = this.resolveDimensionStyle()
     const gap =
-      (dimStyle?.dimgap ??
-        AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimgap) *
+      (dimStyle?.dimgap ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimgap) *
       (dimStyle?.dimscale ??
         AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimscale)
     let length = this._textWidth + gap
@@ -798,7 +797,16 @@ export class AcDbLeader extends AcDbCurve {
       this.numVertices >= 2 &&
       (this._splineGeo == null || this._updated)
     ) {
-      this._splineGeo = new AcGeSpline3d(this._vertices, 'Uniform')
+      // AcGeSpline3d needs degree + 1 fit points and defaults to a cubic, so a
+      // splined leader with 2 or 3 vertices threw ILLEGAL_PARAMETERS out of
+      // subWorldDraw and the leader vanished from the drawing. Drop to the
+      // highest degree the vertex count supports: quadratic for 3 points,
+      // a straight interpolation for 2.
+      this._splineGeo = new AcGeSpline3d(
+        this._vertices,
+        'Uniform',
+        Math.min(3, this.numVertices - 1)
+      )
       this._updated = false
     }
   }
@@ -1001,7 +1009,11 @@ export class AcDbLeader extends AcDbCurve {
    * @returns Offset polyline along the leader path, or `null` when offset fails
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return acdbOffsetVertexPathAsPolyline(this.collectPath2d(), false, offsetDist)
+    return acdbOffsetVertexPathAsPolyline(
+      this.collectPath2d(),
+      false,
+      offsetDist
+    )
   }
 
   /**
@@ -1033,4 +1045,3 @@ export class AcDbLeader extends AcDbCurve {
     )
   }
 }
-
