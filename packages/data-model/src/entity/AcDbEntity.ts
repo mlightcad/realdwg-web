@@ -425,7 +425,8 @@ export abstract class AcDbEntity extends AcDbObject {
     super.dxfInFields(filer)
 
     // Tolerate missing AcDbEntity marker (some writers omit it).
-    if (!filer.atSubclassData('AcDbEntity')) {
+    const hasSubclassMarker = filer.atSubclassData('AcDbEntity')
+    if (!hasSubclassMarker) {
       const next = filer.peekItem()
       if (next && Number(next.code) === 100) {
         // Different subclass — leave for derived class.
@@ -492,6 +493,20 @@ export abstract class AcDbEntity extends AcDbObject {
           // Stay resilient to unknown AcDbEntity codes (forward compatible).
           // Do not push back — that would abort derived subclass readers
           // (TEXT/MTEXT/DIMENSION/TABLE often carry layout/material extras).
+          //
+          // That reasoning only holds while a (100, subclass) marker delimits
+          // this section. Marker-less entities — every DXF R12 (AC1009) file,
+          // plus minimal writers that omit the markers in later versions —
+          // have no delimiter, so swallowing unknown codes consumes the whole
+          // record including the geometry (10/20/30, 11/21/31, ...). The
+          // derived reader then gets an exhausted filer, keeps its defaults,
+          // and every LINE collapses to a degenerate point at the origin,
+          // which makes the layout extents empty and the drawing render
+          // blank. Hand the first unknown code to the derived reader instead.
+          if (!hasSubclassMarker) {
+            filer.pushBackItem(item)
+            return this
+          }
           break
       }
     }
