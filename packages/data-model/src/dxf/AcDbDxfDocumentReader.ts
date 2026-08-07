@@ -62,8 +62,13 @@ export interface AcDbDxfDocumentReaderResult {
   unknownEntityCount: number
   /** OBJECTS-section types that were skipped (no native reader yet). */
   unknownObjectCount: number
+  /** Entities of a known type whose reader threw and were skipped. */
+  malformedEntityCount: number
   fonts: string[]
 }
+
+/** How many malformed entities are reported to the console before going quiet. */
+const MALFORMED_ENTITY_WARN_LIMIT = 10
 
 /**
  * Single-pass streaming DXF document reader.
@@ -75,6 +80,7 @@ export interface AcDbDxfDocumentReaderResult {
 export class AcDbDxfDocumentReader {
   private _unknownEntityCount = 0
   private _unknownObjectCount = 0
+  private _malformedEntityCount = 0
   private readonly _fonts = new Set<string>()
   /** ATTRIB entities waiting for their owning INSERT (keyed by INSERT objectId). */
   private readonly _attributeMap = new Map<AcDbObjectId, AcDbAttribute[]>()
@@ -97,6 +103,10 @@ export class AcDbDxfDocumentReader {
     return this._unknownObjectCount
   }
 
+  get malformedEntityCount() {
+    return this._malformedEntityCount
+  }
+
   get fonts(): string[] {
     return [...this._fonts]
   }
@@ -104,6 +114,7 @@ export class AcDbDxfDocumentReader {
   async read(filer: AcDbDxfFiler): Promise<AcDbDxfDocumentReaderResult> {
     this._unknownEntityCount = 0
     this._unknownObjectCount = 0
+    this._malformedEntityCount = 0
     this._fonts.clear()
     this._attributeMap.clear()
     filer.database = this._db
@@ -127,8 +138,48 @@ export class AcDbDxfDocumentReader {
     return {
       unknownEntityCount: this._unknownEntityCount,
       unknownObjectCount: this._unknownObjectCount,
+      malformedEntityCount: this._malformedEntityCount,
       fonts: this.fonts
     }
+  }
+
+  /**
+   * Reads one entity, treating a reader that throws as a skipped entity.
+   *
+   * Real drawings ship the occasional out-of-spec record — a CIRCLE with
+   * radius 0 makes the geometry engine throw `Illegal Parameters` — and
+   * letting that escape aborts the whole document, so one bad entity costs
+   * the caller every other entity in the file. Skip it the same way an
+   * unknown type name is skipped.
+   *
+   * Also absorbs the unknown-type case, so both kinds of skip advance the
+   * filer past the record exactly once.
+   *
+   * @returns The entity, or `null` when the type is unknown or the read threw
+   */
+  private readEntityTolerantly(
+    filer: AcDbDxfFiler,
+    typeName: string
+  ): AcDbEntity | null {
+    let entity: AcDbEntity | null = null
+    try {
+      entity = acdbDxfInEntity(filer, typeName)
+    } catch (error) {
+      this._malformedEntityCount += 1
+      if (this._malformedEntityCount <= MALFORMED_ENTITY_WARN_LIMIT) {
+        const reason = error instanceof Error ? error.message : String(error)
+        console.warn(
+          `[AcDbDxfDocumentReader] Skipped malformed ${typeName} entity: ${reason}`
+        )
+      }
+      filer.skipToEndOfObject()
+      return null
+    }
+    if (!entity) {
+      this._unknownEntityCount += 1
+      filer.skipToEndOfObject()
+    }
+    return entity
   }
 
   private readSectionName(filer: AcDbDxfFiler): string {
@@ -375,9 +426,14 @@ export class AcDbDxfDocumentReader {
   private readTable(filer: AcDbDxfFiler, tableName: string) {
     switch (tableName) {
       case 'LAYER':
-        this.readNamedTable(filer, 'LAYER', () => new AcDbLayerTableRecord(), r => {
-          if (r.name) this._db.tables.layerTable.add(r)
-        })
+        this.readNamedTable(
+          filer,
+          'LAYER',
+          () => new AcDbLayerTableRecord(),
+          r => {
+            if (r.name) this._db.tables.layerTable.add(r)
+          }
+        )
         break
       case 'LTYPE':
         this.readNamedTable(
@@ -620,16 +676,13 @@ export class AcDbDxfDocumentReader {
         continue
       }
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
-      const entity = acdbDxfInEntity(filer, typeName)
+      const entity = this.readEntityTolerantly(filer, typeName)
       if (entity) {
         // Model/paper geometry lives in ENTITIES; skip space BTRs here to
         // avoid duplicating entities that also appear with group 67 / owner.
         if (this.shouldAcceptBlockEntity(btr)) {
           this.acceptEntity(entity, btr)
         }
-      } else {
-        this._unknownEntityCount += 1
-        filer.skipToEndOfObject()
       }
 
       sinceYield += 1
@@ -789,12 +842,9 @@ export class AcDbDxfDocumentReader {
         continue
       }
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
-      const entity = acdbDxfInEntity(filer, name)
+      const entity = this.readEntityTolerantly(filer, name)
       if (entity) {
         this.acceptEntity(entity, this.resolveEntityOwner(entity, modelSpace))
-      } else {
-        this._unknownEntityCount += 1
-        filer.skipToEndOfObject()
       }
 
       sinceYield += 1
@@ -832,10 +882,7 @@ export class AcDbDxfDocumentReader {
   /**
    * Appends an entity (or links ATTRIB → INSERT) and collects inline fonts.
    */
-  private acceptEntity(
-    entity: AcDbEntity,
-    owner: AcDbBlockTableRecord
-  ): void {
+  private acceptEntity(entity: AcDbEntity, owner: AcDbBlockTableRecord): void {
     if (entity instanceof AcDbAttribute) {
       this.collectInlineFontsFromEntity(entity)
       this.linkOrDeferAttribute(entity, owner)
@@ -966,7 +1013,10 @@ export class AcDbDxfDocumentReader {
   private async reportParseProgress(filer: AcDbDxfFiler) {
     const { onProgress, totalBytes } = this._options
     if (!onProgress || !totalBytes || totalBytes <= 0) return
-    const ratio = Math.min(1, Math.max(0, filer.position().byteOffset / totalBytes))
+    const ratio = Math.min(
+      1,
+      Math.max(0, filer.position().byteOffset / totalBytes)
+    )
     await onProgress(ratio)
   }
 
