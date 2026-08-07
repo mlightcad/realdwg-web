@@ -1,10 +1,7 @@
 import { AcGeMathUtil } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices } from '../src/base'
-import {
-  AcDbBlockTableRecordFlag,
-  AcDbDatabase
-} from '../src/database'
+import { AcDbBlockTableRecordFlag, AcDbDatabase } from '../src/database'
 import { AcDbNativeDxfConverter } from '../src/dxf'
 import {
   AcDbBlockReference,
@@ -1459,7 +1456,7 @@ describe('AcDbNativeDxfConverter', () => {
       '1',
       'WallsOnly',
       '1',
-      'NAME==\"Walls\"',
+      'NAME=="Walls"',
       '1',
       '*',
       '1',
@@ -2026,14 +2023,16 @@ describe('AcDbNativeDxfConverter', () => {
     expect(text!.verticalMode).toBe(2)
     expect(text!.alignmentPoint.x).toBeCloseTo(105)
 
-    const mtext = model.find(e => e instanceof AcDbMText) as AcDbMText | undefined
+    const mtext = model.find(e => e instanceof AcDbMText) as
+      | AcDbMText
+      | undefined
     expect(mtext).toBeDefined()
     expect(mtext!.contents).toBe('Notes line continued')
     expect(mtext!.direction.x).toBeCloseTo(1)
 
-    const dim = model.find(
-      e => e instanceof AcDbRotatedDimension
-    ) as AcDbRotatedDimension | undefined
+    const dim = model.find(e => e instanceof AcDbRotatedDimension) as
+      | AcDbRotatedDimension
+      | undefined
     expect(dim).toBeDefined()
     expect(dim!.dimBlockId).toBe('*D1')
     expect(dim!.xLine1Point.x).toBeCloseTo(0)
@@ -2043,7 +2042,9 @@ describe('AcDbNativeDxfConverter', () => {
     expect(dim!.dimBlockPosition.x).toBeCloseTo(20)
     expect(dim!.dimBlockPosition.y).toBeCloseTo(0)
 
-    const table = model.find(e => e instanceof AcDbTable) as AcDbTable | undefined
+    const table = model.find(e => e instanceof AcDbTable) as
+      | AcDbTable
+      | undefined
     expect(table).toBeDefined()
     expect(table!.blockName).toBe('*T1')
     expect(table!.numRows).toBe(2)
@@ -2142,6 +2143,73 @@ describe('AcDbNativeDxfConverter', () => {
     expect(dim!.dimBlockPosition.x).toBeCloseTo(0)
     expect(dim!.dimBlockPosition.y).toBeCloseTo(0)
     expect(dim!.dimBlockPosition.z).toBeCloseTo(0)
+  })
+
+  it('reads ROTATED dimension points written under the ALIGNED marker', async () => {
+    // QCAD (and AutoCAD) put the definition points under
+    // (100, AcDbAlignedDimension) and append (100, AcDbRotatedDimension) after
+    // them. Consuming only the leaf marker left the points at (0,0,0).
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'DIMENSION',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbDimension',
+      '10',
+      '10.0',
+      '20',
+      '30.0',
+      '30',
+      '0.0',
+      '70',
+      '32',
+      '3',
+      'Standard',
+      '100',
+      'AcDbAlignedDimension',
+      '13',
+      '10.0',
+      '23',
+      '10.0',
+      '33',
+      '0.0',
+      '14',
+      '40.0',
+      '24',
+      '20.0',
+      '34',
+      '0.0',
+      '100',
+      'AcDbRotatedDimension',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    const converter = new AcDbNativeDxfConverter()
+    await converter.read(new TextEncoder().encode(dxf).buffer, db, 50)
+
+    const dim = [...db.tables.blockTable.modelSpace.newIterator()].find(
+      e => e instanceof AcDbRotatedDimension
+    ) as AcDbRotatedDimension | undefined
+
+    expect(dim).toBeDefined()
+    expect(dim!.xLine1Point.x).toBeCloseTo(10)
+    expect(dim!.xLine1Point.y).toBeCloseTo(10)
+    expect(dim!.xLine2Point.x).toBeCloseTo(40)
+    expect(dim!.xLine2Point.y).toBeCloseTo(20)
+    expect(dim!.dimLinePoint.x).toBeCloseTo(10)
+    expect(dim!.dimLinePoint.y).toBeCloseTo(30)
   })
 
   it('emits FONT before ENTITY flush so fonts load before draw', async () => {
@@ -2415,12 +2483,7 @@ describe('AcDbNativeDxfConverter', () => {
   })
 
   it('emits PARSE IN-PROGRESS while streaming entities', async () => {
-    const lines = [
-      '0',
-      'SECTION',
-      '2',
-      'ENTITIES'
-    ]
+    const lines = ['0', 'SECTION', '2', 'ENTITIES']
     for (let i = 0; i < 40; i++) {
       lines.push(
         '0',
@@ -2482,14 +2545,18 @@ describe('AcDbNativeDxfConverter', () => {
       expect(pct).toBeLessThan(12)
     }
     for (let i = 1; i < parseProgressPcts.length; i++) {
-      expect(parseProgressPcts[i]!).toBeGreaterThanOrEqual(parseProgressPcts[i - 1]!)
+      expect(parseProgressPcts[i]!).toBeGreaterThanOrEqual(
+        parseProgressPcts[i - 1]!
+      )
     }
     const entityProgressPcts = percentages.filter(
       (_, i) => stages[i] === 'ENTITY:IN-PROGRESS'
     )
     expect(entityProgressPcts.length).toBeGreaterThan(0)
     expect(entityProgressPcts[0]!).toBeGreaterThanOrEqual(20)
-    expect(entityProgressPcts[entityProgressPcts.length - 1]!).toBeLessThanOrEqual(98)
+    expect(
+      entityProgressPcts[entityProgressPcts.length - 1]!
+    ).toBeLessThanOrEqual(98)
   })
 
   it('does not count SEQEND as an unknown entity', async () => {
@@ -2574,7 +2641,9 @@ describe('AcDbNativeDxfConverter', () => {
     expect([...inserts[0].attributeIterator()]).toHaveLength(1)
 
     // Re-read via document reader to assert the diagnostic counter.
-    const { AcDbDxfDocumentReader } = await import('../src/dxf/AcDbDxfDocumentReader')
+    const { AcDbDxfDocumentReader } = await import(
+      '../src/dxf/AcDbDxfDocumentReader'
+    )
     const { AcDbDxfFiler } = await import('../src/base/AcDbDxfFiler')
     const db2 = new AcDbDatabase()
     db2.createDefaultData()
@@ -2726,7 +2795,9 @@ describe('AcDbNativeDxfConverter', () => {
       ''
     ].join('\n')
 
-    const { AcDbDxfDocumentReader } = await import('../src/dxf/AcDbDxfDocumentReader')
+    const { AcDbDxfDocumentReader } = await import(
+      '../src/dxf/AcDbDxfDocumentReader'
+    )
     const { AcDbDxfFiler } = await import('../src/base/AcDbDxfFiler')
     const db = new AcDbDatabase()
     db.createDefaultData()

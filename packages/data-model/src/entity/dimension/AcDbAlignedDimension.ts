@@ -529,7 +529,15 @@ export class AcDbAlignedDimension extends AcDbDimension {
 
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
-    filer.atSubclassData(this.dxfSubclassMarker)
+    // Writers disagree on where a ROTATED dimension's definition points live.
+    // AutoCAD and QCAD emit (100, AcDbAlignedDimension), the points, then
+    // (100, AcDbRotatedDimension); others emit only the leaf marker. Consuming
+    // just `this.dxfSubclassMarker` handles the second layout but leaves the
+    // first staring at (100, AcDbAlignedDimension), where the `case 100` branch
+    // finishes immediately and the dimension keeps its default (0,0,0) points.
+    if (!filer.atSubclassData('AcDbAlignedDimension')) {
+      filer.atSubclassData(this.dxfSubclassMarker)
+    }
 
     let x1 = this.xLine1Point.x
     let y1 = this.xLine1Point.y
