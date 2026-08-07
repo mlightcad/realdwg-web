@@ -420,6 +420,8 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     filer.atSubclassData('AcDbSymbolTableRecord')
     filer.atSubclassData('AcDbLayerTableRecord')
 
+    let sawAciColor = false
+
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
       if (!item) break
@@ -439,10 +441,18 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
           const aci = Number(item.value)
           this.isOff = aci < 0
           this.color.colorIndex = Math.abs(aci)
+          sawAciColor = true
           break
         }
         case 420:
-          this.color.setRGBValue(Number(item.value))
+          // Same writer bug as AcDbEntity: group 420 packs a 24-bit RGB, so 0
+          // is indistinguishable from "no true colour", and generators emit it
+          // next to a real index. On a layer it is worse than on an entity —
+          // every ByLayer entity on that layer turns black and the drawing
+          // opens empty. QCAD and dxflib samples do this on layer "0".
+          if (Number(item.value) !== 0 || !sawAciColor) {
+            this.color.setRGBValue(Number(item.value))
+          }
           break
         case 6:
           this.linetype = String(item.value)
@@ -466,4 +476,3 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     return this
   }
 }
-
