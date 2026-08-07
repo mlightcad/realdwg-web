@@ -25,6 +25,23 @@ import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
+ * Coerces a DXF INSERT scale factor (group 41/42/43) to a usable value.
+ *
+ * A scale of 0 collapses the block transform to a singular matrix. AutoCAD
+ * never produces one — the DXF default for all three groups is 1.0 — but 2D
+ * writers routinely emit `43 0` to mean "no Z", and `Matrix4.decompose` on the
+ * result divides by that zero, so NaN spreads through the transform into
+ * whatever geometry and bounds a renderer derives from it. Treat 0 (and
+ * non-finite input) as the spec default.
+ *
+ * @param value - Raw group 41/42/43 value
+ * @returns The scale factor to apply
+ */
+function normalizeScaleFactor(value: number): number {
+  return Number.isFinite(value) && value !== 0 ? value : 1
+}
+
+/**
  * Represents a block reference entity in AutoCAD.
  *
  * A block reference is used to place, size, and display an instance of the collection
@@ -1132,7 +1149,11 @@ export class AcDbBlockReference extends AcDbEntity {
 
     const commit = () => {
       this.position = new AcGePoint3d(x, y, z)
-      this.scaleFactors = new AcGePoint3d(sx, sy, sz)
+      this.scaleFactors = new AcGePoint3d(
+        normalizeScaleFactor(sx),
+        normalizeScaleFactor(sy),
+        normalizeScaleFactor(sz)
+      )
       this.rotation = AcGeMathUtil.degToRad(rotDeg)
       this.normal.copy(new AcGeVector3d(nx, ny, nz))
       this.columnCount = columnCount > 0 ? columnCount : 1

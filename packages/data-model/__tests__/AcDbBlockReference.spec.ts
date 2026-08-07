@@ -520,4 +520,50 @@ describe('AcDbBlockReference', () => {
     expect(filerWithoutAttrs.toString()).not.toContain('\n0\nATTRIB\n')
     expect(filerWithoutAttrs.toString()).not.toContain('\n0\nSEQEND\n')
   })
+  it.each([
+    ['z', ['41', '1.0', '42', '1.0', '43', '0.0'], [1, 1, 1]],
+    ['x and y', ['41', '0.0', '42', '0.0', '43', '1.0'], [1, 1, 1]],
+    ['none', ['41', '0.5', '42', '0.5', '43', '2.0'], [0.5, 0.5, 2]]
+  ])(
+    'normalizes a zero INSERT scale factor (%s zeroed)',
+    (_label, scalePairs, expected) => {
+      // A zero scale makes the block transform singular, and Matrix4.decompose
+      // divides by it, so NaN spreads into every derived bound. 2D writers emit
+      // `43 0` routinely — bjnortier/dxf's arrayed-holes.dxf and LibreCAD's
+      // symbol library both do.
+      createDb()
+      const dxf = [
+        '100',
+        'AcDbEntity',
+        '8',
+        '0',
+        '100',
+        'AcDbBlockReference',
+        '2',
+        'BLOCK_6',
+        '10',
+        '1.0',
+        '20',
+        '2.0',
+        '30',
+        '0.0',
+        ...(scalePairs as string[]),
+        '0',
+        'ENDSEC'
+      ].join('\n')
+
+      const blockRef = new AcDbBlockReference('')
+      blockRef.dxfIn(AcDbDxfFiler.fromString(dxf))
+
+      const [ex, ey, ez] = expected as number[]
+      expect(blockRef.scaleFactors.x).toBeCloseTo(ex)
+      expect(blockRef.scaleFactors.y).toBeCloseTo(ey)
+      expect(blockRef.scaleFactors.z).toBeCloseTo(ez)
+
+      // The resulting transform must stay invertible, which is what keeps a
+      // renderer from decomposing it into NaN.
+      const m = blockRef.blockTransform.elements
+      expect(m.every((v: number) => Number.isFinite(v))).toBe(true)
+    }
+  )
 })
