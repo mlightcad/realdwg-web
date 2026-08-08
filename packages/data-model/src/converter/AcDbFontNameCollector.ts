@@ -80,7 +80,8 @@ export class AcDbFontNameCollector {
   /**
    * Walks entities and returns all normalized font names referenced by the drawing.
    *
-   * @param entities - Entity array, or a handle→entity map (`Map` values are walked).
+   * @param entities - Entity array, handle→entity map (`Map` values are walked),
+   *   or any iterable of entities (avoids materializing a single giant array).
    */
   collect<TEntity>(
     entities: AcDbFontNameCollectorEntities<TEntity>,
