@@ -96,16 +96,23 @@ describe('AcDbDatabase', () => {
         async (
           _data: ArrayBuffer,
           _db: AcDbDatabase,
-          _minimumChunkSize: number,
-          progress?: (
-            percentage: number,
-            stage: string,
-            stageStatus: string,
-            data?: unknown
-          ) => Promise<void>
+          options?: {
+            collectFonts?: boolean
+            progress?: (
+              percentage: number,
+              stage: string,
+              stageStatus: string,
+              data?: unknown
+            ) => Promise<void>
+          }
         ) => {
-          if (progress) {
-            await progress(5, 'FONT', 'END', ['arial', 'simsun', 'hztxt'])
+          expect(options?.collectFonts).toBe(true)
+          if (options?.progress) {
+            await options.progress(5, 'FONT', 'END', [
+              'arial',
+              'simsun',
+              'hztxt'
+            ])
           }
         }
       )
@@ -130,6 +137,27 @@ describe('AcDbDatabase', () => {
     }
   })
 
+  it('skips font collection when fontLoader is not provided', async () => {
+    const db = new AcDbDatabase()
+    const fileType = 'test-skip-font-collection'
+    const converter = {
+      read: jest.fn(async () => undefined)
+    }
+    const manager = AcDbDatabaseConverterManager.instance
+    manager.register(fileType, converter as never)
+
+    try {
+      await db.read(new ArrayBuffer(0), { readOnly: true }, fileType)
+      expect(converter.read).toHaveBeenCalledWith(
+        expect.any(ArrayBuffer),
+        db,
+        expect.objectContaining({ collectFonts: false })
+      )
+    } finally {
+      manager.unregister(fileType)
+    }
+  })
+
   it('continues reading when font loading fails by default', async () => {
     const db = new AcDbDatabase()
     const fileType = 'test-font-load'
@@ -142,16 +170,17 @@ describe('AcDbDatabase', () => {
         async (
           _data: ArrayBuffer,
           _db: AcDbDatabase,
-          _minimumChunkSize: number,
-          progress?: (
-            percentage: number,
-            stage: string,
-            stageStatus: string,
-            data?: unknown
-          ) => Promise<void>
+          options?: {
+            progress?: (
+              percentage: number,
+              stage: string,
+              stageStatus: string,
+              data?: unknown
+            ) => Promise<void>
+          }
         ) => {
-          if (progress) {
-            await progress(5, 'FONT', 'END', ['arial'])
+          if (options?.progress) {
+            await options.progress(5, 'FONT', 'END', ['arial'])
           }
         }
       )
@@ -186,16 +215,17 @@ describe('AcDbDatabase', () => {
         async (
           _data: ArrayBuffer,
           _db: AcDbDatabase,
-          _minimumChunkSize: number,
-          progress?: (
-            percentage: number,
-            stage: string,
-            stageStatus: string,
-            data?: unknown
-          ) => Promise<void>
+          options?: {
+            progress?: (
+              percentage: number,
+              stage: string,
+              stageStatus: string,
+              data?: unknown
+            ) => Promise<void>
+          }
         ) => {
-          if (progress) {
-            await progress(5, 'FONT', 'END', ['arial'])
+          if (options?.progress) {
+            await options.progress(5, 'FONT', 'END', ['arial'])
           }
         }
       )
@@ -229,17 +259,22 @@ describe('AcDbDatabase', () => {
         async (
           _data: ArrayBuffer,
           _db: AcDbDatabase,
-          _minimumChunkSize: number,
-          progress?: (
-            percentage: number,
-            stage: string,
-            stageStatus: string,
-            data?: unknown,
-            taskError?: { error: unknown; task: { name: string }; taskIndex: number }
-          ) => Promise<void>
+          options?: {
+            progress?: (
+              percentage: number,
+              stage: string,
+              stageStatus: string,
+              data?: unknown,
+              taskError?: {
+                error: unknown
+                task: { name: string }
+                taskIndex: number
+              }
+            ) => Promise<void>
+          }
         ) => {
-          if (progress) {
-            await progress(5, 'PARSE', 'ERROR', undefined, {
+          if (options?.progress) {
+            await options.progress(5, 'PARSE', 'ERROR', undefined, {
               error: oomError,
               task: { name: 'PARSE' },
               taskIndex: 1

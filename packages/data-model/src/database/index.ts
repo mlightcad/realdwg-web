@@ -29,6 +29,7 @@ export type {
   AcDbConversionStage,
   AcDbConvertDatabasePerformanceData,
   AcDbDatabaseConverterConfig,
+  AcDbDatabaseConverterReadOptions,
   AcDbParsingTaskResult,
   AcDbParsingTaskStats,
   AcDbStageStatus

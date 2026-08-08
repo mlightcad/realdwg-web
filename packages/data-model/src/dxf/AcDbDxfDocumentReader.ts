@@ -56,6 +56,12 @@ export interface AcDbDxfDocumentReaderOptions {
   onProgress?: (ratio: number) => void | Promise<void>
   /** Total DXF byte length for {@link onProgress}. */
   totalBytes?: number
+  /**
+   * When `true` (default), collect font names from STYLE records and inline
+   * text overrides. When `false`, skip collection and return an empty fonts
+   * list from {@link AcDbDxfDocumentReader.read}.
+   */
+  collectFonts?: boolean
 }
 
 export interface AcDbDxfDocumentReaderResult {
@@ -900,6 +906,7 @@ export class AcDbDxfDocumentReader {
    * need to pick up inline overrides that are not in the style table.
    */
   private collectFontFromStyleRecord(record: AcDbTextStyleTableRecord) {
+    if (this._options.collectFonts === false) return
     if (record.fileName) {
       const normalized = AcDbFontNameCollector.normalizeFontFileName(
         record.fileName
@@ -926,6 +933,7 @@ export class AcDbDxfDocumentReader {
    * this only covers `\f` / `\F` overrides in MTEXT, MLEADER, and TOLERANCE.
    */
   private collectInlineFontsFromEntity(entity: AcDbEntity) {
+    if (this._options.collectFonts === false) return
     const formattedText = this.getEntityFormattedTextForFonts(entity)
     if (!formattedText) return
     for (const font of AcDbFontNameCollector.collectInlineMTextFonts(

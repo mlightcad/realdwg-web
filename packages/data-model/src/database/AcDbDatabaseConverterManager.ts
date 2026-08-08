@@ -51,7 +51,7 @@ export interface AcDbDatabaseConverterManagerEventArgs {
  * const manager = AcDbDatabaseConverterManager.instance;
  * const converter = manager.get(AcDbFileType.DXF);
  * if (converter) {
- *   await converter.read(dxfData, database, 100);
+ *   await converter.read(dxfData, database, { minimumChunkSize: 100 });
  * }
  * ```
  */
@@ -172,7 +172,7 @@ export class AcDbDatabaseConverterManager {
    * ```typescript
    * const converter = manager.get(AcDbFileType.DXF);
    * if (converter) {
-   *   await converter.read(dxfData, database, 100);
+   *   await converter.read(dxfData, database, { minimumChunkSize: 100 });
    * }
    * ```
    */
