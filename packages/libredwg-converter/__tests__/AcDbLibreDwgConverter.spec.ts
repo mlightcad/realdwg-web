@@ -159,6 +159,49 @@ describe('AcDbLibreDwgConverter', () => {
     expect(fonts).not.toContain('italic')
   })
 
+  it('does not throw when a BLOCK_RECORD has more entities than apply arg limits', () => {
+    // Engines typically fail around ~65k–125k args for Function.prototype.apply /
+    // array spread used as push(...entities). Use well above that.
+    const LARGE = 150_000
+    const entities = new Array(LARGE)
+    for (let i = 0; i < LARGE; i++) {
+      entities[i] = { type: 'LINE' }
+    }
+    entities[0] = { type: 'TEXT', styleName: 'Romans' }
+    entities[LARGE - 1] = {
+      type: 'MTEXT',
+      styleName: 'Romans',
+      text: '{\\fCustom|b0;Hi}'
+    }
+
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    const fonts = converter.getFontsPublic({
+      header: { TEXTSTYLE: 'Standard' },
+      tables: {
+        STYLE: {
+          entries: [
+            {
+              name: 'Standard',
+              font: 'txt.shx',
+              standardFlag: 0
+            },
+            {
+              name: 'Romans',
+              font: 'romans.shx',
+              standardFlag: 0
+            }
+          ]
+        },
+        BLOCK_RECORD: {
+          entries: [{ name: 'DENSE', entities }]
+        }
+      },
+      entities: []
+    })
+
+    expect(fonts).toEqual(expect.arrayContaining(['romans', 'custom']))
+  })
+
   it('collects fonts from tolerance entities via dim style text style and inline fonts', () => {
     const converter = new TestLibreDwgConverter({ useWorker: false })
     const fonts = converter.getFontsPublic({

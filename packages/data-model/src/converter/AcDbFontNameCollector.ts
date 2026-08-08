@@ -30,11 +30,13 @@ export type AcDbFontNameCollectorEntityFontInfo = {
 
 /**
  * Entity collections accepted by {@link AcDbFontNameCollector.collect}.
- * Arrays match LibreDwg-style models; maps match handle→entity stores.
+ * Arrays match LibreDwg-style models; maps match handle→entity stores;
+ * arbitrary iterables avoid materializing a single giant entity array.
  */
 export type AcDbFontNameCollectorEntities<TEntity> =
   | readonly TEntity[]
   | Map<number, TEntity>
+  | Iterable<TEntity>
 
 /** Callbacks that map a host-specific entity model to collector input. */
 export type AcDbFontNameCollectorAdapter<TEntity> = {
@@ -149,10 +151,9 @@ export class AcDbFontNameCollector {
 
   private static iterateEntities<TEntity>(
     entities: AcDbFontNameCollectorEntities<TEntity>
-  ): IterableIterator<TEntity> {
-    return entities instanceof Map
-      ? entities.values()
-      : entities[Symbol.iterator]()
+  ): Iterable<TEntity> {
+    // Maps iterate as [key, value] pairs; walk values only.
+    return entities instanceof Map ? entities.values() : entities
   }
 
   /**

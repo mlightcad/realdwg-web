@@ -120,10 +120,21 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       )
     }
 
-    const rootEntities: DwgEntity[] = [...(dwg.entities ?? [])]
-    for (const btr of dwg.tables.BLOCK_RECORD.entries) {
-      if (btr.entities?.length) {
-        rootEntities.push(...btr.entities)
+    // Do not build one giant array with push(...entities) / Array spread —
+    // engines limit Function.prototype.apply argument counts, and large
+    // BLOCK_RECORD entity lists (dense hatches, arrays) can throw
+    // RangeError: Maximum call stack size exceeded. Stream instead.
+    const rootEntities: Iterable<DwgEntity> = {
+      *[Symbol.iterator](): IterableIterator<DwgEntity> {
+        const modelEntities = dwg.entities
+        if (modelEntities?.length) {
+          yield* modelEntities
+        }
+        for (const btr of dwg.tables.BLOCK_RECORD.entries) {
+          if (btr.entities?.length) {
+            yield* btr.entities
+          }
+        }
       }
     }
 
@@ -848,7 +859,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
     const result: DwgEntity[] = []
     for (const type of order) {
-      result.push(...groups[type])
+      // Avoid push(...group): large same-type groups hit apply arg limits.
+      const group = groups[type]
+      for (let i = 0; i < group.length; i++) {
+        result.push(group[i])
+      }
     }
     return result
   }
