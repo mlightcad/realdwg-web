@@ -8,11 +8,7 @@ export default defineConfig({
     // workingDatabase singleton. The app then sets workingDatabase on one copy
     // while converter-created entities read the other →
     // "The current working database must be set before using it!".
-    exclude: [
-      '@mlightcad/dxf-json-converter',
-      '@mlightcad/libredwg-converter',
-      '@mlightcad/data-model'
-    ]
+    exclude: ['@mlightcad/libredwg-converter', '@mlightcad/data-model']
   },
   build: {
     outDir: 'dist'
@@ -20,10 +16,6 @@ export default defineConfig({
   plugins: [
     viteStaticCopy({
       targets: [
-        {
-          src: './node_modules/@mlightcad/dxf-json-converter/dist/*-worker.js',
-          dest: 'assets'
-        },
         {
           src: './node_modules/@mlightcad/libredwg-converter/dist/*-worker.js',
           dest: 'assets'

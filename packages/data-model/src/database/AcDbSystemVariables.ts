@@ -147,7 +147,7 @@ export const AcDbSystemVariables = {
    */
   ORTHOMODE: 'ORTHOMODE',
   /**
-   * When `true`, records open-file stage timings (PARSE / FONT / ENTITY /
+   * When `true`, records open-file stage timings (PARSE / ENTITY /
    * scene convert / block-cache) and prints a summary to the console when
    * opening finishes. Session-only (not stored in the drawing). Default `false`.
    */

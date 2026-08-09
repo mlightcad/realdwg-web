@@ -16,7 +16,6 @@ import {
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
-  AcDbFontNameCollector,
   acdbHexStringsToBytes,
   AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
@@ -45,15 +44,10 @@ import {
   VPORT_FALLBACK_VIEW_TARGET
 } from '@mlightcad/data-model'
 import {
-  DwgBlockRecordTableEntry,
   DwgCommonObject,
   DwgCommonTableEntry,
   DwgDatabase,
-  DwgEntity,
-  DwgInsertEntity,
-  DwgMTextEntity,
-  DwgMultiLeaderEntity,
-  DwgTextEntity
+  DwgEntity
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
@@ -95,143 +89,6 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     } else {
       throw new Error('dwg converter can run in web worker only!')
     }
-  }
-
-  /**
-   * Gets fonts referenced by the drawing: shape-definition STYLE fonts plus
-   * fonts used by entities in model/paper space and block definitions.
-   * Unused named STYLE table fonts are not included.
-   * @param dwg dwg database model
-   * @returns Normalized font names to preload
-   */
-  protected getFonts(dwg: DwgDatabase) {
-    const blockMap: Map<string, DwgBlockRecordTableEntry> = new Map()
-    dwg.tables.BLOCK_RECORD.entries.forEach(btr => {
-      blockMap.set(btr.name, btr)
-    })
-    const dimStyleTextStyles = new Map<string, string>()
-    for (const entry of dwg.tables.DIMSTYLE?.entries ?? []) {
-      const dimtxsty = entry.DIMTXSTY
-      dimStyleTextStyles.set(
-        entry.name,
-        typeof dimtxsty === 'string' && dimtxsty
-          ? dimtxsty
-          : DEFAULT_TEXT_STYLE
-      )
-    }
-
-    // Do not build one giant array with push(...entities) / Array spread —
-    // engines limit Function.prototype.apply argument counts, and large
-    // BLOCK_RECORD entity lists (dense hatches, arrays) can throw
-    // RangeError: Maximum call stack size exceeded. Stream instead.
-    const rootEntities: Iterable<DwgEntity> = {
-      *[Symbol.iterator](): IterableIterator<DwgEntity> {
-        const modelEntities = dwg.entities
-        if (modelEntities?.length) {
-          yield* modelEntities
-        }
-        for (const btr of dwg.tables.BLOCK_RECORD.entries) {
-          if (btr.entities?.length) {
-            yield* btr.entities
-          }
-        }
-      }
-    }
-
-    return new AcDbFontNameCollector({
-      styles: dwg.tables.STYLE.entries.map(style => ({
-        name: style.name,
-        font: style.font,
-        bigFont: style.bigFont,
-        extendedFont: (style as { extendedFont?: string }).extendedFont,
-        standardFlag: style.standardFlag
-      })),
-      textStyleVar: dwg.header?.TEXTSTYLE ?? DEFAULT_TEXT_STYLE,
-      // Large DWGs often list many unused STYLE fonts; only preload shapes plus
-      // fonts referenced by the entity walk (used styles / inline overrides).
-      includeAllNamedStyleFonts: false
-    }).collect(rootEntities, {
-      getEntityFontInfo: (entity: DwgEntity) => {
-        if (entity.type == 'MTEXT') {
-          const mtext = entity as DwgMTextEntity
-          return {
-            styleName: mtext.styleName,
-            formattedText: mtext.text,
-            resolveStyle: true
-          }
-        }
-        if (
-          entity.type == 'TEXT' ||
-          entity.type == 'ATTRIB' ||
-          entity.type == 'ATTDEF'
-        ) {
-          const text = entity as DwgTextEntity
-          return { styleName: text.styleName, resolveStyle: true }
-        }
-        if (entity.type == 'SHAPE') {
-          const shape = entity as DwgEntity & { styleName?: string }
-          return { styleName: shape.styleName, resolveStyle: true }
-        }
-        if (entity.type == 'MULTILEADER' || entity.type == 'MLEADER') {
-          const mleader = entity as DwgMultiLeaderEntity &
-            Record<string, unknown>
-          const text =
-            typeof mleader.textContent === 'string' ? mleader.textContent : ''
-          const styleName =
-            typeof mleader.textStyleName === 'string'
-              ? mleader.textStyleName
-              : typeof mleader.styleName === 'string'
-                ? mleader.styleName
-                : undefined
-          return { styleName, formattedText: text, resolveStyle: true }
-        }
-        if (entity.type == 'TOLERANCE') {
-          const tolerance = entity as DwgEntity & {
-            styleName?: string
-            text?: string
-          }
-          return {
-            styleName: this.resolveDimStyleTextStyle(
-              dimStyleTextStyles,
-              tolerance.styleName
-            ),
-            formattedText:
-              typeof tolerance.text === 'string' ? tolerance.text : '',
-            resolveStyle: true
-          }
-        }
-        if (entity.type == 'INSERT') {
-          return { blockName: (entity as DwgInsertEntity).name }
-        }
-        if (entity.type == 'DIMENSION') {
-          const dimension = entity as DwgEntity & { name?: string }
-          return dimension.name ? { blockName: dimension.name } : null
-        }
-        return null
-      },
-      getBlockEntities: (blockName: string) => blockMap.get(blockName)?.entities
-    })
-  }
-
-  private resolveDimStyleTextStyle(
-    dimStyleTextStyles: Map<string, string>,
-    dimStyleName?: string
-  ): string | undefined {
-    const trimmed = dimStyleName?.trim()
-    if (!trimmed) {
-      return undefined
-    }
-    const exact = dimStyleTextStyles.get(trimmed)
-    if (exact) {
-      return exact
-    }
-    const normalized = trimmed.toUpperCase()
-    for (const [name, textStyle] of dimStyleTextStyles) {
-      if (name.toUpperCase() === normalized) {
-        return textStyle
-      }
-    }
-    return undefined
   }
 
   protected processLineTypes(model: DwgDatabase, db: AcDbDatabase) {

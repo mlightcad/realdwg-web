@@ -26,10 +26,6 @@ export type AcDbConversionStage =
    */
   | 'PARSE'
   /**
-   * Downloading font files
-   */
-  | 'FONT'
-  /**
    * Converting line types
    */
   | 'LTYPE'
@@ -89,7 +85,7 @@ export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS' | 'ERROR'
  * @param stage - Name of the current stage
  * @param stageStatus - Status of the current stage
  * @param data - Store data associated with the current stage. Its meaning varies by stage:
- *   - 'FONT' stage: fonts needed by this drawing
+ *   - 'PARSE' stage: statistics of parsing task
  *
  * @example
  * ```typescript
@@ -100,8 +96,8 @@ export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS' | 'ERROR'
  *   data
  * ) => {
  *   console.log(`Progress: ${percentage}% - Stage: ${stage} - Status: ${stageStatus}`);
- *   if (stage === 'FONT' && data) {
- *     console.log('Fonts needed:', data);
+ *   if (stage === 'PARSE' && data) {
+ *     console.log('Parse stats:', data);
  *   }
  * };
  * ```
@@ -122,9 +118,8 @@ export type AcDbConversionProgressCallback = (
   /**
    * Store data associated with the current stage. Its meaning of different stages are as follows.
    * - 'PARSE' stage: statistics of parsing task
-   * - 'FONT' stage: fonts needed by this drawing
    *
-   * Note: For now, 'PARSE' and 'FONT' stages use this field only.
+   * Note: For now, 'PARSE' stages use this field only.
    */
   data?: unknown,
   /**
@@ -160,13 +155,6 @@ export interface AcDbDatabaseConverterReadOptions {
    * System variables to override in the database after HEADER is processed.
    */
   sysVars?: Record<string, number | boolean | string>
-
-  /**
-   * When `true` (default), collect font names referenced by the drawing and
-   * report them on the FONT stage. When `false`, skip font collection and
-   * report an empty fonts list — useful when no font loader will load them.
-   */
-  collectFonts?: boolean
 }
 
 /**
@@ -419,12 +407,12 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * Reads and converts data into an AcDbDatabase.
    *
    * This method orchestrates the entire conversion process, including
-   * parsing, processing various components (fonts, linetypes, styles, etc.),
+   * parsing, processing various components (linetypes, styles, etc.),
    * and building the final database.
    *
    * @param data - The input data to convert
    * @param db - The database to populate with converted data
-   * @param options - Optional read options (chunk size, progress, fonts, etc.)
+   * @param options - Optional read options (chunk size, progress, etc.)
    * @returns Promise that resolves when conversion is complete
    *
    */
@@ -437,8 +425,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
       minimumChunkSize = 10,
       progress,
       timeout,
-      sysVars,
-      collectFonts = true
+      sysVars
     } = options
 
     const loadDbTimeEntry: AcCmPerformanceEntry<AcDbConvertDatabasePerformanceData> =
@@ -485,20 +472,6 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           progress: percentage,
           task: async (data: ArrayBuffer) => {
             return await this.parse(data, timeout)
-          }
-        },
-        progress
-      )
-    )
-    scheduler.addTask(
-      new AcDbConversionTask(
-        {
-          stage: 'FONT',
-          step: 5,
-          progress: percentage,
-          task: async (data: { model: TModel }) => {
-            const fonts = collectFonts ? this.getFonts(data.model) : []
-            return { model: data.model, data: fonts }
           }
         },
         progress
@@ -745,10 +718,6 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     _data: ArrayBuffer,
     _timeout?: number
   ): Promise<AcDbParsingTaskResult<TModel>> {
-    throw new Error('Not impelemented yet!')
-  }
-
-  protected getFonts(_model: TModel): string[] {
     throw new Error('Not impelemented yet!')
   }
 

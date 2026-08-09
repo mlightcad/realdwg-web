@@ -15,14 +15,12 @@ import {
 import { AcDbDxfDocumentReader } from './AcDbDxfDocumentReader'
 
 /**
- * Progress weights mirror typical open cost: a small PARSE slice, a short FONT
- * download, then most of the bar for ENTITY add/render (same idea as the old
- * converter where ENTITY carried the largest step).
+ * Progress weights mirror typical open cost: a small PARSE slice, then most of
+ * the bar for ENTITY add/render (same idea as the old converter where ENTITY
+ * carried the largest step).
  */
 const PARSE_START_PCT = 1
-const PARSE_END_PCT = 12
-const FONT_START_PCT = 13
-const FONT_END_PCT = 18
+const PARSE_END_PCT = 18
 const ENTITY_START_PCT = 20
 const ENTITY_END_PCT = 98
 
@@ -33,11 +31,10 @@ const ENTITY_END_PCT = 98
  * directly into {@link AcDbDatabase}, avoiding the ParsedDxf JSON intermediate
  * used by `@mlightcad/dxf-json-converter`.
  *
- * Conversion stages mirror {@link AcDbDatabaseConverter}:
- * `START → PARSE → FONT → ENTITY → END`. The reader fills the database quietly
- * (entity-appended events batched); fonts load on FONT; then the batch flushes
- * so the first draw happens with fonts already available — no mid-parse FONT
- * or post-open regen.
+ * Conversion stages: `START → PARSE → ENTITY → END`. The reader fills the
+ * database quietly (entity-appended events batched); then the batch flushes so
+ * the first draw happens after parse completes. Fonts are loaded on demand by
+ * the mtext renderer when a font is first needed.
  *
  * Mid-PARSE byte progress, chunked ENTITY flush, and time-budgeted UI yields
  * keep the status bar / spinner responsive without stalling large files on
@@ -56,11 +53,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     db: AcDbDatabase,
     options: AcDbDatabaseConverterReadOptions = {}
   ) {
-    const {
-      minimumChunkSize = 10,
-      progress,
-      collectFonts = true
-    } = options
+    const { minimumChunkSize = 10, progress } = options
 
     this.progress = progress
 
@@ -79,8 +72,9 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     // Let the open-file overlay paint before sync-heavy parse work (once).
     await accmYieldForPaint()
 
-    // Suppress entityAppended (and related) until FONT finishes so the viewer
-    // does not worldDraw text before fontLoader.load has run.
+    // Suppress entityAppended (and related) until parse finishes so the viewer
+    // does not worldDraw mid-stream while the open-file progress bar is still
+    // in PARSE.
     db.beginEventBatch()
     let batchOpen = true
     try {
@@ -92,7 +86,6 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
         entityBatchSize: Math.max(1, minimumChunkSize || 200),
         yieldBudgetMs: ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
         totalBytes,
-        collectFonts,
         onProgress: async ratio => {
           const pct = Math.min(
             PARSE_END_PCT - 1,
@@ -110,21 +103,12 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
         unknownEntityCount: result.unknownEntityCount
       })
 
-      // Same FONT contract as AcDbDxfConverter / AcDbDatabaseConverter.
-      await emit(FONT_START_PCT, 'FONT', 'START')
-      await emit(
-        FONT_END_PCT,
-        'FONT',
-        'END',
-        collectFonts ? result.fonts : []
-      )
-
       await emit(ENTITY_START_PCT, 'ENTITY', 'START')
       const chunkSize = Math.max(1, minimumChunkSize || 200)
       let lastEntityPct = ENTITY_START_PCT
       const yieldGate = new AcCmUiYieldGate(ACCM_DEFAULT_UI_YIELD_BUDGET_MS)
-      // Flush queued entityAppended in chunks → first draw with fonts loaded,
-      // while advancing most of the open-file progress bar.
+      // Flush queued entityAppended in chunks while advancing most of the
+      // open-file progress bar.
       await db.endEventBatchChunked(chunkSize, async (flushed, total) => {
         const pct =
           total <= 0
@@ -157,9 +141,5 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
 
   protected override async parse(_data: ArrayBuffer) {
     return { model: null, data: { unknownEntityCount: 0 } }
-  }
-
-  protected override getFonts(_model: null): string[] {
-    return []
   }
 }
