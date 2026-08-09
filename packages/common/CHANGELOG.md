@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.12.4
+
+### Patch Changes
+
+- feat: speeds up drawing open by loading fonts on demand, skipping font work when no loader is set, streaming large-block font collection, batching font loads in parallel, and deferring mid-size block compaction
+
 ## 1.12.3
 
 ### Patch Changes
