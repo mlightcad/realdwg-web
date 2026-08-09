@@ -129,6 +129,35 @@ export type AcDbConversionProgressCallback = (
 ) => Promise<void>
 
 /**
+ * Options for {@link AcDbDatabaseConverter.read}.
+ *
+ * Keeps the converter read API extensible without growing positional arguments.
+ */
+export interface AcDbDatabaseConverterReadOptions {
+  /**
+   * Minimum number of items in one processing chunk.
+   *
+   * Defaults to converter-specific behavior when omitted.
+   */
+  minimumChunkSize?: number
+
+  /**
+   * Optional progress callback invoked as conversion stages advance.
+   */
+  progress?: AcDbConversionProgressCallback
+
+  /**
+   * Timeout for parser web worker operations in milliseconds.
+   */
+  timeout?: number
+
+  /**
+   * System variables to override in the database after HEADER is processed.
+   */
+  sysVars?: Record<string, number | boolean | string>
+}
+
+/**
  * Interface defining the data for a conversion task.
  *
  * @template TIn - The input type for the task
@@ -378,26 +407,27 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    * Reads and converts data into an AcDbDatabase.
    *
    * This method orchestrates the entire conversion process, including
-   * parsing, processing various components (fonts, linetypes, styles, etc.),
+   * parsing, processing various components (linetypes, styles, etc.),
    * and building the final database.
    *
    * @param data - The input data to convert
    * @param db - The database to populate with converted data
-   * @param minimumChunkSize - Minimum chunk size for batch processing
-   * @param progress - Optional progress callback
-   * @param timeout - Optional timeout for parser web worker operations in milliseconds
-   * @param sysVars - Optional system variables to override in the database
+   * @param options - Optional read options (chunk size, progress, etc.)
    * @returns Promise that resolves when conversion is complete
    *
    */
   async read(
     data: ArrayBuffer,
     db: AcDbDatabase,
-    minimumChunkSize: number,
-    progress?: AcDbConversionProgressCallback,
-    timeout?: number,
-    sysVars?: Record<string, number | boolean | string>
+    options: AcDbDatabaseConverterReadOptions = {}
   ) {
+    const {
+      minimumChunkSize = 10,
+      progress,
+      timeout,
+      sysVars
+    } = options
+
     const loadDbTimeEntry: AcCmPerformanceEntry<AcDbConvertDatabasePerformanceData> =
       {
         name: PERFORMANCE_ENTRY_NAME,

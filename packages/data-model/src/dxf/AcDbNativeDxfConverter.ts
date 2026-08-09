@@ -9,7 +9,8 @@ import type { AcDbDatabase } from '../database/AcDbDatabase'
 import {
   type AcDbConversionProgressCallback,
   AcDbDatabaseConverter,
-  type AcDbDatabaseConverterConfig
+  type AcDbDatabaseConverterConfig,
+  type AcDbDatabaseConverterReadOptions
 } from '../database/AcDbDatabaseConverter'
 import { AcDbDxfDocumentReader } from './AcDbDxfDocumentReader'
 
@@ -50,11 +51,10 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
   override async read(
     data: ArrayBuffer,
     db: AcDbDatabase,
-    minimumChunkSize: number,
-    progress?: AcDbConversionProgressCallback,
-    _timeout?: number,
-    _sysVars?: Record<string, number | boolean | string>
+    options: AcDbDatabaseConverterReadOptions = {}
   ) {
+    const { minimumChunkSize = 10, progress } = options
+
     this.progress = progress
 
     const emit = async (

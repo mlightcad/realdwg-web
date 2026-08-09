@@ -121,6 +121,7 @@ export type {
   AcDbConverterType,
   AcDbCreateDefaultDataOptions,
   AcDbDatabaseConverterConfig,
+  AcDbDatabaseConverterReadOptions,
   AcDbDatabaseConverterManagerEventArgs,
   AcDbDictObjectEventArgs,
   AcDbDimStyleTableRecordAttrs,

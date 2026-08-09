@@ -436,7 +436,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     expect(db.version.name).toBe('AC1032')
     expect(db.insunits).toBe(4)
@@ -836,7 +836,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     expect(db.classes).toHaveLength(1)
     expect(db.classes[0].name).toBe('ACDBDICTIONARYWDFLT')
@@ -935,7 +935,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const xref = db.tables.blockTable.getAt('xref1')
     expect(xref).toBeDefined()
@@ -1483,7 +1483,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const modelLayout = db.objects.layout.getAt('Model')
     expect(modelLayout).toBeDefined()
@@ -2015,7 +2015,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const model = [...db.tables.blockTable.modelSpace.newIterator()]
     const text = model.find(e => e instanceof AcDbText) as AcDbText | undefined
@@ -2129,7 +2129,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const dim = [...db.tables.blockTable.modelSpace.newIterator()].find(
       e => e instanceof AcDbRotatedDimension
@@ -2236,8 +2236,11 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50, async (_pct, stage, status) => {
-      stages.push(`${stage}:${status}`)
+    await converter.read(buffer, db, {
+      minimumChunkSize: 50,
+      progress: async (_pct, stage, status) => {
+        stages.push(`${stage}:${status}`)
+      }
     })
 
     expect(stages.filter(s => !s.endsWith(':IN-PROGRESS'))).toEqual([
@@ -2297,10 +2300,10 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(lines.join('\n')).buffer
-    await converter.read(buffer, db, 5, async (pct, stage, status) => {
+    await converter.read(buffer, db, { minimumChunkSize: 5, progress: async (pct, stage, status) => {
       stages.push(`${stage}:${status}`)
       percentages.push(pct)
-    })
+    }})
 
     expect(stages).toContain('PARSE:IN-PROGRESS')
     expect(stages).toContain('ENTITY:IN-PROGRESS')
@@ -2403,7 +2406,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const inserts = [...db.tables.blockTable.modelSpace.newIterator()].filter(
       e => e instanceof AcDbBlockReference
@@ -2536,7 +2539,7 @@ describe('AcDbNativeDxfConverter', () => {
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50)
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
 
     const paper = db.tables.blockTable.getAt('*Paper_Space')!
     const lines = [...paper.newIterator()].filter(e => e instanceof AcDbLine)
@@ -2624,7 +2627,7 @@ describe('AcDbNativeDxfConverter', () => {
     const converter = new AcDbNativeDxfConverter()
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db
-    await converter.read(new TextEncoder().encode(dxf).buffer, db, 50)
+    await converter.read(new TextEncoder().encode(dxf).buffer, db, { minimumChunkSize: 50 })
 
     const solids = [...db.tables.blockTable.modelSpace.newIterator()].filter(
       e => e instanceof AcDb3dSolid
@@ -2672,7 +2675,7 @@ describe('AcDbNativeDxfConverter', () => {
     const converter = new AcDbNativeDxfConverter()
     const db = new AcDbDatabase()
     acdbHostApplicationServices().workingDatabase = db
-    await converter.read(new TextEncoder().encode(dxf).buffer, db, 50)
+    await converter.read(new TextEncoder().encode(dxf).buffer, db, { minimumChunkSize: 50 })
 
     const solid = [...db.tables.blockTable.modelSpace.newIterator()].find(
       e => e instanceof AcDb3dSolid

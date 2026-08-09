@@ -97,17 +97,22 @@ describe('AcDbDatabase', () => {
         async (
           _data: ArrayBuffer,
           _db: AcDbDatabase,
-          _minimumChunkSize: number,
-          progress?: (
-            percentage: number,
-            stage: string,
-            stageStatus: string,
-            data?: unknown,
-            taskError?: { error: unknown; task: { name: string }; taskIndex: number }
-          ) => Promise<void>
+          options?: {
+            progress?: (
+              percentage: number,
+              stage: string,
+              stageStatus: string,
+              data?: unknown,
+              taskError?: {
+                error: unknown
+                task: { name: string }
+                taskIndex: number
+              }
+            ) => Promise<void>
+          }
         ) => {
-          if (progress) {
-            await progress(5, 'PARSE', 'ERROR', undefined, {
+          if (options?.progress) {
+            await options.progress(5, 'PARSE', 'ERROR', undefined, {
               error: oomError,
               task: { name: 'PARSE' },
               taskIndex: 1

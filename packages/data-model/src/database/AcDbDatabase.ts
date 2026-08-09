@@ -2139,14 +2139,12 @@ export class AcDbDatabase extends AcDbObject {
     acdbAssignWorkingDatabase(this)
 
     try {
-      await converter.read(
-        data,
-        this,
-        (options && options.minimumChunkSize) || 10,
-        this.createConversionProgressHandler(),
-        options?.timeout,
-        options?.sysVars
-      )
+      await converter.read(data, this, {
+        minimumChunkSize: (options && options.minimumChunkSize) || 10,
+        progress: this.createConversionProgressHandler(),
+        timeout: options?.timeout,
+        sysVars: options?.sysVars
+      })
     } catch (error) {
       const openError = AcDbOpenDatabaseError.from(error)
       this._lastOpenError = openError
@@ -2347,12 +2345,10 @@ export class AcDbDatabase extends AcDbObject {
    */
   async regen() {
     const converter = new AcDbRegenerator(this)
-    await converter.read(
-      null as unknown as ArrayBuffer,
-      this,
-      500,
-      this.createConversionProgressHandler()
-    )
+    await converter.read(null as unknown as ArrayBuffer, this, {
+      minimumChunkSize: 500,
+      progress: this.createConversionProgressHandler()
+    })
   }
 
   /**
