@@ -134,6 +134,42 @@ export type AcDbConversionProgressCallback = (
 ) => Promise<void>
 
 /**
+ * Options for {@link AcDbDatabaseConverter.read}.
+ *
+ * Keeps the converter read API extensible without growing positional arguments.
+ */
+export interface AcDbDatabaseConverterReadOptions {
+  /**
+   * Minimum number of items in one processing chunk.
+   *
+   * Defaults to converter-specific behavior when omitted.
+   */
+  minimumChunkSize?: number
+
+  /**
+   * Optional progress callback invoked as conversion stages advance.
+   */
+  progress?: AcDbConversionProgressCallback
+
+  /**
+   * Timeout for parser web worker operations in milliseconds.
+   */
+  timeout?: number
+
+  /**
+   * System variables to override in the database after HEADER is processed.
+   */
+  sysVars?: Record<string, number | boolean | string>
+
+  /**
+   * When `true` (default), collect font names referenced by the drawing and
+   * report them on the FONT stage. When `false`, skip font collection and
+   * report an empty fonts list — useful when no font loader will load them.
+   */
+  collectFonts?: boolean
+}
+
+/**
  * Interface defining the data for a conversion task.
  *
  * @template TIn - The input type for the task
@@ -388,21 +424,23 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
    *
    * @param data - The input data to convert
    * @param db - The database to populate with converted data
-   * @param minimumChunkSize - Minimum chunk size for batch processing
-   * @param progress - Optional progress callback
-   * @param timeout - Optional timeout for parser web worker operations in milliseconds
-   * @param sysVars - Optional system variables to override in the database
+   * @param options - Optional read options (chunk size, progress, fonts, etc.)
    * @returns Promise that resolves when conversion is complete
    *
    */
   async read(
     data: ArrayBuffer,
     db: AcDbDatabase,
-    minimumChunkSize: number,
-    progress?: AcDbConversionProgressCallback,
-    timeout?: number,
-    sysVars?: Record<string, number | boolean | string>
+    options: AcDbDatabaseConverterReadOptions = {}
   ) {
+    const {
+      minimumChunkSize = 10,
+      progress,
+      timeout,
+      sysVars,
+      collectFonts = true
+    } = options
+
     const loadDbTimeEntry: AcCmPerformanceEntry<AcDbConvertDatabasePerformanceData> =
       {
         name: PERFORMANCE_ENTRY_NAME,
@@ -459,7 +497,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            const fonts = this.getFonts(data.model)
+            const fonts = collectFonts ? this.getFonts(data.model) : []
             return { model: data.model, data: fonts }
           }
         },

@@ -254,6 +254,9 @@ export interface AcDbOpenDatabaseOptions {
    * in the drawing database. By default, font load failures are logged and
    * parsing continues without the missing fonts. Set {@link failOnFontLoadError}
    * to `true` to abort the read when font loading fails.
+   *
+   * When omitted, the converter skips collecting font names during parse,
+   * which can reduce open time when fonts will not be loaded.
    */
   fontLoader?: AcDbFontLoader
 
@@ -2215,14 +2218,14 @@ export class AcDbDatabase extends AcDbObject {
     acdbAssignWorkingDatabase(this)
 
     try {
-      await converter.read(
-        data,
-        this,
-        (options && options.minimumChunkSize) || 10,
-        this.createConversionProgressHandler(options),
-        options?.timeout,
-        options?.sysVars
-      )
+      await converter.read(data, this, {
+        minimumChunkSize: (options && options.minimumChunkSize) || 10,
+        progress: this.createConversionProgressHandler(options),
+        timeout: options?.timeout,
+        sysVars: options?.sysVars,
+        // Skip font collection when nothing will load them — saves parse time.
+        collectFonts: options?.fontLoader != null
+      })
     } catch (error) {
       const openError = AcDbOpenDatabaseError.from(error)
       this._lastOpenError = openError
@@ -2503,12 +2506,10 @@ export class AcDbDatabase extends AcDbObject {
    */
   async regen() {
     const converter = new AcDbRegenerator(this)
-    await converter.read(
-      null as unknown as ArrayBuffer,
-      this,
-      500,
-      this.createConversionProgressHandler()
-    )
+    await converter.read(null as unknown as ArrayBuffer, this, {
+      minimumChunkSize: 500,
+      progress: this.createConversionProgressHandler()
+    })
   }
 
   /**

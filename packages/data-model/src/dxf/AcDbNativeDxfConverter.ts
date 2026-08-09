@@ -9,7 +9,8 @@ import type { AcDbDatabase } from '../database/AcDbDatabase'
 import {
   type AcDbConversionProgressCallback,
   AcDbDatabaseConverter,
-  type AcDbDatabaseConverterConfig
+  type AcDbDatabaseConverterConfig,
+  type AcDbDatabaseConverterReadOptions
 } from '../database/AcDbDatabaseConverter'
 import { AcDbDxfDocumentReader } from './AcDbDxfDocumentReader'
 
@@ -53,11 +54,14 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
   override async read(
     data: ArrayBuffer,
     db: AcDbDatabase,
-    minimumChunkSize: number,
-    progress?: AcDbConversionProgressCallback,
-    _timeout?: number,
-    _sysVars?: Record<string, number | boolean | string>
+    options: AcDbDatabaseConverterReadOptions = {}
   ) {
+    const {
+      minimumChunkSize = 10,
+      progress,
+      collectFonts = true
+    } = options
+
     this.progress = progress
 
     const emit = async (
@@ -88,6 +92,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
         entityBatchSize: Math.max(1, minimumChunkSize || 200),
         yieldBudgetMs: ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
         totalBytes,
+        collectFonts,
         onProgress: async ratio => {
           const pct = Math.min(
             PARSE_END_PCT - 1,
@@ -107,7 +112,12 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
 
       // Same FONT contract as AcDbDxfConverter / AcDbDatabaseConverter.
       await emit(FONT_START_PCT, 'FONT', 'START')
-      await emit(FONT_END_PCT, 'FONT', 'END', result.fonts)
+      await emit(
+        FONT_END_PCT,
+        'FONT',
+        'END',
+        collectFonts ? result.fonts : []
+      )
 
       await emit(ENTITY_START_PCT, 'ENTITY', 'START')
       const chunkSize = Math.max(1, minimumChunkSize || 200)
