@@ -7,7 +7,6 @@ import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import type { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbFontNameCollector } from '../converter/AcDbFontNameCollector'
 import {
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag
@@ -26,9 +25,6 @@ import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbAttribute } from '../entity/AcDbAttribute'
 import { AcDbBlockReference } from '../entity/AcDbBlockReference'
 import type { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbFcf } from '../entity/AcDbFcf'
-import { AcDbMLeader } from '../entity/AcDbMLeader'
-import { AcDbMText } from '../entity/AcDbMText'
 import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic'
 import {
   acdbDxfInAcdsData,
@@ -62,7 +58,6 @@ export interface AcDbDxfDocumentReaderResult {
   unknownEntityCount: number
   /** OBJECTS-section types that were skipped (no native reader yet). */
   unknownObjectCount: number
-  fonts: string[]
 }
 
 /**
@@ -75,7 +70,6 @@ export interface AcDbDxfDocumentReaderResult {
 export class AcDbDxfDocumentReader {
   private _unknownEntityCount = 0
   private _unknownObjectCount = 0
-  private readonly _fonts = new Set<string>()
   /** ATTRIB entities waiting for their owning INSERT (keyed by INSERT objectId). */
   private readonly _attributeMap = new Map<AcDbObjectId, AcDbAttribute[]>()
   private readonly _yieldGate: AcCmUiYieldGate
@@ -97,14 +91,9 @@ export class AcDbDxfDocumentReader {
     return this._unknownObjectCount
   }
 
-  get fonts(): string[] {
-    return [...this._fonts]
-  }
-
   async read(filer: AcDbDxfFiler): Promise<AcDbDxfDocumentReaderResult> {
     this._unknownEntityCount = 0
     this._unknownObjectCount = 0
-    this._fonts.clear()
     this._attributeMap.clear()
     filer.database = this._db
 
@@ -126,8 +115,7 @@ export class AcDbDxfDocumentReader {
 
     return {
       unknownEntityCount: this._unknownEntityCount,
-      unknownObjectCount: this._unknownObjectCount,
-      fonts: this.fonts
+      unknownObjectCount: this._unknownObjectCount
     }
   }
 
@@ -397,7 +385,6 @@ export class AcDbDxfDocumentReader {
           r => {
             // Shape-file STYLE entries often have an empty name.
             this._db.tables.textStyleTable.add(r)
-            this.collectFontFromStyleRecord(r)
           }
         )
         break
@@ -830,20 +817,18 @@ export class AcDbDxfDocumentReader {
   }
 
   /**
-   * Appends an entity (or links ATTRIB → INSERT) and collects inline fonts.
+   * Appends an entity (or links ATTRIB → INSERT).
    */
   private acceptEntity(
     entity: AcDbEntity,
     owner: AcDbBlockTableRecord
   ): void {
     if (entity instanceof AcDbAttribute) {
-      this.collectInlineFontsFromEntity(entity)
       this.linkOrDeferAttribute(entity, owner)
       return
     }
 
     owner.appendEntity(entity)
-    this.collectInlineFontsFromEntity(entity)
 
     if (entity instanceof AcDbBlockReference) {
       const pending = this._attributeMap.get(entity.objectId)
@@ -892,62 +877,6 @@ export class AcDbDxfDocumentReader {
       }
     }
     this._attributeMap.clear()
-  }
-
-  /**
-   * Collects fonts from a STYLE table record. Called while reading TABLES so
-   * every style (and shape-definition) font is preloaded; entity handlers only
-   * need to pick up inline overrides that are not in the style table.
-   */
-  private collectFontFromStyleRecord(record: AcDbTextStyleTableRecord) {
-    if (record.fileName) {
-      const normalized = AcDbFontNameCollector.normalizeFontFileName(
-        record.fileName
-      )
-      if (normalized) this._fonts.add(normalized)
-      else this._fonts.add(record.fileName)
-    }
-    const extended = record.textStyle.extendedFont
-    if (extended) {
-      const normalized = AcDbFontNameCollector.normalizeFontFileName(extended)
-      if (normalized) this._fonts.add(normalized)
-    }
-    const bigFont = record.bigFontFileName
-    if (bigFont) {
-      const normalized = AcDbFontNameCollector.normalizeFontFileName(bigFont)
-      if (normalized) this._fonts.add(normalized)
-    }
-  }
-
-  /**
-   * Collects inline font overrides from text-bearing entities.
-   *
-   * STYLE-table fonts are already gathered in {@link collectFontFromStyleRecord};
-   * this only covers `\f` / `\F` overrides in MTEXT, MLEADER, and TOLERANCE.
-   */
-  private collectInlineFontsFromEntity(entity: AcDbEntity) {
-    const formattedText = this.getEntityFormattedTextForFonts(entity)
-    if (!formattedText) return
-    for (const font of AcDbFontNameCollector.collectInlineMTextFonts(
-      formattedText
-    )) {
-      this._fonts.add(font)
-    }
-  }
-
-  private getEntityFormattedTextForFonts(
-    entity: AcDbEntity
-  ): string | undefined {
-    if (entity instanceof AcDbMText) {
-      return entity.contents || undefined
-    }
-    if (entity instanceof AcDbMLeader) {
-      return entity.contents || undefined
-    }
-    if (entity instanceof AcDbFcf) {
-      return entity.text || undefined
-    }
-    return undefined
   }
 
   private skipUntilEndSec(filer: AcDbDxfFiler) {

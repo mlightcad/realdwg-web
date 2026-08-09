@@ -119,9 +119,6 @@ importers:
       '@mlightcad/data-model':
         specifier: workspace:*
         version: link:../data-model
-      '@mlightcad/dxf-json-converter':
-        specifier: ^1.12.0
-        version: 1.12.0(@mlightcad/data-model@packages+data-model)
       '@mlightcad/libredwg-converter':
         specifier: workspace:*
         version: link:../libredwg-converter
@@ -1515,9 +1512,6 @@ packages:
     resolution: {integrity: sha512-autAXT203ixhqei9xt+qkYOvY8l6LAFIdT2UXc/RPNeUVfqRF1BV94GTJyVPFKT8nFM6MyVJhjLj9E8JWvf5zQ==}
     engines: {node: ^18.18.0 || ^20.9.0 || >=21.1.0}
 
-  '@fxts/core@1.26.0':
-    resolution: {integrity: sha512-ONaza1CGr8dLKmJ0HQgi0h4XuyDJMr0P70M7o/My/YeeRxuYoSANHjE2nSY7xO4WHgxUD5ojd5dpxlFOzAEJsA==}
-
   '@gerrit0/mini-shiki@1.24.2':
     resolution: {integrity: sha512-kw11jMCKwS5+GMMDy/o7W6C1KwsxgHnPO/RXzNBUw000BzRvUhUSi5zE8D2Qq7/A7bfJysFenEVBHUR7aMSxUQ==}
 
@@ -1656,14 +1650,6 @@ packages:
 
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
-
-  '@mlightcad/dxf-json-converter@1.12.0':
-    resolution: {integrity: sha512-M6domJZaTIrHpzOSAcKd19+SMQm9v3jcRTBfPFcIZzpdPCjK4M3VOp5acgtOfLd+vVSyvD5c/PJoUNuxtLGJBA==}
-    peerDependencies:
-      '@mlightcad/data-model': 1.12.0
-
-  '@mlightcad/dxf-json@1.2.8':
-    resolution: {integrity: sha512-pn4kY2+cYLq9xVVeUJUwzBPyYGGIuO6uKc+bKAzWfSaZAWTgrbK7WrY+VHR4od9wrWdDwNWknIqVq4KBZPD7SA==}
 
   '@mlightcad/libredwg-web@0.7.9':
     resolution: {integrity: sha512-tqjx0eCiR0CNI3TyO3LVYzl4ptuzSFm7asGn/C1YiJaEk7Vneto+lRrVUco85qw+PZDihaFLwWqdYIEse1swbA==}
@@ -6350,10 +6336,6 @@ snapshots:
     dependencies:
       levn: 0.4.1
 
-  '@fxts/core@1.26.0':
-    dependencies:
-      tslib: 2.6.3
-
   '@gerrit0/mini-shiki@1.24.2':
     dependencies:
       '@shikijs/engine-oniguruma': 1.24.1
@@ -6628,15 +6610,6 @@ snapshots:
       fs-extra: 8.1.0
       globby: 11.1.0
       read-yaml-file: 1.1.0
-
-  '@mlightcad/dxf-json-converter@1.12.0(@mlightcad/data-model@packages+data-model)':
-    dependencies:
-      '@mlightcad/data-model': link:packages/data-model
-      '@mlightcad/dxf-json': 1.2.8
-
-  '@mlightcad/dxf-json@1.2.8':
-    dependencies:
-      '@fxts/core': 1.26.0
 
   '@mlightcad/libredwg-web@0.7.9': {}
 

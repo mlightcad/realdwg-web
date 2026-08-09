@@ -26,10 +26,6 @@ export type AcDbConversionStage =
    */
   | 'PARSE'
   /**
-   * Downloading font files
-   */
-  | 'FONT'
-  /**
    * Converting line types
    */
   | 'LTYPE'
@@ -89,7 +85,7 @@ export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS' | 'ERROR'
  * @param stage - Name of the current stage
  * @param stageStatus - Status of the current stage
  * @param data - Store data associated with the current stage. Its meaning varies by stage:
- *   - 'FONT' stage: fonts needed by this drawing
+ *   - 'PARSE' stage: statistics of parsing task
  *
  * @example
  * ```typescript
@@ -100,8 +96,8 @@ export type AcDbStageStatus = 'START' | 'END' | 'IN-PROGRESS' | 'ERROR'
  *   data
  * ) => {
  *   console.log(`Progress: ${percentage}% - Stage: ${stage} - Status: ${stageStatus}`);
- *   if (stage === 'FONT' && data) {
- *     console.log('Fonts needed:', data);
+ *   if (stage === 'PARSE' && data) {
+ *     console.log('Parse stats:', data);
  *   }
  * };
  * ```
@@ -122,9 +118,8 @@ export type AcDbConversionProgressCallback = (
   /**
    * Store data associated with the current stage. Its meaning of different stages are as follows.
    * - 'PARSE' stage: statistics of parsing task
-   * - 'FONT' stage: fonts needed by this drawing
    *
-   * Note: For now, 'PARSE' and 'FONT' stages use this field only.
+   * Note: For now, 'PARSE' stages use this field only.
    */
   data?: unknown,
   /**
@@ -455,20 +450,6 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     scheduler.addTask(
       new AcDbConversionTask(
         {
-          stage: 'FONT',
-          step: 5,
-          progress: percentage,
-          task: async (data: { model: TModel }) => {
-            const fonts = this.getFonts(data.model)
-            return { model: data.model, data: fonts }
-          }
-        },
-        progress
-      )
-    )
-    scheduler.addTask(
-      new AcDbConversionTask(
-        {
           stage: 'LTYPE',
           step: 1,
           progress: percentage,
@@ -707,10 +688,6 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     _data: ArrayBuffer,
     _timeout?: number
   ): Promise<AcDbParsingTaskResult<TModel>> {
-    throw new Error('Not impelemented yet!')
-  }
-
-  protected getFonts(_model: TModel): string[] {
     throw new Error('Not impelemented yet!')
   }
 

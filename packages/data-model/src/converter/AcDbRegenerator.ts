@@ -37,15 +37,6 @@ export class AcDbRegenerator extends AcDbDatabaseConverter<AcDbDatabase> {
   }
 
   /**
-   * Does nothing and always returns one empty array.
-   *
-   * @returns An empty array
-   */
-  protected getFonts() {
-    return []
-  }
-
-  /**
    * Processes entities in batches to maintain UI responsiveness.
    *
    * This method breaks up the entity processing work into smaller chunks that are

@@ -50,18 +50,12 @@ export {
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
-  AcDbFontNameCollector,
   AcDbRegenerator,
   AcDbWorkerApi,
   AcDbWorkerManager,
   acdbCreateWorkerApi
 } from './converter'
 export type {
-  AcDbFontNameCollectorAdapter,
-  AcDbFontNameCollectorEntities,
-  AcDbFontNameCollectorEntityFontInfo,
-  AcDbFontNameCollectorOptions,
-  AcDbFontNameCollectorStyleEntry,
   AcDbWorkerConfig,
   AcDbWorkerInstance,
   AcDbWorkerMessage,
@@ -132,8 +126,6 @@ export type {
   AcDbDimStyleTableRecordAttrs,
   AcDbDwgVersionEntry,
   AcDbEntityEventArgs,
-  AcDbFontInfo,
-  AcDbFontLoader,
   AcDbLayerEventArgs,
   AcDbLayerModifiedEventArgs,
   AcDbLayerTableRecordAttrs,

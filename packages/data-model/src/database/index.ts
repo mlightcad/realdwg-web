@@ -4,8 +4,6 @@ export type {
   AcDbCreateDefaultDataOptions,
   AcDbDictObjectEventArgs,
   AcDbEntityEventArgs,
-  AcDbFontInfo,
-  AcDbFontLoader,
   AcDbLayerEventArgs,
   AcDbLayerModifiedEventArgs,
   AcDbOpenDatabaseOptions,

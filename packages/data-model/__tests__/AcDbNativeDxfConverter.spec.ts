@@ -2144,7 +2144,7 @@ describe('AcDbNativeDxfConverter', () => {
     expect(dim!.dimBlockPosition.z).toBeCloseTo(0)
   })
 
-  it('emits FONT before ENTITY flush so fonts load before draw', async () => {
+  it('suppresses entityAppended until ENTITY flush after PARSE', async () => {
     const dxf = [
       '0',
       'SECTION',
@@ -2228,28 +2228,22 @@ describe('AcDbNativeDxfConverter', () => {
     db.createDefaultData()
     acdbHostApplicationServices().workingDatabase = db
     db.events.entityAppended.addEventListener(() => {
-      // During PARSE/FONT the batch must still be open.
-      if (!stages.includes('FONT:END')) {
+      // During PARSE the batch must still be open.
+      if (!stages.includes('PARSE:END')) {
         appendedDuringParse = true
       }
     })
 
     const converter = new AcDbNativeDxfConverter()
     const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50, async (_pct, stage, status, data) => {
+    await converter.read(buffer, db, 50, async (_pct, stage, status) => {
       stages.push(`${stage}:${status}`)
-      if (stage === 'FONT' && status === 'END') {
-        expect(Array.isArray(data)).toBe(true)
-        expect(data as string[]).toEqual(expect.arrayContaining(['simsun']))
-      }
     })
 
     expect(stages.filter(s => !s.endsWith(':IN-PROGRESS'))).toEqual([
       'START:START',
       'PARSE:START',
       'PARSE:END',
-      'FONT:START',
-      'FONT:END',
       'ENTITY:START',
       'ENTITY:END',
       'END:END'
@@ -2258,160 +2252,6 @@ describe('AcDbNativeDxfConverter', () => {
 
     const style = db.tables.textStyleTable.getAt('标准')
     expect(style?.fileName).toBe('SimSun')
-  })
-
-  it('collects STYLE fonts plus inline fonts from MTEXT, MLEADER, and TOLERANCE', async () => {
-    const dxf = [
-      '0',
-      'SECTION',
-      '2',
-      'TABLES',
-      '0',
-      'TABLE',
-      '2',
-      'STYLE',
-      '0',
-      'STYLE',
-      '5',
-      '61',
-      '100',
-      'AcDbSymbolTableRecord',
-      '100',
-      'AcDbTextStyleTableRecord',
-      '2',
-      'Standard',
-      '70',
-      '0',
-      '40',
-      '0.0',
-      '41',
-      '1.0',
-      '50',
-      '0.0',
-      '71',
-      '0',
-      '42',
-      '0.2',
-      '3',
-      'Arial.ttf',
-      '4',
-      '',
-      '0',
-      'ENDTAB',
-      '0',
-      'ENDSEC',
-      '0',
-      'SECTION',
-      '2',
-      'ENTITIES',
-      '0',
-      'MTEXT',
-      '5',
-      '100',
-      '100',
-      'AcDbEntity',
-      '8',
-      '0',
-      '100',
-      'AcDbMText',
-      '10',
-      '0',
-      '20',
-      '0',
-      '30',
-      '0',
-      '40',
-      '2.5',
-      '1',
-      '{\\fCustom|b0|i0;Hello}',
-      '7',
-      'Standard',
-      '0',
-      'MULTILEADER',
-      '5',
-      '101',
-      '100',
-      'AcDbEntity',
-      '8',
-      '0',
-      '100',
-      'AcDbMLeader',
-      '270',
-      '2',
-      '300',
-      'CONTEXT_DATA{',
-      '40',
-      '1.0',
-      '10',
-      '0',
-      '20',
-      '0',
-      '30',
-      '0',
-      '41',
-      '4.0',
-      '290',
-      '1',
-      '304',
-      '{\\fInline|b0;Note}',
-      '11',
-      '0',
-      '21',
-      '0',
-      '31',
-      '1',
-      '12',
-      '10',
-      '22',
-      '10',
-      '32',
-      '0',
-      '170',
-      '1',
-      '301',
-      '}',
-      '172',
-      '2',
-      '0',
-      'TOLERANCE',
-      '5',
-      '102',
-      '100',
-      'AcDbEntity',
-      '8',
-      '0',
-      '100',
-      'AcDbFcf',
-      '10',
-      '0',
-      '20',
-      '0',
-      '30',
-      '0',
-      '1',
-      '{\\Fgdt.shx|b0|i0|c134|p6;j}|0.05|A|',
-      '0',
-      'ENDSEC',
-      '0',
-      'EOF'
-    ].join('\n')
-
-    let fonts: string[] = []
-    const db = new AcDbDatabase()
-    db.createDefaultData()
-    acdbHostApplicationServices().workingDatabase = db
-
-    const converter = new AcDbNativeDxfConverter()
-    const buffer = new TextEncoder().encode(dxf).buffer
-    await converter.read(buffer, db, 50, async (_pct, stage, status, data) => {
-      if (stage === 'FONT' && status === 'END') {
-        fonts = data as string[]
-      }
-    })
-
-    expect(fonts).toEqual(
-      expect.arrayContaining(['arial', 'custom', 'inline', 'gdt.shx'])
-    )
   })
 
   it('emits PARSE IN-PROGRESS while streaming entities', async () => {
@@ -2468,8 +2308,6 @@ describe('AcDbNativeDxfConverter', () => {
       'START:START',
       'PARSE:START',
       'PARSE:END',
-      'FONT:START',
-      'FONT:END',
       'ENTITY:START',
       'ENTITY:END',
       'END:END'
@@ -2479,7 +2317,7 @@ describe('AcDbNativeDxfConverter', () => {
     )
     expect(parseProgressPcts.length).toBeGreaterThan(0)
     for (const pct of parseProgressPcts) {
-      expect(pct).toBeLessThan(12)
+      expect(pct).toBeLessThan(18)
     }
     for (let i = 1; i < parseProgressPcts.length; i++) {
       expect(parseProgressPcts[i]!).toBeGreaterThanOrEqual(parseProgressPcts[i - 1]!)

@@ -157,10 +157,9 @@ export interface AcDbProgressdEventArgs {
    * Store data associated with the current sub stage. Its meaning of different sub stages
    * are as follows.
    * - 'PARSE' stage: statistics of parsing task
-   * - 'FONT' stage: fonts needed by this drawing
    * - Any stage with {@link subStageStatus} `'ERROR'`: `{ code, message, stage? }`
    *
-   * Note: For now, 'PARSE' and 'FONT' sub stages use this field only, except on errors.
+   * Note: For now, 'PARSE' sub stages use this field only, except on errors.
    */
   data?: unknown
 }
@@ -176,64 +175,6 @@ export interface AcDbOpenFailedEventArgs {
 }
 
 /**
- * Font information structure.
- *
- * Contains information about a font including its name, file path,
- * type, and URL for loading.
- */
-export interface AcDbFontInfo {
-  /** Array of font names/aliases */
-  name: string[]
-  /** Font file name */
-  file: string
-  /** Font type (mesh or shx) */
-  type: 'mesh' | 'shx'
-  /** URL for loading the font */
-  url: string
-}
-
-/**
- * Interface for loading fonts when opening a document.
- *
- * Applications should implement this interface to provide font loading
- * functionality when opening drawing databases that contain text entities.
- */
-export interface AcDbFontLoader {
-  /**
-   * Loads the specified fonts.
-   *
-   * @param fontNames - Array of font names to load
-   * @returns Promise that resolves when fonts are loaded
-   *
-   * @example
-   * ```typescript
-   * const fontLoader: AcDbFontLoader = {
-   *   async load(fontNames: string[]) {
-   *     // Load fonts implementation
-   *   },
-   *   async getAvaiableFonts() {
-   *     return [];
-   *   }
-   * };
-   * ```
-   */
-  load(fontNames: string[]): Promise<void>
-
-  /**
-   * Gets all available fonts.
-   *
-   * @returns Promise that resolves to an array of available font information
-   *
-   * @example
-   * ```typescript
-   * const fonts = await fontLoader.getAvaiableFonts();
-   * console.log('Available fonts:', fonts);
-   * ```
-   */
-  getAvaiableFonts(): Promise<AcDbFontInfo[]>
-}
-
-/**
  * Options for reading a drawing database.
  *
  * These options control how a drawing database is opened and processed.
@@ -246,23 +187,6 @@ export interface AcDbOpenDatabaseOptions {
    * any modifications to the database content.
    */
   readOnly?: boolean
-
-  /**
-   * Loader used to load fonts used in the drawing database.
-   *
-   * This loader will be used to load any fonts referenced by text entities
-   * in the drawing database. By default, font load failures are logged and
-   * parsing continues without the missing fonts. Set {@link failOnFontLoadError}
-   * to `true` to abort the read when font loading fails.
-   */
-  fontLoader?: AcDbFontLoader
-
-  /**
-   * When `true`, aborts {@link AcDbDatabase.read} if {@link fontLoader} fails.
-   *
-   * Defaults to `false` so unreachable font CDNs do not block entity parsing.
-   */
-  failOnFontLoadError?: boolean
 
   /**
    * The minimum number of items in one chunk.
@@ -2219,7 +2143,7 @@ export class AcDbDatabase extends AcDbObject {
         data,
         this,
         (options && options.minimumChunkSize) || 10,
-        this.createConversionProgressHandler(options),
+        this.createConversionProgressHandler(),
         options?.timeout,
         options?.sysVars
       )
@@ -2234,9 +2158,7 @@ export class AcDbDatabase extends AcDbObject {
     this.ensureDatabaseDefaults()
   }
 
-  private createConversionProgressHandler(
-    options?: AcDbOpenDatabaseOptions
-  ): AcDbConversionProgressCallback {
+  private createConversionProgressHandler(): AcDbConversionProgressCallback {
     return async (
       percentage: number,
       stage: AcDbConversionStage,
@@ -2255,53 +2177,6 @@ export class AcDbDatabase extends AcDbObject {
         }
       }
 
-      // Font download runs on FONT/'END' from converters, but must finish
-      // *before* we advertise FONT END to listeners. Previously END was
-      // dispatched first, so OPENPROF / UI treated font I/O as zero-cost and
-      // attributed that wall time to the gap before ENTITY.
-      if (
-        options &&
-        options.fontLoader &&
-        stage == 'FONT' &&
-        stageStatus == 'END'
-      ) {
-        const fonts = data
-          ? (data as string[])
-          : this.tables.textStyleTable.fonts
-        try {
-          await this.loadFontsWithProgress(options.fontLoader, fonts, percentage)
-        } catch (error) {
-          if (options.failOnFontLoadError) {
-            throw error
-          }
-          const message =
-            error instanceof Error ? error.message : String(error)
-          console.warn(
-            'Failed to load fonts; continuing without them. ' +
-              'Check your network or configure a local baseUrl. See ' +
-              'https://github.com/mlightcad/cad-viewer/wiki/Self-Hosted-Fonts-and-Templates',
-            error
-          )
-          this.events.openProgress.dispatch({
-            database: this,
-            percentage: percentage,
-            stage: 'CONVERSION',
-            subStage: stage,
-            subStageStatus: 'ERROR',
-            data: { fonts, error: message, code: 'font_load_failed' }
-          })
-        }
-        this.events.openProgress.dispatch({
-          database: this,
-          percentage: percentage,
-          stage: 'CONVERSION',
-          subStage: stage,
-          subStageStatus: 'END',
-          data: fonts
-        })
-        return
-      }
-
       this.events.openProgress.dispatch({
         database: this,
         percentage: percentage,
@@ -2311,37 +2186,6 @@ export class AcDbDatabase extends AcDbObject {
         data: progressData
       })
     }
-  }
-
-  /**
-   * Loads drawing fonts in one batch so {@link AcDbFontLoader.load} /
-   * FontManager can fetch+parse them in parallel (`Promise.allSettled`).
-   *
-   * Previously each font was awaited serially for finer progress ticks; on
-   * CDN-backed opens that turned FONT into a sum of download times (often
-   * tens of seconds). A single IN-PROGRESS event still nudges the open-file
-   * bar off FONT START before the batch wait.
-   */
-  private async loadFontsWithProgress(
-    fontLoader: AcDbFontLoader,
-    fonts: string[],
-    basePercentage: number
-  ): Promise<void> {
-    if (fonts.length > 1) {
-      // Leave headroom before ENTITY (native converter starts ENTITY at 20%).
-      const span = Math.max(1, Math.min(5, 19 - basePercentage))
-      const pct = Math.min(19, basePercentage + Math.round(span / 2))
-      this.events.openProgress.dispatch({
-        database: this,
-        percentage: pct,
-        stage: 'CONVERSION',
-        subStage: 'FONT',
-        subStageStatus: 'IN-PROGRESS',
-        data: fonts
-      })
-    }
-
-    await fontLoader.load(fonts)
   }
 
   /**

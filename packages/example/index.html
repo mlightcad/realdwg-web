@@ -46,22 +46,11 @@
     .tab-panel[hidden] {
       display: none;
     }
-    .bench-controls {
+    .panel-controls {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
       align-items: center;
-    }
-    #benchStatus {
-      margin-top: 8px;
-      color: #555;
-    }
-    #benchOutput {
-      background: var(--tab-bg);
-      padding: 12px;
-      border: 1px solid var(--tab-border);
-      border-radius: 6px;
-      overflow: auto;
     }
     .panel-intro {
       max-width: 720px;
@@ -73,22 +62,11 @@
 <body>
   <nav class="tabs" role="tablist" aria-label="Example sections">
     <button
-      id="tabBenchmark"
-      class="tab-button"
-      type="button"
-      role="tab"
-      aria-selected="true"
-      aria-controls="panelBenchmark"
-      data-tab="benchmark"
-    >
-      Converter Benchmark
-    </button>
-    <button
       id="tabParse"
       class="tab-button"
       type="button"
       role="tab"
-      aria-selected="false"
+      aria-selected="true"
       aria-controls="panelParse"
       data-tab="parse"
     >
@@ -108,63 +86,20 @@
   </nav>
 
   <section
-    id="panelBenchmark"
-    class="tab-panel"
-    role="tabpanel"
-    aria-labelledby="tabBenchmark"
-  >
-    <h2>DXF Converter Benchmark</h2>
-    <p class="panel-intro">
-      Compare wall-clock time to build an <code>AcDbDatabase</code> using
-      <code>AcDbNativeDxfConverter</code> (data-model) vs
-      <code>AcDbDxfConverter</code> (dxf-json-converter). Two built-in verification
-      datasets are provided; you can also upload your own DXF.
-    </p>
-    <div class="bench-controls">
-      <button id="benchBothButton" type="button">
-        Run both samples (A + B)
-      </button>
-      <button id="benchSmallButton" type="button">Run Sample A (small)</button>
-      <button id="benchLargeButton" type="button">Run Sample B (large)</button>
-      <input type="file" id="benchFileInput" accept=".dxf" />
-      <button id="benchCustomButton" type="button">Run custom DXF</button>
-    </div>
-    <div id="benchStatus"></div>
-    <pre id="benchOutput"></pre>
-  </section>
-
-  <section
     id="panelParse"
     class="tab-panel"
     role="tabpanel"
     aria-labelledby="tabParse"
-    hidden
   >
     <h2>DWG / DXF Parse Demo</h2>
     <p class="panel-intro">
-      Select a DWG or DXF file, choose a converter when applicable, then click
-      <strong>Run parse</strong>. DWG always uses LibreDWG in a web worker. For
-      DXF you can pick native streaming or dxf-json-converter (worker).
+      Select a DWG or DXF file, then click <strong>Run parse</strong>. DWG uses
+      LibreDWG in a web worker; DXF uses the native streaming
+      <code>AcDbNativeDxfConverter</code>.
     </p>
-    <div class="bench-controls">
+    <div class="panel-controls">
       <input type="file" id="fileInput" accept=".dwg,.dxf" />
       <button id="runButton" type="button">Run parse</button>
-    </div>
-    <div id="dxfConverterOptions" class="bench-controls" hidden style="margin-top: 8px">
-      <span>DXF converter:</span>
-      <label>
-        <input
-          type="radio"
-          name="dxfConverter"
-          value="native"
-          checked
-        />
-        Native (<code>AcDbNativeDxfConverter</code>)
-      </label>
-      <label>
-        <input type="radio" name="dxfConverter" value="dxf-json" />
-        dxf-json-converter (<code>AcDbDxfConverter</code>, web worker)
-      </label>
     </div>
     <div id="status"></div>
     <pre id="output"></pre>
