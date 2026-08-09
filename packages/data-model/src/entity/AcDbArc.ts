@@ -249,7 +249,7 @@ export class AcDbArc extends AcDbCurve {
    * ```
    */
   set normal(value: AcGeVector3dLike) {
-    this._geo.normal = value
+    this.setNormalAndRefVec(value)
   }
 
   /**
@@ -731,11 +731,19 @@ export class AcDbArc extends AcDbCurve {
     nz: number
   ) {
     const normal = new AcGeVector3d(nx, ny, nz)
-    this.normal.copy(normal)
-    this.center = acgeTransformOcsPointToWcs({ x, y, z }, normal)
+    // DXF arcs are created with a default +Z normal/refVec, then filled via
+    // dxfIn. Sync refVec with the OCS X axis or -Z extrusions tessellate on
+    // the mirrored side of the center (messy chords for large-radius fillets).
+    this.setNormalAndRefVec(normal)
+    this.center = acgeTransformOcsPointToWcs({ x, y, z }, this.normal)
     this.radius = radius
     this.startAngle = AcGeMathUtil.degToRad(startDeg)
     this.endAngle = AcGeMathUtil.degToRad(endDeg)
+  }
+
+  private setNormalAndRefVec(normal: AcGeVector3dLike) {
+    this._geo.normal = normal
+    this._geo.refVec = acgeGetOcsReferenceVector(this._geo.normal)
   }
 
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {

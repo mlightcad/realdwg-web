@@ -29,4 +29,18 @@ describe('AcGeOcsUtil', () => {
     expect(acgeGetOcsAngle(center, start, normal)).toBeCloseTo(0, 8)
     expect(acgeGetOcsAngle(center, end, normal)).toBeCloseTo(Math.PI / 2, 8)
   })
+
+  it('maps OCS→WCS correctly for a non-axis-aligned extrusion', () => {
+    const normal = { x: 0, y: 1, z: 0 }
+    // Arbitrary Axis: Ax = Wz × N = (-1,0,0), Ay = N × Ax = (0,0,1)
+    const wcs = acgeTransformOcsPointToWcs({ x: 1, y: 2, z: 3 }, normal)
+    expect(wcs.x).toBeCloseTo(-1, 8)
+    expect(wcs.y).toBeCloseTo(3, 8)
+    expect(wcs.z).toBeCloseTo(2, 8)
+
+    const back = acgeTransformWcsPointToOcs(wcs, normal)
+    expect(back.x).toBeCloseTo(1, 8)
+    expect(back.y).toBeCloseTo(2, 8)
+    expect(back.z).toBeCloseTo(3, 8)
+  })
 })
