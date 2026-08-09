@@ -531,8 +531,11 @@ export class AcDbCircle extends AcDbCurve {
     nz: number
   ) {
     const normal = new AcGeVector3d(nx, ny, nz)
-    this.normal.copy(normal)
-    this.center = acgeTransformOcsPointToWcs({ x, y, z }, normal)
+    // Keep OCS reference vector in sync when dxfIn replaces the default +Z
+    // normal from the entity factory (same issue as {@link AcDbArc}).
+    this._geo.normal = normal
+    this._geo.refVec = acgeGetOcsReferenceVector(this._geo.normal)
+    this.center = acgeTransformOcsPointToWcs({ x, y, z }, this.normal)
     this.radius = radius
   }
 
