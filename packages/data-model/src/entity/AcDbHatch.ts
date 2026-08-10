@@ -181,6 +181,11 @@ export class AcDbHatch extends AcDbEntity {
 
   /** The underlying geometric area object */
   private _geo: AcGeArea2d
+  /**
+   * Cached result of {@link buildAreasFromLoops}. Cleared when loops change
+   * (`add`, `transformBy`, grip edits).
+   */
+  private _areasFromLoopsCache: AcGeArea2d[] | null = null
   /** The flag to indicate whether the hatch object is configured for solid fill */
   private _isSolidFill: boolean
   /** The elevation (Z-coordinate) of the hatch plane */
@@ -942,12 +947,27 @@ export class AcDbHatch extends AcDbEntity {
    */
   add(loop: AcGeLoop2dType) {
     this._geo.add(loop)
+    this.invalidateAreasFromLoopsCache()
+  }
+
+  private invalidateAreasFromLoopsCache() {
+    this._areasFromLoopsCache = null
   }
 
   private buildAreasFromLoops() {
+    if (this._areasFromLoopsCache != null) {
+      return this._areasFromLoopsCache
+    }
+
     const loops = this._geo.loops
-    if (loops.length === 0) return []
-    if (loops.length === 1) return [this._geo]
+    if (loops.length === 0) {
+      this._areasFromLoopsCache = []
+      return this._areasFromLoopsCache
+    }
+    if (loops.length === 1) {
+      this._areasFromLoopsCache = [this._geo]
+      return this._areasFromLoopsCache
+    }
 
     const hierarchy = this._geo.buildHierarchy()
     const areas: AcGeArea2d[] = []
@@ -968,7 +988,8 @@ export class AcDbHatch extends AcDbEntity {
 
     hierarchy.children.forEach(child => visit(child, 0))
 
-    return areas.length > 0 ? areas : [this._geo]
+    this._areasFromLoopsCache = areas.length > 0 ? areas : [this._geo]
+    return this._areasFromLoopsCache
   }
 
   private getCalculatedAreaValue(): number {
@@ -1158,6 +1179,7 @@ export class AcDbHatch extends AcDbEntity {
     acdbForEachGripIndex(indices, index => {
       this.moveBoundaryGripPointAt(index, offset)
     })
+    this.invalidateAreasFromLoopsCache()
     return this
   }
 
@@ -1666,6 +1688,7 @@ export class AcDbHatch extends AcDbEntity {
       1
     )
     this._geo.transform(matrix2d)
+    this.invalidateAreasFromLoopsCache()
     this._elevation = new AcGePoint3d(0, 0, this._elevation).applyMatrix4(
       matrix
     ).z

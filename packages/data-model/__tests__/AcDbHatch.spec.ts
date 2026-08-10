@@ -496,6 +496,52 @@ describe('AcDbHatch', () => {
     expect(multiDraw.entities).toHaveLength(2)
   })
 
+  it('reuses and invalidates cached areasFromLoops across draw and mutations', () => {
+    const hatch = new AcDbHatch()
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.add(createRectLoop(0, 0, 3, 2))
+
+    expect(hatch.directBatchPrimitive).toBe('area')
+    expect(hatch.area).toBeCloseTo(6, 8)
+    expect(hatch.directBatchPrimitive).toBe('area')
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities }))
+    }
+    expect(hatch.subWorldDraw(renderer as never)).toMatchObject({
+      kind: 'area'
+    })
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.group).not.toHaveBeenCalled()
+
+    hatch.add(createRectLoop(5, 0, 2, 2))
+    expect(hatch.directBatchPrimitive).toBe(null)
+
+    const multiRenderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities }))
+    }
+    const multiDraw = hatch.subWorldDraw(
+      multiRenderer as never
+    ) as unknown as {
+      kind: string
+      entities: unknown[]
+    }
+    expect(multiRenderer.area).toHaveBeenCalledTimes(2)
+    expect(multiRenderer.group).toHaveBeenCalledTimes(1)
+    expect(multiDraw.kind).toBe('group')
+
+    const before = hatch.geometricExtents.clone()
+    hatch.transformBy(new AcGeMatrix3d().makeTranslation(10, 0, 0))
+    const after = hatch.geometricExtents
+    expect(after.min.x).toBeCloseTo(before.min.x + 10, 8)
+    expect(after.max.x).toBeCloseTo(before.max.x + 10, 8)
+    expect(hatch.directBatchPrimitive).toBe(null)
+  })
+
   it('passes gradient hatch settings to graphics traits', () => {
     const hatch = new AcDbHatch()
     hatch.hatchObjectType = AcDbHatchObjectType.GradientObject
