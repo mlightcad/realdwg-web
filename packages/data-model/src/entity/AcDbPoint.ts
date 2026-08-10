@@ -268,6 +268,17 @@ export class AcDbPoint extends AcDbEntity {
   }
 
   /**
+   * Only the simple PDMODE dot (0) is a single `THREE.Points` drawable.
+   * Other modes emit symbol LineSegments and stay on the legacy path.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    const mode = this.database?.pdmode ?? 0
+    return mode === 0 ? ('point' as const) : null
+  }
+
+  /**
    * Draws this point using the specified renderer.
    *
    * This method renders the point using the point's current style properties,

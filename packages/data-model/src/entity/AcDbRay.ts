@@ -343,6 +343,15 @@ export class AcDbRay extends AcDbCurve {
   }
 
   /**
+   * This ray always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this ray using the specified renderer.
    *
    * This method renders the ray as a line segment extending from the base point

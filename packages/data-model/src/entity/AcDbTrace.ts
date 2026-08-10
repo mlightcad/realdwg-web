@@ -313,6 +313,15 @@ export class AcDbTrace extends AcDbCurve {
   }
 
   /**
+   * This trace always draws as a single `area` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'area' as const
+  }
+
+  /**
    * Draws this trace using the specified renderer.
    *
    * This method renders the trace as a filled area using the trace's

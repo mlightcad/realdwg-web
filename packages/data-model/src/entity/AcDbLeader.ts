@@ -530,6 +530,15 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
+   * This leader always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {

@@ -253,6 +253,15 @@ export class AcDbFace extends AcDbEntity {
   }
 
   /**
+   * This face always draws as a single `lineSegments` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineSegments' as const
+  }
+
+  /**
    * Draws this face using the specified renderer.
    *
    * This method renders the face as a filled area using the face's

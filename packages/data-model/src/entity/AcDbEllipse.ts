@@ -581,6 +581,15 @@ export class AcDbEllipse extends AcDbCurve {
   }
 
   /**
+   * This ellipse always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this ellipse using the specified renderer.
    *
    * This method renders the ellipse as an elliptical arc using the ellipse's

@@ -600,6 +600,15 @@ export class AcDbArc extends AcDbCurve {
   }
 
   /**
+   * This arc always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this arc using the specified renderer.
    *
    * This method renders the arc as a circular arc using the arc's

@@ -10,7 +10,8 @@
     ],
     "excludeExternals": true,
     "excludePrivate": true,
-    "excludeProtected": false
+    "excludeProtected": false,
+    "excludeInternal": true
 
     // In TypeDoc 0.26 it is possible to specify options which should be inherited
     // by packages here, instead of in a separate file which is extended by each
