@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.12.5
+
+### Patch Changes
+
+- feat: adds directBatchPrimitive for faster entity geometry batching, fixes OCS transforms for non-default extrusions so arcs and circles render correctly, and tolerates missing LibreDWG symbol and table names without throwing
+- Updated dependencies
+  - @mlightcad/data-model@1.12.5
+
 ## 3.12.4
 
 ### Patch Changes

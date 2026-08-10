@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.12.5
+
+### Patch Changes
+
+- feat: adds directBatchPrimitive for faster entity geometry batching, fixes OCS transforms for non-default extrusions so arcs and circles render correctly, and tolerates missing LibreDWG symbol and table names without throwing
+- Updated dependencies
+  - @mlightcad/common@1.12.5
+  - @mlightcad/geometry-engine@3.12.5
+  - @mlightcad/graphic-interface@3.12.5
+
 ## 1.12.4
 
 ### Patch Changes
