@@ -189,13 +189,35 @@ export class AcDbTable extends AcDbBlockReference {
    * @param numColumns - The number of columns in the table
    */
   constructor(name: string, numRows: number, numColumns: number) {
-    super(name)
+    super(name ?? '')
     this._attachmentPoint = AcGiMTextAttachmentPoint.TopLeft
     this._numColumns = numColumns
     this._numRows = numRows
     this._columnWidth = new Array<number>(numColumns)
     this._rowHeight = new Array<number>(numRows)
     this._cells = new Array<AcDbTableCell>(numRows * numColumns)
+  }
+
+  /**
+   * Resolves the anonymous table block used for rendering.
+   *
+   * LibreDWG sometimes omits the block name (`ldata.name`) while still providing
+   * the hard-pointer block record handle. Prefer name lookup, then fall back to
+   * {@link owningBlockRecordId}.
+   */
+  override get blockTableRecord(): AcDbBlockTableRecord | undefined {
+    const blockName = this.blockName
+    if (blockName) {
+      const byName = this.database.tables.blockTable.getAt(blockName)
+      if (byName) {
+        return byName
+      }
+    }
+    const owningId = this.owningBlockRecordId
+    if (!owningId) {
+      return undefined
+    }
+    return this.database.tables.blockTable.getIdAt(owningId)
   }
 
   /**

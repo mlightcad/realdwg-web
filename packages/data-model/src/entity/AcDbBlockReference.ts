@@ -92,7 +92,7 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   constructor(blockName: string) {
     super()
-    this._blockName = blockName
+    this._blockName = blockName ?? ''
     this._position = new AcGePoint3d()
     this._rotation = 0.0
     this._normal = new AcGeVector3d(0, 0, 1)
@@ -289,6 +289,10 @@ export class AcDbBlockReference extends AcDbEntity {
    * ```
    */
   get blockTableRecord() {
+    // Missing block names must not throw when looking up the BTR.
+    if (!this._blockName) {
+      return undefined
+    }
     return this.database.tables.blockTable.getAt(this._blockName)
   }
 

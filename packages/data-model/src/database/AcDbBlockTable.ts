@@ -128,7 +128,10 @@ export class AcDbBlockTable extends AcDbSymbolTable<AcDbBlockTableRecord> {
    * @returns The normalized block table record name.
    */
   protected normalizeName(name: string) {
-    const trimmed = name.trim()
+    const trimmed = (name ?? '').trim()
+    if (!trimmed) {
+      return ''
+    }
     if (AcDbBlockTableRecord.isModelSapceName(trimmed)) {
       return AcDbBlockTableRecord.MODEL_SPACE_NAME
     }
