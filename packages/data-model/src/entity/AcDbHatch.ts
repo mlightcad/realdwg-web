@@ -1598,6 +1598,23 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Solid (non-gradient) hatches that draw as a single `area` call.
+   * Multi-loop hatches that become a `group` of areas stay on the legacy path.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    if (!this.isSolidFill || this.isGradient) {
+      return null
+    }
+    const areas = this.buildAreasFromLoops()
+    if (areas.length > 1) {
+      return null
+    }
+    return 'area' as const
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {

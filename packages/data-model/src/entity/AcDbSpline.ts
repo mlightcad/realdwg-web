@@ -573,6 +573,15 @@ export class AcDbSpline extends AcDbCurve {
   }
 
   /**
+   * This spline always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this spline using the specified renderer.
    *
    * This method renders the spline as a series of connected line segments

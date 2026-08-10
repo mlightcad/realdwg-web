@@ -626,6 +626,15 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
+   * Thin centerline → `lineStrip`; any renderable width → solid `area`.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return this.hasRenderableWidth() ? ('area' as const) : ('lineStrip' as const)
+  }
+
+  /**
    * Draws this polyline using the specified renderer.
    *
    * This method renders the polyline as a series of connected line segments
@@ -896,6 +905,22 @@ export class AcDbPolyline extends AcDbCurve {
 
     // Default LWPOLYLINE width is 0; omit group 43 unless there is actual width.
     return common != null && common !== 0 ? common : undefined
+  }
+
+  /**
+   * True when any vertex carries a start/end width above the render epsilon.
+   * Matches the width gate used by {@link createWidthProfile}.
+   */
+  private hasRenderableWidth(): boolean {
+    const vertices = this._geo.vertices
+    for (let i = 0; i < vertices.length; i++) {
+      const startWidth = Math.max(0, vertices[i].startWidth ?? 0)
+      const endWidth = Math.max(0, vertices[i].endWidth ?? 0)
+      if (startWidth > WIDTH_EPSILON || endWidth > WIDTH_EPSILON) {
+        return true
+      }
+    }
+    return false
   }
 
   /**

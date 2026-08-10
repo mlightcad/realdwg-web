@@ -425,6 +425,15 @@ export class AcDb2dPolyline extends AcDbCurve {
   }
 
   /**
+   * This 2d polyline always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this polyline using the specified renderer.
    *
    * @param renderer - The renderer to use for drawing

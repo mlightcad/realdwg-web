@@ -5,5 +5,6 @@
     // advanced method in the readme.
 
     "$schema": "https://typedoc.org/schema.json",
-    "includeVersion": true
+    "includeVersion": true,
+    "excludeInternal": true
 }

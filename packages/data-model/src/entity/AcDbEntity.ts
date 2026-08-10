@@ -6,6 +6,7 @@ import {
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
+  AcGiDirectBatchPrimitive,
   AcGiEntity,
   AcGiLineStyle,
   AcGiLineWeight,
@@ -732,6 +733,21 @@ export abstract class AcDbEntity extends AcDbObject {
     renderer: AcGiRenderer,
     delay?: boolean
   ): AcGiEntity | undefined
+
+  /**
+   * The batchable primitive kind emitted by {@link subWorldDraw}, when this entity
+   * is eligible for direct geometry batching without an intermediate drawable tree.
+   *
+   * Default `null`: not eligible. Simple entities override to return the expected
+   * primitive kind (`lineStrip`, `point`, `area`, …). Renderers should still treat
+   * capture misses (wide polyline → `area` instead of `lines`, multi-draw, etc.)
+   * as a fallback to the legacy path.
+   *
+   * @internal
+   */
+  get directBatchPrimitive(): AcGiDirectBatchPrimitive | null {
+    return null
+  }
 
   /**
    * Called by cad application when it wants the entity to draw itself in WCS (World Coordinate

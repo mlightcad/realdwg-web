@@ -331,6 +331,15 @@ export class AcDbXline extends AcDbCurve {
   }
 
   /**
+   * This xline always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this xline using the specified renderer.
    *
    * This method renders the xline as a line segment extending from the base point

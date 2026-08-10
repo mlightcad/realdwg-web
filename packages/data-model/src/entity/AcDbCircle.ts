@@ -439,6 +439,15 @@ export class AcDbCircle extends AcDbCurve {
   }
 
   /**
+   * This circle always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this circle using the specified renderer.
    *
    * This method renders the circle as a circular arc using the circle's

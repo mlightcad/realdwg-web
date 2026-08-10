@@ -419,6 +419,15 @@ export class AcDbLine extends AcDbCurve {
   }
 
   /**
+   * This line always draws as a single `lineStrip` primitive.
+   *
+   * @internal
+   */
+  override get directBatchPrimitive() {
+    return 'lineStrip' as const
+  }
+
+  /**
    * Draws this line using the specified renderer.
    *
    * This method renders the line as a series of connected line segments
