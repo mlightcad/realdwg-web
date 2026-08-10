@@ -347,7 +347,9 @@ export class AcDbSymbolTable<
    * @returns The normalized symbol table record name.
    */
   protected normalizeName(name: string) {
-    return name.trim().toUpperCase()
+    // LibreDWG / partial DXF can omit symbol names; treat missing as empty
+    // so getAt/has/remove return "not found" instead of throwing on `.trim()`.
+    return (name ?? '').trim().toUpperCase()
   }
 
   /**

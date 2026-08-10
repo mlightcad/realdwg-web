@@ -95,6 +95,18 @@ describe('AcDbSymbolTable', () => {
     expect(table.hasId('unnamed-id')).toBe(false)
   })
 
+  it('treats undefined/null names as missing in getAt/has/remove', () => {
+    const db = setupWorkingDatabase()
+    const table = new AcDbSymbolTable<AcDbSymbolTableRecord>(db)
+    table.add(new AcDbSymbolTableRecord({ name: 'A' }))
+
+    expect(table.getAt(undefined as unknown as string)).toBeUndefined()
+    expect(table.getAt(null as unknown as string)).toBeUndefined()
+    expect(table.has(undefined as unknown as string)).toBe(false)
+    expect(table.remove(undefined as unknown as string)).toBe(false)
+    expect(table.getAt('A')?.name).toBe('A')
+  })
+
   it('applies normalized names when subclass overrides normalizeName', () => {
     const db = new AcDbDatabase()
     const table = new LowercaseSymbolTable(db)

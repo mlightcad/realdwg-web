@@ -646,7 +646,7 @@ export class AcDbEntityConverter {
 
   private convertTable(table: DwgTableEntity) {
     const dbEntity = new AcDbTable(
-      table.name,
+      table.name ?? '',
       table.rowCount,
       table.columnCount
     )
