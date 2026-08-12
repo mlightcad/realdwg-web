@@ -71,11 +71,16 @@ export interface AcGiEntity {
    * Return a clone of this object and its direct children (not all descendants).
    * So it means that you need to gurantee the object is flatten by call method
    * 'flatten' before calling this function.
-   * This function will deeply clone geometry in this object. But materials are
-   * reused directly and not deeply cloned.
+   *
+   * Implementations may deep-clone geometry, or (for immutable block-template
+   * caches) alias leaf buffers and mark them so instance dispose skips them.
+   * Materials are reused and not deeply cloned.
+   *
+   * @param shareGeometry - When true, leaf drawables may alias source
+   *   geometry buffers instead of deep-cloning them.
    * @returns Return a clone of this object and optionally all descendants.
    */
-  fastDeepClone(): AcGiEntity
+  fastDeepClone(shareGeometry?: boolean): AcGiEntity
 
   /**
    * Optionally merges same-material drawable leaves so later
@@ -88,6 +93,17 @@ export interface AcGiEntity {
    * @returns Nothing.
    */
   compactForInstancing?(): void
+
+  /**
+   * Optionally prepares this entity as an immutable block-template cache entry.
+   *
+   * Typical implementations finalize deferred drawables and drop detached
+   * source-entity shells without merging leaves. Used by rendering cache miss
+   * paths before {@link fastDeepClone} for scene use.
+   *
+   * @returns Nothing.
+   */
+  prepareCacheTemplate?(): void
 
   /**
    * Optionally releases GPU/CPU resources owned by this entity.

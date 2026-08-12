@@ -285,6 +285,9 @@ export class AcDbRenderingCache {
     }
     // Compact mid-size templates on first reuse so one-shot blocks never pay
     // compactForInstancing, while repeated INSERTs still clone O(material) leaves.
+    // Uncompacted clones must deep-copy geometry (AcTrGroup.fastDeepClone defaults
+    // shareGeometry to isCompacted) so this compact cannot dispose buffers still
+    // aliased by earlier INSERT instances.
     if (AcDbRenderingCache.profiling) {
       const tCompact0 = performance.now()
       const compacted = this.maybeCompactTemplate(template, true)

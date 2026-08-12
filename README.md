@@ -7,8 +7,8 @@ AutoCAD RealDWG is a software development toolkit (SDK) provided by Autodesk tha
 
 The target of this project is to create one web-version of AutoCAD RealDWG by providing the similar API. For now, it supports reading DWG and DXF file only. In the future, it will support write DWG and DXF too.
 
-- [**🌐 DWG/DXF JSON Viewer**](https://dwg.thingraph.site/dwg_json_viewer.html)
-- [**🌐 API Docs**](https://mlightcad.github.io/realdwg-web/)
+- [**🌐 Live Demo**](https://mlightcad.com/realdwg-web-example/)
+- **🌐 API Docs**: [Read the Docs](https://realdwg-web.readthedocs.io/en/latest/) (versioned) · [GitHub Pages](https://mlightcad.github.io/realdwg-web/) (latest/dev)
 
 ## App Based on Realdwg-Web
 
@@ -95,7 +95,7 @@ await database.read(
 );
 ```
 
-For a complete example, see the [example project](./packages/example/src/main.ts).
+For a complete example, see the [example project](./packages/example/src/main.ts) in this repository, or the customer-facing demo [realdwg-web-example](https://github.com/mlightcad/realdwg-web-example).
 
 ### Font Loading and Self-Hosting
 
