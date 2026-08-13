@@ -30,6 +30,22 @@ import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSystemVariables } from './AcDbSystemVariables'
 
 /**
+ * Best-effort default for {@link AcDbSystemVariables.LOGINNAME}.
+ * Prefers common OS environment variables when running under Node.
+ */
+function detectDefaultLoginName(): string {
+  try {
+    const env =
+      typeof process !== 'undefined' && process.env ? process.env : undefined
+    if (!env) return ''
+    const name = env.USERNAME || env.USER || env.LOGNAME || ''
+    return typeof name === 'string' ? name.trim() : ''
+  } catch {
+    return ''
+  }
+}
+
+/**
  * Supported AutoCAD system variable data type name.
  */
 export type AcDbSysVarTypeName =
@@ -471,6 +487,19 @@ export class AcDbSysVarManager {
       defaultValue: AcDbUnitsValue.Millimeters
     })
     /**
+     * Displays the user's login name. Read-only through {@link setVar}; host
+     * apps initialize it with {@link setLoginName}.
+     *
+     * @see https://help.autodesk.com/view/ACD/2026/ENU/?caas=caas/documentation/CIV3D/2014/ENU/filesACD/GUID-81446F4E-F6DC-442A-9889-EE777D3D49B9-htm.html
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.LOGINNAME,
+      type: 'string',
+      isDbVar: false,
+      readOnly: true,
+      defaultValue: detectDefaultLoginName()
+    })
+    /**
      * Sets the linear unit display format for coordinates and distances (not insertion scaling).
      * Integer codes match AutoCAD and {@link AcDbLinearUnits}:
      * - `1`: Scientific
@@ -490,7 +519,7 @@ export class AcDbSysVarManager {
     })
     /**
      * Sets the display precision for linear distances (decimal places or equivalent), used together
-     * with {@link AcDbDatabase.lunits | LUNITS}. Typical range in AutoCAD is **0??**; common initial value **4**.
+     * with {@link AcDbDatabase.lunits | LUNITS}. Typical range in AutoCAD is **0–8**; common initial value **4**.
      *
      * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-5FFF39D6-EFC7-49F5-B56A-6023EB5C0DE7
      */
@@ -691,6 +720,19 @@ export class AcDbSysVarManager {
    */
   public registerMany(vars: AcDbSysVarDescriptor[]) {
     vars.forEach(v => this.registerVar(v))
+  }
+
+  /**
+   * Initializes the session {@link AcDbSystemVariables.LOGINNAME} value.
+   *
+   * {@link setVar} rejects writes because LOGINNAME is read-only for users;
+   * host applications call this once at startup (for example after auth).
+   *
+   * @param value - Login / user display name.
+   */
+  public setLoginName(value: string): void {
+    const name = this.normalizeName(AcDbSystemVariables.LOGINNAME)
+    this.cache.set(name, value.trim())
   }
 
   /**
