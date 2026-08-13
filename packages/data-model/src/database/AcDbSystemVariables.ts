@@ -122,6 +122,14 @@ export const AcDbSystemVariables = {
   HPTRANSPARENCY: 'HPTRANSPARENCY',
   /** Insertion units used for automatic scaling of inserted content. */
   INSUNITS: 'INSUNITS',
+  /**
+   * Displays the user's login name (read-only). Session-scoped; not stored in
+   * the drawing. Host applications may initialize it via
+   * {@link AcDbSysVarManager.setLoginName}.
+   *
+   * @see https://help.autodesk.com/view/ACD/2026/ENU/?caas=caas/documentation/CIV3D/2014/ENU/filesACD/GUID-81446F4E-F6DC-442A-9889-EE777D3D49B9-htm.html
+   */
+  LOGINNAME: 'LOGINNAME',
   /** Global linetype scale multiplier for the drawing database. */
   LTSCALE: 'LTSCALE',
   /** Linear unit display format for coordinates and distances (scientific, decimal, engineering, etc.). */

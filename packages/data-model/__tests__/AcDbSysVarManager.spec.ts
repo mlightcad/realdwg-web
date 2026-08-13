@@ -272,4 +272,19 @@ describe('AcDbSysVarManager', () => {
       manager.setVar(AcDbSystemVariables.DWGNAME, 'Other.dwg', workingDb)
     ).toThrow('System variable dwgname is read-only!')
   })
+
+  it('exposes read-only LOGINNAME for the session', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+
+    expect(typeof manager.getVar(AcDbSystemVariables.LOGINNAME, db)).toBe(
+      'string'
+    )
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.LOGINNAME, 'alice', db)
+    ).toThrow(/read-only/i)
+
+    manager.setLoginName('alice')
+    expect(manager.getVar(AcDbSystemVariables.LOGINNAME, db)).toBe('alice')
+  })
 })
