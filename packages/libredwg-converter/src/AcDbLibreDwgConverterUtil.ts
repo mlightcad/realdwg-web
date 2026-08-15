@@ -1,6 +1,9 @@
 import { Dwg_File_Type, LibreDwg } from '@mlightcad/libredwg-web'
 
 export async function parseDwg(data: string) {
+  // LibreDwg.create() loads libredwg-web.wasm via the Emscripten glue's
+  // `new URL(..., import.meta.url)`. The worker build emits that wasm as a
+  // sibling of libredwg-parser-worker.js (not inlined).
   const libredwg = await LibreDwg.create()
   if (libredwg == null) {
     throw new Error('libredwg is not loaded!')

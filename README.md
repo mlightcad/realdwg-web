@@ -52,7 +52,7 @@ AcDbDatabaseConverterManager.instance.register(
 )
 ```
 
-Deploy `libredwg-parser-worker.js` from `@mlightcad/libredwg-converter`'s `dist/` folder to a public URL (see [example vite config](./packages/example/vite.config.ts)).
+Deploy `libredwg-parser-worker.js` and its sibling `libredwg-web.wasm` from `@mlightcad/libredwg-converter`'s `dist/` folder to the same public directory (see [example vite config](./packages/example/vite.config.ts)).
 
 ### Unregistering a Converter
 
@@ -256,7 +256,7 @@ const dwgConverter = new AcDbLibreDwgConverter({
 })
 ```
 
-Deploy `libredwg-parser-worker.js` from `@mlightcad/libredwg-converter`'s `dist/` folder as a static asset (see [example vite config](./packages/example/vite.config.ts)).
+Deploy `libredwg-parser-worker.js` and its sibling `libredwg-web.wasm` from `@mlightcad/libredwg-converter`'s `dist/` folder as static assets in the same directory (see [example vite config](./packages/example/vite.config.ts)).
 
 **How this limits copyleft propagation**
 
@@ -264,7 +264,7 @@ Deploy `libredwg-parser-worker.js` from `@mlightcad/libredwg-converter`'s `dist/
 | --- | --- | --- |
 | Core SDK (`data-model`, including `AcDbNativeDxfConverter`) | MIT | N/A — no GPL dependency |
 | `libredwg-converter` (main bundle) | GPL | Orchestrates parsing; GPL parser execution stays in worker |
-| `libredwg-parser-worker.js` | GPL | Separate bundle; loaded at runtime; communicates via `postMessage` |
+| `libredwg-parser-worker.js` + `libredwg-web.wasm` | GPL | Separate worker + wasm assets; loaded at runtime; communicates via `postMessage` |
 
 When `useWorker: true` is configured and the worker script is deployed separately:
 
