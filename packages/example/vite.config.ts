@@ -1,5 +1,9 @@
+import { existsSync } from 'node:fs'
 import { defineConfig } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
+
+const libredwgWasmSrc =
+  './node_modules/@mlightcad/libredwg-converter/dist/libredwg-web.wasm'
 
 export default defineConfig({
   optimizeDeps: {
@@ -19,7 +23,16 @@ export default defineConfig({
         {
           src: './node_modules/@mlightcad/libredwg-converter/dist/*-worker.js',
           dest: 'assets'
-        }
+        },
+        ...(existsSync(libredwgWasmSrc)
+          ? [
+              {
+                // Sibling of libredwg-parser-worker.js (not inlined; see cad-viewer#494).
+                src: libredwgWasmSrc,
+                dest: 'assets'
+              }
+            ]
+          : [])
       ]
     })
   ]
