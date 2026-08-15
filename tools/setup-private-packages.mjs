@@ -29,14 +29,16 @@ function run(command, args) {
 
 function printNextSteps(prefix) {
   console.log(prefix)
+  console.log('  pnpm use:dwg-converter')
   console.log('  pnpm install')
-  console.log('  pnpm --filter @mlight-cad/dwg-converter build')
+  console.log('  pnpm --dir packages/dwg-converter install')
+  console.log('  pnpm --dir packages/dwg-converter build')
   console.log('')
   console.log(
-    'Note: pnpm install may add packages/dwg-converter to pnpm-lock.yaml.'
+    'Note: packages/dwg-converter is excluded from pnpm-workspace.yaml,'
   )
   console.log(
-    'Do not commit those lockfile changes — public CI has no private package.'
+    'so it will not be added to the public pnpm-lock.yaml.'
   )
 }
 

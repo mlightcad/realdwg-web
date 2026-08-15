@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.13.0
+
+### Minor Changes
+
+- feat: adds a session-scoped LOGINNAME system variable so drawings can expose the current login name, and fixes LibreDWG converter packaging so the wasm module is emitted beside the parser worker for reliable runtime loading
+
 ## 1.12.5
 
 ### Patch Changes

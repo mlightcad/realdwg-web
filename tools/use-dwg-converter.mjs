@@ -10,7 +10,8 @@
  *   - src/main.ts: import, class name and worker file references
  *
  * If packages/dwg-converter/package.json exists:
- *   - set @mlightcad/data-model version to workspace:*
+ *   - set @mlightcad/data-model version to link:../data-model
+ *     (dwg-converter is outside the pnpm workspace / public lockfile)
  */
 import { access, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
@@ -134,14 +135,13 @@ const packageJsonPath = path.join(exampleDir, 'package.json')
   const deps = pkg.dependencies ?? {}
   const fromKey = [FROM_PKG, LEGACY_TO_PKG].find((key) => key in deps)
   if (fromKey && fromKey !== TO_PKG) {
-    const version = deps[fromKey]
     delete deps[fromKey]
-    deps[TO_PKG] = version === undefined ? 'workspace:*' : version
+    deps[TO_PKG] = 'link:../dwg-converter'
     pkg.dependencies = deps
     const after = `${JSON.stringify(pkg, null, 2)}\n`
     if (after !== before) {
       await writeFile(packageJsonPath, after, { encoding: 'utf8' })
-      changes.push(`package.json: ${fromKey} → ${TO_PKG}`)
+      changes.push(`package.json: ${fromKey} → ${TO_PKG} (link:../dwg-converter)`)
     }
   }
 }
@@ -199,9 +199,9 @@ if (await fileExists(dwgConverterPkgPath)) {
         const deps = pkg[section]
         if (
           deps?.[DATA_MODEL_PKG] != null &&
-          deps[DATA_MODEL_PKG] !== 'workspace:*'
+          deps[DATA_MODEL_PKG] !== 'link:../data-model'
         ) {
-          deps[DATA_MODEL_PKG] = 'workspace:*'
+          deps[DATA_MODEL_PKG] = 'link:../data-model'
           changed = true
         }
       }
@@ -212,7 +212,7 @@ if (await fileExists(dwgConverterPkgPath)) {
     })
   ) {
     changes.push(
-      `packages/dwg-converter/package.json: ${DATA_MODEL_PKG} → workspace:*`
+      `packages/dwg-converter/package.json: ${DATA_MODEL_PKG} → link:../data-model`
     )
   }
 }

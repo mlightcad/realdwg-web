@@ -1,5 +1,17 @@
 # @mlightcad/realdwg-web-example
 
+## 0.13.0
+
+### Minor Changes
+
+- feat: adds a session-scoped LOGINNAME system variable so drawings can expose the current login name, and fixes LibreDWG converter packaging so the wasm module is emitted beside the parser worker for reliable runtime loading
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.13.0
+  - @mlightcad/libredwg-converter@3.13.0
+
 ## 0.12.5
 
 ### Patch Changes
