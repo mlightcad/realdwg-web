@@ -2,6 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![npm version](https://img.shields.io/npm/v/@mlightcad/data-model.svg)](https://www.npmjs.com/package/@mlightcad/data-model)
+[![npm downloads](https://img.shields.io/npm/dm/@mlightcad/data-model.svg)](https://www.npmjs.com/package/@mlightcad/data-model)
 
 AutoCAD RealDWG is a software development toolkit (SDK) provided by Autodesk that allows developers to read, write, and create DWG and DXF files (AutoCAD's native drawing file formats) without needing AutoCAD installed.
 
