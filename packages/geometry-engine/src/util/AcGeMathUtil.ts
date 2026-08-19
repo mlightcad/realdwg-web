@@ -572,6 +572,16 @@ function acgeIsBetweenAngle(
   }
 }
 
+/**
+ * Return true if `mid` lies on the counterclockwise sweep from `start` to `end`.
+ * Angles are treated as radians and normalized to `[0, 2π)`.
+ */
+function acgeIsAngleOnCcwSweep(start: number, mid: number, end: number) {
+  const total = acgeNormalizeAngle(end - start)
+  const offset = acgeNormalizeAngle(mid - start)
+  return offset <= total + 1e-7
+}
+
 function acgeIntPartLength(num: number) {
   num = Math.abs(num)
   if (num < 1.0) {
@@ -610,6 +620,7 @@ const AcGeMathUtil = {
   normalizeAngle: acgeNormalizeAngle,
   isBetween: acgeIsBetween,
   isBetweenAngle: acgeIsBetweenAngle,
+  isAngleOnCcwSweep: acgeIsAngleOnCcwSweep,
   intPartLength: acgeIntPartLength,
   relativeEps: acgeRelativeEps
 }
@@ -639,6 +650,7 @@ export {
   acgeNormalizeAngle,
   acgeIsBetween,
   acgeIsBetweenAngle,
+  acgeIsAngleOnCcwSweep,
   acgeIntPartLength,
   acgeRelativeEps,
   AcGeMathUtil

@@ -20,6 +20,7 @@ export {
   acgeInverseLerp,
   acgeIsBetween,
   acgeIsBetweenAngle,
+  acgeIsAngleOnCcwSweep,
   acgeIsPowerOfTwo,
   acgeLerp,
   acgeMapLinear,
