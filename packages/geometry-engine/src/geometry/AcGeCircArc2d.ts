@@ -8,6 +8,25 @@ import {
   AcGeVector2d
 } from '../math'
 import { AcGeMathUtil, TAU } from '../util'
+import {
+  acgeTryCreateArcByCenterStartChord,
+  acgeTryCreateArcByCenterStartEnd,
+  acgeTryCreateArcByCenterStartProjectedEnd,
+  acgeTryCreateArcByCenterStartSweep,
+  acgeTryCreateArcByStartEndAngle,
+  acgeTryCreateArcByStartEndDirection,
+  acgeTryCreateArcByStartEndRadius,
+  acgeTryCreateArcByThreePoints,
+  acgeTryCreateCircle,
+  acgeTryCreateCircleByDiameter,
+  acgeTryCreateCircleByThreePoints,
+  acgeTryCreateShorterArc
+} from './AcGeCircArc2dFactory'
+import {
+  type AcGeCircumcircle2d,
+  acgeComputeCircumcircle2d,
+  acgeProjectPointOntoCircle2d
+} from './AcGeCircArcUtil'
 import { AcGeCurve2d } from './AcGeCurve2d'
 
 /**
@@ -81,6 +100,200 @@ export class AcGeCircArc2d extends AcGeCurve2d {
   }
 
   /**
+   * Create an arc from mathematical (unmirrored) polar angles.
+   *
+   * `startAngle` / `endAngle` are `atan2` angles in the XY plane (0 = +X,
+   * 90° = +Y). This differs from the five-argument constructor, whose angles
+   * are mirrored when `clockwise` is true.
+   *
+   * @param center Input arc center
+   * @param radius Input arc radius
+   * @param startAngle Input start angle in radians (`atan2`)
+   * @param endAngle Input end angle in radians (`atan2`)
+   * @param clockwise Input true to sweep clockwise from start to end
+   */
+  static fromMathAngles(
+    center: AcGePoint2dLike,
+    radius: number,
+    startAngle: number,
+    endAngle: number,
+    clockwise: boolean
+  ): AcGeCircArc2d {
+    const arc = new AcGeCircArc2d(
+      center,
+      radius,
+      AcGeMathUtil.normalizeAngle(startAngle),
+      AcGeMathUtil.normalizeAngle(endAngle),
+      false
+    )
+    arc._clockwise = clockwise
+    arc._boundingBoxNeedsUpdate = true
+    return arc
+  }
+
+  /**
+   * Return the circumcircle of three XY points, or `null` when they are collinear.
+   */
+  static computeCircumcircle(
+    p1: AcGePoint2dLike,
+    p2: AcGePoint2dLike,
+    p3: AcGePoint2dLike
+  ): AcGeCircumcircle2d | null {
+    return acgeComputeCircumcircle2d(p1, p2, p3)
+  }
+
+  /**
+   * Project `point` radially onto the circle `(center, radius)`.
+   */
+  static projectPoint(
+    center: AcGePoint2dLike,
+    radius: number,
+    point: AcGePoint2dLike
+  ) {
+    return acgeProjectPointOntoCircle2d(center, radius, point)
+  }
+
+  /**
+   * Create the unique arc from `start` through `through` to `end`.
+   *
+   * The through point selects the major or minor sweep, including arcs greater
+   * than 180°. Return `null` when the points are collinear.
+   *
+   * @param reverseDirection Input true to take the complementary sweep
+   */
+  static tryCreateByThreePoints(
+    start: AcGePoint2dLike,
+    through: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    reverseDirection: boolean = false
+  ): AcGeCircArc2d | null {
+    return acgeTryCreateArcByThreePoints(start, through, end, reverseDirection)
+  }
+
+  /**
+   * Create a full circle from center and radius.
+   */
+  static tryCreateCircle(center: AcGePoint2dLike, radius: number) {
+    return acgeTryCreateCircle(center, radius)
+  }
+
+  /**
+   * Create a full circle whose diameter is the segment `p1`–`p2`.
+   */
+  static tryCreateCircleByDiameter(p1: AcGePoint2dLike, p2: AcGePoint2dLike) {
+    return acgeTryCreateCircleByDiameter(p1, p2)
+  }
+
+  /**
+   * Create a full circle through three non-collinear points.
+   */
+  static tryCreateCircleByThreePoints(
+    p1: AcGePoint2dLike,
+    p2: AcGePoint2dLike,
+    p3: AcGePoint2dLike
+  ) {
+    return acgeTryCreateCircleByThreePoints(p1, p2, p3)
+  }
+
+  /**
+   * Create the shorter arc from `start` to `end` on the circle at `center`.
+   */
+  static tryCreateShorterArc(
+    start: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    center: AcGePoint2dLike
+  ) {
+    return acgeTryCreateShorterArc(start, end, center)
+  }
+
+  /**
+   * Create an arc from center, start, and end with an explicit orientation.
+   */
+  static tryCreateByCenterStartEnd(
+    center: AcGePoint2dLike,
+    start: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    clockwise: boolean
+  ) {
+    return acgeTryCreateArcByCenterStartEnd(center, start, end, clockwise)
+  }
+
+  /**
+   * Create a center-start arc whose end is the radial projection of `rawEnd`.
+   */
+  static tryCreateByCenterStartProjectedEnd(
+    center: AcGePoint2dLike,
+    start: AcGePoint2dLike,
+    rawEnd: AcGePoint2dLike,
+    clockwise: boolean
+  ) {
+    return acgeTryCreateArcByCenterStartProjectedEnd(
+      center,
+      start,
+      rawEnd,
+      clockwise
+    )
+  }
+
+  /**
+   * Create a center-start arc from a signed included angle.
+   * Positive sweep is counterclockwise.
+   */
+  static tryCreateByCenterStartSweep(
+    center: AcGePoint2dLike,
+    start: AcGePoint2dLike,
+    sweepRad: number
+  ) {
+    return acgeTryCreateArcByCenterStartSweep(center, start, sweepRad)
+  }
+
+  /**
+   * Create a center-start arc from a signed chord length.
+   */
+  static tryCreateByCenterStartChord(
+    center: AcGePoint2dLike,
+    start: AcGePoint2dLike,
+    chordLength: number
+  ) {
+    return acgeTryCreateArcByCenterStartChord(center, start, chordLength)
+  }
+
+  /**
+   * Create a start-end arc from a signed included angle.
+   * Positive sweep is counterclockwise.
+   */
+  static tryCreateByStartEndAngle(
+    start: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    sweepRad: number
+  ) {
+    return acgeTryCreateArcByStartEndAngle(start, end, sweepRad)
+  }
+
+  /**
+   * Create a start-end arc from a tangent direction at the start point.
+   */
+  static tryCreateByStartEndDirection(
+    start: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    directionRad: number
+  ) {
+    return acgeTryCreateArcByStartEndDirection(start, end, directionRad)
+  }
+
+  /**
+   * Create a start-end arc from a signed radius.
+   * Positive radius is counterclockwise.
+   */
+  static tryCreateByStartEndRadius(
+    start: AcGePoint2dLike,
+    end: AcGePoint2dLike,
+    radius: number
+  ) {
+    return acgeTryCreateArcByStartEndRadius(start, end, radius)
+  }
+
+  /**
    * Create arc by three points
    * @param p1 Input the start point
    * @param p2 Input one point between the start point and the end point
@@ -91,66 +304,14 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     p2: AcGePoint2dLike,
     p3: AcGePoint2dLike
   ) {
-    const midpoint = (
-      p1: AcGePoint2dLike,
-      p2: AcGePoint2dLike
-    ): AcGePoint2dLike => ({
-      x: (p1.x + p2.x) / 2,
-      y: (p1.y + p2.y) / 2
-    })
-
-    const slope = (p1: AcGePoint2dLike, p2: AcGePoint2dLike): number =>
-      (p2.y - p1.y) / (p2.x - p1.x)
-
-    const perpSlope = (m: number): number => -1 / m
-
-    const midpoint1 = midpoint(p1, p2)
-    const midpoint2 = midpoint(p2, p3)
-
-    const slope1 = slope(p1, p2)
-    const slope2 = slope(p2, p3)
-
-    const perpSlope1 = perpSlope(slope1)
-    const perpSlope2 = perpSlope(slope2)
-
-    const intersect = (
-      m1: number,
-      b1: number,
-      m2: number,
-      b2: number
-    ): AcGePoint2dLike => {
-      const x = (b2 - b1) / (m1 - m2)
-      const y = m1 * x + b1
-      return { x, y }
-    }
-
-    const b1 = midpoint1.y - perpSlope1 * midpoint1.x
-    const b2 = midpoint2.y - perpSlope2 * midpoint2.x
-
-    const center = intersect(perpSlope1, b1, perpSlope2, b2)
-
-    const radius = Math.sqrt(
-      Math.pow(p1.x - center.x, 2) + Math.pow(p1.y - center.y, 2)
-    )
-
-    const angle = (p: AcGePoint2dLike, center: AcGePoint2dLike): number =>
-      Math.atan2(p.y - center.y, p.x - center.x)
-
-    const startAngle = angle(p1, center)
-    const midAngle = angle(p2, center)
-    const endAngle = angle(p3, center)
-
-    const isCounterclockwise =
-      (endAngle > startAngle && endAngle < midAngle) ||
-      (startAngle > endAngle && startAngle < midAngle) ||
-      (midAngle > endAngle && midAngle < startAngle)
-
-    this.center = center
-    this.radius = radius
-    this._clockwise = !isCounterclockwise
-    // Store internal angles (unmirrored)
-    this._startAngle = startAngle
-    this._endAngle = endAngle
+    const arc = acgeTryCreateArcByThreePoints(p1, p2, p3)
+    if (!arc) throw AcCmErrors.ILLEGAL_PARAMETERS
+    this.center = arc.center
+    this.radius = arc.radius
+    this._clockwise = arc._clockwise
+    this._startAngle = arc._startAngle
+    this._endAngle = arc._endAngle
+    this._boundingBoxNeedsUpdate = true
   }
 
   /**

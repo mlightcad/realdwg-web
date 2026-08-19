@@ -517,6 +517,7 @@ export {
   acgeInverseLerp,
   acgeIsBetween,
   acgeIsBetweenAngle,
+  acgeIsAngleOnCcwSweep,
   acgeIsPowerOfTwo,
   acgeLerp,
   acgeMapLinear,
@@ -535,6 +536,8 @@ export {
 } from '@mlightcad/geometry-engine'
 export type {
   AcGeBoundaryEdgeType,
+  AcGeCircumcircle2d,
+  AcGeCircumcircle3d,
   AcGeIndexNode,
   AcGeKnotParameterizationType,
   AcGeLoop2dType,

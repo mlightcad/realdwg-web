@@ -16,6 +16,8 @@ export {
 } from './geometry'
 export type {
   AcGeBoundaryEdgeType,
+  AcGeCircumcircle2d,
+  AcGeCircumcircle3d,
   AcGeIndexNode,
   AcGeKnotParameterizationType,
   AcGeLoop2dType,
@@ -81,6 +83,7 @@ export {
   acgeInverseLerp,
   acgeIsBetween,
   acgeIsBetweenAngle,
+  acgeIsAngleOnCcwSweep,
   acgeIsPowerOfTwo,
   acgeLerp,
   acgeMapLinear,
