@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.13.1
+
+### Patch Changes
+
+- feat: adds circular-arc factory helpers so callers can build 2D circles and arcs from center-radius, diameter, three points, start-end-bulge, and start-center-end constructions. Three-point arcs now pick a unique circumcircle and honor AutoCAD-style reverse-direction sweep, so near-collinear points and complementary arcs stay numerically stable
+
 ## 1.13.0
 
 ### Minor Changes
