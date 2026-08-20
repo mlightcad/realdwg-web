@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d,
@@ -183,6 +184,17 @@ export class AcDbLine extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     return this._geo.box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return [
+      {
+        kind: 'line',
+        line: this._geo.clone(),
+        extent: 'bounded'
+      }
+    ]
   }
 
   /**

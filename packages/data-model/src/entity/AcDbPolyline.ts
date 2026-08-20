@@ -2,6 +2,7 @@ import {
   AcGeArea2d,
   AcGeBox3d,
   AcGeCircArc2d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   acgeOffsetVertexPath,
   AcGePoint2d,
@@ -24,6 +25,7 @@ import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -337,6 +339,16 @@ export class AcDbPolyline extends AcDbCurve {
     return new AcGeBox3d(
       { x: box.min.x, y: box.min.y, z: this._elevation },
       { x: box.max.x, y: box.max.y, z: this._elevation }
+    )
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromPolyline2d(
+      this._geo.vertices,
+      this.closed,
+      this._elevation,
+      this._normal
     )
   }
 

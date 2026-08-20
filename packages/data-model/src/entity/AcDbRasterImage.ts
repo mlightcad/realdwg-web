@@ -1,6 +1,7 @@
 import {
   AcGeBox2d,
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
@@ -17,6 +18,7 @@ import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
@@ -383,6 +385,11 @@ export class AcDbRasterImage extends AcDbEntity {
       0
     )
     return extents
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromPointPath(this.boundaryPath(), true)
   }
 
   /**

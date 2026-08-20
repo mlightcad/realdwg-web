@@ -1,6 +1,7 @@
 import {
   AcGeBox3d,
   acgeClosedPolygonArea3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -13,6 +14,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
 /**
@@ -175,6 +177,11 @@ export class AcDbFace extends AcDbEntity {
    */
   get geometricExtents(): AcGeBox3d {
     return new AcGeBox3d().setFromPoints(this._vertices)
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromPointPath(this._vertices, true)
   }
 
   /**

@@ -1,5 +1,7 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
+  AcGeLine3d,
   AcGeMatrix3d,
   AcGePoint3d
 } from '@mlightcad/geometry-engine'
@@ -308,6 +310,31 @@ export class AcDb3dSolid extends AcDbEntity {
       return new AcGeBox3d(new AcGePoint3d(0, 0, 0), new AcGePoint3d(0, 0, 0))
     }
     return new AcGeBox3d().setFromPoints(this._points)
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const primitives: AcGeIntersectPrimitive[] = []
+    for (let i = 0; i + 5 < this._wireframe.length; i += 6) {
+      primitives.push({
+        kind: 'line',
+        line: new AcGeLine3d(
+          {
+            x: this._wireframe[i]!,
+            y: this._wireframe[i + 1]!,
+            z: this._wireframe[i + 2]!
+          },
+          {
+            x: this._wireframe[i + 3]!,
+            y: this._wireframe[i + 4]!,
+            z: this._wireframe[i + 5]!
+          }
+        ),
+        extent: 'bounded',
+        extendable: false
+      })
+    }
+    return primitives
   }
 
   /**

@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
@@ -22,6 +23,7 @@ import {
   AcDbEntityPropertyGroup
 } from './AcDbEntityProperties'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
+import { acdbTransformIntersectPrimitives } from './AcDbIntersectHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
 
 /**
@@ -801,6 +803,38 @@ export class AcDbBlockReference extends AcDbEntity {
     box.applyMatrix4(matrix)
 
     return box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const blockTableRecord = this.blockTableRecord
+    if (blockTableRecord == null) return []
+
+    const primitives: AcGeIntersectPrimitive[] = []
+    const cols = Math.max(1, this.columnCount)
+    const rows = Math.max(1, this.rowCount)
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < cols; col++) {
+        const localOffset = new AcGeMatrix3d().makeTranslation(
+          col * this.columnSpacing,
+          row * this.rowSpacing,
+          0
+        )
+        const matrix = new AcGeMatrix3d().multiplyMatrices(
+          this.getFullInsertionTransform(),
+          localOffset
+        )
+        for (const entity of blockTableRecord.newIterator()) {
+          primitives.push(
+            ...acdbTransformIntersectPrimitives(
+              entity.subGetIntersectCurves(),
+              matrix
+            )
+          )
+        }
+      }
+    }
+    return primitives
   }
 
   /**

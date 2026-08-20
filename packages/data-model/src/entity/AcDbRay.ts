@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeLine3d,
   AcGeMatrix3d,
   acgeOffsetPointByDirectionInXY,
@@ -168,6 +169,18 @@ export class AcDbRay extends AcDbCurve {
       this._unitDir.clone().multiplyScalar(-10).add(this._basePoint)
     )
     return extents
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const end = this._basePoint.clone().add(this._unitDir)
+    return [
+      {
+        kind: 'line',
+        line: new AcGeLine3d(this._basePoint, end),
+        extent: 'ray'
+      }
+    ]
   }
 
   /**

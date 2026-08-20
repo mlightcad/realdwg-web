@@ -1,7 +1,10 @@
 import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 import {
   AcGeBox3d,
+  acgeIntersectCurves,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
+  AcGePlane,
   AcGePoint3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -17,6 +20,7 @@ import {
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
 import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants'
+import { AcDbIntersect } from '../misc/AcDbIntersect'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import {
   AcDbEntityProperties,
@@ -668,6 +672,52 @@ export abstract class AcDbEntity extends AcDbObject {
     // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
     insertionMat?: AcGeMatrix3d
   ) {}
+
+  /**
+   * Finds intersection points between this entity and another entity.
+   *
+   * This method mirrors ObjectARX `AcDbEntity::intersectWith`. Intersection
+   * points are returned in WCS. The optional `projPlane` argument corresponds
+   * to the ObjectARX overload that intersects the projections of both
+   * entities onto a plane (apparent intersection). `gsMarker` subentity
+   * filtering is not implemented.
+   *
+   * Subclasses should override {@link subGetIntersectCurves} instead of this
+   * method.
+   *
+   * @param entity - The other entity
+   * @param intType - Whether to extend this entity, the other entity, both, or neither
+   * @param projPlane - Optional projection plane for apparent intersection
+   * @returns Intersection points in WCS; empty when the entities do not intersect
+   */
+  intersectWith(
+    entity: AcDbEntity,
+    intType: AcDbIntersect = AcDbIntersect.OnBothOperands,
+    projPlane?: AcGePlane
+  ): AcGePoint3d[] {
+    const a = this.subGetIntersectCurves()
+    const b = entity.subGetIntersectCurves()
+    if (a.length === 0 || b.length === 0) return []
+    const extendA =
+      intType === AcDbIntersect.ExtendThis ||
+      intType === AcDbIntersect.ExtendBoth
+    const extendB =
+      intType === AcDbIntersect.ExtendArg ||
+      intType === AcDbIntersect.ExtendBoth
+    return acgeIntersectCurves(a, b, extendA, extendB, projPlane)
+  }
+
+  /**
+   * Returns the WCS curve primitives used by {@link intersectWith}.
+   *
+   * Default implementation returns `[]` (no intersections). Subclasses with
+   * drawable curve geometry override this; callers should use `intersectWith`.
+   * Entities without curve primitives (text, points, attributes) keep this
+   * empty default, matching ObjectARX.
+   */
+  subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return []
+  }
 
   /**
    * Transforms this entity by the specified matrix.

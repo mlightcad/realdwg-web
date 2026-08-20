@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeLine3d,
   AcGeMathUtil,
   AcGeMatrix3d,
@@ -30,6 +31,7 @@ import {
   AcDbEntityRuntimeProperty
 } from '../AcDbEntityProperties'
 import { acdbForEachGripIndex } from '../AcDbGripHelpers'
+import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers'
 
 /**
  * Defines the line spacing style for dimension text.
@@ -563,6 +565,23 @@ export abstract class AcDbDimension extends AcDbEntity {
     }
     const group = renderer.group([])
     return group
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const blockTableRecord = this.getDimBlockTableRecord()
+    if (!blockTableRecord) return []
+    const matrix = this.getFullDimBlockTransform()
+    const primitives: AcGeIntersectPrimitive[] = []
+    for (const entity of blockTableRecord.newIterator()) {
+      primitives.push(
+        ...acdbTransformIntersectPrimitives(
+          entity.subGetIntersectCurves(),
+          matrix
+        )
+      )
+    }
+    return primitives
   }
 
   /**

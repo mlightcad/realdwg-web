@@ -1,4 +1,10 @@
-import { AcGeCircArc2d, AcGeTol, DEFAULT_TOL, ORIGIN_POINT_2D } from '../src'
+import {
+  AcGeCircArc2d,
+  AcGeTol,
+  DEFAULT_TOL,
+  ORIGIN_POINT_2D,
+  TAU
+} from '../src'
 import { AcGeMatrix2d } from '../src'
 
 describe('Test AcGeCircArc2d', () => {
@@ -352,5 +358,70 @@ describe('Test AcGeCircArc2d', () => {
     )
     expect(radius).not.toBeNull()
     expect(radius!.radius).toBeCloseTo(1)
+  })
+
+  it('pointLiesOnCircle uses a relative radial tolerance', () => {
+    expect(
+      AcGeCircArc2d.pointLiesOnCircle({ x: 10, y: 0 }, { x: 0, y: 0 }, 10)
+    ).toBe(true)
+    expect(
+      AcGeCircArc2d.pointLiesOnCircle({ x: 10.2, y: 0 }, { x: 0, y: 0 }, 10)
+    ).toBe(false)
+    // Default eps is max(1e-6, r * 1e-5) = 1e-4 for r = 10.
+    expect(
+      AcGeCircArc2d.pointLiesOnCircle(
+        { x: 10.00005, y: 0 },
+        { x: 0, y: 0 },
+        10
+      )
+    ).toBe(true)
+    expect(
+      AcGeCircArc2d.pointLiesOnCircle(
+        { x: 10.001, y: 0 },
+        { x: 0, y: 0 },
+        10
+      )
+    ).toBe(false)
+  })
+
+  it('sameCircle compares center and radius', () => {
+    expect(
+      AcGeCircArc2d.sameCircle({ x: 1, y: 2 }, 3, { x: 1, y: 2 }, 3)
+    ).toBe(true)
+    expect(
+      AcGeCircArc2d.sameCircle({ x: 1, y: 2 }, 3, { x: 1.1, y: 2 }, 3)
+    ).toBe(false)
+  })
+
+  it('isBetterDistanceAlign prefers closer points, then larger align', () => {
+    expect(AcGeCircArc2d.isBetterDistanceAlign(1, 0, 4, 10)).toBe(true)
+    expect(AcGeCircArc2d.isBetterDistanceAlign(9, 10, 4, 0)).toBe(false)
+    expect(AcGeCircArc2d.isBetterDistanceAlign(4, 2, 4, 1)).toBe(true)
+    expect(AcGeCircArc2d.isBetterDistanceAlign(4, 1, 4, 2)).toBe(false)
+  })
+
+  it('inwardAlignment picks the arc interior at a shared vertex', () => {
+    const first = new AcGeCircArc2d(
+      ORIGIN_POINT_2D,
+      1,
+      0,
+      Math.PI / 2,
+      false
+    )
+    const second = new AcGeCircArc2d(
+      ORIGIN_POINT_2D,
+      1,
+      (3 * Math.PI) / 2,
+      TAU,
+      false
+    )
+    const vertex = { x: 1, y: 0 }
+    const towardFirst = { x: 0.95, y: 0.05 }
+    const towardSecond = { x: 0.95, y: -0.05 }
+    expect(first.inwardAlignment(vertex, towardFirst)).toBeGreaterThan(0)
+    expect(second.inwardAlignment(vertex, towardFirst)).toBeLessThan(0)
+    expect(second.inwardAlignment(vertex, towardSecond)).toBeGreaterThan(0)
+    expect(first.inwardAlignment(vertex, towardSecond)).toBeLessThan(0)
+    expect(first.inwardAlignment(vertex, vertex)).toBe(0)
   })
 })

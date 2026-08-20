@@ -1,5 +1,6 @@
 import { AcCmErrors } from '@mlightcad/common'
 import {
+  AcGeIntersectPrimitive,
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
   acgeOffsetSmoothedSampledPath,
@@ -436,6 +437,17 @@ export class AcDbSpline extends AcDbCurve {
    */
   get geometricExtents() {
     return this._geo.box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return [
+      {
+        kind: 'spline',
+        spline: this._geo.clone(),
+        extendable: false
+      }
+    ]
   }
 
   /**

@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
@@ -15,6 +16,7 @@ import {
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 
 /**
  * Represents a viewport entity in AutoCAD drawings.
@@ -584,6 +586,36 @@ export class AcDbViewport extends AcDbEntity {
       )
     )
     return box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const halfWidth = this._width / 2
+    const halfHeight = this._height / 2
+    const z = this._centerPoint.z
+    const corners = [
+      new AcGePoint3d(
+        this._centerPoint.x - halfWidth,
+        this._centerPoint.y - halfHeight,
+        z
+      ),
+      new AcGePoint3d(
+        this._centerPoint.x + halfWidth,
+        this._centerPoint.y - halfHeight,
+        z
+      ),
+      new AcGePoint3d(
+        this._centerPoint.x + halfWidth,
+        this._centerPoint.y + halfHeight,
+        z
+      ),
+      new AcGePoint3d(
+        this._centerPoint.x - halfWidth,
+        this._centerPoint.y + halfHeight,
+        z
+      )
+    ]
+    return acdbIntersectPrimitivesFromPointPath(corners, true)
   }
 
   /**
