@@ -91,11 +91,7 @@ export class AcDbSymbolTableRecord<
   /**
    * Ensures this record may be modified.
    *
-   * Temporary records, still-detached records (real handle assigned but not yet
-   * added to a table), and undo/redo replay are exempt from the open-for-write
-   * check. Do not use {@link database} here: that getter falls back to the host
-   * working database and throws when it is unset or belongs to another data-model
-   * copy (Vite + peer `dwg-converter`).
+   * Temporary records and undo/redo replay are exempt from the open-for-write check.
    *
    * @throws Error when an existing record is modified without being opened for write
    */
@@ -104,7 +100,7 @@ export class AcDbSymbolTableRecord<
       return
     }
 
-    const db = this.residentDatabase
+    const db = this.database
     if (!db) {
       return
     }

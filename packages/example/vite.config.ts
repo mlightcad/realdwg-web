@@ -2,20 +2,13 @@ import { defineConfig } from 'vite'
 import { viteStaticCopy } from 'vite-plugin-static-copy'
 
 export default defineConfig({
-  resolve: {
-    dedupe: ['@mlightcad/data-model']
-  },
   optimizeDeps: {
-    // Do not prebundle converters: Vite would inline @mlightcad/data-model
+    // Do not prebundle GPL converters: Vite would inline @mlightcad/data-model
     // into the optimized chunk, creating a second HostApplicationServices /
     // workingDatabase singleton. The app then sets workingDatabase on one copy
     // while converter-created entities read the other →
     // "The current working database must be set before using it!".
-    exclude: [
-      '@mlightcad/libredwg-converter',
-      '@mlight-cad/dwg-converter',
-      '@mlightcad/data-model'
-    ]
+    exclude: ['@mlightcad/libredwg-converter', '@mlightcad/data-model']
   },
   build: {
     outDir: 'dist'
