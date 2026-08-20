@@ -1,5 +1,17 @@
 # @mlightcad/graphic-interface
 
+## 3.14.0
+
+### Minor Changes
+
+- feat: adds ObjectARX-style entity intersection so callers can query WCS intersection points between drawing entities via AcDbEntity.intersectWith, with extend-this, extend-arg, and extend-both flags plus optional apparent intersection on a projection plane. Curve entities, hatches, inserts, and dimensions expose primitives, while text-like entities stay empty. The geometry engine adds acgeIntersectCurves for pairwise line, arc, ellipse, and spline intersection with de-duplication
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.14.0
+  - @mlightcad/geometry-engine@3.14.0
+
 ## 3.13.1
 
 ### Patch Changes
