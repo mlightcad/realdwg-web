@@ -1,6 +1,7 @@
 import { AcCmColor } from '@mlightcad/common'
 
 import { AcDbOpenMode } from '../src/base'
+import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
 import {
   AcDbDatabase,
   AcDbLayerModifiedEventArgs
@@ -11,6 +12,7 @@ import {
   LAYER_TABLE_RECORD_DIFF_ATTR_KEYS
 } from '../src/database/AcDbLayerTableRecord'
 import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
+import { AcDbViewportTableRecord } from '../src/database/AcDbViewportTableRecord'
 
 describe('AcDbSymbolTableRecord write access', () => {
   it('derives layer diff keys from default attrs plus name', () => {
@@ -49,6 +51,27 @@ describe('AcDbSymbolTableRecord write access', () => {
 
     db.tables.layerTable.add(layer)
     expect(layer.isOff).toBe(true)
+  })
+
+  it('allows mutating an unbound record after a real handle without a working database', () => {
+    const services = acdbHostApplicationServices() as unknown as {
+      _workingDatabase: AcDbDatabase | null
+    }
+    const previousDb = services._workingDatabase
+    services._workingDatabase = null
+    try {
+      const record = new AcDbViewportTableRecord()
+      record.objectId = '1A2B'
+      expect(record.isTemp).toBe(false)
+      expect(() => {
+        record.standardFlag = 1
+        record.circleSides = 200
+      }).not.toThrow()
+      expect(record.standardFlag).toBe(1)
+      expect(record.circleSides).toBe(200)
+    } finally {
+      services._workingDatabase = previousDb
+    }
   })
 
   it('dispatches layerModified on commit, not during editing', () => {
