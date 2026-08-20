@@ -12,13 +12,21 @@ export {
   AcGeNurbsCurve,
   AcGePolyline2d,
   AcGeShape2d,
-  AcGeSpline3d
+  AcGeSpline3d,
+  acgeIsBetterDistanceAlign,
+  acgePointLiesOnCircle2d,
+  acgeSameCircle2d,
+  acgeCloneIntersectPrimitive,
+  acgeIntersectCurves,
+  acgeTransformIntersectPrimitive
 } from './geometry'
 export type {
   AcGeBoundaryEdgeType,
   AcGeCircumcircle2d,
   AcGeCircumcircle3d,
+  AcGeCurveExtent,
   AcGeIndexNode,
+  AcGeIntersectPrimitive,
   AcGeKnotParameterizationType,
   AcGeLoop2dType,
   AcGePolyline2dVertex,

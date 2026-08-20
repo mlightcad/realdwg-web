@@ -1,6 +1,7 @@
 import {
   AcGeCircArc3d,
   acgeGetOcsReferenceVector,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -191,6 +192,17 @@ export class AcDbCircle extends AcDbCurve {
    */
   get geometricExtents() {
     return this._geo.box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return [
+      {
+        kind: 'circArc',
+        arc: this._geo.clone(),
+        extendable: false
+      }
+    ]
   }
 
   /**

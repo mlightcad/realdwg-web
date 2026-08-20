@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
@@ -19,6 +20,7 @@ import {
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import { AcDbMText } from './AcDbMText'
 import {
   acdbCollectLineSegmentOsnapPoints,
@@ -491,6 +493,20 @@ export class AcDbLeader extends AcDbCurve {
     }
     const box = new AcGeBox3d()
     return box.setFromPoints(this.collectDrawPoints())
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    if (this.isSplined && this.splineGeo) {
+      return [
+        {
+          kind: 'spline',
+          spline: this.splineGeo.clone(),
+          extendable: false
+        }
+      ]
+    }
+    return acdbIntersectPrimitivesFromPointPath(this._vertices, false)
   }
 
   /**

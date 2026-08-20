@@ -1,11 +1,13 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
+  AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
@@ -18,6 +20,7 @@ import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -224,6 +227,16 @@ export class AcDb2dPolyline extends AcDbCurve {
     return new AcGeBox3d(
       { x: box.min.x, y: box.min.y, z: this._elevation },
       { x: box.max.x, y: box.max.y, z: this._elevation }
+    )
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromPolyline2d(
+      this._geo.vertices,
+      this.closed,
+      this._elevation,
+      AcGeVector3d.Z_AXIS
     )
   }
 

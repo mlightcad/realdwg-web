@@ -2,6 +2,7 @@ import {
   AcGeArea2d,
   AcGeBox3d,
   AcGeCircArc3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -26,6 +27,7 @@ import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
 } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -486,6 +488,28 @@ export class AcDbMLine extends AcDbEntity {
     const points = this.collectGeometryPoints()
     const box = new AcGeBox3d()
     return box.setFromPoints(points)
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const primitives: AcGeIntersectPrimitive[] = []
+    const mlineStyle = this.getMLineStyle()
+    const elementCount = this.getRenderableElementCount(mlineStyle)
+    if (elementCount <= 0) {
+      return acdbIntersectPrimitivesFromPointPath(
+        this.getReferencePath(),
+        this.closed
+      )
+    }
+    for (let i = 0; i < elementCount; i++) {
+      primitives.push(
+        ...acdbIntersectPrimitivesFromPointPath(
+          this.getElementPath(i, mlineStyle),
+          this.closed
+        )
+      )
+    }
+    return primitives
   }
 
   /**

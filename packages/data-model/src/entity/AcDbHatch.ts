@@ -10,6 +10,7 @@ import {
   AcGeCircArc2d,
   AcGeEllipseArc2d,
   AcGeIndexNode,
+  AcGeIntersectPrimitive,
   AcGeLine2d,
   AcGeLoop2d,
   AcGeLoop2dType,
@@ -20,6 +21,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
@@ -44,6 +46,7 @@ import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -1024,6 +1027,15 @@ export class AcDbHatch extends AcDbEntity {
       )
     })
     return extents
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromAreaLoops(
+      this._geo.loops,
+      this._elevation,
+      AcGeVector3d.Z_AXIS
+    )
   }
 
   /**

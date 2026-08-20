@@ -1,5 +1,6 @@
 import {
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -22,6 +23,7 @@ import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
 } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import { AcDbOleFrame } from './AcDbOleFrame'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 
@@ -509,6 +511,14 @@ export class AcDbOle2Frame extends AcDbOleFrame {
    */
   get geometricExtents(): AcGeBox3d {
     return new AcGeBox3d().setFromPoints(this.boundaryPath())
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return acdbIntersectPrimitivesFromPointPath(
+      this.boundaryPath().slice(0, 4),
+      true
+    )
   }
 
   /**

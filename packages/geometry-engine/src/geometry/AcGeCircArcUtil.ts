@@ -122,3 +122,59 @@ export function acgeProjectPointOntoCircle2d(
   const scale = radius / distance
   return new AcGePoint2d(center.x + dx * scale, center.y + dy * scale)
 }
+
+/**
+ * Default absolute tolerance when comparing two circle centers/radii in XY.
+ */
+const ACGE_SAME_CIRCLE_EPS = 1e-8
+
+/**
+ * True when `point` lies on the circle `(center, radius)` within a radial
+ * tolerance. The default tolerance is `max(FLOAT_TOL, radius * 1e-5)`.
+ */
+export function acgePointLiesOnCircle2d(
+  point: AcGePoint2dLike,
+  center: AcGePoint2dLike,
+  radius: number,
+  eps?: number
+): boolean {
+  const radial = Math.abs(acgeDistance2d(point, center) - radius)
+  return radial <= (eps ?? Math.max(FLOAT_TOL, radius * 1e-5))
+}
+
+/**
+ * True when two circles share the same center and radius within `eps`
+ * (default `1e-8`).
+ */
+export function acgeSameCircle2d(
+  center1: AcGePoint2dLike,
+  radius1: number,
+  center2: AcGePoint2dLike,
+  radius2: number,
+  eps: number = ACGE_SAME_CIRCLE_EPS
+): boolean {
+  return (
+    Math.abs(center1.x - center2.x) <= eps &&
+    Math.abs(center1.y - center2.y) <= eps &&
+    Math.abs(radius1 - radius2) <= eps
+  )
+}
+
+/**
+ * Lexicographic pick among nearest-point candidates: smaller `distSq` wins;
+ * on a near-tie, larger `align` wins.
+ *
+ * Use this when two geometries share a vertex so nearest-point distances are
+ * equal and a later-wins compare would always take the second candidate.
+ */
+export function acgeIsBetterDistanceAlign(
+  distSq: number,
+  align: number,
+  bestDistSq: number,
+  bestAlign: number
+): boolean {
+  const tie = Math.max(1e-18, Math.abs(bestDistSq) * 1e-9)
+  if (distSq < bestDistSq - tie) return true
+  if (distSq > bestDistSq + tie) return false
+  return align > bestAlign
+}

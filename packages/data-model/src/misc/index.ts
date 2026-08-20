@@ -59,6 +59,7 @@ export type {
   AcDbMemoryEstimateOptions
 } from './AcDbMemoryEstimator'
 export { AcDbObjectIterator } from './AcDbObjectIterator'
+export { AcDbIntersect } from './AcDbIntersect'
 export {
   ACDB_OLE2FRAME_GEOMETRY_HEADER_SIZE,
   acdbParseOle2FrameGeometryHeader

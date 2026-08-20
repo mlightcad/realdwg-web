@@ -25,7 +25,10 @@ import {
 import {
   type AcGeCircumcircle2d,
   acgeComputeCircumcircle2d,
-  acgeProjectPointOntoCircle2d
+  acgeIsBetterDistanceAlign,
+  acgePointLiesOnCircle2d,
+  acgeProjectPointOntoCircle2d,
+  acgeSameCircle2d
 } from './AcGeCircArcUtil'
 import { AcGeCurve2d } from './AcGeCurve2d'
 
@@ -151,6 +154,46 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     point: AcGePoint2dLike
   ) {
     return acgeProjectPointOntoCircle2d(center, radius, point)
+  }
+
+  /**
+   * True when `point` lies on the circle `(center, radius)` within a radial
+   * tolerance (default `max(1e-6, radius * 1e-5)`).
+   */
+  static pointLiesOnCircle(
+    point: AcGePoint2dLike,
+    center: AcGePoint2dLike,
+    radius: number,
+    eps?: number
+  ): boolean {
+    return acgePointLiesOnCircle2d(point, center, radius, eps)
+  }
+
+  /**
+   * True when two circles share the same center and radius within `eps`
+   * (default `1e-8`).
+   */
+  static sameCircle(
+    center1: AcGePoint2dLike,
+    radius1: number,
+    center2: AcGePoint2dLike,
+    radius2: number,
+    eps?: number
+  ): boolean {
+    return acgeSameCircle2d(center1, radius1, center2, radius2, eps)
+  }
+
+  /**
+   * Lexicographic pick among nearest-point candidates: smaller `distSq` wins;
+   * on a near-tie, larger `align` wins.
+   */
+  static isBetterDistanceAlign(
+    distSq: number,
+    align: number,
+    bestDistSq: number,
+    bestAlign: number
+  ): boolean {
+    return acgeIsBetterDistanceAlign(distSq, align, bestDistSq, bestAlign)
   }
 
   /**
@@ -708,6 +751,35 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     const dStart = p.distanceToSquared(this.startPoint)
     const dEnd = p.distanceToSquared(this.endPoint)
     return dStart <= dEnd ? this.startPoint.clone() : this.endPoint.clone()
+  }
+
+  /**
+   * How much `query - onCurve` points into this circular arc.
+   *
+   * Zero when `onCurve` is not an endpoint (within a relative tolerance), or
+   * when `query` coincides with `onCurve`. A positive value means `query` lies
+   * on this arc's interior side of `onCurve` — useful when two arcs share a
+   * vertex and nearest-point distances are equal.
+   */
+  inwardAlignment(onCurve: AcGePoint2dLike, query: AcGePoint2dLike): number {
+    const mx = query.x - onCurve.x
+    const my = query.y - onCurve.y
+    if (mx * mx + my * my < 1e-24) return 0
+
+    const r = this.radius > 0 ? this.radius : 1
+    const endTolSq = Math.max(1e-16, 1e-12 * r * r)
+    const atStart = this.startPoint.distanceToSquared(onCurve) <= endTolSq
+    const atEnd = this.endPoint.distanceToSquared(onCurve) <= endTolSq
+    if (!atStart && !atEnd) return 0
+
+    const pts = this.getPoints(8)
+    if (pts.length < 3) return 0
+    const inward = atStart && !atEnd ? pts[1]! : pts[pts.length - 2]!
+    const ix = inward.x - onCurve.x
+    const iy = inward.y - onCurve.y
+    const ilen = Math.hypot(ix, iy)
+    if (!(ilen > 1e-18)) return 0
+    return (mx * ix + my * iy) / ilen
   }
 
   /**

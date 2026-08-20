@@ -1,6 +1,7 @@
 import {
   AcGeArea2d,
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
@@ -17,6 +18,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
 import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
 
@@ -242,6 +244,15 @@ export class AcDbTrace extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     return new AcGeBox3d().setFromPoints(this._vertices)
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const v0 = this._vertices[0]
+    const v1 = this._vertices[1]
+    const v2 = this._vertices[2]
+    const v3 = this._vertices[3]
+    return acdbIntersectPrimitivesFromPointPath([v0, v1, v3, v2], true)
   }
 
   /**

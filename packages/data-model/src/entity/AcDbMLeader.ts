@@ -2,6 +2,7 @@ import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -30,6 +31,7 @@ import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -1405,6 +1407,19 @@ export class AcDbMLeader extends AcDbEntity {
     return points.length > 0
       ? new AcGeBox3d().setFromPoints(points)
       : new AcGeBox3d()
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    const primitives: AcGeIntersectPrimitive[] = []
+    this._leaders.forEach(leader => {
+      leader.leaderLines.forEach(line => {
+        primitives.push(
+          ...acdbIntersectPrimitivesFromPointPath(line.vertices, false)
+        )
+      })
+    })
+    return primitives
   }
 
   /**

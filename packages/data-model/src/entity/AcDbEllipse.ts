@@ -1,6 +1,7 @@
 import {
   AcGeEllipseArc3d,
   acgeGetOcsAngle,
+  AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
@@ -316,6 +317,17 @@ export class AcDbEllipse extends AcDbCurve {
    */
   get geometricExtents() {
     return this._geo.box
+  }
+
+  /** @inheritdoc */
+  override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
+    return [
+      {
+        kind: 'ellipseArc',
+        arc: this._geo.clone(),
+        extendable: !this.closed
+      }
+    ]
   }
 
   /**
