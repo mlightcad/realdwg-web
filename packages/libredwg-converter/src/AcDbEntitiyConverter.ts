@@ -77,7 +77,8 @@ import {
   AcGeVector2d,
   AcGeVector3d,
   AcGiMTextAttachmentPoint,
-  AcGiMTextFlowDirection} from '@mlightcad/data-model'
+  AcGiMTextFlowDirection
+} from '@mlightcad/data-model'
 import type {
   Dwg3dFaceEntity,
   DwgAlignedDimensionEntity,
@@ -463,15 +464,19 @@ export class AcDbEntityConverter {
           polyType = AcDbPoly2dType.QuadSplinePoly
         }
       }
-      return new AcDb2dPolyline(
+      const dbPolyline = new AcDb2dPolyline(
         polyType,
         vertices,
-        0,
+        vertices[0]?.z ?? 0,
         isClosed,
         polyline.startWidth,
         polyline.endWidth,
         bulges
       )
+      if (polyline.extrusionDirection) {
+        dbPolyline.normal = polyline.extrusionDirection
+      }
+      return dbPolyline
     }
   }
 
@@ -641,6 +646,9 @@ export class AcDbEntityConverter {
         }
       }
     }
+    if (hatch.extrusionDirection) {
+      dbEntity.normal = hatch.extrusionDirection
+    }
     return dbEntity
   }
 
@@ -765,7 +773,8 @@ export class AcDbEntityConverter {
     if (leader.horizontalDirection) {
       dbEntity.horizontalDirection = leader.horizontalDirection
     }
-    if (leader.offsetFromBlock) dbEntity.offsetFromBlock = leader.offsetFromBlock
+    if (leader.offsetFromBlock)
+      dbEntity.offsetFromBlock = leader.offsetFromBlock
     if (leader.offsetFromAnnotation) {
       dbEntity.offsetFromAnnotation = leader.offsetFromAnnotation
     }
@@ -1314,8 +1323,7 @@ export class AcDbEntityConverter {
       Math.abs(dbViewport.centerPoint.x) < eps &&
       Math.abs(dbViewport.centerPoint.y) < eps
     const target = dbViewport.viewTarget
-    const targetAtOrigin =
-      Math.abs(target.x) < eps && Math.abs(target.y) < eps
+    const targetAtOrigin = Math.abs(target.x) < eps && Math.abs(target.y) < eps
     const oneToOne =
       Number.isFinite(dbViewport.height) &&
       Number.isFinite(dbViewport.viewHeight) &&

@@ -49,9 +49,10 @@ export type AcGeIntersectPrimitive =
       spline: AcGeSpline3d
     })
 
-const SPLINE_SAMPLE_COUNT = 64
+const SPLINE_SAMPLE_COUNT = 128
 const PLANAR_SAMPLE_COUNT = 96
 const POINT_TOL = DEFAULT_TOL.equalPointTol
+const REFINE_TOL = POINT_TOL * 8
 
 /**
  * Finds intersection points between two sets of curve primitives.
@@ -68,7 +69,7 @@ const POINT_TOL = DEFAULT_TOL.equalPointTol
  * @param extendA - Extend the first operand when its primitives allow it
  * @param extendB - Extend the second operand when its primitives allow it
  * @param projPlane - Optional projection plane for apparent intersection
- * @returns Intersection points in WCS, de-duplicated by {@link FLOAT_TOL}
+ * @returns Intersection points in WCS, de-duplicated by the equal-point tolerance
  */
 export function acgeIntersectCurves(
   a: readonly AcGeIntersectPrimitive[],
@@ -170,6 +171,12 @@ type PreparedPrimitive =
       full: boolean
       box: AcGeBox3d
     }
+  | {
+      kind: 'spline'
+      spline: AcGeSpline3d
+      samples: PreparedLine[]
+      box?: AcGeBox3d
+    }
 
 function flattenPrimitives(
   primitives: readonly AcGeIntersectPrimitive[],
@@ -190,12 +197,23 @@ function flattenPrimitives(
       case 'circArc': {
         const expanded = expandCircArc(primitive.arc, shouldExtend)
         if (projPlane && !planesParallel(expanded.normal, projPlane.normal)) {
-          appendSampledCurve(
-            result,
-            sampleCircArc(expanded, isFullCircArc(expanded)),
-            isFullCircArc(expanded),
-            projPlane
-          )
+          const projected = projectCircleOntoPlane(expanded, projPlane)
+          if (projected?.kind === 'circArc') {
+            result.push(
+              prepareCircArc(projected.arc, isFullCircArc(projected.arc))
+            )
+          } else if (projected?.kind === 'ellipseArc') {
+            result.push(
+              prepareEllipseArc(projected.arc, isFullEllipseArc(projected.arc))
+            )
+          } else {
+            appendSampledCurve(
+              result,
+              sampleCircArc(expanded, isFullCircArc(expanded)),
+              isFullCircArc(expanded),
+              projPlane
+            )
+          }
         } else {
           const projected = projectCircArc(expanded, projPlane)
           if (projected) {
@@ -224,12 +242,16 @@ function flattenPrimitives(
         break
       }
       case 'spline': {
-        appendSampledCurve(
-          result,
-          primitive.spline.getPoints(SPLINE_SAMPLE_COUNT),
-          primitive.spline.closed,
-          projPlane
-        )
+        if (projPlane) {
+          appendSampledCurve(
+            result,
+            primitive.spline.getPoints(SPLINE_SAMPLE_COUNT),
+            primitive.spline.closed,
+            projPlane
+          )
+        } else {
+          result.push(prepareSpline(primitive.spline))
+        }
         break
       }
     }
@@ -273,6 +295,30 @@ function prepareEllipseArc(
     arc,
     full: full || isFullEllipseArc(arc),
     box: arc.box
+  }
+}
+
+function prepareSpline(spline: AcGeSpline3d): PreparedPrimitive {
+  const samples: PreparedLine[] = []
+  const points = spline.getPoints(SPLINE_SAMPLE_COUNT)
+  if (points.length >= 2) {
+    const count = spline.closed ? points.length : points.length - 1
+    for (let i = 0; i < count; i++) {
+      const start = points[i]
+      const end = points[(i + 1) % points.length]
+      if (start.distanceToSquared(end) < POINT_TOL * POINT_TOL) continue
+      samples.push(prepareLine(start.clone(), end.clone(), 'bounded'))
+    }
+  }
+  const box = new AcGeBox3d()
+  for (const sample of samples) {
+    if (sample.box) box.union(sample.box)
+  }
+  return {
+    kind: 'spline',
+    spline,
+    samples,
+    box: samples.length > 0 ? box : undefined
   }
 }
 
@@ -331,6 +377,85 @@ function projectCircArc(
     plane.normal.clone(),
     projectDirectionToPlane(arc.refVec, plane.normal)
   )
+}
+
+/**
+ * Orthogonal projection of a circular arc onto `plane`. Parallel planes keep a
+ * circle; a tilted circle becomes an ellipse. A circle whose plane is
+ * perpendicular to `plane` degenerates to a segment and returns null so the
+ * caller can sample.
+ */
+function projectCircleOntoPlane(
+  arc: AcGeCircArc3d,
+  plane: AcGePlane
+):
+  | { kind: 'circArc'; arc: AcGeCircArc3d }
+  | { kind: 'ellipseArc'; arc: AcGeEllipseArc3d }
+  | null {
+  const center = projectPointToPlane(arc.center, plane)
+  const n = arc.normal.clone()
+  if (n.lengthSq() < POINT_TOL * POINT_TOL) return null
+  n.normalize()
+  const p = plane.normal.clone()
+  if (p.lengthSq() < POINT_TOL * POINT_TOL) return null
+  p.normalize()
+  const cos = n.dot(p)
+  const absCos = Math.abs(cos)
+
+  if (absCos > 1 - 1e-8) {
+    return {
+      kind: 'circArc',
+      arc: new AcGeCircArc3d(
+        center,
+        arc.radius,
+        arc.startAngle,
+        arc.endAngle,
+        p,
+        projectDirectionToPlane(arc.refVec, p)
+      )
+    }
+  }
+  if (absCos < 1e-8) return null
+
+  const hinge = new AcGeVector3d().crossVectors(n, p)
+  if (hinge.lengthSq() < POINT_TOL * POINT_TOL) return null
+  hinge.normalize()
+
+  const ellipse = new AcGeEllipseArc3d(
+    center,
+    p,
+    hinge,
+    arc.radius,
+    arc.radius * absCos,
+    0,
+    TAU
+  )
+  if (isFullCircArc(arc)) {
+    return { kind: 'ellipseArc', arc: ellipse }
+  }
+
+  const start = projectPointToPlane(arc.startPoint, plane)
+  const end = projectPointToPlane(arc.endPoint, plane)
+  const mid = projectPointToPlane(arc.midPoint, plane)
+  const startAngle = ellipseArcAngle(ellipse, start)
+  const endAngle = ellipseArcAngle(ellipse, end)
+  const midAngle = ellipseArcAngle(ellipse, mid)
+  const tMid = AcGeMathUtil.normalizeAngle(midAngle - startAngle)
+  const tEnd = AcGeMathUtil.normalizeAngle(endAngle - startAngle)
+  const sweepEnd =
+    tMid <= tEnd || tEnd < 1e-8 ? startAngle + tEnd : startAngle + tEnd + TAU
+  return {
+    kind: 'ellipseArc',
+    arc: new AcGeEllipseArc3d(
+      center,
+      p,
+      hinge,
+      arc.radius,
+      arc.radius * absCos,
+      startAngle,
+      sweepEnd
+    )
+  }
 }
 
 function projectEllipseArc(
@@ -409,6 +534,11 @@ function intersectPrepared(
   a: PreparedPrimitive,
   b: PreparedPrimitive
 ): AcGePoint3d[] {
+  if (a.kind === 'spline' && b.kind === 'spline') {
+    return intersectSplineSpline(a, b)
+  }
+  if (a.kind === 'spline') return intersectSplineOther(a, b)
+  if (b.kind === 'spline') return intersectSplineOther(b, a)
   if (a.kind === 'line' && b.kind === 'line') return intersectLineLine(a, b)
   if (a.kind === 'line' && b.kind === 'circArc') {
     return intersectLineCircArc(a, b.arc, b.full)
@@ -435,6 +565,95 @@ function intersectPrepared(
     return intersectEllipseEllipse(a.arc, a.full, b.arc, b.full)
   }
   return []
+}
+
+function intersectSplineOther(
+  spline: Extract<PreparedPrimitive, { kind: 'spline' }>,
+  other: PreparedPrimitive
+): AcGePoint3d[] {
+  const hits: AcGePoint3d[] = []
+  for (const sample of spline.samples) {
+    if (!boxesMayIntersect(sample, other)) continue
+    appendPoints(hits, intersectPrepared(sample, other))
+  }
+  return refineSplineHits(spline.spline, hits, other)
+}
+
+function intersectSplineSpline(
+  a: Extract<PreparedPrimitive, { kind: 'spline' }>,
+  b: Extract<PreparedPrimitive, { kind: 'spline' }>
+): AcGePoint3d[] {
+  const hits: AcGePoint3d[] = []
+  for (const sa of a.samples) {
+    for (const sb of b.samples) {
+      if (!boxesMayIntersect(sa, sb)) continue
+      appendPoints(hits, intersectLineLine(sa, sb))
+    }
+  }
+  const points: AcGePoint3d[] = []
+  for (const hit of hits) {
+    const pa = a.spline.nearestPoint(hit, SPLINE_SAMPLE_COUNT)
+    const pb = b.spline.nearestPoint(hit, SPLINE_SAMPLE_COUNT)
+    if (pa.distanceTo(pb) <= REFINE_TOL) points.push(pa)
+  }
+  return points
+}
+
+function refineSplineHits(
+  spline: AcGeSpline3d,
+  hits: AcGePoint3d[],
+  other: PreparedPrimitive
+): AcGePoint3d[] {
+  const points: AcGePoint3d[] = []
+  for (const hit of hits) {
+    const refined = spline.nearestPoint(hit, SPLINE_SAMPLE_COUNT)
+    if (distanceToPrepared(other, refined) <= REFINE_TOL) {
+      points.push(refined)
+    }
+  }
+  return points
+}
+
+function distanceToPrepared(
+  primitive: PreparedPrimitive,
+  point: AcGePoint3d
+): number {
+  if (primitive.kind === 'line') {
+    const dirLenSq = primitive.dir.lengthSq()
+    if (dirLenSq < POINT_TOL * POINT_TOL) return Number.POSITIVE_INFINITY
+    const t =
+      new AcGeVector3d().subVectors(point, primitive.start).dot(primitive.dir) /
+      dirLenSq
+    if (!isParamOnExtent(t, primitive.extent)) return Number.POSITIVE_INFINITY
+    return pointOnLine(primitive.start, primitive.dir, t).distanceTo(point)
+  }
+  if (primitive.kind === 'circArc') {
+    if (!isPointOnCircle(point, primitive.arc)) {
+      const plane = planeFromNormalAndPoint(
+        primitive.arc.normal,
+        primitive.arc.center
+      )
+      const planar = Math.abs(plane.distanceToPoint(point))
+      const radial = Math.abs(
+        point.distanceTo(primitive.arc.center) - primitive.arc.radius
+      )
+      const off = Math.hypot(planar, radial)
+      if (off > REFINE_TOL) return off
+    }
+    return isAngleOnCircArc(
+      primitive.arc,
+      circArcAngle(primitive.arc, point),
+      primitive.full
+    )
+      ? 0
+      : Number.POSITIVE_INFINITY
+  }
+  if (primitive.kind === 'ellipseArc') {
+    return isPointOnEllipse(point, primitive.arc, primitive.full)
+      ? 0
+      : Math.abs(ellipseImplicit(primitive.arc, point))
+  }
+  return Number.POSITIVE_INFINITY
 }
 
 function intersectLineLine(a: PreparedLine, b: PreparedLine): AcGePoint3d[] {

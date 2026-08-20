@@ -2,17 +2,20 @@ import {
   AcGePoint2d,
   AcGePoint3d,
   AcGePolyline2d,
+  acgeTransformOcsPointToWcs,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import {
+  AcDb2dPolyline,
   AcDbAlignedDimension,
   AcDbBlockReference,
   AcDbCircle,
   AcDbHatch,
   AcDbLine,
+  AcDbPoly2dType,
   AcDbPolyline,
   AcDbRay,
   AcDbText,
@@ -227,5 +230,67 @@ describe('AcDbEntity.intersectWith', () => {
 
     expect(text.intersectWith(line)).toEqual([])
     expect(line.intersectWith(text)).toEqual([])
+  })
+
+  it('intersects a 2d polyline using its extrusion normal', () => {
+    const polyline = new AcDb2dPolyline(AcDbPoly2dType.SimplePoly, [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 }
+    ])
+    polyline.normal = { x: 0, y: 1, z: 0 }
+    const start = acgeTransformOcsPointToWcs(
+      { x: 0, y: 0, z: 0 },
+      polyline.normal
+    )
+    const end = acgeTransformOcsPointToWcs(
+      { x: 10, y: 0, z: 0 },
+      polyline.normal
+    )
+    const mid = new AcGePoint3d().addVectors(start, end).multiplyScalar(0.5)
+    const dir = new AcGeVector3d().subVectors(end, start)
+    const perp = new AcGeVector3d(-dir.y, dir.x, dir.z)
+    if (perp.lengthSq() < 1e-20) {
+      perp.set(0, 0, 1)
+    }
+    perp.normalize()
+    const cutter = new AcDbLine(
+      mid.clone().add(perp),
+      mid.clone().addScaledVector(perp, -1)
+    )
+
+    const points = polyline.intersectWith(cutter)
+    expect(points).toHaveLength(1)
+    expectPoint(points, mid)
+  })
+
+  it('intersects a hatch using its extrusion normal', () => {
+    const hatch = new AcDbHatch()
+    hatch.normal = { x: 0, y: 1, z: 0 }
+    hatch.add(
+      new AcGePolyline2d(
+        [
+          { x: 0, y: 0 },
+          { x: 10, y: 0 },
+          { x: 10, y: 10 },
+          { x: 0, y: 10 }
+        ],
+        true
+      )
+    )
+    const a = acgeTransformOcsPointToWcs({ x: 0, y: 0, z: 0 }, hatch.normal)
+    const b = acgeTransformOcsPointToWcs({ x: 10, y: 0, z: 0 }, hatch.normal)
+    const mid = new AcGePoint3d().addVectors(a, b).multiplyScalar(0.5)
+    const dir = new AcGeVector3d().subVectors(b, a)
+    const perp = new AcGeVector3d(-dir.y, dir.x, dir.z)
+    if (perp.lengthSq() < 1e-20) perp.set(0, 0, 1)
+    perp.normalize()
+    const cutter = new AcDbLine(
+      mid.clone().add(perp),
+      mid.clone().addScaledVector(perp, -1)
+    )
+
+    const points = hatch.intersectWith(cutter)
+    expect(points).toHaveLength(1)
+    expectPoint(points, mid)
   })
 })

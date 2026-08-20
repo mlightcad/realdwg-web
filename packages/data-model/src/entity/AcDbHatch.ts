@@ -21,6 +21,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  acgeTransformOcsPointToWcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -193,6 +194,8 @@ export class AcDbHatch extends AcDbEntity {
   private _isSolidFill: boolean
   /** The elevation (Z-coordinate) of the hatch plane */
   private _elevation: number
+  /** Extrusion direction / plane normal (DXF group 210). */
+  private _normal = new AcGeVector3d(0, 0, 1)
   /** The definition lines for the hatch pattern */
   private _definitionLines: AcGiHatchPatternLine[]
   /** Whether current definition lines were generated from a predefined PAT entry. */
@@ -503,6 +506,19 @@ export class AcDbHatch extends AcDbEntity {
   }
   set elevation(value: number) {
     this._elevation = value
+  }
+
+  /**
+   * Extrusion direction / plane normal (DXF group 210).
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
+    if (this._normal.lengthSq() > 0) {
+      this._normal.normalize()
+    }
   }
 
   /**
@@ -1020,10 +1036,24 @@ export class AcDbHatch extends AcDbEntity {
     areas.forEach(area => {
       const box = area.box
       extents.union(
-        new AcGeBox3d(
-          { x: box.min.x, y: box.min.y, z: this._elevation },
-          { x: box.max.x, y: box.max.y, z: this._elevation }
-        )
+        new AcGeBox3d().setFromPoints([
+          acgeTransformOcsPointToWcs(
+            { x: box.min.x, y: box.min.y, z: this._elevation },
+            this._normal
+          ),
+          acgeTransformOcsPointToWcs(
+            { x: box.max.x, y: box.min.y, z: this._elevation },
+            this._normal
+          ),
+          acgeTransformOcsPointToWcs(
+            { x: box.max.x, y: box.max.y, z: this._elevation },
+            this._normal
+          ),
+          acgeTransformOcsPointToWcs(
+            { x: box.min.x, y: box.max.y, z: this._elevation },
+            this._normal
+          )
+        ])
       )
     })
     return extents
@@ -1034,7 +1064,7 @@ export class AcDbHatch extends AcDbEntity {
     return acdbIntersectPrimitivesFromAreaLoops(
       this._geo.loops,
       this._elevation,
-      AcGeVector3d.Z_AXIS
+      this._normal
     )
   }
 
@@ -1704,6 +1734,10 @@ export class AcDbHatch extends AcDbEntity {
     this._elevation = new AcGePoint3d(0, 0, this._elevation).applyMatrix4(
       matrix
     ).z
+    this._normal.transformDirection(matrix)
+    if (this._normal.lengthSq() > 0) {
+      this._normal.normalize()
+    }
 
     const xAxis = new AcGePoint3d(1, 0, 0).applyMatrix4(matrix)
     const origin = new AcGePoint3d().applyMatrix4(matrix)
@@ -1735,7 +1769,7 @@ export class AcDbHatch extends AcDbEntity {
     this.updatePredefinedPatternDefinitionLines(patternName, patternScale)
     filer.writeSubclassMarker('AcDbHatch')
     filer.writePoint3d(10, { x: 0, y: 0, z: this.elevation })
-    filer.writeVector3d(210, { x: 0, y: 0, z: 1 })
+    filer.writeVector3d(210, this.normal)
     filer.writeString(
       2,
       patternName ||
@@ -1938,6 +1972,9 @@ export class AcDbHatch extends AcDbEntity {
         }
 
     let elevation = this.elevation
+    let nx = this.normal.x
+    let ny = this.normal.y
+    let nz = this.normal.z
     let patternAngleDeg = (this.patternAngle * 180) / Math.PI
     let boundaryFlag = 0
     let isPolylineBoundary = false
@@ -1949,12 +1986,7 @@ export class AcDbHatch extends AcDbEntity {
     let pendingVertex: PendingVertex | null = null
     let edges: EdgeBuilder[] = []
     let currentEdge: EdgeBuilder | null = null
-    let edgePhase:
-      | 'type'
-      | 'line-end'
-      | 'arc'
-      | 'ellipse'
-      | 'spline' = 'type'
+    let edgePhase: 'type' | 'line-end' | 'arc' | 'ellipse' | 'spline' = 'type'
     let loopsRemaining = 0
     let inPatternLines = false
     let currentPatternLine: AcGiHatchPatternLine | null = null
@@ -2236,7 +2268,14 @@ export class AcDbHatch extends AcDbEntity {
 
       switch (code) {
         case 10:
-          if (isPolylineBoundary || (currentEdge && currentEdge.kind !== 'line' && currentEdge.kind !== 'arc' && currentEdge.kind !== 'ellipse' && currentEdge.kind !== 'spline')) {
+          if (
+            isPolylineBoundary ||
+            (currentEdge &&
+              currentEdge.kind !== 'line' &&
+              currentEdge.kind !== 'arc' &&
+              currentEdge.kind !== 'ellipse' &&
+              currentEdge.kind !== 'spline')
+          ) {
             // handled below in boundary context
           }
           if (loopsRemaining > 0 && isPolylineBoundary) {
@@ -2486,9 +2525,13 @@ export class AcDbHatch extends AcDbEntity {
           this.hatchStyle = n as AcDbHatchStyle
           break
         case 210:
+          nx = n
+          break
         case 220:
+          ny = n
+          break
         case 230:
-          // Extrusion — hatch currently stores elevation only.
+          nz = n
           break
         default:
           break
@@ -2505,8 +2548,11 @@ export class AcDbHatch extends AcDbEntity {
     }
     flushPendingGradientAci()
     this.elevation = elevation
+    const extrusion = new AcGeVector3d(nx, ny, nz)
+    if (extrusion.lengthSq() > 0) {
+      this.normal = extrusion
+    }
     this.patternAngle = (patternAngleDeg * Math.PI) / 180
     return this
   }
 }
-

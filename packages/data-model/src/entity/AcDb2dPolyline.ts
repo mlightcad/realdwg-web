@@ -7,6 +7,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
+  acgeTransformOcsPointToWcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -76,6 +77,8 @@ export class AcDb2dPolyline extends AcDbCurve {
   private _polyType: AcDbPoly2dType
   /** The elevation (Z-coordinate) of the polyline plane */
   private _elevation: number
+  /** Extrusion direction / plane normal (DXF group 210). */
+  private _normal = new AcGeVector3d(0, 0, 1)
   /** The underlying geometric polyline object */
   private _geo: AcGePolyline2d<AcGePolyline2dVertex>
 
@@ -156,6 +159,19 @@ export class AcDb2dPolyline extends AcDbCurve {
   }
 
   /**
+   * Extrusion direction / plane normal (DXF group 210).
+   */
+  get normal(): AcGeVector3d {
+    return this._normal
+  }
+  set normal(value: AcGeVector3dLike) {
+    this._normal.copy(value)
+    if (this._normal.lengthSq() > 0) {
+      this._normal.normalize()
+    }
+  }
+
+  /**
    * Gets whether this polyline is closed.
    *
    * A closed polyline has a segment drawn from the last vertex to the first vertex,
@@ -224,10 +240,24 @@ export class AcDb2dPolyline extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     const box = this._geo.box
-    return new AcGeBox3d(
-      { x: box.min.x, y: box.min.y, z: this._elevation },
-      { x: box.max.x, y: box.max.y, z: this._elevation }
-    )
+    return new AcGeBox3d().setFromPoints([
+      acgeTransformOcsPointToWcs(
+        { x: box.min.x, y: box.min.y, z: this._elevation },
+        this._normal
+      ),
+      acgeTransformOcsPointToWcs(
+        { x: box.max.x, y: box.min.y, z: this._elevation },
+        this._normal
+      ),
+      acgeTransformOcsPointToWcs(
+        { x: box.max.x, y: box.max.y, z: this._elevation },
+        this._normal
+      ),
+      acgeTransformOcsPointToWcs(
+        { x: box.min.x, y: box.max.y, z: this._elevation },
+        this._normal
+      )
+    ])
   }
 
   /** @inheritdoc */
@@ -236,7 +266,7 @@ export class AcDb2dPolyline extends AcDbCurve {
       this._geo.vertices,
       this.closed,
       this._elevation,
-      AcGeVector3d.Z_AXIS
+      this._normal
     )
   }
 
@@ -349,6 +379,10 @@ export class AcDb2dPolyline extends AcDbCurve {
     })
 
     this._elevation = elevation
+    this._normal.transformDirection(matrix)
+    if (this._normal.lengthSq() > 0) {
+      this._normal.normalize()
+    }
     ;(
       this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
         _boundingBoxNeedsUpdate: boolean
@@ -526,6 +560,7 @@ export class AcDb2dPolyline extends AcDbCurve {
     filer.writeDouble(10, 0)
     filer.writeDouble(20, 0)
     filer.writeDouble(30, this.elevation)
+    filer.writeVector3d(210, this.normal)
     return this
   }
 

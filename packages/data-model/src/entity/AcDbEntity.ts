@@ -712,6 +712,8 @@ export abstract class AcDbEntity extends AcDbObject {
    *
    * Default implementation returns `[]` (no intersections). Subclasses with
    * drawable curve geometry override this; callers should use `intersectWith`.
+   * Entities without curve primitives (text, points, attributes) keep this
+   * empty default, matching ObjectARX.
    */
   subGetIntersectCurves(): AcGeIntersectPrimitive[] {
     return []

@@ -275,7 +275,30 @@ describe('acgeIntersectCurves', () => {
       [linePrim([5, -5, 0], [5, 5, 0])]
     )
     expect(points.length).toBeGreaterThanOrEqual(1)
-    expect(points[0].x).toBeCloseTo(5, 2)
-    expect(points[0].y).toBeCloseTo(0, 2)
+    expect(points[0].x).toBeCloseTo(5, 5)
+    expect(points[0].y).toBeCloseTo(0, 5)
+  })
+
+  it('projects a tilted circle onto a plane as an ellipse', () => {
+    const n = new AcGeVector3d(0, 1, 1).normalize()
+    const circle: AcGeIntersectPrimitive = {
+      kind: 'circArc',
+      arc: new AcGeCircArc3d({ x: 0, y: 0, z: 0 }, 5, 0, TAU, n),
+      extendable: false
+    }
+    const plane = new AcGePlane().setFromNormalAndCoplanarPoint(
+      AcGeVector3d.Z_AXIS,
+      new AcGePoint3d(0, 0, 0)
+    )
+    const points = acgeIntersectCurves(
+      [circle],
+      [linePrim([-10, 0, 0], [10, 0, 0])],
+      false,
+      false,
+      plane
+    )
+    expect(points).toHaveLength(2)
+    expectPoint(points, { x: 5, y: 0, z: 0 }, 4)
+    expectPoint(points, { x: -5, y: 0, z: 0 }, 4)
   })
 })

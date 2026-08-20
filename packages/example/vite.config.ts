@@ -13,7 +13,7 @@ export default defineConfig({
     // "The current working database must be set before using it!".
     exclude: [
       '@mlightcad/libredwg-converter',
-      '@mlightcad/dwg-converter',
+      '@mlight-cad/dwg-converter',
       '@mlightcad/data-model'
     ]
   },
