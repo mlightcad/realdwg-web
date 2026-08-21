@@ -481,6 +481,9 @@ describe('DXF Phase 3–5 extensions', () => {
       'SEQEND'
     ].join('\n')
     const db = createWorkingDb()
+    // LibreDWG dwg2dxf often writes $CECOLOR 0 (ByBlock) while omitting
+    // group 62 on ByLayer entities. Import must not copy CECOLOR.
+    db.cecolor.colorIndex = 0
     const filer = AcDbDxfFiler.fromString(snippet, { database: db })
     expect(filer.readItem()?.value).toBe('LINE')
     const line = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
@@ -488,6 +491,11 @@ describe('DXF Phase 3–5 extensions', () => {
     expect(line.objectId).toBe('6EA')
     expect(line.ownerId).toBe('1F')
     expect(line.layer).toBe('3中心线层')
+    expect(line.color.isByLayer).toBe(true)
+    expect(line.color.colorIndex).toBe(256)
+    line.resolveEffectiveProperties()
+    expect(line.color.isByLayer).toBe(true)
+    expect(line.color.colorIndex).toBe(256)
   })
 
   it('reads $CLAYER from HEADER', async () => {

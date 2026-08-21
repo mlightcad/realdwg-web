@@ -2685,4 +2685,185 @@ describe('AcDbNativeDxfConverter', () => {
     expect(solid.acisData).toContain('point $-1 1 2 3')
     expect(solid.hasRenderableGeometry).toBe(true)
   })
+
+  it('defaults omitted group 62 to ByLayer even when $CECOLOR is ByBlock', async () => {
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'HEADER',
+      '9',
+      '$CECOLOR',
+      '62',
+      '0',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'TABLES',
+      '0',
+      'TABLE',
+      '2',
+      'LAYER',
+      '0',
+      'LAYER',
+      '5',
+      '10',
+      '100',
+      'AcDbSymbolTableRecord',
+      '100',
+      'AcDbLayerTableRecord',
+      '2',
+      'CENTER',
+      '70',
+      '0',
+      '62',
+      '1',
+      '6',
+      'Continuous',
+      '0',
+      'ENDTAB',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'LINE',
+      '5',
+      '55',
+      '102',
+      '{ACAD_REACTORS',
+      '330',
+      '508',
+      '102',
+      '}',
+      '330',
+      '2',
+      '100',
+      'AcDbEntity',
+      '8',
+      'CENTER',
+      '100',
+      'AcDbLine',
+      '10',
+      '0',
+      '20',
+      '0',
+      '30',
+      '0',
+      '11',
+      '10',
+      '21',
+      '0',
+      '31',
+      '0',
+      '0',
+      'LINE',
+      '5',
+      '56',
+      '100',
+      'AcDbEntity',
+      '8',
+      'CENTER',
+      '62',
+      '0',
+      '100',
+      'AcDbLine',
+      '10',
+      '0',
+      '20',
+      '1',
+      '30',
+      '0',
+      '11',
+      '10',
+      '21',
+      '1',
+      '31',
+      '0',
+      '0',
+      'LINE',
+      '5',
+      '57',
+      '100',
+      'AcDbEntity',
+      '8',
+      'CENTER',
+      '62',
+      '3',
+      '100',
+      'AcDbLine',
+      '10',
+      '0',
+      '20',
+      '2',
+      '30',
+      '0',
+      '11',
+      '10',
+      '21',
+      '2',
+      '31',
+      '0',
+      '0',
+      'INSERT',
+      '5',
+      '58',
+      '100',
+      'AcDbEntity',
+      '8',
+      'CENTER',
+      '100',
+      'AcDbBlockReference',
+      '2',
+      'Door',
+      '10',
+      '0',
+      '20',
+      '3',
+      '30',
+      '0',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF',
+      ''
+    ].join('\n')
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const converter = new AcDbNativeDxfConverter()
+    const buffer = new TextEncoder().encode(dxf).buffer
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
+
+    expect(db.cecolor.isByBlock).toBe(true)
+
+    const entities = [...db.tables.blockTable.modelSpace.newIterator()]
+    expect(entities).toHaveLength(4)
+
+    const omitted = entities[0] as AcDbLine
+    expect(omitted).toBeInstanceOf(AcDbLine)
+    expect(omitted.layer).toBe('CENTER')
+    expect(omitted.color.isByLayer).toBe(true)
+    expect(omitted.color.colorIndex).toBe(256)
+    expect(omitted.resolvedColor.colorIndex).toBe(1)
+
+    const byBlock = entities[1] as AcDbLine
+    expect(byBlock.color.isByBlock).toBe(true)
+    expect(byBlock.color.colorIndex).toBe(0)
+
+    const aci = entities[2] as AcDbLine
+    expect(aci.color.isByACI).toBe(true)
+    expect(aci.color.colorIndex).toBe(3)
+
+    const insert = entities[3] as AcDbBlockReference
+    expect(insert).toBeInstanceOf(AcDbBlockReference)
+    expect(insert.color.isByLayer).toBe(true)
+    expect(insert.color.colorIndex).toBe(256)
+  })
 })

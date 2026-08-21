@@ -501,6 +501,13 @@ export abstract class AcDbEntity extends AcDbObject {
       }
     }
 
+    // Omitted group 62 is ByLayer per the DXF spec. Do not leave `_color`
+    // unset: appendEntity copies CECOLOR, which only seeds newly created
+    // entities (LibreDWG dwg2dxf often writes $CECOLOR 0 / ByBlock).
+    if (!this.hasExplicitColor()) {
+      this.setEntityColor(new AcCmColor().setByLayer())
+    }
+
     return this
   }
 
