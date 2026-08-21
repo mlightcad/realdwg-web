@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.14.1
+
+### Patch Changes
+
+- fix: defaults omitted DXF entity colors to ByLayer instead of the current CECOLOR system variable, matching AutoCAD when color group 62 is absent. LibreDWG dwg2dxf often writes $CECOLOR 0 while omitting that group on ByLayer entities, so import no longer copies CECOLOR onto them. Also upgrades @mlightcad/libredwg-web to 0.7.10
+- Updated dependencies
+  - @mlightcad/common@1.14.1
+  - @mlightcad/geometry-engine@3.14.1
+
 ## 3.14.0
 
 ### Minor Changes
