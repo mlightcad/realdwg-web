@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.14.2
+
+### Patch Changes
+
+- feat: adds AutoCAD-compatible DWG Compare system variables so drawings can store COMPAREHATCH, COMPARETEXT, COMPARERCMARGIN, and COMPARETOLERANCE with AutoCAD defaults and ranges, while COMPAREPROPS stays a registry-backed bitcode for property-only diffs. DXF HEADER import reads in-range compare values and ignores out-of-range ones, and the database exposes typed getters plus COMPAREPROPS color, layer, and linetype bit flags
+- Updated dependencies
+  - @mlightcad/data-model@1.14.2
+  - @mlightcad/libredwg-converter@3.14.2
+
 ## 0.14.1
 
 ### Patch Changes
