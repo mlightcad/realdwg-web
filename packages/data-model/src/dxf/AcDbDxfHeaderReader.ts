@@ -161,6 +161,26 @@ function applyHeaderVar(
     case '$ORTHOMODE':
       db.orthomode = readHeaderNumber(filer) ?? 0
       break
+    case '$COMPAREHATCH': {
+      const n = readHeaderNumber(filer)
+      if (n != null) db.comparehatch = n
+      break
+    }
+    case '$COMPARERCMARGIN': {
+      const n = readHeaderNumber(filer)
+      if (n != null) db.comparercmargin = n
+      break
+    }
+    case '$COMPARETEXT': {
+      const n = readHeaderNumber(filer)
+      if (n != null) db.comparetext = n
+      break
+    }
+    case '$COMPARETOLERANCE': {
+      const n = readHeaderNumber(filer)
+      if (n != null) db.comparetolerance = n
+      break
+    }
     case '$PDMODE':
       db.pdmode = readHeaderNumber(filer) ?? 0
       break

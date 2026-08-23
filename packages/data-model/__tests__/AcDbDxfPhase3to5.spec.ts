@@ -558,4 +558,60 @@ describe('DXF Phase 3–5 extensions', () => {
     )
     expect(db2.dimstyle).toBe('AltDim')
   })
+
+  it('round-trips DWG Compare header variables', async () => {
+    const db = createWorkingDb()
+    db.createDefaultData()
+    db.comparehatch = 1
+    db.comparercmargin = 12
+    db.comparetext = 0
+    db.comparetolerance = 4
+
+    const dxf = db.dxfOut(undefined, 16, 'AC1032') as string
+    expect(dxf).toMatch(/\$COMPAREHATCH\n70\n1\n/)
+    expect(dxf).toMatch(/\$COMPARERCMARGIN\n70\n12\n/)
+    expect(dxf).toMatch(/\$COMPARETEXT\n70\n0\n/)
+    expect(dxf).toMatch(/\$COMPARETOLERANCE\n70\n4\n/)
+
+    const db2 = createWorkingDb()
+    await new AcDbDxfDocumentReader(db2).read(
+      AcDbDxfFiler.fromString(
+        [
+          '0',
+          'SECTION',
+          '2',
+          'HEADER',
+          '9',
+          '$ACADVER',
+          '1',
+          'AC1032',
+          '9',
+          '$COMPAREHATCH',
+          '70',
+          '1',
+          '9',
+          '$COMPARERCMARGIN',
+          '70',
+          '8',
+          '9',
+          '$COMPARETEXT',
+          '70',
+          '0',
+          '9',
+          '$COMPARETOLERANCE',
+          '70',
+          '10',
+          '0',
+          'ENDSEC',
+          '0',
+          'EOF'
+        ].join('\n'),
+        { database: db2 }
+      )
+    )
+    expect(db2.comparehatch).toBe(1)
+    expect(db2.comparercmargin).toBe(8)
+    expect(db2.comparetext).toBe(0)
+    expect(db2.comparetolerance).toBe(10)
+  })
 })

@@ -128,3 +128,64 @@ export const ACDB_GRIPSIZE_DEFAULT = 5
 /** AutoCAD valid range for the GRIPSIZE system variable. */
 export const ACDB_GRIPSIZE_MIN = 1
 export const ACDB_GRIPSIZE_MAX = 255
+
+/**
+ * COMPAREPROPS bit: include color property changes in drawing comparison.
+ *
+ * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-FC52193A-3801-42D1-B5C3-873B192B36B2
+ */
+export const ACDB_COMPAREPROPS_COLOR = 1
+/** COMPAREPROPS bit: include layer property changes. */
+export const ACDB_COMPAREPROPS_LAYER = 2
+/** COMPAREPROPS bit: include linetype property changes. */
+export const ACDB_COMPAREPROPS_LINETYPE = 4
+/** COMPAREPROPS bit: include linetype scale property changes. */
+export const ACDB_COMPAREPROPS_LINETYPESCALE = 8
+/** COMPAREPROPS bit: include lineweight property changes. */
+export const ACDB_COMPAREPROPS_LINEWEIGHT = 16
+/** COMPAREPROPS bit: include transparency property changes. */
+export const ACDB_COMPAREPROPS_TRANSPARENCY = 32
+/** COMPAREPROPS bit: include thickness property changes. */
+export const ACDB_COMPAREPROPS_THICKNESS = 64
+
+/** AutoCAD default for COMPAREPROPS: property changes are not compared. */
+export const ACDB_COMPAREPROPS_DEFAULT = 0
+
+/** AutoCAD valid range for the COMPAREPROPS bitcode (sum of defined bits). */
+export const ACDB_COMPAREPROPS_MIN = 0
+export const ACDB_COMPAREPROPS_MAX =
+  ACDB_COMPAREPROPS_COLOR |
+  ACDB_COMPAREPROPS_LAYER |
+  ACDB_COMPAREPROPS_LINETYPE |
+  ACDB_COMPAREPROPS_LINETYPESCALE |
+  ACDB_COMPAREPROPS_LINEWEIGHT |
+  ACDB_COMPAREPROPS_TRANSPARENCY |
+  ACDB_COMPAREPROPS_THICKNESS
+
+/** AutoCAD default for COMPAREHATCH: hatch objects are excluded from comparison. */
+export const ACDB_COMPAREHATCH_DEFAULT = 0
+
+/** AutoCAD valid range for the COMPAREHATCH system variable. */
+export const ACDB_COMPAREHATCH_MIN = 0
+export const ACDB_COMPAREHATCH_MAX = 1
+
+/** AutoCAD default for COMPARERCMARGIN: revision-cloud offset of 5. */
+export const ACDB_COMPARERCMARGIN_DEFAULT = 5
+
+/** AutoCAD valid range for the COMPARERCMARGIN system variable. */
+export const ACDB_COMPARERCMARGIN_MIN = 1
+export const ACDB_COMPARERCMARGIN_MAX = 25
+
+/** AutoCAD default for COMPARETEXT: text objects are included in comparison. */
+export const ACDB_COMPARETEXT_DEFAULT = 1
+
+/** AutoCAD valid range for the COMPARETEXT system variable. */
+export const ACDB_COMPARETEXT_MIN = 0
+export const ACDB_COMPARETEXT_MAX = 1
+
+/** AutoCAD default for COMPARETOLERANCE: 6 decimal places. */
+export const ACDB_COMPARETOLERANCE_DEFAULT = 6
+
+/** AutoCAD valid range for the COMPARETOLERANCE system variable. */
+export const ACDB_COMPARETOLERANCE_MIN = 0
+export const ACDB_COMPARETOLERANCE_MAX = 14

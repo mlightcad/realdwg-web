@@ -9,6 +9,21 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
 import {
+  ACDB_COMPAREHATCH_DEFAULT,
+  ACDB_COMPAREHATCH_MAX,
+  ACDB_COMPAREHATCH_MIN,
+  ACDB_COMPAREPROPS_DEFAULT,
+  ACDB_COMPAREPROPS_MAX,
+  ACDB_COMPAREPROPS_MIN,
+  ACDB_COMPARERCMARGIN_DEFAULT,
+  ACDB_COMPARERCMARGIN_MAX,
+  ACDB_COMPARERCMARGIN_MIN,
+  ACDB_COMPARETEXT_DEFAULT,
+  ACDB_COMPARETEXT_MAX,
+  ACDB_COMPARETEXT_MIN,
+  ACDB_COMPARETOLERANCE_DEFAULT,
+  ACDB_COMPARETOLERANCE_MAX,
+  ACDB_COMPARETOLERANCE_MIN,
   ACDB_GRIPCOLOR_DEFAULT,
   ACDB_GRIPCOLOR_MAX,
   ACDB_GRIPCOLOR_MIN,
@@ -260,6 +275,84 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 0
+    })
+    /**
+     * Controls whether hatch objects are included in drawing comparison.
+     * - 0: Hatch objects are excluded (AutoCAD default)
+     * - 1: Hatch objects are included
+     *
+     * Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-BBB5E4A0-B607-4898-9A6B-A65C51551EE5
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMPAREHATCH,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: ACDB_COMPAREHATCH_DEFAULT
+    })
+    /**
+     * Controls whether a change in an object's non-geometric property is
+     * identified as a change between two drawing revisions (bitcode sum):
+     * - 0: Property changes are not included (AutoCAD default)
+     * - 1: Color
+     * - 2: Layer
+     * - 4: Linetype
+     * - 8: Linetype scale
+     * - 16: Lineweight
+     * - 32: Transparency
+     * - 64: Thickness
+     *
+     * Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-FC52193A-3801-42D1-B5C3-873B192B36B2
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMPAREPROPS,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_COMPAREPROPS_DEFAULT
+    })
+    /**
+     * Offset distance between a change-set boundary and the revision cloud.
+     * Valid range is **1–25**; higher values produce a larger cloud.
+     * Saved in the drawing. AutoCAD initial value is **5**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-7A230058-048B-4EE6-949D-105AF6AC8E73
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMPARERCMARGIN,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: ACDB_COMPARERCMARGIN_DEFAULT
+    })
+    /**
+     * Controls whether text objects are included in drawing comparison.
+     * - 0: Text objects are excluded
+     * - 1: Text objects are included (AutoCAD default)
+     *
+     * Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-1BE58261-FA5F-4914-BAC6-C1DF7E3D1E9C
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMPARETEXT,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: ACDB_COMPARETEXT_DEFAULT
+    })
+    /**
+     * Decimal-place tolerance used when comparing two drawings. Objects are
+     * considered identical when they differ by at most this precision.
+     * Valid range is **0–14**. Saved in the drawing. AutoCAD initial value is **6**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-3131F7C8-7199-4EC5-9892-88C2D2A86F78
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMPARETOLERANCE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: ACDB_COMPARETOLERANCE_DEFAULT
     })
     /**
      * - 0: All Dynamic Input features, including dynamic prompts, off
@@ -911,6 +1004,46 @@ export class AcDbSysVarManager {
         }
         value = intVal
       }
+      if (name === AcDbSystemVariables.COMPAREHATCH.toLowerCase()) {
+        value = this.coerceIntegerInRange(
+          'COMPAREHATCH',
+          value,
+          ACDB_COMPAREHATCH_MIN,
+          ACDB_COMPAREHATCH_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.COMPAREPROPS.toLowerCase()) {
+        value = this.coerceIntegerInRange(
+          'COMPAREPROPS',
+          value,
+          ACDB_COMPAREPROPS_MIN,
+          ACDB_COMPAREPROPS_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.COMPARERCMARGIN.toLowerCase()) {
+        value = this.coerceIntegerInRange(
+          'COMPARERCMARGIN',
+          value,
+          ACDB_COMPARERCMARGIN_MIN,
+          ACDB_COMPARERCMARGIN_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.COMPARETEXT.toLowerCase()) {
+        value = this.coerceIntegerInRange(
+          'COMPARETEXT',
+          value,
+          ACDB_COMPARETEXT_MIN,
+          ACDB_COMPARETEXT_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.COMPARETOLERANCE.toLowerCase()) {
+        value = this.coerceIntegerInRange(
+          'COMPARETOLERANCE',
+          value,
+          ACDB_COMPARETOLERANCE_MIN,
+          ACDB_COMPARETOLERANCE_MAX
+        )
+      }
       if (descriptor.isDbVar) {
         this.applyVarMutation(name, oldVal, value, db, () => {
           ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] =
@@ -1015,6 +1148,25 @@ export class AcDbSysVarManager {
     }
 
     return !Object.is(oldValue, newValue)
+  }
+
+  /**
+   * Truncates a numeric sysvar to an integer and rejects values outside
+   * AutoCAD's documented valid range.
+   */
+  private coerceIntegerInRange(
+    displayName: string,
+    value: unknown,
+    min: number,
+    max: number
+  ): number {
+    const intVal = Math.trunc(value as number)
+    if (!Number.isFinite(intVal) || intVal < min || intVal > max) {
+      throw new Error(
+        `Invalid ${displayName} value! Valid range is ${min} to ${max}.`
+      )
+    }
+    return intVal
   }
 
   /**
