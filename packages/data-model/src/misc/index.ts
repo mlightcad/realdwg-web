@@ -7,6 +7,8 @@ export type { AcDbRenderingCacheProfileStats } from './AcDbRenderingCache'
 export { AcDbCodePage, acdbDwgCodePageToEncoding } from './AcDbCodePage'
 export {
   ACAD_APPID,
+  acdbCoerceIntegerSysVar,
+  acdbIntegerSysVarIfInRange,
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,

@@ -355,6 +355,19 @@ describe('AcDbSysVarManager', () => {
       manager.setVar(AcDbSystemVariables.COMPARETOLERANCE, 15, db)
     ).toThrow('Invalid COMPARETOLERANCE value! Valid range is 0 to 14.')
 
+    expect(() => {
+      db.comparehatch = 2
+    }).toThrow('Invalid COMPAREHATCH value! Valid range is 0 to 1.')
+    expect(() => {
+      db.comparercmargin = 0
+    }).toThrow('Invalid COMPARERCMARGIN value! Valid range is 1 to 25.')
+    expect(() => {
+      db.comparetext = -1
+    }).toThrow('Invalid COMPARETEXT value! Valid range is 0 to 1.')
+    expect(() => {
+      db.comparetolerance = 15
+    }).toThrow('Invalid COMPARETOLERANCE value! Valid range is 0 to 14.')
+
     manager.setVar(AcDbSystemVariables.COMPAREHATCH, 0, db)
     manager.setVar(AcDbSystemVariables.COMPAREPROPS, oldCompareProps, db)
     manager.setVar(AcDbSystemVariables.COMPARERCMARGIN, 5, db)

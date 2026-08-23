@@ -5,6 +5,15 @@ import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
 import {
+  ACDB_COMPAREHATCH_MAX,
+  ACDB_COMPAREHATCH_MIN,
+  ACDB_COMPARERCMARGIN_MAX,
+  ACDB_COMPARERCMARGIN_MIN,
+  ACDB_COMPARETEXT_MAX,
+  ACDB_COMPARETEXT_MIN,
+  ACDB_COMPARETOLERANCE_MAX,
+  ACDB_COMPARETOLERANCE_MIN,
+  acdbIntegerSysVarIfInRange,
   ByLayer,
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
@@ -162,22 +171,38 @@ function applyHeaderVar(
       db.orthomode = readHeaderNumber(filer) ?? 0
       break
     case '$COMPAREHATCH': {
-      const n = readHeaderNumber(filer)
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_COMPAREHATCH_MIN,
+        ACDB_COMPAREHATCH_MAX
+      )
       if (n != null) db.comparehatch = n
       break
     }
     case '$COMPARERCMARGIN': {
-      const n = readHeaderNumber(filer)
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_COMPARERCMARGIN_MIN,
+        ACDB_COMPARERCMARGIN_MAX
+      )
       if (n != null) db.comparercmargin = n
       break
     }
     case '$COMPARETEXT': {
-      const n = readHeaderNumber(filer)
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_COMPARETEXT_MIN,
+        ACDB_COMPARETEXT_MAX
+      )
       if (n != null) db.comparetext = n
       break
     }
     case '$COMPARETOLERANCE': {
-      const n = readHeaderNumber(filer)
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_COMPARETOLERANCE_MIN,
+        ACDB_COMPARETOLERANCE_MAX
+      )
       if (n != null) db.comparetolerance = n
       break
     }

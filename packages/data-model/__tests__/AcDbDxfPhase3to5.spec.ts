@@ -559,7 +559,7 @@ describe('DXF Phase 3–5 extensions', () => {
     expect(db2.dimstyle).toBe('AltDim')
   })
 
-  it('round-trips DWG Compare header variables', async () => {
+  it('reads in-range DWG Compare HEADER values and ignores out-of-range or exported names', async () => {
     const db = createWorkingDb()
     db.createDefaultData()
     db.comparehatch = 1
@@ -568,10 +568,10 @@ describe('DXF Phase 3–5 extensions', () => {
     db.comparetolerance = 4
 
     const dxf = db.dxfOut(undefined, 16, 'AC1032') as string
-    expect(dxf).toMatch(/\$COMPAREHATCH\n70\n1\n/)
-    expect(dxf).toMatch(/\$COMPARERCMARGIN\n70\n12\n/)
-    expect(dxf).toMatch(/\$COMPARETEXT\n70\n0\n/)
-    expect(dxf).toMatch(/\$COMPARETOLERANCE\n70\n4\n/)
+    expect(dxf).not.toMatch(/\$COMPAREHATCH/)
+    expect(dxf).not.toMatch(/\$COMPARERCMARGIN/)
+    expect(dxf).not.toMatch(/\$COMPARETEXT/)
+    expect(dxf).not.toMatch(/\$COMPARETOLERANCE/)
 
     const db2 = createWorkingDb()
     await new AcDbDxfDocumentReader(db2).read(
@@ -613,5 +613,46 @@ describe('DXF Phase 3–5 extensions', () => {
     expect(db2.comparercmargin).toBe(8)
     expect(db2.comparetext).toBe(0)
     expect(db2.comparetolerance).toBe(10)
+
+    const db3 = createWorkingDb()
+    await new AcDbDxfDocumentReader(db3).read(
+      AcDbDxfFiler.fromString(
+        [
+          '0',
+          'SECTION',
+          '2',
+          'HEADER',
+          '9',
+          '$ACADVER',
+          '1',
+          'AC1032',
+          '9',
+          '$COMPAREHATCH',
+          '70',
+          '2',
+          '9',
+          '$COMPARERCMARGIN',
+          '70',
+          '0',
+          '9',
+          '$COMPARETEXT',
+          '70',
+          '-1',
+          '9',
+          '$COMPARETOLERANCE',
+          '70',
+          '15',
+          '0',
+          'ENDSEC',
+          '0',
+          'EOF'
+        ].join('\n'),
+        { database: db3 }
+      )
+    )
+    expect(db3.comparehatch).toBe(0)
+    expect(db3.comparercmargin).toBe(5)
+    expect(db3.comparetext).toBe(1)
+    expect(db3.comparetolerance).toBe(6)
   })
 })

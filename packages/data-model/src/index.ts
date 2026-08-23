@@ -350,6 +350,8 @@ export {
   acdbHexStringsToBytes,
   acdbPreviewIconToDataUrl,
   acdbThumbnailImageToDataUrl,
+  acdbCoerceIntegerSysVar,
+  acdbIntegerSysVarIfInRange,
   acdbHasOsnapMode,
   acdbMaskToOsnapModes,
   acdbOsnapModesToMask,

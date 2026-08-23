@@ -26,9 +26,18 @@ import { AcDbPolyline } from '../entity/AcDbPolyline'
 import {
   ACAD_APPID,
   ACDB_COMPAREHATCH_DEFAULT,
+  ACDB_COMPAREHATCH_MAX,
+  ACDB_COMPAREHATCH_MIN,
   ACDB_COMPARERCMARGIN_DEFAULT,
+  ACDB_COMPARERCMARGIN_MAX,
+  ACDB_COMPARERCMARGIN_MIN,
   ACDB_COMPARETEXT_DEFAULT,
+  ACDB_COMPARETEXT_MAX,
+  ACDB_COMPARETEXT_MIN,
   ACDB_COMPARETOLERANCE_DEFAULT,
+  ACDB_COMPARETOLERANCE_MAX,
+  ACDB_COMPARETOLERANCE_MIN,
+  acdbCoerceIntegerSysVar,
   ACTIVE_VPORT_NAME,
   ByBlock,
   ByLayer,
@@ -2108,12 +2117,18 @@ export class AcDbDatabase extends AcDbObject {
     return this._comparehatch
   }
   set comparehatch(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPAREHATCH',
+      value ?? ACDB_COMPAREHATCH_DEFAULT,
+      ACDB_COMPAREHATCH_MIN,
+      ACDB_COMPAREHATCH_MAX
+    )
     this.updateSysVar(
       AcDbSystemVariables.COMPAREHATCH,
       this._comparehatch,
-      value ?? ACDB_COMPAREHATCH_DEFAULT,
-      nextValue => {
-        this._comparehatch = nextValue
+      nextValue,
+      coerced => {
+        this._comparehatch = coerced
       }
     )
   }
@@ -2128,12 +2143,18 @@ export class AcDbDatabase extends AcDbObject {
     return this._comparercmargin
   }
   set comparercmargin(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARERCMARGIN',
+      value ?? ACDB_COMPARERCMARGIN_DEFAULT,
+      ACDB_COMPARERCMARGIN_MIN,
+      ACDB_COMPARERCMARGIN_MAX
+    )
     this.updateSysVar(
       AcDbSystemVariables.COMPARERCMARGIN,
       this._comparercmargin,
-      value ?? ACDB_COMPARERCMARGIN_DEFAULT,
-      nextValue => {
-        this._comparercmargin = nextValue
+      nextValue,
+      coerced => {
+        this._comparercmargin = coerced
       }
     )
   }
@@ -2150,12 +2171,18 @@ export class AcDbDatabase extends AcDbObject {
     return this._comparetext
   }
   set comparetext(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARETEXT',
+      value ?? ACDB_COMPARETEXT_DEFAULT,
+      ACDB_COMPARETEXT_MIN,
+      ACDB_COMPARETEXT_MAX
+    )
     this.updateSysVar(
       AcDbSystemVariables.COMPARETEXT,
       this._comparetext,
-      value ?? ACDB_COMPARETEXT_DEFAULT,
-      nextValue => {
-        this._comparetext = nextValue
+      nextValue,
+      coerced => {
+        this._comparetext = coerced
       }
     )
   }
@@ -2170,12 +2197,18 @@ export class AcDbDatabase extends AcDbObject {
     return this._comparetolerance
   }
   set comparetolerance(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARETOLERANCE',
+      value ?? ACDB_COMPARETOLERANCE_DEFAULT,
+      ACDB_COMPARETOLERANCE_MIN,
+      ACDB_COMPARETOLERANCE_MAX
+    )
     this.updateSysVar(
       AcDbSystemVariables.COMPARETOLERANCE,
       this._comparetolerance,
-      value ?? ACDB_COMPARETOLERANCE_DEFAULT,
-      nextValue => {
-        this._comparetolerance = nextValue
+      nextValue,
+      coerced => {
+        this._comparetolerance = coerced
       }
     )
   }
@@ -2836,14 +2869,6 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt32(70, this.osmode)
     filer.writeString(9, '$ORTHOMODE')
     filer.writeInt16(70, this.orthomode)
-    filer.writeString(9, '$COMPAREHATCH')
-    filer.writeInt16(70, this.comparehatch)
-    filer.writeString(9, '$COMPARERCMARGIN')
-    filer.writeInt16(70, this.comparercmargin)
-    filer.writeString(9, '$COMPARETEXT')
-    filer.writeInt16(70, this.comparetext)
-    filer.writeString(9, '$COMPARETOLERANCE')
-    filer.writeInt16(70, this.comparetolerance)
     filer.endSection()
   }
 

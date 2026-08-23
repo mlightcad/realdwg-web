@@ -189,3 +189,38 @@ export const ACDB_COMPARETOLERANCE_DEFAULT = 6
 /** AutoCAD valid range for the COMPARETOLERANCE system variable. */
 export const ACDB_COMPARETOLERANCE_MIN = 0
 export const ACDB_COMPARETOLERANCE_MAX = 14
+
+/**
+ * Truncates a numeric system-variable value to an integer and rejects values
+ * outside AutoCAD's documented valid range.
+ */
+export function acdbCoerceIntegerSysVar(
+  displayName: string,
+  value: unknown,
+  min: number,
+  max: number
+): number {
+  const intVal = Math.trunc(value as number)
+  if (!Number.isFinite(intVal) || intVal < min || intVal > max) {
+    throw new Error(
+      `Invalid ${displayName} value! Valid range is ${min} to ${max}.`
+    )
+  }
+  return intVal
+}
+
+/**
+ * Returns a truncated integer when it lies in `[min, max]`; otherwise
+ * `undefined`. Used when ingesting untrusted drawing data such as DXF HEADER.
+ */
+export function acdbIntegerSysVarIfInRange(
+  value: unknown,
+  min: number,
+  max: number
+): number | undefined {
+  const intVal = Math.trunc(value as number)
+  if (!Number.isFinite(intVal) || intVal < min || intVal > max) {
+    return undefined
+  }
+  return intVal
+}

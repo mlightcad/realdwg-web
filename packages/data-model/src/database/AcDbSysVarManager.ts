@@ -33,6 +33,7 @@ import {
   ACDB_GRIPSIZE_DEFAULT,
   ACDB_GRIPSIZE_MAX,
   ACDB_GRIPSIZE_MIN,
+  acdbCoerceIntegerSysVar,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
@@ -1005,7 +1006,7 @@ export class AcDbSysVarManager {
         value = intVal
       }
       if (name === AcDbSystemVariables.COMPAREHATCH.toLowerCase()) {
-        value = this.coerceIntegerInRange(
+        value = acdbCoerceIntegerSysVar(
           'COMPAREHATCH',
           value,
           ACDB_COMPAREHATCH_MIN,
@@ -1013,7 +1014,7 @@ export class AcDbSysVarManager {
         )
       }
       if (name === AcDbSystemVariables.COMPAREPROPS.toLowerCase()) {
-        value = this.coerceIntegerInRange(
+        value = acdbCoerceIntegerSysVar(
           'COMPAREPROPS',
           value,
           ACDB_COMPAREPROPS_MIN,
@@ -1021,7 +1022,7 @@ export class AcDbSysVarManager {
         )
       }
       if (name === AcDbSystemVariables.COMPARERCMARGIN.toLowerCase()) {
-        value = this.coerceIntegerInRange(
+        value = acdbCoerceIntegerSysVar(
           'COMPARERCMARGIN',
           value,
           ACDB_COMPARERCMARGIN_MIN,
@@ -1029,7 +1030,7 @@ export class AcDbSysVarManager {
         )
       }
       if (name === AcDbSystemVariables.COMPARETEXT.toLowerCase()) {
-        value = this.coerceIntegerInRange(
+        value = acdbCoerceIntegerSysVar(
           'COMPARETEXT',
           value,
           ACDB_COMPARETEXT_MIN,
@@ -1037,7 +1038,7 @@ export class AcDbSysVarManager {
         )
       }
       if (name === AcDbSystemVariables.COMPARETOLERANCE.toLowerCase()) {
-        value = this.coerceIntegerInRange(
+        value = acdbCoerceIntegerSysVar(
           'COMPARETOLERANCE',
           value,
           ACDB_COMPARETOLERANCE_MIN,
@@ -1148,25 +1149,6 @@ export class AcDbSysVarManager {
     }
 
     return !Object.is(oldValue, newValue)
-  }
-
-  /**
-   * Truncates a numeric sysvar to an integer and rejects values outside
-   * AutoCAD's documented valid range.
-   */
-  private coerceIntegerInRange(
-    displayName: string,
-    value: unknown,
-    min: number,
-    max: number
-  ): number {
-    const intVal = Math.trunc(value as number)
-    if (!Number.isFinite(intVal) || intVal < min || intVal > max) {
-      throw new Error(
-        `Invalid ${displayName} value! Valid range is ${min} to ${max}.`
-      )
-    }
-    return intVal
   }
 
   /**
