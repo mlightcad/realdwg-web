@@ -25,6 +25,19 @@ import { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbPolyline } from '../entity/AcDbPolyline'
 import {
   ACAD_APPID,
+  ACDB_COMPAREHATCH_DEFAULT,
+  ACDB_COMPAREHATCH_MAX,
+  ACDB_COMPAREHATCH_MIN,
+  ACDB_COMPARERCMARGIN_DEFAULT,
+  ACDB_COMPARERCMARGIN_MAX,
+  ACDB_COMPARERCMARGIN_MIN,
+  ACDB_COMPARETEXT_DEFAULT,
+  ACDB_COMPARETEXT_MAX,
+  ACDB_COMPARETEXT_MIN,
+  ACDB_COMPARETOLERANCE_DEFAULT,
+  ACDB_COMPARETOLERANCE_MAX,
+  ACDB_COMPARETOLERANCE_MIN,
+  acdbCoerceIntegerSysVar,
   ACTIVE_VPORT_NAME,
   ByBlock,
   ByLayer,
@@ -362,6 +375,14 @@ export class AcDbDatabase extends AcDbObject {
   private _osmode: number
   /** Orthogonal mode flag (ORTHOMODE): 0 = off, 1 = on */
   private _orthomode: number
+  /** COMPAREHATCH: whether hatch objects are included in drawing comparison */
+  private _comparehatch: number
+  /** COMPARERCMARGIN: revision-cloud offset around comparison change sets */
+  private _comparercmargin: number
+  /** COMPARETEXT: whether text objects are included in drawing comparison */
+  private _comparetext: number
+  /** COMPARETOLERANCE: decimal-place geometric tolerance for drawing comparison */
+  private _comparetolerance: number
   /** Tables in the database */
   private _tables: AcDbTables
   /** Class definitions from DXF CLASSES / DWG class table (needed for proxy entities). */
@@ -486,6 +507,10 @@ export class AcDbDatabase extends AcDbObject {
     this._pdsize = 0
     this._osmode = 0
     this._orthomode = 0
+    this._comparehatch = ACDB_COMPAREHATCH_DEFAULT
+    this._comparercmargin = ACDB_COMPARERCMARGIN_DEFAULT
+    this._comparetext = ACDB_COMPARETEXT_DEFAULT
+    this._comparetolerance = ACDB_COMPARETOLERANCE_DEFAULT
     this._maxHandle = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
@@ -2076,6 +2101,114 @@ export class AcDbDatabase extends AcDbObject {
       value ?? 0,
       nextValue => {
         this._orthomode = nextValue
+      }
+    )
+  }
+
+  /**
+   * Whether hatch objects are included in drawing comparison (**COMPAREHATCH**).
+   *
+   * - `0`: Hatch objects are excluded (AutoCAD default)
+   * - `1`: Hatch objects are included
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-BBB5E4A0-B607-4898-9A6B-A65C51551EE5
+   */
+  get comparehatch(): number {
+    return this._comparehatch
+  }
+  set comparehatch(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPAREHATCH',
+      value ?? ACDB_COMPAREHATCH_DEFAULT,
+      ACDB_COMPAREHATCH_MIN,
+      ACDB_COMPAREHATCH_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.COMPAREHATCH,
+      this._comparehatch,
+      nextValue,
+      coerced => {
+        this._comparehatch = coerced
+      }
+    )
+  }
+
+  /**
+   * Offset between a change-set boundary and the revision cloud
+   * (**COMPARERCMARGIN**). AutoCAD range is **1–25**; default is **5**.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-7A230058-048B-4EE6-949D-105AF6AC8E73
+   */
+  get comparercmargin(): number {
+    return this._comparercmargin
+  }
+  set comparercmargin(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARERCMARGIN',
+      value ?? ACDB_COMPARERCMARGIN_DEFAULT,
+      ACDB_COMPARERCMARGIN_MIN,
+      ACDB_COMPARERCMARGIN_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.COMPARERCMARGIN,
+      this._comparercmargin,
+      nextValue,
+      coerced => {
+        this._comparercmargin = coerced
+      }
+    )
+  }
+
+  /**
+   * Whether text objects are included in drawing comparison (**COMPARETEXT**).
+   *
+   * - `0`: Text objects are excluded
+   * - `1`: Text objects are included (AutoCAD default)
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-1BE58261-FA5F-4914-BAC6-C1DF7E3D1E9C
+   */
+  get comparetext(): number {
+    return this._comparetext
+  }
+  set comparetext(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARETEXT',
+      value ?? ACDB_COMPARETEXT_DEFAULT,
+      ACDB_COMPARETEXT_MIN,
+      ACDB_COMPARETEXT_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.COMPARETEXT,
+      this._comparetext,
+      nextValue,
+      coerced => {
+        this._comparetext = coerced
+      }
+    )
+  }
+
+  /**
+   * Decimal-place geometric tolerance used when comparing two drawings
+   * (**COMPARETOLERANCE**). AutoCAD range is **0–14**; default is **6**.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-3131F7C8-7199-4EC5-9892-88C2D2A86F78
+   */
+  get comparetolerance(): number {
+    return this._comparetolerance
+  }
+  set comparetolerance(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'COMPARETOLERANCE',
+      value ?? ACDB_COMPARETOLERANCE_DEFAULT,
+      ACDB_COMPARETOLERANCE_MIN,
+      ACDB_COMPARETOLERANCE_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.COMPARETOLERANCE,
+      this._comparetolerance,
+      nextValue,
+      coerced => {
+        this._comparetolerance = coerced
       }
     )
   }

@@ -46,6 +46,44 @@ export const AcDbSystemVariables = {
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
   /**
+   * Controls whether hatch objects are included in drawing comparison.
+   * `0` excludes hatches (AutoCAD default); `1` includes them. Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-BBB5E4A0-B607-4898-9A6B-A65C51551EE5
+   */
+  COMPAREHATCH: 'COMPAREHATCH',
+  /**
+   * Bitcode controlling which non-geometric property changes count as a
+   * difference between drawings. `0` ignores property-only changes (AutoCAD
+   * default). Saved in the registry (not in the drawing).
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-FC52193A-3801-42D1-B5C3-873B192B36B2
+   */
+  COMPAREPROPS: 'COMPAREPROPS',
+  /**
+   * Offset between a change-set boundary and the revision cloud in a
+   * comparison drawing. Valid range is **1–25**; AutoCAD default is **5**.
+   * Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-7A230058-048B-4EE6-949D-105AF6AC8E73
+   */
+  COMPARERCMARGIN: 'COMPARERCMARGIN',
+  /**
+   * Controls whether text objects are included in drawing comparison.
+   * `0` excludes text; `1` includes text (AutoCAD default). Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-1BE58261-FA5F-4914-BAC6-C1DF7E3D1E9C
+   */
+  COMPARETEXT: 'COMPARETEXT',
+  /**
+   * Decimal-place tolerance used when comparing two drawings. Objects are
+   * treated as identical when their geometric difference is at or below this
+   * precision. Valid range is **0–14**; AutoCAD default is **6**. Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/view/ACD/2025/ENU/?guid=GUID-3131F7C8-7199-4EC5-9892-88C2D2A86F78
+   */
+  COMPARETOLERANCE: 'COMPARETOLERANCE',
+  /**
    * Controls the display and behavior of dynamic input at the cursor, enabling or
    * disabling on-screen pointer and dimension input
    */
