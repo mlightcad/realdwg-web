@@ -51,6 +51,10 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
 
   /**
    * Draw a circular arc or full circle.
+   *
+   * Tessellate using `drawCircleSides` on {@link AcGiContext.database} so the
+   * database open-time setting is honoured.
+   *
    * @param arc Input circular arc to draw
    * @returns Return an object which can be added to scene
    */
@@ -58,6 +62,10 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
 
   /**
    * Draw an elliptical arc or full ellipse.
+   *
+   * Tessellate using `drawCircleSides` on {@link AcGiContext.database} so the
+   * database open-time setting is honoured.
+   *
    * @param ellipseArc Input elliptical arc to draw
    * @returns Return an object which can be added to scene
    */
@@ -84,6 +92,10 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
 
   /**
    * Draw one area
+   *
+   * Tessellate loop boundaries using `drawCircleSides` on
+   * {@link AcGiContext.database} so the database open-time setting is honoured.
+   *
    * @param area Input area to draw
    * @returns Return an object which can be added to scene
    */

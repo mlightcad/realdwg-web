@@ -151,6 +151,7 @@ const SYSVAR_KEYS = new Set([
   '_orthomode',
   '_maxHandle',
   '_drawNoPlotLayers',
+  '_drawCircleSides',
   '_dwgname',
   '_currentSpace',
   '_formatter',

@@ -30,6 +30,8 @@ export type {
   AcGeKnotParameterizationType,
   AcGeLoop2dType,
   AcGePolyline2dVertex,
+  AcGeResolvedTessellateOptions,
+  AcGeTessellateOptions,
   CatmullRomCurveType
 } from './geometry'
 export {
