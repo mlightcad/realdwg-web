@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.14.3
+
+### Patch Changes
+
+- feat: adds chord-height curve tessellation so short arcs use fewer segments than a full circle, while opening a drawing without circleSides defaults to draft quality so stored VIEWRES 1000 is not applied accidentally. Circles, arcs, ellipses, polylines, leaders, and splines tessellate from the open-time setting, and renderers can read drawCircleSides from the draw context
+- Updated dependencies
+  - @mlightcad/data-model@1.14.3
+
 ## 3.14.2
 
 ### Patch Changes
