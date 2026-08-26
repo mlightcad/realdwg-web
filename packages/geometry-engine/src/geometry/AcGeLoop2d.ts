@@ -5,9 +5,10 @@ import {
   AcGePoint2d,
   AcGePoint3d
 } from '../math'
-import { AcGeMathUtil } from '../util'
+import { AcGeMathUtil, FLOAT_TOL, TAU } from '../util'
 import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { AcGeCurve2d } from './AcGeCurve2d'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
 import { AcGeEllipseArc2d } from './AcGeEllipseArc2d'
 import { AcGeLine2d } from './AcGeLine2d'
 import { AcGeSpline3d } from './AcGeSpline3d'
@@ -224,6 +225,33 @@ export class AcGeLoop2d extends AcGeCurve2d {
     return points
   }
 
+  /**
+   * Sample this loop for display using per-edge chord-height tessellation.
+   *
+   * Straight edges emit endpoints only. Circular arcs and splines use
+   * {@link AcGeCircArc2d.tessellate} / {@link AcGeSpline3d.tessellate}.
+   * Elliptical edges choose a segment count from the same chord-height formula.
+   *
+   * @param options - Chord-height tessellation options
+   */
+  tessellate(options?: AcGeTessellateOptions): AcGePoint2d[] {
+    const points: AcGePoint2d[] = []
+    this._curves.forEach(curve => {
+      tessellateLoopEdge(curve, options).forEach(point => {
+        const last = points[points.length - 1]
+        if (
+          last &&
+          (last.x - point.x) ** 2 + (last.y - point.y) ** 2 <=
+            FLOAT_TOL * FLOAT_TOL
+        ) {
+          return
+        }
+        points.push(new AcGePoint2d(point.x, point.y))
+      })
+    })
+    return points
+  }
+
   private static findConnectingEdge(
     edges: AcGeBoundaryEdgeType[],
     target: AcGePoint2d,
@@ -379,4 +407,26 @@ export class AcGeLoop2d extends AcGeCurve2d {
       edge.closed
     )
   }
+}
+
+function tessellateLoopEdge(
+  curve: AcGeBoundaryEdgeType,
+  options?: AcGeTessellateOptions
+): Array<{ x: number; y: number }> {
+  if (curve instanceof AcGeLine2d) {
+    return curve.getPoints()
+  }
+  if (curve instanceof AcGeCircArc2d) {
+    return curve.tessellate(options)
+  }
+  if (curve instanceof AcGeSpline3d) {
+    return curve.tessellate(options)
+  }
+  const sweep = curve.closed ? TAU : curve.deltaAngle
+  const n = AcGeCircArc2d.segmentCount(
+    Math.max(curve.majorAxisRadius, curve.minorAxisRadius),
+    sweep,
+    options
+  )
+  return curve.getPoints(n)
 }

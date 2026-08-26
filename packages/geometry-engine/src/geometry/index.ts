@@ -4,6 +4,10 @@ export { AcGeShape2d } from './AcGeShape2d'
 export { AcGeCurve2d } from './AcGeCurve2d'
 export { AcGeCircArc2d } from './AcGeCircArc2d'
 export { AcGeCircArc3d } from './AcGeCircArc3d'
+export type {
+  AcGeResolvedTessellateOptions,
+  AcGeTessellateOptions
+} from './AcGeCurveTessellate'
 export type { AcGeCircumcircle2d, AcGeCircumcircle3d } from './AcGeCircArcUtil'
 export {
   acgeIsBetterDistanceAlign,

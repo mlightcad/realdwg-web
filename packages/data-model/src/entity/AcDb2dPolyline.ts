@@ -14,6 +14,7 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -488,7 +489,7 @@ export class AcDb2dPolyline extends AcDbCurve {
    */
   subWorldDraw(renderer: AcGiRenderer) {
     const points: AcGePoint3d[] = []
-    const tmp = this._geo.getPoints(100)
+    const tmp = this._geo.tessellate(acdbDrawTessellateOptions(renderer))
     tmp.forEach(point =>
       points.push(new AcGePoint3d().set(point.x, point.y, this.elevation))
     )

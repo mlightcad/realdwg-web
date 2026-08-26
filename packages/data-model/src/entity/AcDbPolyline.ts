@@ -10,6 +10,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGePolyline2dVertex,
+  type AcGeTessellateOptions,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -18,6 +19,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -656,8 +658,9 @@ export class AcDbPolyline extends AcDbCurve {
    * @returns The rendered polyline entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const centerline = this._geo.getPoints(100)
-    const widthProfile = this.createWidthProfile()
+    const tessellateOptions = acdbDrawTessellateOptions(renderer)
+    const centerline = this._geo.tessellate(tessellateOptions)
+    const widthProfile = this.createWidthProfile(tessellateOptions)
     if (widthProfile != null) {
       const area = createWidePolylineArea(widthProfile, this.closed)
       if (area != null) {
@@ -954,7 +957,9 @@ export class AcDbPolyline extends AcDbCurve {
    * @returns A width profile suitable for wide-line loop construction, or `null`
    * if the polyline has insufficient geometry or no renderable width.
    */
-  private createWidthProfile(): WidePolylinePoint[] | null {
+  private createWidthProfile(
+    tessellateOptions?: AcGeTessellateOptions
+  ): WidePolylinePoint[] | null {
     const vertices = this._geo.vertices
     const count = vertices.length
     if (count < 2) return null
@@ -972,7 +977,11 @@ export class AcDbPolyline extends AcDbCurve {
         hasRenderableWidth = true
       }
 
-      const sampled = this.sampleSegment(startVertex, endVertex)
+      const sampled = this.sampleSegment(
+        startVertex,
+        endVertex,
+        tessellateOptions
+      )
       const lastIndex = sampled.length - 1
       for (let j = 0; j <= lastIndex; j++) {
         if (j === 0 && points.length > 0) {
@@ -1008,11 +1017,12 @@ export class AcDbPolyline extends AcDbCurve {
    */
   private sampleSegment(
     startVertex: AcDbPolylineVertex,
-    endVertex: AcDbPolylineVertex
+    endVertex: AcDbPolylineVertex,
+    tessellateOptions?: AcGeTessellateOptions
   ): AcGePoint2d[] {
     if (startVertex.bulge && Math.abs(startVertex.bulge) > WIDTH_EPSILON) {
       const arc = new AcGeCircArc2d(startVertex, endVertex, startVertex.bulge)
-      const sampled = arc.getPoints(32)
+      const sampled = arc.tessellate(tessellateOptions)
       if (sampled.length > 1) {
         return sampled.map(point => new AcGePoint2d(point.x, point.y))
       }

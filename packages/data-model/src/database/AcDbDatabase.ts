@@ -49,6 +49,7 @@ import {
 } from '../misc/AcDbConstants'
 import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
 import { AcDbDataGenerator } from '../misc/AcDbDataGenerator'
+import { ACDB_DRAW_CIRCLE_SIDES_DRAFT } from '../misc/AcDbDrawTessellate'
 import { AcDbFormatter } from '../misc/AcDbFormatter'
 import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
@@ -92,6 +93,7 @@ import { AcDbViewportTable } from './AcDbViewportTable'
 import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
 import {
   AcGeBox3d,
+  AcGeCircArc2d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -233,12 +235,25 @@ export interface AcDbOpenDatabaseOptions {
   /**
    * Whether entities on non-plottable ("no-plot") layers are drawn.
    *
-   * - `true` (default): desktop AutoCAD editor semantics ??no-plot layers remain
+   * - `true` (default): desktop AutoCAD editor semantics — no-plot layers remain
    *   visible on screen (Defpoints, viewport frames on `*-NPLT`, etc.).
-   * - `false`: web/publish viewer semantics (e.g. BIM 360 / ACC) ??entities on
+   * - `false`: web/publish viewer semantics (e.g. BIM 360 / ACC) — entities on
    *   no-plot layers are omitted from display.
    */
   drawNoPlotLayers?: boolean
+
+  /**
+   * Maximum number of segments used to tessellate a full circle when drawing.
+   *
+   * Lower values use less GPU memory and produce smaller HTML exports; higher
+   * values look smoother on large arcs. Clamped to the DXF VPORT range
+   * `[{@link AcGeCircArc2d.MIN_CIRCLE_SIDES}, {@link AcGeCircArc2d.MAX_CIRCLE_SIDES}]`.
+   * When omitted, {@link ACDB_DRAW_CIRCLE_SIDES_DRAFT} (50) is used so
+   * AutoCAD's common VIEWRES 1000 is not applied accidentally.
+   *
+   * Short arcs still use fewer segments than a full circle.
+   */
+  circleSides?: number
 
   /**
    * File name of the drawing being opened, including extension (for example `Plan.dwg`).
@@ -413,6 +428,11 @@ export class AcDbDatabase extends AcDbObject {
    * Set from {@link AcDbOpenDatabaseOptions.drawNoPlotLayers} when opening a database.
    */
   private _drawNoPlotLayers = true
+  /**
+   * Display tessellation side count for a full circle.
+   * Set from {@link AcDbOpenDatabaseOptions.circleSides} when opening a database.
+   */
+  private _drawCircleSides = ACDB_DRAW_CIRCLE_SIDES_DRAFT
   /** Current drawing file name (**DWGNAME**), including extension. */
   private _dwgname: string
   /**
@@ -1176,12 +1196,8 @@ export class AcDbDatabase extends AcDbObject {
     hasId?: (id: AcDbObjectId) => boolean
   ) {
     const objectId = object.getAttrWithoutException('objectId')
-    const tableDuplicate =
-      hasId != null && objectId != null && hasId(objectId)
-    const needsGenerated =
-      !objectId ||
-      object.isTemp ||
-      tableDuplicate
+    const tableDuplicate = hasId != null && objectId != null && hasId(objectId)
+    const needsGenerated = !objectId || object.isTemp || tableDuplicate
 
     if (needsGenerated) {
       this.assignGeneratedHandle(object)
@@ -1575,6 +1591,19 @@ export class AcDbDatabase extends AcDbObject {
    */
   get drawNoPlotLayers() {
     return this._drawNoPlotLayers
+  }
+
+  /**
+   * Display tessellation side count for a full circle.
+   *
+   * Configured via {@link AcDbOpenDatabaseOptions.circleSides} when the
+   * database is opened. Defaults to {@link ACDB_DRAW_CIRCLE_SIDES_DRAFT}.
+   */
+  get drawCircleSides() {
+    return this._drawCircleSides
+  }
+  set drawCircleSides(value: number) {
+    this._drawCircleSides = AcGeCircArc2d.resolveCircleSides(value)
   }
 
   /**
@@ -2261,6 +2290,7 @@ export class AcDbDatabase extends AcDbObject {
     this.clear()
     this._lastOpenError = null
     this._drawNoPlotLayers = options?.drawNoPlotLayers ?? true
+    this.drawCircleSides = options?.circleSides ?? ACDB_DRAW_CIRCLE_SIDES_DRAFT
     if (options?.fileName) {
       this.setDwgName(options.fileName)
     }

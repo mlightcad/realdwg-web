@@ -17,6 +17,7 @@ import {
   AcDbDimStyleTableRecord,
   AcDbDimTextVertical
 } from '../database'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
@@ -558,16 +559,16 @@ export class AcDbLeader extends AcDbCurve {
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    return renderer.lines(this.collectDrawPoints())
+    return renderer.lines(this.collectDrawPoints(renderer))
   }
 
   /**
    * Builds the leader polyline including the optional horizontal hook line
    * segment that spans the associated annotation width.
    */
-  private collectDrawPoints(): AcGePoint3d[] {
+  private collectDrawPoints(renderer?: AcGiRenderer): AcGePoint3d[] {
     if (this.isSplined && this.splineGeo) {
-      return this.splineGeo.getPoints(100)
+      return this.splineGeo.tessellate(acdbDrawTessellateOptions(renderer))
     }
 
     const points = this._vertices.map(vertex => vertex.clone())

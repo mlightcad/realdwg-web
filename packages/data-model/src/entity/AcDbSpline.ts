@@ -13,6 +13,7 @@ import {
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbPolyline } from './AcDbPolyline'
@@ -603,7 +604,7 @@ export class AcDbSpline extends AcDbCurve {
    * @returns The rendered spline entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const points = this._geo.getPoints(100)
+    const points = this._geo.tessellate(acdbDrawTessellateOptions(renderer))
     return renderer.lines(points)
   }
 

@@ -147,7 +147,9 @@ describe('AcDbLeader', () => {
     leaderC.appendVertex(new AcGePoint3d(6, 1, 0))
     leaderC.isSplined = true
     leaderC.subWorldDraw(rendererC as never)
-    expect((rendererC.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(100)
+    const splinedPoints = (rendererC.lines.mock.calls[0] as unknown[][])[0]
+    expect(splinedPoints.length).toBeGreaterThan(1)
+    expect(splinedPoints.length).toBeLessThanOrEqual(100)
   })
 
   it('extends straight leaders with a horizontal hook line segment', () => {
@@ -351,7 +353,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    expect((renderer.lines.mock.calls[0] as unknown[][])[0]).toHaveLength(100)
+    const sampled = (renderer.lines.mock.calls[0] as unknown[][])[0]
+    expect(sampled.length).toBeGreaterThan(1)
+    expect(sampled.length).toBeLessThanOrEqual(100)
   })
 
   it('writes leader-specific DXF fields', () => {

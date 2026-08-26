@@ -74,6 +74,14 @@ export {
   acdbDecodeMLeaderStyleRawColor
 } from './AcDbMLeaderStyleColorCodec'
 export {
+  ACDB_DRAW_CIRCLE_SIDES_DRAFT,
+  ACDB_DRAW_CIRCLE_SIDES_HIGH,
+  ACDB_DRAW_CIRCLE_SIDES_STANDARD,
+  acdbDrawCircleSides,
+  acdbDrawTessellateOptions,
+  acdbResolveCircleSides
+} from './AcDbDrawTessellate'
+export {
   acdbEstimateDatabaseMemory,
   acdbFormatMemoryEstimate
 } from './AcDbMemoryEstimator'

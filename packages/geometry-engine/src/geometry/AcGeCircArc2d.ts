@@ -7,7 +7,7 @@ import {
   AcGePoint2dLike,
   AcGeVector2d
 } from '../math'
-import { AcGeMathUtil, TAU } from '../util'
+import { acgeClamp, AcGeMathUtil, FLOAT_TOL, TAU } from '../util'
 import {
   acgeTryCreateArcByCenterStartChord,
   acgeTryCreateArcByCenterStartEnd,
@@ -31,6 +31,10 @@ import {
   acgeSameCircle2d
 } from './AcGeCircArcUtil'
 import { AcGeCurve2d } from './AcGeCurve2d'
+import type {
+  AcGeResolvedTessellateOptions,
+  AcGeTessellateOptions
+} from './AcGeCurveTessellate'
 
 /**
  * Represent a circular arc.
@@ -44,6 +48,16 @@ import { AcGeCurve2d } from './AcGeCurve2d'
  * This means a "90° above X axis" in counterclockwise mode becomes "270°" in clockwise mode.
  */
 export class AcGeCircArc2d extends AcGeCurve2d {
+  /**
+   * Default tessellation side count for a full circle.
+   * Matches the historical `getPoints(100)` sampling path.
+   */
+  static readonly DEFAULT_CIRCLE_SIDES = 100
+  /** Lower bound for {@link AcGeTessellateOptions.circleSides}. */
+  static readonly MIN_CIRCLE_SIDES = 8
+  /** Upper bound for {@link AcGeTessellateOptions.circleSides} (DXF VPORT range). */
+  static readonly MAX_CIRCLE_SIDES = 20000
+
   private _center!: AcGePoint2d
   private _radius!: number
   private _startAngle!: number
@@ -905,5 +919,126 @@ export class AcGeCircArc2d extends AcGeCurve2d {
       }
     }
     return points
+  }
+
+  /**
+   * Sample this arc to a polyline whose chord height is bounded by `options`.
+   *
+   * Uses a closed-form segment count, then {@link getPoints}. A full circle
+   * with default options still uses 100 segments; a short arc uses fewer.
+   *
+   * @param options - Chord-height tessellation options
+   */
+  tessellate(options?: AcGeTessellateOptions): AcGePoint2d[] {
+    const sweep = this.closed ? TAU : this.deltaAngle
+    const numPoints = AcGeCircArc2d.segmentCount(this.radius, sweep, {
+      ...options,
+      minSegments: options?.minSegments ?? (this.closed ? 8 : 3)
+    })
+    return this.getPoints(numPoints)
+  }
+
+  /**
+   * Clamp a VIEWRES-like side count into the legal VPORT range.
+   *
+   * @param circleSides - Raw side count; non-finite values fall back to the default
+   */
+  static resolveCircleSides(circleSides?: number): number {
+    if (circleSides == null || !Number.isFinite(circleSides)) {
+      return AcGeCircArc2d.DEFAULT_CIRCLE_SIDES
+    }
+    return acgeClamp(
+      Math.round(circleSides),
+      AcGeCircArc2d.MIN_CIRCLE_SIDES,
+      AcGeCircArc2d.MAX_CIRCLE_SIDES
+    )
+  }
+
+  /**
+   * Fill in `circleSides` and `maxSegments`, leaving per-curve deviation and
+   * `minSegments` for the caller to resolve.
+   */
+  static resolveTessellateOptions(
+    options?: AcGeTessellateOptions
+  ): AcGeResolvedTessellateOptions {
+    const circleSides = AcGeCircArc2d.resolveCircleSides(options?.circleSides)
+    const maxSegments = Math.max(
+      1,
+      Math.round(options?.maxSegments ?? circleSides)
+    )
+    return {
+      deviation: options?.deviation,
+      circleSides,
+      minSegments: options?.minSegments,
+      maxSegments
+    }
+  }
+
+  /**
+   * Chord height of a full circle tessellated into `circleSides` equal segments.
+   *
+   * `s = r * (1 - cos(π / n))`. Used as the default world-space deviation so a
+   * full circle still uses about `circleSides` segments.
+   */
+  static chordDeviationFromRadius(
+    radius: number,
+    circleSides: number = AcGeCircArc2d.DEFAULT_CIRCLE_SIDES
+  ): number {
+    const r = Math.abs(radius)
+    const n = AcGeCircArc2d.resolveCircleSides(circleSides)
+    if (r <= FLOAT_TOL) {
+      return FLOAT_TOL
+    }
+    return Math.max(FLOAT_TOL, r * (1 - Math.cos(Math.PI / n)))
+  }
+
+  /**
+   * Number of equal circular-arc segments whose chord height is at most the
+   * requested deviation.
+   *
+   * For the default deviation this equals `ceil(|sweep| / τ * circleSides)`,
+   * so a full circle keeps the historical 100-segment look while a short arc
+   * uses proportionally fewer evaluations.
+   *
+   * @param radius - Arc radius in world units
+   * @param sweep - Signed or unsigned included angle in radians
+   * @param options - Tessellation options
+   * @returns Segment count in `[minSegments, maxSegments]`
+   */
+  static segmentCount(
+    radius: number,
+    sweep: number,
+    options?: AcGeTessellateOptions
+  ): number {
+    const resolved = AcGeCircArc2d.resolveTessellateOptions(options)
+    const sweepAbs = Math.abs(sweep)
+    const isFullCircle = sweepAbs >= TAU - 1e-8
+    const minSegments = Math.max(
+      1,
+      Math.round(resolved.minSegments ?? (isFullCircle ? 8 : 3))
+    )
+    const maxSegments = Math.max(minSegments, resolved.maxSegments)
+    const r = Math.abs(radius)
+
+    if (r <= FLOAT_TOL || sweepAbs <= FLOAT_TOL) {
+      return minSegments
+    }
+
+    const deviation =
+      resolved.deviation ??
+      AcGeCircArc2d.chordDeviationFromRadius(r, resolved.circleSides)
+    const ratio = 1 - deviation / r
+    if (!Number.isFinite(ratio) || ratio >= 1) {
+      return maxSegments
+    }
+    if (ratio <= -1) {
+      return minSegments
+    }
+
+    const theta = 2 * Math.acos(ratio)
+    if (theta <= FLOAT_TOL) {
+      return maxSegments
+    }
+    return acgeClamp(Math.ceil(sweepAbs / theta), minSegments, maxSegments)
   }
 }

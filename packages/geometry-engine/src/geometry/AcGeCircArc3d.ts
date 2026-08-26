@@ -11,8 +11,10 @@ import {
   AcGeVector3dLike
 } from '../math'
 import { AcGeMathUtil, AcGeTol, ORIGIN_POINT_3D, TAU } from '../util'
+import { AcGeCircArc2d } from './AcGeCircArc2d'
 import { acgeComputeCircumcircle3d } from './AcGeCircArcUtil'
 import { AcGeCurve3d } from './AcGeCurve3d'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
 
 /**
  * The class represeting both full circles and circular arcs in 3d space. The ellipse arc is
@@ -521,6 +523,32 @@ export class AcGeCircArc3d extends AcGeCurve3d {
       points.push(point)
     }
     return points
+  }
+
+  /**
+   * Sample this arc to a polyline whose chord height is bounded by `options`.
+   *
+   * @param options - Chord-height tessellation options
+   */
+  tessellate(options?: AcGeTessellateOptions): AcGePoint3d[] {
+    const sweep = this.closed ? TAU : this.deltaAngle
+    const numPoints = AcGeCircArc3d.segmentCount(this.radius, sweep, {
+      ...options,
+      minSegments: options?.minSegments ?? (this.closed ? 8 : 3)
+    })
+    return this.getPoints(numPoints)
+  }
+
+  /**
+   * Number of equal circular-arc segments whose chord height is at most the
+   * requested deviation. Delegates to {@link AcGeCircArc2d.segmentCount}.
+   */
+  static segmentCount(
+    radius: number,
+    sweep: number,
+    options?: AcGeTessellateOptions
+  ): number {
+    return AcGeCircArc2d.segmentCount(radius, sweep, options)
   }
 
   /**
