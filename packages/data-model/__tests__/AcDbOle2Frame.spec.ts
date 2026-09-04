@@ -1,3 +1,6 @@
+import fs from 'node:fs'
+import path from 'node:path'
+
 import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
@@ -6,6 +9,7 @@ import { acdbDxfInEntity } from '../src/dxf/AcDbDxfEntityFactory'
 import { AcDbOle2Frame } from '../src/entity'
 import { acdbParseOle2FrameGeometryHeader } from '../src/misc/AcDbOle2FrameGeometry'
 import { acdbExtractOleImageBlob } from '../src/misc/AcDbOleImageExtractor'
+import { acdbReassembleEmfFromWmfEscapes } from '../src/misc/AcDbOleMetafileDetect'
 import {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks
@@ -93,12 +97,8 @@ describe('acdbExtractOleImageBlob', () => {
   })
 
   it('extracts the Excel OLE preview metafile from a real OLE2FRAME payload', () => {
-    const fs = require('node:fs')
-    const path = require('node:path')
     const fixture = path.join(__dirname, 'fixtures', 'excel-ole2frame.bin')
-    if (!fs.existsSync(fixture)) {
-      return
-    }
+    expect(fs.existsSync(fixture)).toBe(true)
     const data = new Uint8Array(fs.readFileSync(fixture))
     const blob = acdbExtractOleImageBlob(data)
     expect(blob).toBeDefined()
@@ -109,25 +109,17 @@ describe('acdbExtractOleImageBlob', () => {
   })
 
   it('reassembles a contiguous EMF from WMF WMFC escape chunks', () => {
-    const fs = require('node:fs')
-    const path = require('node:path')
-    const {
-      acdbReassembleEmfFromWmfEscapes
-    } = require('../src/misc/AcDbOleMetafileDetect')
     const fixture = path.join(__dirname, 'fixtures', 'excel-ole-pres.wmf')
-    if (!fs.existsSync(fixture)) {
-      return
-    }
+    expect(fs.existsSync(fixture)).toBe(true)
     const wmf = new Uint8Array(fs.readFileSync(fixture))
     const emf = acdbReassembleEmfFromWmfEscapes(wmf)
-    expect(emf).toBeDefined()
-    if (!emf) return
+    expect(emf).toBeInstanceOf(Uint8Array)
 
-    const view = new DataView(emf.buffer, emf.byteOffset, emf.byteLength)
+    const view = new DataView(emf!.buffer, emf!.byteOffset, emf!.byteLength)
     expect(view.getUint32(0, true)).toBe(1)
     const nBytes = view.getUint32(48, true)
     const nRecords = view.getUint32(52, true)
-    expect(nBytes).toBe(emf.length)
+    expect(nBytes).toBe(emf!.length)
 
     let offset = 0
     let walked = 0
