@@ -47,6 +47,7 @@
     "@mlightcad/common": "workspace:*",
     "@mlightcad/geometry-engine": "workspace:*",
     "@mlightcad/graphic-interface": "workspace:*",
+    "emf-converter": "2.0.2",
     "uid": "^2.0.2"
   }
 }

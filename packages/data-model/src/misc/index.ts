@@ -97,6 +97,20 @@ export {
   acdbParseOle2FrameGeometryHeader
 } from './AcDbOle2FrameGeometry'
 export type { AcDbOle2FrameGeometryHeader } from './AcDbOle2FrameGeometry'
+export { acdbExtractOleImageBlob } from './AcDbOleImageExtractor'
+export {
+  ACDB_OLE_METAFILE_EMF_MIME,
+  ACDB_OLE_METAFILE_WMF_MIME,
+  acdbIsOleMetafileMimeType,
+  acdbLooksLikeEmf,
+  acdbLooksLikeWmf,
+  acdbReassembleEmfFromWmfEscapes
+} from './AcDbOleMetafileDetect'
+export {
+  acdbOleBlobNeedsMetafileRasterization,
+  acdbRasterizeOleMetafile
+} from './AcDbOleMetafileRasterizer'
+export type { AcDbOleMetafileRasterizeOptions } from './AcDbOleMetafileRasterizer'
 export {
   AcDbOsnapMode,
   acdbHasOsnapMode,

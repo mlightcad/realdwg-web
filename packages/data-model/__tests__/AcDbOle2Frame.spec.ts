@@ -73,6 +73,81 @@ describe('acdbExtractOleImageBlob', () => {
     expect(acdbExtractOleImageBlob(new Uint8Array([1, 2, 3, 4]))).toBeUndefined()
     expect(acdbExtractOleImageBlob(undefined)).toBeUndefined()
   })
+
+  it('extracts a standalone WMF payload as image/wmf', () => {
+    // Minimal standard WMF: header (9 words) + META_EOF (3 words).
+    const wmf = new Uint8Array(24)
+    const wmfView = new DataView(wmf.buffer)
+    wmfView.setUint16(0, 1, true) // mtType memory
+    wmfView.setUint16(2, 9, true) // mtHeaderSize
+    wmfView.setUint16(4, 0x0300, true) // mtVersion
+    wmfView.setUint32(6, 12, true) // mtSize in words
+    // META_EOF at offset 18
+    wmfView.setUint32(18, 3, true)
+    wmfView.setUint16(22, 0, true)
+
+    const blob = acdbExtractOleImageBlob(wmf)
+    expect(blob).toBeDefined()
+    expect(blob?.type).toBe('image/wmf')
+    expect(blob?.size).toBe(wmf.length)
+  })
+
+  it('extracts the Excel OLE preview metafile from a real OLE2FRAME payload', () => {
+    const fs = require('node:fs')
+    const path = require('node:path')
+    const fixture = path.join(__dirname, 'fixtures', 'excel-ole2frame.bin')
+    if (!fs.existsSync(fixture)) {
+      return
+    }
+    const data = new Uint8Array(fs.readFileSync(fixture))
+    const blob = acdbExtractOleImageBlob(data)
+    expect(blob).toBeDefined()
+    // Excel CF_ENHMETAFILE is a WMF that embeds EMF via WMFC escapes; we
+    // reassemble a contiguous EMF so the full table (not only ~8 rows) converts.
+    expect(blob?.type).toBe('image/emf')
+    expect(blob?.size || 0).toBe(76788)
+  })
+
+  it('reassembles a contiguous EMF from WMF WMFC escape chunks', () => {
+    const fs = require('node:fs')
+    const path = require('node:path')
+    const {
+      acdbReassembleEmfFromWmfEscapes
+    } = require('../src/misc/AcDbOleMetafileDetect')
+    const fixture = path.join(__dirname, 'fixtures', 'excel-ole-pres.wmf')
+    if (!fs.existsSync(fixture)) {
+      return
+    }
+    const wmf = new Uint8Array(fs.readFileSync(fixture))
+    const emf = acdbReassembleEmfFromWmfEscapes(wmf)
+    expect(emf).toBeDefined()
+    if (!emf) return
+
+    const view = new DataView(emf.buffer, emf.byteOffset, emf.byteLength)
+    expect(view.getUint32(0, true)).toBe(1)
+    const nBytes = view.getUint32(48, true)
+    const nRecords = view.getUint32(52, true)
+    expect(nBytes).toBe(emf.length)
+
+    let offset = 0
+    let walked = 0
+    let reachedEof = false
+    for (let r = 0; r < nRecords; r++) {
+      const type = view.getUint32(offset, true)
+      const size = view.getUint32(offset + 4, true)
+      expect(size).toBeGreaterThanOrEqual(8)
+      expect(offset + size).toBeLessThanOrEqual(nBytes)
+      walked++
+      offset += size
+      if (type === 14) {
+        reachedEof = true
+        break
+      }
+    }
+    expect(reachedEof).toBe(true)
+    expect(walked).toBe(nRecords)
+    expect(nRecords).toBeGreaterThan(1000)
+  })
 })
 
 /**

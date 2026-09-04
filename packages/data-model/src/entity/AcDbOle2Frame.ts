@@ -616,7 +616,12 @@ export class AcDbOle2Frame extends AcDbOleFrame {
 
   /**
    * Gets the image blob extracted from the embedded OLE object, when the
-   * payload contains a recognizable bitmap / PNG / JPEG presentation.
+   * payload contains a recognizable bitmap / PNG / JPEG / WMF / EMF
+   * presentation.
+   *
+   * Metafile blobs use MIME types `image/wmf` or `image/emf` and must be
+   * rasterized by the host renderer (see {@link acdbRasterizeOleMetafile})
+   * before WebGL texturing.
    *
    * Extraction is performed lazily on first access and cached until the OLE
    * binary payload changes.
@@ -629,6 +634,10 @@ export class AcDbOle2Frame extends AcDbOleFrame {
    * Draws the embedded OLE picture when an image can be extracted from the
    * OLE binary payload; otherwise draws a pickable rectangular frame
    * (transparent fill + outline).
+   *
+   * Excel OLE previews typically arrive as WMF/EMF metafile blobs. Renderers
+   * that accept those MIME types (and rasterize them) will show the table
+   * picture; others should treat metafiles like missing images.
    */
   subWorldDraw(renderer: AcGiRenderer) {
     const image = this.resolveImage()

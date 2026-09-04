@@ -6,17 +6,35 @@
  * Compound File Binary (CFB) document. Embedded pictures (for example
  * "Paintbrush Picture") typically expose either:
  * - a `CONTENTS` stream containing a full BMP / PNG / JPEG file, or
- * - a `\2OlePres###` presentation stream with a CF_DIB / CF_BITMAP payload
+ * - a `\2OlePres###` presentation stream with a CF_DIB / CF_BITMAP /
+ *   CF_ENHMETAFILE / CF_METAFILEPICT payload
  *
- * This extractor prefers CFB streams when present, then falls back to scanning
- * the raw buffer for common image signatures and packed DIBs.
+ * Excel OLE objects almost always ship a WMF/EMF presentation in
+ * `\2OlePres000`. Those metafile blobs use MIME types {@link
+ * ACDB_OLE_METAFILE_WMF_MIME} / {@link ACDB_OLE_METAFILE_EMF_MIME} and must be
+ * rasterized (see {@link acdbRasterizeOleMetafile}) before WebGL texturing.
+ *
+ * This extractor prefers OlePres streams when present, then other CFB image
+ * streams, then a raw-buffer signature scan.
  */
+
+import {
+  ACDB_OLE_METAFILE_EMF_MIME,
+  ACDB_OLE_METAFILE_WMF_MIME,
+  acdbLooksLikeEmf,
+  acdbLooksLikeWmf,
+  acdbReassembleEmfFromWmfEscapes,
+  findEmfHeaderOffset,
+  isEmfHeaderAt
+} from './AcDbOleMetafileDetect'
 
 const CFB_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] as const
 
 /** Standard clipboard format identifiers used in OLE presentation streams. */
 const CF_BITMAP = 2
+const CF_METAFILEPICT = 3
 const CF_DIB = 8
+const CF_ENHMETAFILE = 14
 
 const DIRECTORY_ENTRY_SIZE = 128
 const MAX_STREAM_BYTES = 64 * 1024 * 1024
@@ -25,7 +43,8 @@ const MAX_STREAM_BYTES = 64 * 1024 * 1024
  * Attempts to extract an image blob from OLE binary data.
  *
  * @param data - Raw OLE payload from {@link AcDbOleFrame.getOleObject}.
- * @returns A browser-decodable image blob, or `undefined` when no image is found.
+ * @returns A browser-decodable raster blob (`image/bmp|png|jpeg|gif`) or a
+ *   metafile blob (`image/wmf|emf`), or `undefined` when nothing usable is found.
  */
 export function acdbExtractOleImageBlob(
   data?: Uint8Array | null
@@ -64,20 +83,8 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
     return undefined
   }
 
-  const preferredNames = [
-    'CONTENTS',
-    'Package',
-    'Ole10Native',
-    '\x01Ole10Native'
-  ]
-
-  for (const name of preferredNames) {
-    const stream = file.readStream(name)
-    if (!stream?.length) continue
-    const blob = extractImageFromRawBytes(stream)
-    if (blob) return blob
-  }
-
+  // Prefer OlePres first — Excel/Office OLE display pictures live here as
+  // WMF/EMF. Checking Package beforehand only wastes work (xlsx zip).
   for (const entry of file.entries()) {
     if (entry.type !== 'stream') continue
     if (!/olepres/i.test(entry.name) && !entry.name.includes('OlePres')) {
@@ -91,7 +98,21 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
     if (fromRaw) return fromRaw
   }
 
-  // Last resort: scan every stream for embedded image bytes.
+  const preferredNames = [
+    'CONTENTS',
+    'Ole10Native',
+    '\x01Ole10Native',
+    'Package'
+  ]
+
+  for (const name of preferredNames) {
+    const stream = file.readStream(name)
+    if (!stream?.length) continue
+    const blob = extractImageFromRawBytes(stream)
+    if (blob) return blob
+  }
+
+  // Last resort: scan every stream for embedded image / metafile bytes.
   for (const entry of file.entries()) {
     if (entry.type !== 'stream') continue
     const stream = file.readStream(entry.name)
@@ -105,10 +126,10 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
 
 /**
  * Parses an OLE presentation stream (`\2OlePres000`, …) and extracts a DIB /
- * bitmap when the clipboard format is CF_DIB or CF_BITMAP.
+ * bitmap / WMF / EMF presentation picture.
  *
  * @param stream - Bytes of a `\2OlePres###` (or similarly named) stream.
- * @returns A BMP image blob for CF_DIB / CF_BITMAP payloads, or `undefined`.
+ * @returns A raster or metafile blob, or `undefined`.
  *
  * @see https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oleds/78ab0f5c-ad1b-41b4-bb5e-1eea2cd13a6c
  */
@@ -127,8 +148,10 @@ function extractImageFromOlePresentation(stream: Uint8Array): Blob | undefined {
     clipboardFormat = view.getUint32(offset, true)
     offset += 4
   } else if (markerOrLength === 0xfffffffe) {
-    // Unicode clipboard format name — skip string and try raw scan later.
-    return undefined
+    // Unicode clipboard format name — skip string length + UTF-16 chars.
+    if (offset + 4 > stream.length) return undefined
+    const nameBytes = view.getUint32(offset, true)
+    offset += 4 + nameBytes
   } else if (markerOrLength > 0 && markerOrLength < 0xffff) {
     // ANSI clipboard format name
     offset += markerOrLength
@@ -154,23 +177,231 @@ function extractImageFromOlePresentation(stream: Uint8Array): Blob | undefined {
   }
 
   const presentationData = stream.subarray(offset, offset + dataSize)
-  if (clipboardFormat === CF_DIB) {
-    return dibToBmpBlob(presentationData)
-  }
-  if (clipboardFormat === CF_BITMAP) {
-    return extractImageFromRawBytes(presentationData)
-  }
-  return extractImageFromRawBytes(presentationData)
+  return extractPresentationPicture(presentationData, clipboardFormat)
 }
 
 /**
- * Scans a byte buffer for common image file signatures (BMP, PNG, JPEG, GIF)
- * and packed DIB structures.
+ * Interprets OlePres picture bytes using the declared clipboard format, with
+ * content sniffing as a fallback (Excel often labels WMF data as
+ * CF_ENHMETAFILE).
+ */
+function extractPresentationPicture(
+  presentationData: Uint8Array,
+  clipboardFormat: number
+): Blob | undefined {
+  if (clipboardFormat === CF_DIB) {
+    const dib = dibToBmpBlob(presentationData)
+    if (dib) return dib
+  }
+  if (clipboardFormat === CF_BITMAP) {
+    const raster = extractRasterImageFromRawBytes(presentationData)
+    if (raster) return raster
+  }
+  if (
+    clipboardFormat === CF_ENHMETAFILE ||
+    clipboardFormat === CF_METAFILEPICT
+  ) {
+    const metafile = extractMetafileFromPresentationData(
+      presentationData,
+      clipboardFormat
+    )
+    if (metafile) return metafile
+  }
+
+  // Content sniffing: Excel CF_ENHMETAFILE streams frequently contain a full
+  // WMF (and only a broken/partial embedded EMF fragment).
+  const metafile = extractMetafileFromPresentationData(presentationData)
+  if (metafile) return metafile
+
+  return extractRasterImageFromRawBytes(presentationData)
+}
+
+/**
+ * Pulls a WMF or EMF blob out of OlePres picture bytes.
+ *
+ * Preference order:
+ * 1. EMF reassembled from WMF `META_ESCAPE_ENHANCED_METAFILE` ("WMFC") chunks
+ *    — required for Excel OLE; a raw `nBytes` slice through the wrapper is
+ *    corrupt and only paints the first few rows.
+ * 2. Standalone EMF (`EMR_HEADER`), including best-effort `nBytes` slices for
+ *    dual-mode EMF+ streams that fail a strict EMR walk
+ * 3. Complete WMF (standard or Aldus placeable) when it walks to `META_EOF`
+ * 4. Best-effort WMF slice from a plausible header
+ */
+function extractMetafileFromPresentationData(
+  data: Uint8Array,
+  clipboardFormat?: number
+): Blob | undefined {
+  // CF_METAFILEPICT: optional 12-byte METAFILEPICT (mm, xExt, yExt) before WMF.
+  let wmfCandidate = data
+  if (clipboardFormat === CF_METAFILEPICT && data.length > 30) {
+    const maybeWmf = data.subarray(12)
+    if (acdbLooksLikeWmf(maybeWmf)) {
+      wmfCandidate = maybeWmf
+    }
+  }
+
+  // Excel CF_ENHMETAFILE is often a WMF that shards the real EMF across WMFC
+  // escape records. Reassemble before any contiguous EMF header slice.
+  if (acdbLooksLikeWmf(wmfCandidate)) {
+    const reassembled = acdbReassembleEmfFromWmfEscapes(wmfCandidate)
+    if (reassembled) {
+      return new Blob([copyBytes(reassembled)], {
+        type: ACDB_OLE_METAFILE_EMF_MIME
+      })
+    }
+  }
+
+  const emfOffset = findEmfHeaderOffset(data)
+  if (emfOffset >= 0 && isEmfHeaderAt(data, emfOffset)) {
+    const validated = sliceValidatedEmf(data, emfOffset)
+    if (validated) {
+      return new Blob([copyBytes(validated)], {
+        type: ACDB_OLE_METAFILE_EMF_MIME
+      })
+    }
+
+    // Dual-mode Excel EMF+ streams often fail a strict EMR walk after the
+    // first EMF+ comment block, but still convert correctly when the bytes
+    // are a true contiguous EMF (not a WMF-wrapped shard stream).
+    const view = new DataView(
+      data.buffer,
+      data.byteOffset + emfOffset,
+      data.length - emfOffset
+    )
+    const nBytes = view.getUint32(48, true)
+    if (nBytes > 88 && emfOffset + nBytes <= data.length) {
+      return new Blob([copyBytes(data.subarray(emfOffset, emfOffset + nBytes))], {
+        type: ACDB_OLE_METAFILE_EMF_MIME
+      })
+    }
+  }
+
+  if (acdbLooksLikeWmf(wmfCandidate)) {
+    const wmf = sliceValidatedWmf(wmfCandidate)
+    if (wmf) {
+      return new Blob([copyBytes(wmf)], { type: ACDB_OLE_METAFILE_WMF_MIME })
+    }
+    return new Blob([copyBytes(wmfCandidate)], {
+      type: ACDB_OLE_METAFILE_WMF_MIME
+    })
+  }
+
+  return undefined
+}
+
+/** Copies a view into a standalone buffer so Blob construction is unambiguous. */
+function copyBytes(data: Uint8Array): Uint8Array {
+  const copy = new Uint8Array(data.length)
+  copy.set(data)
+  return copy
+}
+
+/**
+ * Returns an EMF byte slice that successfully walks from `EMR_HEADER` to
+ * `EMR_EOF`, or `undefined` when the record stream is corrupt.
+ */
+function sliceValidatedEmf(
+  data: Uint8Array,
+  start: number
+): Uint8Array | undefined {
+  if (!isEmfHeaderAt(data, start)) {
+    return undefined
+  }
+  const view = new DataView(
+    data.buffer,
+    data.byteOffset + start,
+    data.length - start
+  )
+  const nBytes = view.getUint32(48, true)
+  const nRecords = view.getUint32(52, true)
+  let offset = 0
+  for (let r = 0; r < nRecords; r++) {
+    if (offset + 8 > nBytes) {
+      return undefined
+    }
+    const type = view.getUint32(offset, true)
+    const size = view.getUint32(offset + 4, true)
+    if (size < 8 || offset + size > nBytes) {
+      return undefined
+    }
+    offset += size
+    if (type === 14) {
+      // EMR_EOF
+      return data.subarray(start, start + offset)
+    }
+  }
+  return undefined
+}
+
+/**
+ * Returns a WMF byte slice that walks from the header to `META_EOF`, or
+ * `undefined` when the record stream is corrupt.
+ */
+function sliceValidatedWmf(data: Uint8Array): Uint8Array | undefined {
+  let headerOffset = 0
+  const view = new DataView(data.buffer, data.byteOffset, data.byteLength)
+  if (data.length >= 40 && view.getUint32(0, true) === 0x9ac6cdd7) {
+    headerOffset = 22
+  }
+  if (!acdbLooksLikeWmf(data.subarray(headerOffset))) {
+    return undefined
+  }
+  const headerView = new DataView(
+    data.buffer,
+    data.byteOffset + headerOffset,
+    data.length - headerOffset
+  )
+  const headerSizeWords = headerView.getUint16(2, true)
+  const sizeWords = headerView.getUint32(6, true)
+  const expectedBytes = headerOffset + sizeWords * 2
+  if (expectedBytes > data.length) {
+    return undefined
+  }
+
+  let offset = headerOffset + headerSizeWords * 2
+  const end = expectedBytes
+  let records = 0
+  while (offset + 6 <= end && records < 500_000) {
+    const recordSizeWords = view.getUint32(offset, true)
+    const func = view.getUint16(offset + 4, true)
+    if (recordSizeWords < 3 || offset + recordSizeWords * 2 > end) {
+      return undefined
+    }
+    offset += recordSizeWords * 2
+    records++
+    if (func === 0) {
+      // META_EOF
+      return data.subarray(0, offset)
+    }
+  }
+  return undefined
+}
+
+/**
+ * Scans a byte buffer for common image file signatures (BMP, PNG, JPEG, GIF),
+ * packed DIBs, and WMF/EMF metafiles.
  *
  * @param data - Arbitrary bytes that may contain an embedded image.
  * @returns The first recognized image blob, or `undefined` if none is found.
  */
 function extractImageFromRawBytes(data: Uint8Array): Blob | undefined {
+  const raster = extractRasterImageFromRawBytes(data)
+  if (raster) return raster
+
+  if (acdbLooksLikeEmf(data) || acdbLooksLikeWmf(data)) {
+    return extractMetafileFromPresentationData(data)
+  }
+
+  return undefined
+}
+
+/**
+ * Scans for BMP / PNG / JPEG / GIF / packed DIB only (no metafiles).
+ */
+function extractRasterImageFromRawBytes(
+  data: Uint8Array
+): Blob | undefined {
   const bmp = findBmpBlob(data)
   if (bmp) return bmp
 
