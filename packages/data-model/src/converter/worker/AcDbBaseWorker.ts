@@ -19,11 +19,15 @@ export interface AcDbWorkerMessage<TInput = unknown> {
  * - `worker_oom` — postMessage failed due to memory or clone limits
  * - `worker_timeout` — task exceeded the configured timeout (main thread)
  * - `worker_error` — generic worker or postMessage failure
+ * - `license_expired` — DWG converter evaluation period has ended
+ * - `license_invalid` — DWG converter license key is missing, malformed, expired, or invalid
  */
 export type AcDbWorkerErrorCode =
   | 'worker_oom'
   | 'worker_timeout'
   | 'worker_error'
+  | 'license_expired'
+  | 'license_invalid'
 
 /** Response posted back to the main thread after a worker task completes. */
 export interface AcDbWorkerResponse<TOutput = unknown> {
@@ -59,11 +63,14 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
         const result = await this.executeTask(input)
         this.sendResponse(id, true, result)
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error)
         this.sendResponse(
           id,
           false,
           undefined,
-          error instanceof Error ? error.message : String(error)
+          message,
+          this.classifyTaskError(error, message)
         )
       }
     }
@@ -102,6 +109,34 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
   }
 
   /**
+   * Map a thrown worker task error to a structured error code.
+   *
+   * Prefers a structured `code` on the error (for example license failures),
+   * then the error name, then message heuristics.
+   */
+  private classifyTaskError(
+    error: unknown,
+    message: string
+  ): AcDbWorkerErrorCode {
+    if (error instanceof Error) {
+      const code = (error as { code?: unknown }).code
+      if (code === 'license_expired' || code === 'license_invalid') {
+        return code
+      }
+      if (error.name === 'DwgConverterLicenseError') {
+        return this.classifyLicenseMessage(message)
+      }
+    }
+
+    const licenseCode = this.classifyLicenseMessageFromText(message)
+    if (licenseCode) {
+      return licenseCode
+    }
+
+    return this.classifyPostMessageError(message)
+  }
+
+  /**
    * Map a postMessage failure message to a structured error code.
    */
   private classifyPostMessageError(message: string): AcDbWorkerErrorCode {
@@ -113,6 +148,25 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
       return 'worker_oom'
     }
     return 'worker_error'
+  }
+
+  private classifyLicenseMessage(
+    message: string
+  ): 'license_expired' | 'license_invalid' {
+    return this.classifyLicenseMessageFromText(message) ?? 'license_invalid'
+  }
+
+  private classifyLicenseMessageFromText(
+    message: string
+  ): 'license_expired' | 'license_invalid' | undefined {
+    const lower = message.toLowerCase()
+    if (lower.includes('evaluation of @mlight-cad/dwg-converter has expired')) {
+      return 'license_expired'
+    }
+    if (lower.includes('invalid @mlight-cad/dwg-converter license key')) {
+      return 'license_invalid'
+    }
+    return undefined
   }
 
   /**

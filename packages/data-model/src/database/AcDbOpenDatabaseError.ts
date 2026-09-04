@@ -13,6 +13,8 @@ import { AcDbConversionStage } from './AcDbDatabaseConverter'
  * - `parse_failed` — the drawing could not be parsed into an {@link AcDbDatabase}
  * - `font_load_failed` — required font files could not be downloaded or loaded
  * - `fetch_failed` — the drawing source could not be fetched from a URI
+ * - `license_expired` — DWG converter evaluation period has ended
+ * - `license_invalid` — DWG converter license key is missing, malformed, expired, or invalid
  * - `unknown` — failure reason could not be classified
  */
 export type AcDbOpenDatabaseErrorCode =
@@ -22,13 +24,15 @@ export type AcDbOpenDatabaseErrorCode =
   | 'parse_failed'
   | 'font_load_failed'
   | 'fetch_failed'
+  | 'license_expired'
+  | 'license_invalid'
   | 'unknown'
 
 /**
  * Structured error thrown when opening a drawing database fails.
  *
  * Callers can inspect {@link code} to distinguish worker out-of-memory failures
- * from parse errors, timeouts, and other failure modes.
+ * from parse errors, timeouts, license failures, and other failure modes.
  */
 export class AcDbOpenDatabaseError extends Error {
   /** Machine-readable failure category for programmatic handling. */
@@ -42,6 +46,9 @@ export class AcDbOpenDatabaseError extends Error {
    */
   readonly stage?: AcDbConversionStage
 
+  /** Original thrown value that was normalized into this error, when available. */
+  readonly cause?: unknown
+
   /**
    * Substrings matched against worker error messages to detect out-of-memory failures.
    *
@@ -53,6 +60,19 @@ export class AcDbOpenDatabaseError extends Error {
     'data cannot be cloned',
     'allocation failed',
     'memory access out of bounds'
+  ]
+
+  /**
+   * Message markers used when a thrown license error lacks a structured `code`.
+   *
+   * Kept in sync with `@mlight-cad/dwg-converter` user-facing license messages.
+   */
+  private static readonly LICENSE_EXPIRED_MARKERS = [
+    'evaluation of @mlight-cad/dwg-converter has expired'
+  ]
+
+  private static readonly LICENSE_INVALID_MARKERS = [
+    'invalid @mlight-cad/dwg-converter license key'
   ]
 
   /**
@@ -71,6 +91,16 @@ export class AcDbOpenDatabaseError extends Error {
     this.name = 'AcDbOpenDatabaseError'
     this.code = code
     this.stage = options?.stage
+    this.cause = options?.cause
+  }
+
+  /**
+   * Returns `true` when {@link code} is a license failure.
+   */
+  static isLicenseErrorCode(
+    code: AcDbOpenDatabaseErrorCode
+  ): code is 'license_expired' | 'license_invalid' {
+    return code === 'license_expired' || code === 'license_invalid'
   }
 
   /**
@@ -87,10 +117,36 @@ export class AcDbOpenDatabaseError extends Error {
   }
 
   /**
+   * Classifies a thrown value into an {@link AcDbOpenDatabaseErrorCode}.
+   *
+   * Prefers a structured `code` on the error (for example
+   * `DwgConverterLicenseError.code`), then the error `name`, then message
+   * heuristics used for worker/postMessage failures.
+   *
+   * @param error - Thrown value from an open or conversion operation
+   * @returns The inferred open-database error code
+   */
+  static classifyThrownError(error: unknown): AcDbOpenDatabaseErrorCode {
+    if (error instanceof Error) {
+      const structured = AcDbOpenDatabaseError.readStructuredCode(error)
+      if (structured) {
+        return structured
+      }
+
+      if (error.name === 'DwgConverterLicenseError') {
+        return AcDbOpenDatabaseError.classifyLicenseMessage(error.message)
+      }
+    }
+
+    const message = error instanceof Error ? error.message : String(error)
+    return AcDbOpenDatabaseError.classifyWorkerErrorMessage(message)
+  }
+
+  /**
    * Classifies a worker error message into an {@link AcDbOpenDatabaseErrorCode}.
    *
-   * Checks out-of-memory patterns first, then timeout wording, and falls back to
-   * `worker_error` for all other messages.
+   * Checks license markers, then out-of-memory patterns, then timeout wording,
+   * and falls back to `worker_error` for all other messages.
    *
    * @param message - Worker or postMessage error text to classify
    * @returns The inferred open-database error code
@@ -98,10 +154,25 @@ export class AcDbOpenDatabaseError extends Error {
   static classifyWorkerErrorMessage(
     message: string
   ): AcDbOpenDatabaseErrorCode {
+    const lower = message.toLowerCase()
+    if (
+      AcDbOpenDatabaseError.LICENSE_EXPIRED_MARKERS.some(marker =>
+        lower.includes(marker)
+      )
+    ) {
+      return 'license_expired'
+    }
+    if (
+      AcDbOpenDatabaseError.LICENSE_INVALID_MARKERS.some(marker =>
+        lower.includes(marker)
+      )
+    ) {
+      return 'license_invalid'
+    }
     if (AcDbOpenDatabaseError.isWorkerOutOfMemoryMessage(message)) {
       return 'worker_oom'
     }
-    if (message.toLowerCase().includes('timed out')) {
+    if (lower.includes('timed out')) {
       return 'worker_timeout'
     }
     return 'worker_error'
@@ -126,7 +197,7 @@ export class AcDbOpenDatabaseError extends Error {
     }
 
     const message = error instanceof Error ? error.message : String(error)
-    const code = AcDbOpenDatabaseError.classifyWorkerErrorMessage(message)
+    const code = AcDbOpenDatabaseError.classifyThrownError(error)
     return new AcDbOpenDatabaseError(message, code, { stage, cause: error })
   }
 
@@ -194,8 +265,59 @@ export class AcDbOpenDatabaseError extends Error {
         return 'worker_timeout'
       case 'worker_error':
         return 'worker_error'
+      case 'license_expired':
+        return 'license_expired'
+      case 'license_invalid':
+        return 'license_invalid'
       default:
         return AcDbOpenDatabaseError.classifyWorkerErrorMessage(message ?? '')
     }
+  }
+
+  /**
+   * Reads a structured machine-readable code from a thrown error when present.
+   */
+  private static readStructuredCode(
+    error: Error
+  ): AcDbOpenDatabaseErrorCode | undefined {
+    const code = (error as { code?: unknown }).code
+    if (typeof code !== 'string') {
+      return undefined
+    }
+
+    switch (code) {
+      case 'license_expired':
+      case 'license_invalid':
+      case 'worker_oom':
+      case 'worker_timeout':
+      case 'worker_error':
+      case 'parse_failed':
+      case 'font_load_failed':
+      case 'fetch_failed':
+      case 'unknown':
+        return code
+      default:
+        return undefined
+    }
+  }
+
+  /**
+   * Classifies license failure messages into expired vs invalid.
+   *
+   * Used for `DwgConverterLicenseError` instances that omit a structured
+   * `code`. Unknown license messages default to `license_invalid`.
+   */
+  private static classifyLicenseMessage(
+    message: string
+  ): 'license_expired' | 'license_invalid' {
+    const lower = message.toLowerCase()
+    if (
+      AcDbOpenDatabaseError.LICENSE_EXPIRED_MARKERS.some(marker =>
+        lower.includes(marker)
+      )
+    ) {
+      return 'license_expired'
+    }
+    return 'license_invalid'
   }
 }
