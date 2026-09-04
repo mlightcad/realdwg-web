@@ -5,6 +5,13 @@
 
 /// <reference lib="webworker" />
 
+import {
+  ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
+  acdbClassifyDwgConverterLicenseMessage,
+  acdbClassifyDwgConverterLicenseMessageOrInvalid,
+  acdbIsDwgConverterLicenseCode
+} from './AcDbDwgConverterLicense'
+
 /** Message sent from the main thread to a worker task. */
 export interface AcDbWorkerMessage<TInput = unknown> {
   /** Unique task identifier used to correlate the response. */
@@ -19,11 +26,15 @@ export interface AcDbWorkerMessage<TInput = unknown> {
  * - `worker_oom` — postMessage failed due to memory or clone limits
  * - `worker_timeout` — task exceeded the configured timeout (main thread)
  * - `worker_error` — generic worker or postMessage failure
+ * - `license_expired` — DWG converter evaluation period has ended
+ * - `license_invalid` — DWG converter license key is missing, malformed, expired, or invalid
  */
 export type AcDbWorkerErrorCode =
   | 'worker_oom'
   | 'worker_timeout'
   | 'worker_error'
+  | 'license_expired'
+  | 'license_invalid'
 
 /** Response posted back to the main thread after a worker task completes. */
 export interface AcDbWorkerResponse<TOutput = unknown> {
@@ -59,11 +70,14 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
         const result = await this.executeTask(input)
         this.sendResponse(id, true, result)
       } catch (error) {
+        const message =
+          error instanceof Error ? error.message : String(error)
         this.sendResponse(
           id,
           false,
           undefined,
-          error instanceof Error ? error.message : String(error)
+          message,
+          this.classifyTaskError(error, message)
         )
       }
     }
@@ -99,6 +113,34 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
         errorCode: this.classifyPostMessageError(message)
       })
     }
+  }
+
+  /**
+   * Map a thrown worker task error to a structured error code.
+   *
+   * Prefers a structured `code` on the error (for example license failures),
+   * then the error name, then message heuristics.
+   */
+  private classifyTaskError(
+    error: unknown,
+    message: string
+  ): AcDbWorkerErrorCode {
+    if (error instanceof Error) {
+      const code = (error as { code?: unknown }).code
+      if (acdbIsDwgConverterLicenseCode(code)) {
+        return code
+      }
+      if (error.name === ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME) {
+        return acdbClassifyDwgConverterLicenseMessageOrInvalid(message)
+      }
+    }
+
+    const licenseCode = acdbClassifyDwgConverterLicenseMessage(message)
+    if (licenseCode) {
+      return licenseCode
+    }
+
+    return this.classifyPostMessageError(message)
   }
 
   /**

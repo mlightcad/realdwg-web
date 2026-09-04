@@ -6,12 +6,14 @@
  * Updates packages/example:
  *   - index.html: LibreDWG → dwg-converter
  *   - package.json: dependency name
- *   - vite.config.ts: package references + dwg-codepage-*.bin static copy
+ *   - vite.config.ts: package references, drop libredwg-web.wasm, add
+ *     dwg-codepage-*.bin static copy
  *   - src/main.ts: import, class name and worker file references
  *
  * If packages/dwg-converter/package.json exists:
- *   - set @mlightcad/data-model version to link:../data-model
- *     (dwg-converter is outside the pnpm workspace / public lockfile)
+ *   - set @mlightcad/data-model in dependencies/devDependencies to
+ *     link:../data-model (dwg-converter is outside the pnpm workspace)
+ *   - fix peerDependencies if they incorrectly use link: (must be semver)
  */
 import { access, readFile, writeFile } from 'node:fs/promises'
 import { constants } from 'node:fs'
@@ -117,6 +119,60 @@ function ensureCodepageCopyTarget(content) {
   return { content: lines.join(nl), added: true }
 }
 
+/**
+ * Remove libredwg-web.wasm viteStaticCopy target — private dwg-converter
+ * does not ship that asset.
+ *
+ * @param {string} content
+ * @returns {{ content: string, removed: boolean }}
+ */
+function removeLibreDwgWasmCopyTarget(content) {
+  if (!content.includes('libredwg-web.wasm')) {
+    return { content, removed: false }
+  }
+
+  const nl = content.includes('\r\n') ? '\r\n' : '\n'
+  const lines = content.split(/\r?\n/)
+  const wasmLineIdx = lines.findIndex((line) =>
+    line.includes('libredwg-web.wasm')
+  )
+  if (wasmLineIdx === -1) {
+    return { content, removed: false }
+  }
+
+  // Find the enclosing `{ ... }` object for this target.
+  let startIdx = wasmLineIdx
+  while (startIdx > 0 && !/^[ \t]*\{$/.test(lines[startIdx])) {
+    startIdx--
+  }
+  let endIdx = wasmLineIdx
+  while (endIdx < lines.length && !/^[ \t]*\},?$/.test(lines[endIdx])) {
+    endIdx++
+  }
+  if (endIdx >= lines.length) {
+    return { content, removed: false }
+  }
+
+  // Drop a trailing comma on the previous target if this was the last entry.
+  const nextNonEmpty = lines
+    .slice(endIdx + 1)
+    .find((line) => line.trim() !== '')
+  const removingLast =
+    nextNonEmpty != null && /^[ \t]*\]/.test(nextNonEmpty)
+  if (removingLast) {
+    for (let i = startIdx - 1; i >= 0; i--) {
+      if (lines[i].trim() === '') continue
+      if (lines[i].endsWith(',')) {
+        lines[i] = lines[i].replace(/,$/, '')
+      }
+      break
+    }
+  }
+
+  lines.splice(startIdx, endIdx - startIdx + 1)
+  return { content: lines.join(nl), removed: true }
+}
+
 const changes = []
 
 const indexHtmlPath = path.join(exampleDir, 'index.html')
@@ -151,6 +207,8 @@ const viteConfigPath = path.join(exampleDir, 'vite.config.ts')
   const before = await readFile(viteConfigPath, { encoding: 'utf8' })
   let next = replaceConverterPkg(before)
   const renamed = next !== before
+  const wasmRemoved = removeLibreDwgWasmCopyTarget(next)
+  next = wasmRemoved.content
   const ensured = ensureCodepageCopyTarget(next)
   next = ensured.content
 
@@ -159,6 +217,9 @@ const viteConfigPath = path.join(exampleDir, 'vite.config.ts')
   }
   if (renamed) {
     changes.push(`vite.config.ts: converter package → ${TO_PKG}`)
+  }
+  if (wasmRemoved.removed) {
+    changes.push('vite.config.ts: remove libredwg-web.wasm static copy target')
   }
   if (ensured.added) {
     changes.push('vite.config.ts: add dwg-codepage-*.bin static copy target')
@@ -191,11 +252,8 @@ if (await fileExists(dwgConverterPkgPath)) {
     await updateFile(dwgConverterPkgPath, (content) => {
       const pkg = JSON.parse(content)
       let changed = false
-      for (const section of [
-        'dependencies',
-        'devDependencies',
-        'peerDependencies'
-      ]) {
+      // peerDependencies must be semver / workspace: / catalog: — not link:
+      for (const section of ['dependencies', 'devDependencies']) {
         const deps = pkg[section]
         if (
           deps?.[DATA_MODEL_PKG] != null &&
@@ -205,6 +263,13 @@ if (await fileExists(dwgConverterPkgPath)) {
           changed = true
         }
       }
+      if (
+        pkg.peerDependencies?.[DATA_MODEL_PKG] != null &&
+        pkg.peerDependencies[DATA_MODEL_PKG].startsWith('link:')
+      ) {
+        pkg.peerDependencies[DATA_MODEL_PKG] = '*'
+        changed = true
+      }
       if (!changed) {
         return content
       }
@@ -212,7 +277,7 @@ if (await fileExists(dwgConverterPkgPath)) {
     })
   ) {
     changes.push(
-      `packages/dwg-converter/package.json: ${DATA_MODEL_PKG} → link:../data-model`
+      `packages/dwg-converter/package.json: ${DATA_MODEL_PKG} → link:../data-model (peer: *)`
     )
   }
 }
