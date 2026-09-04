@@ -363,13 +363,26 @@ export {
   acdbOsnapModesToMask,
   acdbToggleOsnapMode,
   acdbDecodeMLeaderStyleRawColor,
-  acdbDwgCodePageToEncoding
+  acdbDwgCodePageToEncoding,
+  ACDB_OLE2FRAME_GEOMETRY_HEADER_SIZE,
+  ACDB_OLE_METAFILE_EMF_MIME,
+  ACDB_OLE_METAFILE_WMF_MIME,
+  acdbExtractOleImageBlob,
+  acdbIsOleMetafileMimeType,
+  acdbLooksLikeEmf,
+  acdbLooksLikeWmf,
+  acdbOleBlobNeedsMetafileRasterization,
+  acdbParseOle2FrameGeometryHeader,
+  acdbRasterizeOleMetafile,
+  acdbReassembleEmfFromWmfEscapes
 } from './misc'
 export type {
   AcDbFormatterOptions,
   AcDbMemoryEstimate,
   AcDbMemoryEstimateBucket,
   AcDbMemoryEstimateOptions,
+  AcDbOle2FrameGeometryHeader,
+  AcDbOleMetafileRasterizeOptions,
   AcDbPatDocument,
   AcDbPatGradientColor,
   AcDbPatGradientPreviewOptions,
