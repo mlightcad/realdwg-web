@@ -5,6 +5,13 @@
 
 /// <reference lib="webworker" />
 
+import {
+  ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
+  classifyDwgConverterLicenseMessage,
+  classifyDwgConverterLicenseMessageOrInvalid,
+  isDwgConverterLicenseCode
+} from './AcDbDwgConverterLicense'
+
 /** Message sent from the main thread to a worker task. */
 export interface AcDbWorkerMessage<TInput = unknown> {
   /** Unique task identifier used to correlate the response. */
@@ -120,15 +127,15 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
   ): AcDbWorkerErrorCode {
     if (error instanceof Error) {
       const code = (error as { code?: unknown }).code
-      if (code === 'license_expired' || code === 'license_invalid') {
+      if (isDwgConverterLicenseCode(code)) {
         return code
       }
-      if (error.name === 'DwgConverterLicenseError') {
-        return this.classifyLicenseMessage(message)
+      if (error.name === ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME) {
+        return classifyDwgConverterLicenseMessageOrInvalid(message)
       }
     }
 
-    const licenseCode = this.classifyLicenseMessageFromText(message)
+    const licenseCode = classifyDwgConverterLicenseMessage(message)
     if (licenseCode) {
       return licenseCode
     }
@@ -148,25 +155,6 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
       return 'worker_oom'
     }
     return 'worker_error'
-  }
-
-  private classifyLicenseMessage(
-    message: string
-  ): 'license_expired' | 'license_invalid' {
-    return this.classifyLicenseMessageFromText(message) ?? 'license_invalid'
-  }
-
-  private classifyLicenseMessageFromText(
-    message: string
-  ): 'license_expired' | 'license_invalid' | undefined {
-    const lower = message.toLowerCase()
-    if (lower.includes('evaluation of @mlight-cad/dwg-converter has expired')) {
-      return 'license_expired'
-    }
-    if (lower.includes('invalid @mlight-cad/dwg-converter license key')) {
-      return 'license_invalid'
-    }
-    return undefined
   }
 
   /**
