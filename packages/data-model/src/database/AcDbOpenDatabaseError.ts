@@ -3,9 +3,9 @@ import { AcCmTaskError } from '@mlightcad/common'
 import type { AcDbWorkerErrorCode } from '../converter/worker/AcDbBaseWorker'
 import {
   ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
-  classifyDwgConverterLicenseMessage,
-  classifyDwgConverterLicenseMessageOrInvalid,
-  isDwgConverterLicenseCode
+  acdbClassifyDwgConverterLicenseMessage,
+  acdbClassifyDwgConverterLicenseMessageOrInvalid,
+  acdbIsDwgConverterLicenseCode
 } from '../converter/worker/AcDbDwgConverterLicense'
 import { AcDbWorkerResult } from '../converter/worker/AcDbWorkerManager'
 import { AcDbConversionStage } from './AcDbDatabaseConverter'
@@ -93,7 +93,7 @@ export class AcDbOpenDatabaseError extends Error {
   static isLicenseErrorCode(
     code: AcDbOpenDatabaseErrorCode
   ): code is 'license_expired' | 'license_invalid' {
-    return isDwgConverterLicenseCode(code)
+    return acdbIsDwgConverterLicenseCode(code)
   }
 
   /**
@@ -127,7 +127,7 @@ export class AcDbOpenDatabaseError extends Error {
       }
 
       if (error.name === ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME) {
-        return classifyDwgConverterLicenseMessageOrInvalid(error.message)
+        return acdbClassifyDwgConverterLicenseMessageOrInvalid(error.message)
       }
     }
 
@@ -147,7 +147,7 @@ export class AcDbOpenDatabaseError extends Error {
   static classifyWorkerErrorMessage(
     message: string
   ): AcDbOpenDatabaseErrorCode {
-    const licenseCode = classifyDwgConverterLicenseMessage(message)
+    const licenseCode = acdbClassifyDwgConverterLicenseMessage(message)
     if (licenseCode) {
       return licenseCode
     }

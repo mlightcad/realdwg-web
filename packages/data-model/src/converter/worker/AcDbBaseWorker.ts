@@ -7,9 +7,9 @@
 
 import {
   ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
-  classifyDwgConverterLicenseMessage,
-  classifyDwgConverterLicenseMessageOrInvalid,
-  isDwgConverterLicenseCode
+  acdbClassifyDwgConverterLicenseMessage,
+  acdbClassifyDwgConverterLicenseMessageOrInvalid,
+  acdbIsDwgConverterLicenseCode
 } from './AcDbDwgConverterLicense'
 
 /** Message sent from the main thread to a worker task. */
@@ -127,15 +127,15 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
   ): AcDbWorkerErrorCode {
     if (error instanceof Error) {
       const code = (error as { code?: unknown }).code
-      if (isDwgConverterLicenseCode(code)) {
+      if (acdbIsDwgConverterLicenseCode(code)) {
         return code
       }
       if (error.name === ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME) {
-        return classifyDwgConverterLicenseMessageOrInvalid(message)
+        return acdbClassifyDwgConverterLicenseMessageOrInvalid(message)
       }
     }
 
-    const licenseCode = classifyDwgConverterLicenseMessage(message)
+    const licenseCode = acdbClassifyDwgConverterLicenseMessage(message)
     if (licenseCode) {
       return licenseCode
     }

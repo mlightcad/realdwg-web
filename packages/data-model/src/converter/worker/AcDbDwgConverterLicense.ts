@@ -24,7 +24,7 @@ const LICENSE_INVALID_MARKERS = [
 /**
  * Returns `true` when {@link code} is a DWG converter license failure code.
  */
-export function isDwgConverterLicenseCode(
+export function acdbIsDwgConverterLicenseCode(
   code: unknown
 ): code is AcDbDwgConverterLicenseCode {
   return code === 'license_expired' || code === 'license_invalid'
@@ -35,7 +35,7 @@ export function isDwgConverterLicenseCode(
  *
  * @returns The matching license code, or `undefined` when no marker matches
  */
-export function classifyDwgConverterLicenseMessage(
+export function acdbClassifyDwgConverterLicenseMessage(
   message: string
 ): AcDbDwgConverterLicenseCode | undefined {
   const lower = message.toLowerCase()
@@ -51,8 +51,8 @@ export function classifyDwgConverterLicenseMessage(
 /**
  * Classifies a known license error message, defaulting unknown text to invalid.
  */
-export function classifyDwgConverterLicenseMessageOrInvalid(
+export function acdbClassifyDwgConverterLicenseMessageOrInvalid(
   message: string
 ): AcDbDwgConverterLicenseCode {
-  return classifyDwgConverterLicenseMessage(message) ?? 'license_invalid'
+  return acdbClassifyDwgConverterLicenseMessage(message) ?? 'license_invalid'
 }
