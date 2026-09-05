@@ -212,7 +212,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const layers = model.tables.LAYER.entries
     layers.forEach(item => {
       const color = new AcCmColor()
-      color.colorIndex = item.colorIndex
+      this.applyLibreLayerColor(color, item)
       const record = new AcDbLayerTableRecord({
         name: item.name,
         standardFlags: item.standardFlag,
@@ -225,6 +225,44 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       this.processCommonTableEntryAttrs(item, record)
       db.tables.layerTable.add(record)
     })
+  }
+
+  /**
+   * Maps a libredwg-web {@link DwgLayerTableEntry} colour onto {@link AcCmColor}.
+   *
+   * `libredwg-web` `convertLayer` leaves `colorIndex` at the ByLayer sentinel
+   * **256** for CMC method `0xC2` while storing the real CMC RGB in `color`.
+   * Layer colours cannot be ByLayer — treating 256 as ByLayer washes legend
+   * solid fills white (same failure mode as dwg-converter's Index/256 bug).
+   */
+  private applyLibreLayerColor(
+    target: AcCmColor,
+    item: {
+      colorIndex?: number
+      color?: number
+      colorName?: string
+    }
+  ) {
+    const aci = item.colorIndex
+    const rgb = item.color
+
+    // ACI 1–255 wins. Check ByBlock (0) before the RGB fallback: libredwg's
+    // convertLayer defaults `color` to 0xffffff even for the 0xc3/ByBlock path,
+    // so treating any finite rgb first would mis-map ByBlock layers to white.
+    if (aci != null && aci >= 1 && aci <= 255) {
+      target.colorIndex = aci
+    } else if (aci === 0) {
+      target.colorIndex = 0
+    } else if (rgb != null && Number.isFinite(rgb)) {
+      // colorIndex 256 (or absent): CMC 0xC2 left the real RGB in `color`.
+      target.setRGBValue(rgb & 0xffffff)
+    } else {
+      target.colorIndex = 256
+    }
+
+    if (item.colorName) {
+      target.colorName = item.colorName
+    }
   }
 
   protected processViewports(model: DwgDatabase, db: AcDbDatabase) {
