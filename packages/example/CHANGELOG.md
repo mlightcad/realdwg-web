@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.14.4
+
+### Patch Changes
+
+- feat: extracts and rasterizes OLE WMF/EMF metafile previews so embedded OLE content can render as images, and classifies DWG converter license failures into clearer open-database errors. LibreDWG layer import maps CMC RGB true colors when colorIndex is 256 instead of losing those layer colors
+- Updated dependencies
+  - @mlightcad/data-model@1.14.4
+  - @mlightcad/libredwg-converter@3.14.4
+
 ## 0.14.3
 
 ### Patch Changes
