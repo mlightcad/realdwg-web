@@ -124,7 +124,7 @@ describe('AcDbAttributeDefinition', () => {
     expect(renderer.mtext).toHaveBeenCalledTimes(1)
   })
 
-  it('draws the default value for ATTDEFs inside a block definition', () => {
+  it('skips non-constant ATTDEFs inside a block definition (INSERT ATTRIB draws)', () => {
     const db = setWorkingDb()
     const blockRecord = new AcDbBlockTableRecord()
     blockRecord.name = 'ATTDEF_BLOCK'
@@ -136,17 +136,15 @@ describe('AcDbAttributeDefinition', () => {
     attDef.height = 2.5
     blockRecord.appendEntity(attDef)
 
-    const giEntity = { objectId: 'ATTDEF' }
     const renderer = {
-      mtext: jest.fn(() => giEntity)
+      mtext: jest.fn(() => ({ objectId: 'ATTDEF' }))
     } as unknown as {
       mtext: jest.Mock
     }
 
-    expect(attDef.subWorldDraw(renderer as never)).toBe(giEntity)
-    expect(renderer.mtext.mock.calls[0][0]).toMatchObject({
-      text: 'default value'
-    })
+    expect(attDef.isConst).toBe(false)
+    expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
+    expect(renderer.mtext).not.toHaveBeenCalled()
   })
 
   it('draws constant default values inside a block and still hides invisible ones', () => {
@@ -177,6 +175,63 @@ describe('AcDbAttributeDefinition', () => {
     expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
     expect(renderer.mtext).toHaveBeenCalledTimes(1)
   })
+
+  it('draws constant MText ATTDEFs inside a block', () => {
+    const db = setWorkingDb()
+    const blockRecord = new AcDbBlockTableRecord()
+    blockRecord.name = 'CONST_MTEXT_BLOCK'
+    db.tables.blockTable.add(blockRecord)
+
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = 'TAG_01'
+    attDef.textString = 'mtext fixed'
+    attDef.isConstMTextAttribute = true
+    attDef.height = 2.5
+    blockRecord.appendEntity(attDef)
+
+    const renderer = {
+      mtext: jest.fn(() => ({ objectId: 'ATTDEF' }))
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
+    expect(attDef.subWorldDraw(renderer as never)).toBeDefined()
+    expect(renderer.mtext.mock.calls[0][0]).toMatchObject({
+      text: 'mtext fixed'
+    })
+  })
+
+  it('does not mutate group 70 when skipping non-constant block ATTDEFs', () => {
+    const db = setWorkingDb()
+    const blockRecord = new AcDbBlockTableRecord()
+    blockRecord.name = 'FLAGS_BLOCK'
+    db.tables.blockTable.add(blockRecord)
+
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = 'TAG_01'
+    attDef.textString = 'ghost'
+    attDef.height = 2.5
+    blockRecord.appendEntity(attDef)
+
+    const renderer = {
+      mtext: jest.fn(() => ({ objectId: 'ATTDEF' }))
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
+    expect(attDef.isInvisible).toBe(false)
+    expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
+    expect(attDef.isInvisible).toBe(false)
+
+    const filer = new AcDbDxfFiler()
+    attDef.ownerId = blockRecord.objectId
+    attDef.layer = '0'
+    attDef.lineWeight = 0
+    attDef.linetypeScale = 1
+    attDef.dxfOutFields(filer)
+    expect(filer.toString()).toContain('\n70\n0\n')
+  })
+
   it('writes expected ATTDEF-specific fields in dxfOutFields', () => {
     const db = setWorkingDb()
     const attDef = new AcDbAttributeDefinition()

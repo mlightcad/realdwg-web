@@ -339,9 +339,10 @@ export class AcDbAttributeDefinition extends AcDbText {
   /**
    * Resolves the on-screen glyph for this ATTDEF.
    *
-   * - Loose in model/paper space: tag (placeholder while editing)
-   * - Inside a block definition: default attribute value
    * - Invisible: not drawn
+   * - Loose in model/paper space: tag (placeholder while editing)
+   * - Constant (or constant MText) inside a block: default value is geometry
+   * - Non-constant inside a block: not drawn — INSERT ATTRIB supplies the value
    */
   private resolveDisplayText(): string | undefined {
     if (this.isInvisible) {
@@ -350,14 +351,20 @@ export class AcDbAttributeDefinition extends AcDbText {
     if (this.isLooseInDrawingSpace()) {
       return this.tag || this.textString
     }
-    return this.textString
+    if (this.isConst || this.isConstMTextAttribute) {
+      return this.textString
+    }
+    // Non-constant template ATTDEF: the INSERT's ATTRIB draws the value.
+    return undefined
   }
 
   /**
    * Draws an attribute definition following AutoCAD ATTDEF semantics.
    *
-   * Loose definitions in model/paper space show the tag; definitions inside a
-   * block show the default value. Invisible definitions are not drawn.
+   * Loose definitions in model/paper space show the tag. Constant definitions
+   * inside a block show the default value. Non-constant definitions inside a
+   * block are not drawn (INSERT ATTRIB draws the value). Invisible definitions
+   * are not drawn.
    *
    * @param renderer - The renderer to use for drawing
    * @param delay - When true, the renderer may defer heavy work
