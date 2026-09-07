@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.14.5
+
+### Patch Changes
+
+- fix: ignores non-finite geometry points so NaN bounding boxes no longer poison spatial indexes, and empty polyline OCS boxes return an empty WCS box instead of transforming infinity. Also skips drawing non-constant ATTDEFs inside block definitions so only constant attribute templates render as block geometry while INSERT ATTRIB draws the editable values
+- Updated dependencies
+  - @mlightcad/common@1.14.5
+  - @mlightcad/geometry-engine@3.14.5
+
 ## 3.14.4
 
 ### Patch Changes
