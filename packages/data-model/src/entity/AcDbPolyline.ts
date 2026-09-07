@@ -338,6 +338,9 @@ export class AcDbPolyline extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     const box = this._geo.box
+    if (box.isEmpty()) {
+      return new AcGeBox3d()
+    }
     return new AcGeBox3d(
       { x: box.min.x, y: box.min.y, z: this._elevation },
       { x: box.max.x, y: box.max.y, z: this._elevation }
