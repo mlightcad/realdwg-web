@@ -241,6 +241,11 @@ export class AcDb2dPolyline extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     const box = this._geo.box
+    // Empty OCS box uses ±Infinity; transforming those through the OCS matrix
+    // yields NaN and can poison spatial indexes downstream.
+    if (box.isEmpty()) {
+      return new AcGeBox3d()
+    }
     return new AcGeBox3d().setFromPoints([
       acgeTransformOcsPointToWcs(
         { x: box.min.x, y: box.min.y, z: this._elevation },
