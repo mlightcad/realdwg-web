@@ -104,6 +104,17 @@ export class AcDbText extends AcDbEntity {
    * not BASELINE. Mirrors `AcDbText::alignmentPoint` in ObjectARX.
    */
   private _alignmentPoint: AcGePoint3d
+  /**
+   * Whether the alignment point was explicitly provided by the source file
+   * (DXF group 11 / DWG) or set through the API.
+   *
+   * Parse paths mirror {@link _position} into {@link _alignmentPoint} when
+   * group 11 is absent, so coordinate equality cannot tell "unset" apart
+   * from a spec-compliant file whose group 11 happens to equal group 10
+   * (e.g. everything written by ezdxf's `Text.set_placement`). This flag is
+   * the source of truth used by {@link resolveTextAnchor}.
+   */
+  private _hasAlignmentPoint = false
   /** The rotation angle of the text */
   private _rotation: number
   /** The oblique angle of the text */
@@ -297,10 +308,31 @@ export class AcDbText extends AcDbEntity {
   /**
    * Sets the alignment point of the text in WCS coordinates.
    *
+   * Setting an alignment point through the API marks it as explicitly
+   * provided (see {@link hasAlignmentPoint}).
+   *
    * @param value - The new alignment point
    */
   set alignmentPoint(value: AcGePoint3d) {
     this._alignmentPoint.copy(value)
+    this._hasAlignmentPoint = true
+  }
+
+  /**
+   * Whether the alignment point was explicitly provided by the source file
+   * or through the API, as opposed to mirrored from {@link position} by a
+   * parse-time fallback when group 11 is absent.
+   */
+  get hasAlignmentPoint() {
+    return this._hasAlignmentPoint
+  }
+
+  /**
+   * Marks whether the alignment point is explicitly provided. Parse paths
+   * (DXF/DWG converters) set this after assigning {@link alignmentPoint}.
+   */
+  set hasAlignmentPoint(value: boolean) {
+    this._hasAlignmentPoint = value
   }
 
   /**
@@ -853,11 +885,14 @@ export class AcDbText extends AcDbEntity {
     }
 
     const ap = this._alignmentPoint
+    // "Unset" is decided by the explicit-presence flag, not by coordinate
+    // equality: spec-compliant writers (ezdxf `set_placement`, AutoCAD) emit
+    // group 11 equal to group 10 when the insertion point coincides with the
+    // alignment point. The all-zero check stays as a guard for files that
+    // carry a degenerate zero group 11.
     const apIsUnset =
-      (ap.x === 0 && ap.y === 0 && ap.z === 0) ||
-      (ap.x === this._position.x &&
-        ap.y === this._position.y &&
-        ap.z === this._position.z)
+      !this._hasAlignmentPoint ||
+      (ap.x === 0 && ap.y === 0 && ap.z === 0)
     if (apIsUnset) {
       return {
         anchor: this._position,
@@ -1084,10 +1119,16 @@ export class AcDbText extends AcDbEntity {
     nz: number
   ) {
     this.position = new AcGePoint3d(px, py, pz)
+    // The assignment goes through the setter (which marks the alignment
+    // point as provided), so set the flag explicitly afterwards: only a
+    // present and non-zero group 11 counts as provided; the fallback branch
+    // merely mirrors `position` into `alignmentPoint`.
     if (hasAlignment && !(ax === 0 && ay === 0 && az === 0)) {
       this.alignmentPoint = new AcGePoint3d(ax, ay, az)
+      this._hasAlignmentPoint = true
     } else {
       this.alignmentPoint = new AcGePoint3d(px, py, pz)
+      this._hasAlignmentPoint = false
     }
     const normal = new AcGeVector3d(nx, ny, nz)
     if (normal.lengthSq() > 0) {
