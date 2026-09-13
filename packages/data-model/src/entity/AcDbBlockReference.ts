@@ -378,11 +378,16 @@ export class AcDbBlockReference extends AcDbEntity {
    *
    * ```
    * blockTransform =
-   *   T(position)
+   *   T(position.x, position.y, 0)
    * · R(rotation about OCS Z)
    * · S(scaleFactors)
    * · T(-blockBasePoint)
    * ```
+   *
+   * Insertion Z is flattened to 0 so elevated nested INSERTs stay inside the
+   * 2D orthographic near/far band (same plan-view policy as
+   * {@link AcDbLine.subWorldDraw}). {@link position}.z is still stored on the
+   * entity.
    *
    * ### Notes
    *
@@ -452,18 +457,25 @@ export class AcDbBlockReference extends AcDbEntity {
     //
     // This moves the transformed block geometry from the origin
     // to its final insertion point, still in OCS.
+    //
+    // Plan-view note: translation Z is forced to 0. Orthographic 2D
+    // cameras use a narrow near/far band around Z≈0 (see
+    // AcDbLine.subWorldDraw). Nested INSERTs often carry large
+    // elevations (e.g. title-block signature stamps at |Z|≈9000);
+    // preserving that Z depth-clips their geometry even though XY is
+    // on-screen. The stored position.z is unchanged for properties / DXF.
     // ------------------------------------------------------------
     const mInsert = new AcGeMatrix3d().makeTranslation(
       this._position.x,
       this._position.y,
-      this._position.z
+      0
     )
 
     // ------------------------------------------------------------
     // Final composition (right-multiply convention)
     //
     // blockTransform =
-    //   T(position)
+    //   T(position.x, position.y, 0)
     // · R(rotation about OCS Z)
     // · S(scaleFactors)
     // · T(-blockBasePoint)
