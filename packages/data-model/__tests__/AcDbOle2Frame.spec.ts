@@ -108,6 +108,19 @@ describe('acdbExtractOleImageBlob', () => {
     expect(blob?.size || 0).toBe(76788)
   })
 
+  it('prefers Ole10Native BMP over OlePres WMF for Paintbrush OLE', () => {
+    // From ole-image.dxf handle 28D: `\2OlePres000` is CF_METAFILEPICT (WMF)
+    // while `\1Ole10Native` holds the real BMP (white + CJK glyph). Preferring
+    // the metafile preview yields a blank white texture after rasterization.
+    const fixture = path.join(__dirname, 'fixtures', 'paintbrush-ole2frame.bin')
+    expect(fs.existsSync(fixture)).toBe(true)
+    const data = new Uint8Array(fs.readFileSync(fixture))
+    const blob = acdbExtractOleImageBlob(data)
+    expect(blob).toBeDefined()
+    expect(blob?.type).toBe('image/bmp')
+    expect(blob?.size || 0).toBe(107406)
+  })
+
   it('reassembles a contiguous EMF from WMF WMFC escape chunks', () => {
     const fixture = path.join(__dirname, 'fixtures', 'excel-ole-pres.wmf')
     expect(fs.existsSync(fixture)).toBe(true)

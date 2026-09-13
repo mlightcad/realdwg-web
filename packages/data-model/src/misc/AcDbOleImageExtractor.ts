@@ -14,8 +14,15 @@
  * ACDB_OLE_METAFILE_WMF_MIME} / {@link ACDB_OLE_METAFILE_EMF_MIME} and must be
  * rasterized (see {@link acdbRasterizeOleMetafile}) before WebGL texturing.
  *
- * This extractor prefers OlePres streams when present, then other CFB image
- * streams, then a raw-buffer signature scan.
+ * Preference order (important for regressions):
+ * 1. OlePres **raster** (CF_DIB / CF_BITMAP) when present
+ * 2. CONTENTS / Ole10Native / Package **raster** (Paintbrush BMP/PNG)
+ * 3. OlePres **metafile** (Excel WMF/EMF presentations)
+ * 4. Remaining CFB streams, then a raw-buffer signature scan
+ *
+ * Preferring OlePres metafiles before Ole10Native/CONTENTS breaks Paintbrush
+ * OLE2FRAME entities that ship a blank-looking WMF preview alongside a real
+ * BMP in `\1Ole10Native` (white rectangle, missing ink such as CJK glyphs).
  */
 
 import {
@@ -83,18 +90,19 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
     return undefined
   }
 
-  // Prefer OlePres first — Excel/Office OLE display pictures live here as
-  // WMF/EMF. Checking Package beforehand only wastes work (xlsx zip).
+  // 1) OlePres raster first (CF_DIB / CF_BITMAP). Do not take WMF/EMF yet —
+  // Paintbrush OLE often pairs a poor metafile preview with a good BMP in
+  // Ole10Native / CONTENTS.
   for (const entry of file.entries()) {
     if (entry.type !== 'stream') continue
-    if (!/olepres/i.test(entry.name) && !entry.name.includes('OlePres')) {
-      continue
-    }
+    if (!isOlePresStreamName(entry.name)) continue
     const stream = file.readStream(entry.name)
     if (!stream?.length) continue
-    const fromPres = extractImageFromOlePresentation(stream)
+    const fromPres = extractImageFromOlePresentation(stream, {
+      allowMetafile: false
+    })
     if (fromPres) return fromPres
-    const fromRaw = extractImageFromRawBytes(stream)
+    const fromRaw = extractRasterImageFromRawBytes(stream)
     if (fromRaw) return fromRaw
   }
 
@@ -105,14 +113,30 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
     'Package'
   ]
 
+  // 2) Preferred CFB streams — Paintbrush stores a full BMP in Ole10Native.
+  // Package for Excel is usually an xlsx zip and yields no raster here.
   for (const name of preferredNames) {
     const stream = file.readStream(name)
     if (!stream?.length) continue
-    const blob = extractImageFromRawBytes(stream)
+    const blob = extractRasterImageFromRawBytes(stream)
     if (blob) return blob
   }
 
-  // Last resort: scan every stream for embedded image / metafile bytes.
+  // 3) OlePres metafiles — required for Excel OLE table previews (WMF/EMF).
+  for (const entry of file.entries()) {
+    if (entry.type !== 'stream') continue
+    if (!isOlePresStreamName(entry.name)) continue
+    const stream = file.readStream(entry.name)
+    if (!stream?.length) continue
+    const fromPres = extractImageFromOlePresentation(stream, {
+      allowMetafile: true
+    })
+    if (fromPres) return fromPres
+    const fromRaw = extractImageFromRawBytes(stream)
+    if (fromRaw) return fromRaw
+  }
+
+  // 4) Last resort: scan every stream for embedded image / metafile bytes.
   for (const entry of file.entries()) {
     if (entry.type !== 'stream') continue
     const stream = file.readStream(entry.name)
@@ -124,6 +148,19 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
   return undefined
 }
 
+function isOlePresStreamName(name: string): boolean {
+  return /olepres/i.test(name) || name.includes('OlePres')
+}
+
+interface ExtractOlePresentationOptions {
+  /**
+   * When false, only CF_DIB / CF_BITMAP (and sniffed rasters) are returned.
+   * Metafile clipboard formats are ignored so callers can prefer a later
+   * Ole10Native / CONTENTS BMP.
+   */
+  allowMetafile?: boolean
+}
+
 /**
  * Parses an OLE presentation stream (`\2OlePres000`, …) and extracts a DIB /
  * bitmap / WMF / EMF presentation picture.
@@ -133,10 +170,15 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
  *
  * @see https://learn.microsoft.com/en-us/openspecs/windows_protocols/ms-oleds/78ab0f5c-ad1b-41b4-bb5e-1eea2cd13a6c
  */
-function extractImageFromOlePresentation(stream: Uint8Array): Blob | undefined {
+function extractImageFromOlePresentation(
+  stream: Uint8Array,
+  options: ExtractOlePresentationOptions = {}
+): Blob | undefined {
   if (stream.length < 28) {
     return undefined
   }
+
+  const allowMetafile = options.allowMetafile !== false
 
   const view = new DataView(stream.buffer, stream.byteOffset, stream.byteLength)
   let offset = 0
@@ -177,7 +219,9 @@ function extractImageFromOlePresentation(stream: Uint8Array): Blob | undefined {
   }
 
   const presentationData = stream.subarray(offset, offset + dataSize)
-  return extractPresentationPicture(presentationData, clipboardFormat)
+  return extractPresentationPicture(presentationData, clipboardFormat, {
+    allowMetafile
+  })
 }
 
 /**
@@ -187,8 +231,11 @@ function extractImageFromOlePresentation(stream: Uint8Array): Blob | undefined {
  */
 function extractPresentationPicture(
   presentationData: Uint8Array,
-  clipboardFormat: number
+  clipboardFormat: number,
+  options: ExtractOlePresentationOptions = {}
 ): Blob | undefined {
+  const allowMetafile = options.allowMetafile !== false
+
   if (clipboardFormat === CF_DIB) {
     const dib = dibToBmpBlob(presentationData)
     if (dib) return dib
@@ -198,8 +245,9 @@ function extractPresentationPicture(
     if (raster) return raster
   }
   if (
-    clipboardFormat === CF_ENHMETAFILE ||
-    clipboardFormat === CF_METAFILEPICT
+    allowMetafile &&
+    (clipboardFormat === CF_ENHMETAFILE ||
+      clipboardFormat === CF_METAFILEPICT)
   ) {
     const metafile = extractMetafileFromPresentationData(
       presentationData,
@@ -208,10 +256,12 @@ function extractPresentationPicture(
     if (metafile) return metafile
   }
 
-  // Content sniffing: Excel CF_ENHMETAFILE streams frequently contain a full
-  // WMF (and only a broken/partial embedded EMF fragment).
-  const metafile = extractMetafileFromPresentationData(presentationData)
-  if (metafile) return metafile
+  if (allowMetafile) {
+    // Content sniffing: Excel CF_ENHMETAFILE streams frequently contain a full
+    // WMF (and only a broken/partial embedded EMF fragment).
+    const metafile = extractMetafileFromPresentationData(presentationData)
+    if (metafile) return metafile
+  }
 
   return extractRasterImageFromRawBytes(presentationData)
 }
