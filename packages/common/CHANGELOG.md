@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.14.6
+
+### Patch Changes
+
+- fix: anchors TEXT by DXF group 11 presence instead of matching coordinates, prefers Ole10Native BMP over OlePres WMF for Paintbrush OLE so raster previews render correctly, and flattens INSERT elevation in blockTransform so 2D clipping no longer misses elevated block references
+
 ## 1.14.5
 
 ### Patch Changes
