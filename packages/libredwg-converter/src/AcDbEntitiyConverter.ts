@@ -702,8 +702,10 @@ export class AcDbEntityConverter {
         ((text.endPoint as { z?: number }).z ?? 0) === 0)
     if (text.endPoint && !isEndPointZero) {
       dbEntity.alignmentPoint.copy(text.endPoint)
+      dbEntity.hasAlignmentPoint = true
     } else {
       dbEntity.alignmentPoint.copy(text.startPoint)
+      dbEntity.hasAlignmentPoint = false
     }
     dbEntity.rotation = text.rotation
     dbEntity.oblique = text.obliqueAngle ?? 0
@@ -1375,8 +1377,10 @@ export class AcDbEntityConverter {
         ((alignmentPoint as { z?: number }).z ?? 0) === 0)
     if (alignmentPoint && !isAlignmentPointZero) {
       dbAttrib.alignmentPoint.copy(alignmentPoint)
+      dbAttrib.hasAlignmentPoint = true
     } else {
       dbAttrib.alignmentPoint.copy(text.startPoint)
+      dbAttrib.hasAlignmentPoint = false
     }
     dbAttrib.rotation = text.rotation
     dbAttrib.oblique = text.obliqueAngle ?? 0
