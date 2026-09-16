@@ -103,12 +103,7 @@ function applyHeaderVar(
       db.celtype = readHeaderString(filer) || ByLayer
       break
     case '$CETRANSPARENCY': {
-      const v = readHeaderString(filer) || 'ByLayer'
-      AcDbSysVarManager.instance().setVar(
-        AcDbSystemVariables.CETRANSPARENCY,
-        v,
-        db
-      )
+      readTransparencyHeaderVar(filer, db, AcDbSystemVariables.CETRANSPARENCY)
       break
     }
     case '$CELTSCALE':
@@ -146,6 +141,10 @@ function applyHeaderVar(
     case 'HPLAYER':
       db.hplayer = readHeaderString(filer) || '.'
       break
+    case '$HPTRANSPARENCY': {
+      readTransparencyHeaderVar(filer, db, AcDbSystemVariables.HPTRANSPARENCY)
+      break
+    }
     case '$LTSCALE':
       db.ltscale = readHeaderNumber(filer) ?? 1
       break
@@ -253,6 +252,33 @@ function readHeaderNumber(filer: AcDbDxfFiler): number | undefined {
   }
   const n = Number(item.value)
   return Number.isFinite(n) ? n : undefined
+}
+
+/**
+ * Reads a transparency header variable (`$CETRANSPARENCY` / `$HPTRANSPARENCY`).
+ *
+ * Spec-compliant writers (and this library's own `dxfOut`) store transparency
+ * as a group-440 32-bit bitfield integer (high byte = method, low byte =
+ * alpha). Feeding that integer as a *string* into
+ * `AcCmTransparency.fromString` rejects values above 255 and throws
+ * "Invalid transparency value!" — meaning a file written by `dxfOut` could
+ * not be re-opened. Pass numeric values through as numbers so
+ * `AcDbSysVarManager.setVar` takes the `deserialize` path; keep the string
+ * path for textual values ("ByLayer", "ByBlock", percentage).
+ */
+function readTransparencyHeaderVar(
+  filer: AcDbDxfFiler,
+  db: AcDbDatabase,
+  varName: string
+): void {
+  const v = readHeaderString(filer)
+  if (v == null) return
+  const n = Number(v)
+  AcDbSysVarManager.instance().setVar(
+    varName,
+    Number.isFinite(n) && v.trim() !== '' ? n : v,
+    db
+  )
 }
 
 function readHeaderPoint3d(filer: AcDbDxfFiler): AcGePoint3d | undefined {
