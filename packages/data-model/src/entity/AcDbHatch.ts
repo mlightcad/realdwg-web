@@ -1845,8 +1845,15 @@ export class AcDbHatch extends AcDbEntity {
                 ? 0
                 : edge.minorAxisRadius / edge.majorAxisRadius
             filer.writeDouble(40, ratio)
+            // Same full-span restore as circular arcs: a closed ellipse edge
+            // (start ≡ end mod 2π, including the constructor's 0..2π form
+            // where deltaAngle normalizes to 0) must write a 360° span, or
+            // strict DXF readers treat the boundary as open and drop the fill.
             filer.writeAngle(50, edge.startAngle)
-            filer.writeAngle(51, edge.endAngle)
+            filer.writeAngle(
+              51,
+              edge.closed ? edge.startAngle + Math.PI * 2 : edge.endAngle
+            )
             filer.writeInt16(73, edge.clockwise ? 0 : 1)
             continue
           }

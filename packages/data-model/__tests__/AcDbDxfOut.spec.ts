@@ -539,11 +539,19 @@ describe('AcDbDatabase.dxfOut', () => {
     db.createDefaultData()
     acdbHostApplicationServices().workingDatabase = db
 
+    // Non-default ByAlpha values so round-trip asserts more than method.
+    db.cetransparency.percentage = 30
+    db.hptransparency.percentage = 50
+    const ceSerialized = db.cetransparency.serialize()
+    const hpSerialized = db.hptransparency.serialize()
+
     // AC1024+ writes $CETRANSPARENCY/$HPTRANSPARENCY as group-440 32-bit
     // bitfield integers (high byte = method, low byte = alpha).
     const dxf = asAsciiDxf(db.dxfOut(undefined, 6, 'AC1024'))
     expect(dxf).toContain('$CETRANSPARENCY\n440\n')
     expect(dxf).toContain('$HPTRANSPARENCY\n440\n')
+    expect(dxf).toContain(`$CETRANSPARENCY\n440\n${ceSerialized}\n`)
+    expect(dxf).toContain(`$HPTRANSPARENCY\n440\n${hpSerialized}\n`)
 
     // The reader must accept its own writer's output: 440 values go through
     // AcCmTransparency.deserialize. Feeding them to fromString as text used
@@ -557,7 +565,54 @@ describe('AcDbDatabase.dxfOut', () => {
     await expect(
       new AcDbDxfDocumentReader(db2).read(AcDbDxfFiler.fromString(dxf))
     ).resolves.toBeDefined()
-    expect(db2.cetransparency.method).toBe(db.cetransparency.method)
-    expect(db2.hptransparency.method).toBe(db.hptransparency.method)
+    expect(db2.cetransparency.equals(db.cetransparency)).toBe(true)
+    expect(db2.hptransparency.equals(db.hptransparency)).toBe(true)
+    expect(db2.cetransparency.serialize()).toBe(ceSerialized)
+    expect(db2.hptransparency.serialize()).toBe(hpSerialized)
+    expect(db2.cetransparency.percentage).toBe(30)
+    expect(db2.hptransparency.percentage).toBe(50)
+  })
+
+  it('reads textual transparency header values via fromString, not deserialize', async () => {
+    const { AcDbDxfDocumentReader } = await import('../src/dxf/AcDbDxfDocumentReader')
+    const { AcDbDxfFiler } = await import('../src/base/AcDbDxfFiler')
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    // Non-440 string encoding: percentage must take fromString (ByAlpha ≈
+    // alpha 191 for 25%), not deserialize(25) which would be ByLayer|alpha 25.
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'HEADER',
+      '9',
+      '$ACADVER',
+      '1',
+      'AC1024',
+      '9',
+      '$CETRANSPARENCY',
+      '1',
+      '25',
+      '9',
+      '$HPTRANSPARENCY',
+      '1',
+      'ByBlock',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    await new AcDbDxfDocumentReader(db).read(AcDbDxfFiler.fromString(dxf))
+    expect(db.cetransparency.percentage).toBe(25)
+    expect(db.hptransparency.isByBlock).toBe(true)
   })
 })
