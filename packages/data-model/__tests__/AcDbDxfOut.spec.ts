@@ -1,4 +1,5 @@
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import { acdbHostApplicationServices } from '../src/base'
 import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
 import { AcDbAttribute } from '../src/entity/AcDbAttribute'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
@@ -531,5 +532,32 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(valuesByCode(proxyRecord!, '160')).toContain('4')
     expect(valuesByCode(proxyRecord!, '310')).toContain('01020304')
     expect(valuesByCode(proxyRecord!, '1')).toEqual([])
+  })
+
+  it('re-opens its own dxfOut output: transparency header vars round-trip (440 bitfield)', async () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    // AC1024+ writes $CETRANSPARENCY/$HPTRANSPARENCY as group-440 32-bit
+    // bitfield integers (high byte = method, low byte = alpha).
+    const dxf = asAsciiDxf(db.dxfOut(undefined, 6, 'AC1024'))
+    expect(dxf).toContain('$CETRANSPARENCY\n440\n')
+    expect(dxf).toContain('$HPTRANSPARENCY\n440\n')
+
+    // The reader must accept its own writer's output: 440 values go through
+    // AcCmTransparency.deserialize. Feeding them to fromString as text used
+    // to reject bitfield ints > 255 with "Invalid transparency value!" and
+    // made every dxfOut-produced file unopenable.
+    const { AcDbDxfDocumentReader } = await import('../src/dxf/AcDbDxfDocumentReader')
+    const { AcDbDxfFiler } = await import('../src/base/AcDbDxfFiler')
+    const db2 = new AcDbDatabase()
+    db2.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db2
+    await expect(
+      new AcDbDxfDocumentReader(db2).read(AcDbDxfFiler.fromString(dxf))
+    ).resolves.toBeDefined()
+    expect(db2.cetransparency.method).toBe(db.cetransparency.method)
+    expect(db2.hptransparency.method).toBe(db.hptransparency.method)
   })
 })
