@@ -1817,8 +1817,17 @@ export class AcDbHatch extends AcDbEntity {
             filer.writeInt16(72, 2)
             filer.writePoint2d(10, edge.center)
             filer.writeDouble(40, edge.radius)
+            // A full-circle edge normalizes to start == end (0 ≡ 2π) in
+            // AcGeCircArc2d. Writing both verbatim emits a degenerate
+            // zero-length arc; strict DXF readers (ezdxf, AutoCAD) then treat
+            // the boundary as open and drop the fill. A closed arc edge in a
+            // hatch boundary loop can only be a full circle — restore the
+            // 360° span.
             filer.writeAngle(50, edge.startAngle)
-            filer.writeAngle(51, edge.endAngle)
+            filer.writeAngle(
+              51,
+              edge.closed ? edge.startAngle + Math.PI * 2 : edge.endAngle
+            )
             filer.writeInt16(73, edge.clockwise ? 0 : 1)
             continue
           }

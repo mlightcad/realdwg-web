@@ -690,6 +690,41 @@ describe('AcDbHatch', () => {
     expect(dxf).toContain('\n70\n1\n')
   })
 
+  it('writes a 360-degree span for full-circle arc boundary edges', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.isSolidFill = true
+
+    // A full-circle arc edge (0..2π) collapses to start == end under
+    // AcGeCircArc2d's angle normalization. dxfOut must restore the 0°..360°
+    // span: writing both angles verbatim produces a degenerate zero-length
+    // arc, and strict DXF readers (ezdxf, AutoCAD) then treat the boundary
+    // as open and silently drop the fill.
+    hatch.add(
+      new AcGeLoop2d([
+        new AcGeCircArc2d({ x: 5, y: 5 }, 3, 0, Math.PI * 2, false)
+      ])
+    )
+    // A genuine partial arc right next to it must stay untouched.
+    hatch.add(
+      new AcGeLoop2d([
+        new AcGeCircArc2d({ x: 20, y: 5 }, 3, 0, Math.PI / 2, false),
+        new AcGeLine2d({ x: 23, y: 5 }, { x: 20, y: 5 }),
+        new AcGeLine2d({ x: 20, y: 5 }, { x: 20, y: 8 })
+      ])
+    )
+
+    const filer = new AcDbDxfFiler()
+    hatch.dxfOutFields(filer)
+    const dxf = filer.toString()
+
+    expect(dxf).toContain('\n72\n2\n')
+    expect(dxf).toContain('\n50\n0\n51\n360\n')
+    expect(dxf).toContain('\n50\n0\n51\n90\n')
+  })
+
   it('dxfInFields reads gradient colors, name, angle (radians), and tint', () => {
     const db = createWorkingDb()
     const hatch = new AcDbHatch()
