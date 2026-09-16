@@ -4,6 +4,11 @@ settings:
   autoInstallPeers: true
   excludeLinksFromLockfile: false
 
+patchedDependencies:
+  emf-converter@2.0.2:
+    hash: a9dbd97a8187945f5d37fa26afed37919642a858a857ec26e6e4c66cebdfe855
+    path: patches/emf-converter@2.0.2.patch
+
 importers:
 
   .:
@@ -112,7 +117,7 @@ importers:
         version: link:../graphic-interface
       emf-converter:
         specifier: 2.0.2
-        version: 2.0.2
+        version: 2.0.2(patch_hash=a9dbd97a8187945f5d37fa26afed37919642a858a857ec26e6e4c66cebdfe855)
       uid:
         specifier: ^2.0.2
         version: 2.0.2
@@ -7671,7 +7676,7 @@ snapshots:
 
   electron-to-chromium@1.5.393: {}
 
-  emf-converter@2.0.2: {}
+  emf-converter@2.0.2(patch_hash=a9dbd97a8187945f5d37fa26afed37919642a858a857ec26e6e4c66cebdfe855): {}
 
   emittery@0.13.1: {}
 

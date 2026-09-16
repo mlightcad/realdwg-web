@@ -8,3 +8,5 @@ allowBuilds:
   core-js: true
   esbuild: true
   nx: true
+patchedDependencies:
+  emf-converter@2.0.2: patches/emf-converter@2.0.2.patch
