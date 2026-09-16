@@ -17,6 +17,24 @@ import {
   acdbLooksLikeWmf
 } from './AcDbOleMetafileDetect'
 
+/**
+ * Default Windows face-name → CSS font-family map for OLE metafile text.
+ *
+ * Excel table previews frequently embed ExtTextOut runs that name `宋体` /
+ * `SimSun`. Without a remapping, browsers that lack that exact face still
+ * measure CJK via the default sans fallback in some paths but may fail to
+ * paint glyphs inside clipped EMF cells — keep a conservative CJK stack.
+ */
+const ACDB_OLE_DEFAULT_FONT_FAMILY_MAP: Record<string, string> = {
+  宋体: '"SimSun", "NSimSun", "Microsoft YaHei", "Noto Sans SC", "Source Han Sans SC", sans-serif',
+  simsun: '"SimSun", "NSimSun", "Microsoft YaHei", "Noto Sans SC", sans-serif',
+  nsimsun: '"NSimSun", "SimSun", "Microsoft YaHei", sans-serif',
+  黑体: '"SimHei", "Microsoft YaHei", "Noto Sans SC", sans-serif',
+  simhei: '"SimHei", "Microsoft YaHei", sans-serif',
+  微软雅黑: '"Microsoft YaHei", "Noto Sans SC", sans-serif',
+  'microsoft yahei': '"Microsoft YaHei", "Noto Sans SC", sans-serif'
+}
+
 export interface AcDbOleMetafileRasterizeOptions {
   /** Maximum output width in pixels. */
   maxWidth?: number
@@ -60,7 +78,13 @@ export async function acdbRasterizeOleMetafile(
     maxHeight: options.maxHeight,
     dpiScale: options.dpiScale ?? 1,
     maxCanvasDimension: options.maxCanvasDimension,
-    fontFamilyMap: options.fontFamilyMap
+    // Excel OLE previews commonly use 宋体/SimSun. Map those face names to a
+    // CSS stack so Chromium can fall back when the exact Windows face is
+    // missing (otherwise ExtTextOut glyphs silently vanish).
+    fontFamilyMap: {
+      ...ACDB_OLE_DEFAULT_FONT_FAMILY_MAP,
+      ...options.fontFamilyMap
+    }
   }
 
   // Fresh ArrayBuffer — `emf-converter` requires ArrayBuffer (not SharedArrayBuffer).

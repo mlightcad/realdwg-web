@@ -1,0 +1,64 @@
+diff --git a/dist/index.js b/dist/index.js
+index 4e58922988e6277d5bb039c59b8a8d1b2152e596..ec38d991c0d3bf0c9d62118da83516882a85e930 100644
+--- a/dist/index.js
++++ b/dist/index.js
+@@ -1622,11 +1622,14 @@ function handleExtSelectClipRgn(rCtx, dataOff, recSize) {
+     const top = view.getInt32(rOff + 4, true);
+     const right = view.getInt32(rOff + 8, true);
+     const bottom = view.getInt32(rOff + 12, true);
++    // EMR_EXTSELECTCLIPRGN rects are device units (Win32 ExtSelectClipRgn).
++    // Do not apply the GDI world transform — Excel OLE previews store
++    // clip boxes in page/device space while ExtTextOut refs stay in world space.
+     rects.push({
+-      x: gmx(rCtx, left),
+-      y: gmy(rCtx, top),
+-      w: gmw(rCtx, right - left),
+-      h: gmh(rCtx, bottom - top)
++      x: (left - rCtx.bounds.left) * rCtx.sx,
++      y: (top - rCtx.bounds.top) * rCtx.sy,
++      w: (right - left) * rCtx.sx,
++      h: (bottom - top) * rCtx.sy
+     });
+   }
+   if (rects.length === 0) {
+@@ -2038,7 +2041,7 @@ function handleEmfObjectRecord(rCtx, recType, dataOff, recSize) {
+         const italic = view.getUint8(dataOff + 24);
+         const underline = view.getUint8(dataOff + 25);
+         const strikeOut = view.getUint8(dataOff + 26);
+-        const family = readUtf16LE(view, dataOff + 28, 32) || "sans-serif";
++        const family = readUtf16LE(view, dataOff + 32, 32) || "sans-serif";
+         rCtx.objectTable.set(ihFont, {
+           kind: "font",
+           height: Math.abs(height),
+diff --git a/dist/index.mjs b/dist/index.mjs
+index 6f0899197373c38402da4274db8667cca19079a4..33141d49ea14bdb9105af553ca3c89df503a25a7 100644
+--- a/dist/index.mjs
++++ b/dist/index.mjs
+@@ -1620,11 +1620,14 @@ function handleExtSelectClipRgn(rCtx, dataOff, recSize) {
+     const top = view.getInt32(rOff + 4, true);
+     const right = view.getInt32(rOff + 8, true);
+     const bottom = view.getInt32(rOff + 12, true);
++    // EMR_EXTSELECTCLIPRGN rects are device units (Win32 ExtSelectClipRgn).
++    // Do not apply the GDI world transform — Excel OLE previews store
++    // clip boxes in page/device space while ExtTextOut refs stay in world space.
+     rects.push({
+-      x: gmx(rCtx, left),
+-      y: gmy(rCtx, top),
+-      w: gmw(rCtx, right - left),
+-      h: gmh(rCtx, bottom - top)
++      x: (left - rCtx.bounds.left) * rCtx.sx,
++      y: (top - rCtx.bounds.top) * rCtx.sy,
++      w: (right - left) * rCtx.sx,
++      h: (bottom - top) * rCtx.sy
+     });
+   }
+   if (rects.length === 0) {
+@@ -2036,7 +2039,7 @@ function handleEmfObjectRecord(rCtx, recType, dataOff, recSize) {
+         const italic = view.getUint8(dataOff + 24);
+         const underline = view.getUint8(dataOff + 25);
+         const strikeOut = view.getUint8(dataOff + 26);
+-        const family = readUtf16LE(view, dataOff + 28, 32) || "sans-serif";
++        const family = readUtf16LE(view, dataOff + 32, 32) || "sans-serif";
+         rCtx.objectTable.set(ihFont, {
+           kind: "font",
+           height: Math.abs(height),
