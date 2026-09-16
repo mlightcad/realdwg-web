@@ -257,28 +257,50 @@ function readHeaderNumber(filer: AcDbDxfFiler): number | undefined {
 /**
  * Reads a transparency header variable (`$CETRANSPARENCY` / `$HPTRANSPARENCY`).
  *
- * Spec-compliant writers (and this library's own `dxfOut`) store transparency
- * as a group-440 32-bit bitfield integer (high byte = method, low byte =
- * alpha). Feeding that integer as a *string* into
- * `AcCmTransparency.fromString` rejects values above 255 and throws
- * "Invalid transparency value!" — meaning a file written by `dxfOut` could
- * not be re-opened. Pass numeric values through as numbers so
- * `AcDbSysVarManager.setVar` takes the `deserialize` path; keep the string
- * path for textual values ("ByLayer", "ByBlock", percentage).
+ * Spec-compliant writers (and this library's own `dxfOut`) store these as
+ * group-440 32-bit bitfield integers (high byte = method, low byte = alpha).
+ * Feeding that integer as a *string* into `AcCmTransparency.fromString`
+ * rejects values above 255 and throws "Invalid transparency value!" — so a
+ * file written by `dxfOut` could not be re-opened.
+ *
+ * Dispatch by group code, not by `Number()` heuristics:
+ * - **440** → pass as a number so `setVar` takes the `deserialize` path
+ * - **anything else** (textual "ByLayer"/"ByBlock"/percentage) → string /
+ *   `fromString` path. Do not coerce bare percentages like `"25"` via
+ *   `Number()`, which would incorrectly go through `deserialize`.
+ * - **missing value** → fall back to `'ByLayer'` (matches prior reader
+ *   behavior and AutoCAD's default).
  */
 function readTransparencyHeaderVar(
   filer: AcDbDxfFiler,
   db: AcDbDatabase,
   varName: string
 ): void {
-  const v = readHeaderString(filer)
-  if (v == null) return
-  const n = Number(v)
-  AcDbSysVarManager.instance().setVar(
-    varName,
-    Number.isFinite(n) && v.trim() !== '' ? n : v,
-    db
-  )
+  const item = filer.readItem()
+  if (!item || Number(item.code) === 9 || Number(item.code) === 0) {
+    if (item) filer.pushBackItem(item)
+    AcDbSysVarManager.instance().setVar(varName, 'ByLayer', db)
+    return
+  }
+
+  const code = Number(item.code)
+  const raw = String(item.value).trim()
+  if (raw === '') {
+    AcDbSysVarManager.instance().setVar(varName, 'ByLayer', db)
+    return
+  }
+
+  if (code === 440) {
+    const n = Number(raw)
+    AcDbSysVarManager.instance().setVar(
+      varName,
+      Number.isFinite(n) ? n : 'ByLayer',
+      db
+    )
+    return
+  }
+
+  AcDbSysVarManager.instance().setVar(varName, raw, db)
 }
 
 function readHeaderPoint3d(filer: AcDbDxfFiler): AcGePoint3d | undefined {

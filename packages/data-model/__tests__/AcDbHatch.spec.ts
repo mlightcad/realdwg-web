@@ -725,6 +725,66 @@ describe('AcDbHatch', () => {
     expect(dxf).toContain('\n50\n0\n51\n90\n')
   })
 
+  it('writes a 360-degree span for full-ellipse arc boundary edges', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.isSolidFill = true
+
+    // Constructor full-ellipse (0..2π) keeps end=TAU, but closed is still
+    // true because deltaAngle normalizes to 0 — dxfOut must emit 0°..360°.
+    hatch.add(
+      new AcGeLoop2d([
+        new AcGeEllipseArc2d({ x: 5, y: 5 }, 4, 2, 0, Math.PI * 2, false, 0)
+      ])
+    )
+
+    // Collapsed closed edge (start ≡ end after normalize/transform): without
+    // the span restore this would write a degenerate 45°..45° edge.
+    const collapsed = new AcGeEllipseArc2d(
+      { x: 20, y: 5 },
+      4,
+      2,
+      0,
+      Math.PI / 2,
+      false,
+      0
+    )
+    collapsed.startAngle = Math.PI / 4
+    collapsed.endAngle = Math.PI / 4
+    expect(collapsed.closed).toBe(true)
+    hatch.add(new AcGeLoop2d([collapsed]))
+
+    // Genuine partial ellipse must stay untouched.
+    hatch.add(
+      new AcGeLoop2d([
+        new AcGeEllipseArc2d(
+          { x: 35, y: 5 },
+          4,
+          2,
+          0,
+          Math.PI / 2,
+          false,
+          0
+        )
+      ])
+    )
+
+    const filer = new AcDbDxfFiler()
+    hatch.dxfOutFields(filer)
+    const dxf = filer.toString()
+
+    expect(dxf).toContain('\n72\n3\n')
+    expect(dxf).toContain('\n50\n0\n51\n360\n')
+    expect(dxf).toContain('\n50\n0\n51\n90\n')
+    // Collapsed closed edge: start° + 360°. Allow float noise on the end angle
+    // (e.g. 404.999… from π/4 + 2π → degrees).
+    const collapsedAngles = dxf.match(/\n50\n45\n51\n([^\n]+)\n/)
+    expect(collapsedAngles).not.toBeNull()
+    expect(Number(collapsedAngles![1])).toBeCloseTo(405, 6)
+  })
+
   it('dxfInFields reads gradient colors, name, angle (radians), and tint', () => {
     const db = createWorkingDb()
     const hatch = new AcDbHatch()
