@@ -53,7 +53,11 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     db: AcDbDatabase,
     options: AcDbDatabaseConverterReadOptions = {}
   ) {
-    const { minimumChunkSize = 10, progress } = options
+    const {
+      minimumChunkSize = 10,
+      progress,
+      encoding
+    } = options
 
     this.progress = progress
 
@@ -78,7 +82,10 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     db.beginEventBatch()
     let batchOpen = true
     try {
-      const filer = AcDbDxfFiler.fromBuffer(data, { database: db })
+      const filer = AcDbDxfFiler.fromBuffer(data, {
+        database: db,
+        encoding
+      })
       const totalBytes = data.byteLength
       let lastParsePct = PARSE_START_PCT
 

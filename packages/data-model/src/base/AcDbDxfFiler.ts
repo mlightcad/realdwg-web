@@ -60,6 +60,14 @@ export interface AcDbDxfFilerOptions {
   reader?: AcDbDxfPairReader
   /** Write-mode output format (default ASCII). */
   outputFormat?: AcDbDxfOutputFormat
+  /**
+   * Read-mode text encoding override for `fromBuffer`.
+   *
+   * When omitted, the encoding is auto-detected from `$DWGCODEPAGE`.
+   * Common aliases such as `'cp949'` are normalized to a supported
+   * `TextDecoder` label (`'euc-kr'`). Ignored when `reader` is provided.
+   */
+  encoding?: string
 }
 
 /** Magic prefix for AutoCAD Binary DXF files (22 bytes). */
@@ -137,7 +145,10 @@ export class AcDbDxfFiler {
     data: ArrayBuffer | Uint8Array,
     options: Omit<AcDbDxfFilerOptions, 'reader'> = {}
   ): AcDbDxfFiler {
-    return AcDbDxfFiler.forReading(acdbCreateDxfPairReader(data), options)
+    return AcDbDxfFiler.forReading(
+      acdbCreateDxfPairReader(data, { encoding: options.encoding }),
+      options
+    )
   }
 
   /** Create a read-mode filer from an already-decoded ASCII DXF string. */
