@@ -364,6 +364,7 @@ export {
   acdbToggleOsnapMode,
   acdbDecodeMLeaderStyleRawColor,
   acdbDwgCodePageToEncoding,
+  acdbNormalizeTextEncoding,
   ACDB_OLE2FRAME_GEOMETRY_HEADER_SIZE,
   ACDB_OLE_METAFILE_EMF_MIME,
   ACDB_OLE_METAFILE_WMF_MIME,

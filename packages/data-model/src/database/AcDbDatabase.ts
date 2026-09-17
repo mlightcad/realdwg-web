@@ -221,6 +221,17 @@ export interface AcDbOpenDatabaseOptions {
   timeout?: number
 
   /**
+   * Override the text encoding used to decode text content (layer names,
+   * annotations, text entities, block attributes, ...).
+   *
+   * When omitted, the encoding is auto-detected from the file (DXF reads
+   * `$DWGCODEPAGE`; DWG reads the header code page). When provided, it wins
+   * over auto-detection — for example `'cp949'` or `'euc-kr'` for Korean
+   * drawings whose declared code page is missing or wrong.
+   */
+  encoding?: string
+
+  /**
    * System variables to override in the database.
    *
    * This allows overriding system variable values when opening a database.
@@ -2306,6 +2317,7 @@ export class AcDbDatabase extends AcDbObject {
         minimumChunkSize: (options && options.minimumChunkSize) || 10,
         progress: this.createConversionProgressHandler(),
         timeout: options?.timeout,
+        encoding: options?.encoding,
         sysVars: options?.sysVars
       })
     } catch (error) {

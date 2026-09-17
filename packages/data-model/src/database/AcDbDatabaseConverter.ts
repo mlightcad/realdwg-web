@@ -152,6 +152,18 @@ export interface AcDbDatabaseConverterReadOptions {
   timeout?: number
 
   /**
+   * Override the text encoding used to decode strings in the source file.
+   *
+   * When omitted, converters auto-detect the encoding (DXF reads
+   * `$DWGCODEPAGE`; DWG reads the header code page). When provided, it wins
+   * over auto-detection — for example `'cp949'` (normalized to the supported
+   * `'euc-kr'` `TextDecoder` label) for Korean drawings. Applies to
+   * converters that read text in the main thread, such as the native DXF
+   * converter; worker-based converters may ignore it.
+   */
+  encoding?: string
+
+  /**
    * System variables to override in the database after HEADER is processed.
    */
   sysVars?: Record<string, number | boolean | string>

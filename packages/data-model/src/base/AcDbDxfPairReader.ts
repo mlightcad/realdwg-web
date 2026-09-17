@@ -1,5 +1,9 @@
 import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
-import { AcDbCodePage, acdbDwgCodePageToEncoding } from '../misc/AcDbCodePage'
+import {
+  AcDbCodePage,
+  acdbDwgCodePageToEncoding,
+  acdbNormalizeTextEncoding
+} from '../misc/AcDbCodePage'
 import {
   acdbDxfIsInt32Code,
   acdbDxfValueType
@@ -532,7 +536,15 @@ export function acdbMakeBinaryDxfPairReader(
 }
 
 export interface AcDbCreateDxfPairReaderOptions {
-  /** Override text encoding for ASCII DXF. */
+  /**
+   * Override text encoding for ASCII DXF.
+   *
+   * When omitted, the encoding is auto-detected from `$DWGCODEPAGE`
+   * (`'utf-8'` for R2007+ drawings). When provided, it wins over the detected
+   * value — use it to force e.g. `'cp949'` for Korean drawings whose header
+   * lies. Common non-WHATWG aliases such as `'cp949'` are normalized to a
+   * supported `TextDecoder` label (`'euc-kr'`).
+   */
   encoding?: string
   /** Force R12 1-byte group codes for binary DXF. */
   legacyR12?: boolean
@@ -552,8 +564,12 @@ export function acdbCreateDxfPairReader(
   const bytes =
     data instanceof Uint8Array ? data : new Uint8Array(data)
 
+  const overrideEncoding = options.encoding
+    ? acdbNormalizeTextEncoding(options.encoding)
+    : undefined
+
   if (acdbIsBinaryDxf(bytes)) {
-    let encoding = options.encoding
+    let encoding = overrideEncoding
     let legacyR12 = options.legacyR12
     if (encoding == null || legacyR12 == null) {
       encoding = encoding ?? 'utf-8'
@@ -581,7 +597,7 @@ export function acdbCreateDxfPairReader(
       ? bytes.buffer
       : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
 
-  let encoding = options.encoding
+  let encoding = overrideEncoding
   if (encoding == null) {
     const info = acdbPeekDxfHeaderInfo(buffer)
     // Pre-2007 drawings may declare a non-UTF-8 `$DWGCODEPAGE`.
