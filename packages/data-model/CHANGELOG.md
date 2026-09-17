@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.14.8
+
+### Patch Changes
+
+- fix: renders tapered wide polylines that taper to zero width as filled geometry instead of falling back to strokes, including collapsed-inner circular widths as solid disks. LibreDWG solid hatches named \_SOLID (and leading-underscore variants) are recognized as solid fills so empty definitionLines are no longer dropped during convert
+- Updated dependencies
+  - @mlightcad/common@1.14.8
+  - @mlightcad/geometry-engine@3.14.8
+  - @mlightcad/graphic-interface@3.14.8
+
 ## 1.14.7
 
 ### Patch Changes
