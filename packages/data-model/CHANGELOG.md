@@ -1,5 +1,15 @@
 # @mlightcad/data-model
 
+## 1.14.7
+
+### Patch Changes
+
+- fix: decodes Korean CP949 DXF text via euc-kr so layer names and annotations no longer garble, hardens DXF transparency header reads and full-ellipse/full-circle hatch arcs for round-trip fidelity, and fixes Excel OLE EMF text clipping plus CJK font fallback when rendering embedded previews
+- Updated dependencies
+  - @mlightcad/common@1.14.7
+  - @mlightcad/geometry-engine@3.14.7
+  - @mlightcad/graphic-interface@3.14.7
+
 ## 1.14.6
 
 ### Patch Changes
