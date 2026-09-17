@@ -47,6 +47,19 @@ const createRectLoop = (x: number, y: number, w: number, h: number) =>
   )
 
 describe('AcDbHatch', () => {
+  it('treats LibreDWG _SOLID pattern name as solid fill', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+    hatch.patternName = '_SOLID'
+    expect(hatch.isSolidFill).toBe(true)
+    hatch.patternName = 'solid'
+    expect(hatch.isSolidFill).toBe(true)
+    hatch.patternName = HATCH_PATTERN_SOLID
+    expect(hatch.isSolidFill).toBe(true)
+    hatch.patternName = 'ANSI31'
+    expect(hatch.isSolidFill).toBe(false)
+  })
+
   it('exposes type names and public getters/setters', () => {
     createWorkingDb()
     const hatch = new AcDbHatch()

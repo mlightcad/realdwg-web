@@ -45,6 +45,21 @@ export const DEFAULT_HATCH_PATTERN_METRIC = 'ANGLE'
 export const HATCH_PATTERN_SOLID = 'SOLID'
 
 /**
+ * Returns true when a hatch pattern name denotes a solid fill.
+ *
+ * LibreDWG (and some older writers) emit `_SOLID` instead of `SOLID`. Treat
+ * both — and any leading-underscore / case variant — as solid so fill is not
+ * dropped when `definitionLines` are empty.
+ */
+export function acdbIsSolidHatchPatternName(
+  patternName: string | null | undefined
+): boolean {
+  if (patternName == null) return false
+  const normalized = patternName.trim().toUpperCase().replace(/^_+/, '')
+  return normalized === HATCH_PATTERN_SOLID
+}
+
+/**
  * Default hatch pattern name used for user-defined hatch patterns in DXF output.
  */
 export const HATCH_PATTERN_USER = 'USER'

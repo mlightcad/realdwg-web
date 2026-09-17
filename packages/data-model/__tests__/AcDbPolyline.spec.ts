@@ -425,6 +425,73 @@ describe('AcDbPolyline', () => {
     ).toBeUndefined()
   })
 
+  it('renders open taper 0→width (valve triangle) as filled area', () => {
+    // Matches GAS-Valve / GAS-PRV LWPOLYLINE: 2 verts, startWidth 0, endWidth 0.75.
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 0, 0.75)
+    polyline.addVertexAt(1, new AcGePoint2d(0.661766, 0), 0, 0.25, 0.25)
+
+    const giEntity = { id: 'valve-taper-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0]?.[0] as {
+      area: number
+      loops: unknown[]
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops.length).toBeGreaterThan(0)
+    expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
+  })
+
+  it('renders closed circular wide polyline (Blowoff) as solid filled disk', () => {
+    // Blowoff block: closed LWPOLYLINE, 2 verts, bulge=1 each (full circle),
+    // constant width == diameter so the inner offset collapses to a point.
+    const polyline = new AcDbPolyline()
+    polyline.closed = true
+    polyline.addVertexAt(0, new AcGePoint2d(-0.25, 0), 1, 0.5, 0.5)
+    polyline.addVertexAt(1, new AcGePoint2d(0.25, 0), 1, 0.5, 0.5)
+
+    const giEntity = { id: 'blowoff-filled-disk-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+    const areaArg = (renderer.area as jest.Mock).mock.calls[0]?.[0] as {
+      area: number
+      loops: unknown[]
+    }
+
+    expect(result).toBe(giEntity)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(areaArg.loops.length).toBe(1)
+    expect(Math.abs(areaArg.area)).toBeGreaterThan(0.5)
+  })
+
   it('renders variable-width polyline as filled area', () => {
     const polyline = new AcDbPolyline()
     polyline.elevation = 0

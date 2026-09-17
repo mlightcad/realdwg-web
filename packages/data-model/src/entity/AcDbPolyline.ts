@@ -1198,8 +1198,17 @@ function createWidePolylineAreaForSingleProfile(
   if (closed) {
     const leftLoop = compactBoundaryLoop(left)
     const rightLoop = compactBoundaryLoop(right)
-    if (!isRenderableLoop(leftLoop) || !isRenderableLoop(rightLoop)) {
+    const leftOk = isRenderableLoop(leftLoop)
+    const rightOk = isRenderableLoop(rightLoop)
+    if (!leftOk && !rightOk) {
       return null
+    }
+    // When half-width >= centerline radius (e.g. Blowoff circle with
+    // width == diameter), the inner offset collapses to a point. Keep the
+    // outer loop alone as a solid filled disk instead of aborting to stroke.
+    if (!leftOk || !rightOk) {
+      area.add(new AcGePolyline2d(leftOk ? leftLoop : rightLoop, true))
+      return area
     }
     const leftArea = Math.abs(calculateSignedArea(leftLoop))
     const rightArea = Math.abs(calculateSignedArea(rightLoop))
@@ -1284,6 +1293,11 @@ function isValidWidePolylineRing(outerArea: number, innerArea: number) {
  * as a nearly-closed stirrup outline.
  */
 function isNearlyClosedWidePolyline(centerline: WidePolylinePoint[]) {
+  // A single segment (2 samples) is a stroke, never a stirrup ring — even when
+  // length is comparable to width (valve triangles, arrowheads, etc.).
+  if (centerline.length < 3) {
+    return false
+  }
   const first = centerline[0]
   const last = centerline[centerline.length - 1]
   const gap = Math.hypot(last.x - first.x, last.y - first.y)
@@ -1342,9 +1356,12 @@ function createWidePolylineBoundaries(
   for (let i = 0; i < centerline.length; i++) {
     const point = centerline[i]
     const halfWidth = Math.max(0, point.width) / 2
+    // Zero width: left/right meet on the centerline (triangle tip / taper end).
+    // Returning null here drops the whole open-band segment in
+    // addOpenWidePolylineBand (valve symbols, arrowheads, etc.).
     if (halfWidth <= WIDTH_EPSILON) {
-      left[i] = null
-      right[i] = null
+      left[i] = { x: point.x, y: point.y }
+      right[i] = { x: point.x, y: point.y }
       continue
     }
     const offset = computeOffsetDirection(centerline, i, closed)
