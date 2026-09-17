@@ -533,10 +533,15 @@ export class AcDbEntityConverter {
         dashLengths: item.numberOfDashLengths > 0 ? item.dashLengths : []
       })
     })
-    // Important: Don't use DwgHatchSolidFill.SolidFill to avoid bundling libredwg-web into libredeg-converter
-    dbEntity.isSolidFill = hatch.solidFill == 1
+    // Important: Don't use DwgHatchSolidFill.SolidFill to avoid bundling libredwg-web into libredeg-converter.
+    // Set patternName first: its setter derives isSolidFill from the name (incl. LibreDWG's
+    // `_SOLID`). Then OR in the binary solidFill flag so solid fills stay solid even when
+    // the pattern string is unexpected.
     dbEntity.hatchStyle = hatch.hatchStyle as unknown as AcDbHatchStyle
     dbEntity.patternName = hatch.patternName
+    if (hatch.solidFill == 1) {
+      dbEntity.isSolidFill = true
+    }
     dbEntity.patternType = hatch.patternType as unknown as AcDbHatchPatternType
     dbEntity.patternAngle = hatch.patternAngle == null ? 0 : hatch.patternAngle
     dbEntity.patternScale = hatch.patternScale == null ? 0 : hatch.patternScale
