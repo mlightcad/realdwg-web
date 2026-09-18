@@ -320,6 +320,29 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
     for (const item of this.getAttrWithoutException('pattern') ?? []) {
       filer.writeDouble(49, item.elementLength)
       filer.writeInt16(74, item.elementTypeFlag)
+      if (item.elementTypeFlag !== 0) {
+        if (item.shapeNumber != null) {
+          filer.writeInt16(75, item.shapeNumber)
+        }
+        if (item.styleObjectId) {
+          filer.writeObjectId(340, item.styleObjectId)
+        }
+        if (item.scale != null) {
+          filer.writeDouble(46, item.scale)
+        }
+        if (item.rotation != null) {
+          filer.writeDouble(50, item.rotation)
+        }
+        if (item.offsetX != null) {
+          filer.writeDouble(44, item.offsetX)
+        }
+        if (item.offsetY != null) {
+          filer.writeDouble(45, item.offsetY)
+        }
+        if (item.text) {
+          filer.writeString(9, item.text)
+        }
+      }
     }
     return this
   }
@@ -369,14 +392,40 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
             pattern[pattern.length - 1].elementTypeFlag = Number(item.value)
           }
           break
-        // Complex linetype shape/text extras — skip without ending the record.
         case 75:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].shapeNumber = Number(item.value)
+          }
+          break
         case 340:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].styleObjectId = String(item.value)
+          }
+          break
         case 46:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].scale = Number(item.value)
+          }
+          break
         case 50:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].rotation = Number(item.value)
+          }
+          break
         case 44:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].offsetX = Number(item.value)
+          }
+          break
         case 45:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].offsetY = Number(item.value)
+          }
+          break
         case 9:
+          if (pattern.length > 0) {
+            pattern[pattern.length - 1].text = String(item.value)
+          }
           break
         default:
           break
