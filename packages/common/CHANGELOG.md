@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.14.9
+
+### Patch Changes
+
+- fix: preserves complex linetype shape and text DXF extras on round-trip by reading and writing shape number, style object id, scale, rotation, X/Y offsets, and embedded text for non-dash pattern elements, so those attributes are no longer dropped when parsing or exporting DXF linetype table records
+
 ## 1.14.8
 
 ### Patch Changes
