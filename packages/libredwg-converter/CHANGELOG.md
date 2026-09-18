@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.14.10
+
+### Patch Changes
+
+- fix: keeps tapered LWPOLYLINE vertex widths when converting from libredwg-web 0.7.13 so valve triangles and other variable-width polylines retain start and end widths instead of collapsing to constant width
+- Updated dependencies
+  - @mlightcad/data-model@1.14.10
+
 ## 3.14.9
 
 ### Patch Changes
