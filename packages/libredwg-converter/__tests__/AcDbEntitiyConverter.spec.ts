@@ -10,6 +10,7 @@ import {
   AcDbLeader,
   AcDbLeaderAnnotationType,
   AcDbMText,
+  AcDbPolyline,
   AcDbProxyEntity,
   AcDbShape,
   acdbHostApplicationServices
@@ -395,6 +396,42 @@ describe('libredwg AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDbMText)
     expect((result as AcDbMText).extentsWidth).toBeCloseTo(16.25)
+  })
+
+  it('keeps tapered LWPOLYLINE vertex widths (valve triangles)', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'LWPOLYLINE',
+      flag: 0x20,
+      constantWidth: 0,
+      vertices: [
+        { x: 0, y: 0, bulge: 0, startWidth: 0, endWidth: 0.75 },
+        {
+          x: 0.6617664691521554,
+          y: 0,
+          bulge: 0,
+          startWidth: 0.25,
+          endWidth: 0.25
+        }
+      ]
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbPolyline)
+    const polyline = result as AcDbPolyline
+    const vertices = polyline.properties.groups
+      .find(group => group.groupName === 'geometry')
+      ?.properties.find(property => property.name === 'vertices')
+      ?.accessor.get() as Array<{
+      startWidth?: number
+      endWidth?: number
+    }>
+    expect(vertices).toHaveLength(2)
+    expect(vertices[0].startWidth).toBe(0)
+    expect(vertices[0].endWidth).toBeCloseTo(0.75)
+    expect(vertices[1].startWidth).toBeCloseTo(0.25)
+    expect(vertices[1].endWidth).toBeCloseTo(0.25)
+    expect(polyline.directBatchPrimitive).toBe('area')
   })
 
   it('converts libredwg TOLERANCE entity to AcDbFcf', () => {
