@@ -36,6 +36,29 @@ export type AcDbWorkerErrorCode =
   | 'license_expired'
   | 'license_invalid'
 
+/**
+ * Substrings matched against worker / WASM error messages to detect OOM.
+ *
+ * Shared by {@link AcDbBaseWorker} and {@link AcDbOpenDatabaseError} so worker
+ * `errorCode` classification stays aligned with main-thread heuristics.
+ */
+export const ACDB_WORKER_OOM_PATTERNS = [
+  'out of memory',
+  'data cannot be cloned',
+  'allocation failed',
+  'memory access out of bounds'
+] as const
+
+/**
+ * Returns `true` when the message indicates a worker / WASM out-of-memory failure.
+ *
+ * @param message - Worker, postMessage, or parse error text to inspect
+ */
+export function acdbIsWorkerOutOfMemoryMessage(message: string): boolean {
+  const lower = message.toLowerCase()
+  return ACDB_WORKER_OOM_PATTERNS.some(pattern => lower.includes(pattern))
+}
+
 /** Response posted back to the main thread after a worker task completes. */
 export interface AcDbWorkerResponse<TOutput = unknown> {
   /** Task identifier matching the originating {@link AcDbWorkerMessage.id}. */
@@ -144,15 +167,18 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
   }
 
   /**
-   * Map a postMessage failure message to a structured error code.
+   * Map a worker / postMessage failure message to a structured error code.
+   *
+   * Uses {@link acdbIsWorkerOutOfMemoryMessage} so WASM faults such as
+   * `memory access out of bounds` are reported as `worker_oom`, not a generic
+   * `worker_error`.
    */
   private classifyPostMessageError(message: string): AcDbWorkerErrorCode {
-    const lower = message.toLowerCase()
-    if (
-      lower.includes('out of memory') ||
-      lower.includes('data cannot be cloned')
-    ) {
+    if (acdbIsWorkerOutOfMemoryMessage(message)) {
       return 'worker_oom'
+    }
+    if (message.toLowerCase().includes('timed out')) {
+      return 'worker_timeout'
     }
     return 'worker_error'
   }

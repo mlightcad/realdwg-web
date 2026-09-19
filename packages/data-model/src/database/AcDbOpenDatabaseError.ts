@@ -1,6 +1,9 @@
 import { AcCmTaskError } from '@mlightcad/common'
 
-import type { AcDbWorkerErrorCode } from '../converter/worker/AcDbBaseWorker'
+import {
+  acdbIsWorkerOutOfMemoryMessage,
+  type AcDbWorkerErrorCode
+} from '../converter/worker/AcDbBaseWorker'
 import {
   ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
   acdbClassifyDwgConverterLicenseMessage,
@@ -56,19 +59,6 @@ export class AcDbOpenDatabaseError extends Error {
   readonly cause?: unknown
 
   /**
-   * Substrings matched against worker error messages to detect out-of-memory failures.
-   *
-   * Used by {@link isWorkerOutOfMemoryMessage} when structured worker error codes
-   * are unavailable.
-   */
-  private static readonly WORKER_OOM_PATTERNS = [
-    'out of memory',
-    'data cannot be cloned',
-    'allocation failed',
-    'memory access out of bounds'
-  ]
-
-  /**
    * Creates a new open-database error.
    *
    * @param message - Human-readable failure description
@@ -103,10 +93,7 @@ export class AcDbOpenDatabaseError extends Error {
    * @returns Whether the message matches a known out-of-memory pattern
    */
   static isWorkerOutOfMemoryMessage(message: string): boolean {
-    const lower = message.toLowerCase()
-    return AcDbOpenDatabaseError.WORKER_OOM_PATTERNS.some(pattern =>
-      lower.includes(pattern)
-    )
+    return acdbIsWorkerOutOfMemoryMessage(message)
   }
 
   /**
@@ -231,6 +218,9 @@ export class AcDbOpenDatabaseError extends Error {
    *
    * When the worker code is missing or unrecognized, falls back to
    * {@link classifyWorkerErrorMessage} on the optional message text.
+   *
+   * OOM detection belongs in the worker ({@link AcDbBaseWorker}): once the
+   * worker reports `worker_oom`, this method simply preserves that code.
    *
    * @param errorCode - Structured error category from the worker response
    * @param message - Worker error text used for heuristic classification
