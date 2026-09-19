@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.14.11
+
+### Patch Changes
+
+- feat: adds dynamic block INSERT drawing via anonymous \*U representations and LibreDWG dyn-block dictionary metadata, plus AcDbArcAlignedText with DXF group 90 color round-trip. AcDbBlockRepresentationData remains for converters and dyn-block references but is no longer publicly re-exported
+
 ## 1.14.10
 
 ### Patch Changes
