@@ -153,8 +153,8 @@ importers:
   packages/libredwg-converter:
     dependencies:
       '@mlightcad/libredwg-web':
-        specifier: ^0.7.13
-        version: 0.7.13
+        specifier: ^0.7.14
+        version: 0.7.14
     devDependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
@@ -1659,8 +1659,8 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@mlightcad/libredwg-web@0.7.13':
-    resolution: {integrity: sha512-9mcz9KjHoBbKSfk1zDKCRuHjeRvzhD6Ifw+66mH99w+zZJJJ/1rvJBCf8OYCWCZmMffOASkOa4pxpR+28ryIFA==}
+  '@mlightcad/libredwg-web@0.7.14':
+    resolution: {integrity: sha512-5zuTw+x5o/qj9czjkcf2o3PWuh8v+XEEFM9ZEMEhVRaJySZ6+C7Ua6y6hyGcwJ3WfmXhWAHEdVYsKtx4XAlvfA==}
     engines: {node: '>=20'}
 
   '@nodelib/fs.scandir@2.1.5':
@@ -6622,7 +6622,7 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mlightcad/libredwg-web@0.7.13': {}
+  '@mlightcad/libredwg-web@0.7.14': {}
 
   '@nodelib/fs.scandir@2.1.5':
     dependencies:

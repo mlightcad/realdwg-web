@@ -4,6 +4,14 @@ export { AcDb3dPolyline, AcDbPoly3dType } from './AcDb3dPolyline'
 export { AcDb3dSolid, type AcDb3dSolidOptions } from './AcDb3dSolid'
 export { AcDb3dVertex, AcDb3dVertexType } from './AcDb3dVertex'
 export { AcDbArc } from './AcDbArc'
+export {
+  AcDbArcAlignedText,
+  AcDbArcTextAlignment,
+  AcDbArcTextDirection,
+  AcDbArcTextPosition,
+  acdbParseArcAlignedNumber
+} from './AcDbArcAlignedText'
+export type { AcDbArcAlignedTextGlyph } from './AcDbArcAlignedText'
 export { AcDbAttribute } from './AcDbAttribute'
 export {
   AcDbAttributeDefinition,

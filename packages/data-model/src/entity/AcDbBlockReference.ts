@@ -16,6 +16,7 @@ import { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
+import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference'
 import { AcDbAttribute } from './AcDbAttribute'
 import { AcDbEntity } from './AcDbEntity'
 import {
@@ -299,6 +300,17 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Block table record used for drawing, extents, osnap, and intersection.
+   *
+   * For dynamic block references that use an anonymous `*U` representation,
+   * this returns that anonymous record (via {@link AcDbDynBlockReference});
+   * otherwise it returns {@link blockTableRecord}.
+   */
+  get drawableBlockTableRecord() {
+    return AcDbDynBlockReference.drawableBlockTableRecord(this)
+  }
+
+  /**
    * Appends the specified AcDbAttribute object to the attribute list of the block reference,
    * establishes the block reference as the attribute's owner, and adds the attribute to the
    * AcDbDatabase that contains the block reference.
@@ -403,7 +415,7 @@ export class AcDbBlockReference extends AcDbEntity {
     // Retrieve the referenced block table record.
     // The block definition contains its own local coordinate system
     // whose origin is the block base point.
-    const blockTableRecord = this.blockTableRecord
+    const blockTableRecord = this.drawableBlockTableRecord
 
     // The base point (origin) of the block definition.
     // All entities inside the block are defined relative to this point.
@@ -804,7 +816,7 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
-    const blockTableRecord = this.blockTableRecord
+    const blockTableRecord = this.drawableBlockTableRecord
     if (blockTableRecord != null) {
       const entities = blockTableRecord.newIterator()
       for (const entity of entities) {
@@ -819,7 +831,7 @@ export class AcDbBlockReference extends AcDbEntity {
 
   /** @inheritdoc */
   override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
-    const blockTableRecord = this.blockTableRecord
+    const blockTableRecord = this.drawableBlockTableRecord
     if (blockTableRecord == null) return []
 
     const primitives: AcGeIntersectPrimitive[] = []
@@ -853,7 +865,7 @@ export class AcDbBlockReference extends AcDbEntity {
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const blockTableRecord = this.blockTableRecord
+    const blockTableRecord = this.drawableBlockTableRecord
     if (blockTableRecord != null) {
       const attribs: AcGiEntity[] = []
       this._attribs.forEach(attrib => {
@@ -946,7 +958,7 @@ export class AcDbBlockReference extends AcDbEntity {
     snapPoints: AcGePoint3dLike[],
     parentInsertionMat: AcGeMatrix3d
   ) {
-    const blockTableRecord = this.blockTableRecord
+    const blockTableRecord = this.drawableBlockTableRecord
     if (!blockTableRecord) return
 
     const thisInsertionMat = new AcGeMatrix3d().multiplyMatrices(
@@ -1035,7 +1047,7 @@ export class AcDbBlockReference extends AcDbEntity {
     visitedRefs.add(this.objectId)
 
     try {
-      const blockTableRecord = this.blockTableRecord
+      const blockTableRecord = this.drawableBlockTableRecord
       if (blockTableRecord == null) return false
 
       const thisInsertionMat = new AcGeMatrix3d().multiplyMatrices(
@@ -1108,7 +1120,8 @@ export class AcDbBlockReference extends AcDbEntity {
    * @returns The insertion point in the caller coordinate space.
    */
   private getInsertionPoint(parentInsertionMat: AcGeMatrix3d) {
-    const blockBasePoint = this.blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
+    const blockBasePoint =
+      this.drawableBlockTableRecord?.origin ?? AcGePoint3d.ORIGIN
     const insertionMat = new AcGeMatrix3d().multiplyMatrices(
       parentInsertionMat,
       this.getFullInsertionTransform()

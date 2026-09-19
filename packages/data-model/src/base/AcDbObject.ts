@@ -475,28 +475,17 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * ```
    */
   createExtensionDictionary(): AcDbObjectId | undefined {
-    // If already exists, behave like ObjectARX: do nothing
-    // const existingId = this.extensionDictionary
-    // if (existingId) {
-    //   return existingId
-    // }
+    const existingId = this.extensionDictionary
+    if (existingId) {
+      return existingId
+    }
 
-    // const db = this.database
-    // if (db) {
-    //   // Create a new extension dictionary
-    //   const dict = new AcDbDictionary(db)
+    const db = this.database
+    if (!db) {
+      return undefined
+    }
 
-    //   // Ensure dictionary lives in the same database
-    //   dict.database = db
-
-    //   // Add dictionary to database
-    //   db.objects.dictionary.setAt(dict.objectId, dict)
-
-    //   // Establish ownership relationship
-    //   this.extensionDictionary = dict.objectId
-    //   return dict.objectId
-    // }
-    return undefined
+    return db.createExtensionDictionaryFor(this)
   }
 
   /**
