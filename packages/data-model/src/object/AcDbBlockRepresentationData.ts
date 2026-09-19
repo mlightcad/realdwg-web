@@ -2,13 +2,19 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
 
 /**
- * Database-resident object that stores the dynamic-block definition referenced
- * by an evaluated anonymous representation.
+ * DWG/DXF-resident object (`ACDB_BLOCKREPRESENTATION_DATA`) that stores a soft
+ * pointer (group code 340) from an evaluated dynamic-block INSERT back to its
+ * original dynamic {@link AcDbBlockTableRecord}.
  *
- * Mirrors the role of AutoCAD's `AcDbBlockRepresentationData` (DXF
- * `ACDB_BLOCKREPRESENTATION_DATA`): the soft pointer to the original dynamic
- * {@link AcDbBlockTableRecord} used by
- * {@link AcDbDynBlockReference.dynamicBlockTableRecord}.
+ * This is **not** a public ObjectARX API class. AutoCAD keeps it as an
+ * undocumented database object under the INSERT extension dictionary
+ * (`AcDbBlockRepresentation` → `AcDbRepData`). Application code should use
+ * {@link AcDbDynBlockReference.dynamicBlockTableRecord} instead.
+ *
+ * Kept only so converters can materialize the object graph and
+ * {@link AcDbDynBlockReference} can resolve the definition handle.
+ *
+ * @internal
  */
 export class AcDbBlockRepresentationData extends AcDbObject {
   private _blockId: AcDbObjectId = ''

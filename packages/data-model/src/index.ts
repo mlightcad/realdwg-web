@@ -412,7 +412,6 @@ export type {
   AcDbImportDynBlockMetadataOptions
 } from './misc'
 export {
-  AcDbBlockRepresentationData,
   AcDbDictionary,
   AcDbDuplicateRecordCloning,
   AcDbDynBlockReference,
