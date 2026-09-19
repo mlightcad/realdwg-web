@@ -153,3 +153,22 @@ export type {
   AcDbPatPattern,
   AcDbPatPreviewOptions
 } from './pat'
+export {
+  ACDB_DYN_BLOCK_ENHANCED_BLOCK,
+  ACDB_DYN_BLOCK_GUID_APP,
+  ACDB_DYN_BLOCK_REP_BTAG_APP,
+  ACDB_DYN_BLOCK_REP_DATA,
+  ACDB_DYN_BLOCK_REP_ETAG_APP,
+  ACDB_DYN_BLOCK_REPRESENTATION_DICT,
+  ACDB_DYN_BLOCK_TRUE_NAME_APP,
+  acdbIsAnonymousUserBlockName
+} from './AcDbDynBlockConstants'
+export {
+  acdbImportDynBlockMetadata,
+  acdbNormalizeExtensionDictionaryId
+} from './AcDbImportDynBlockMetadata'
+export type {
+  AcDbDynBlockDictionarySource,
+  AcDbDynBlockRepresentationSource,
+  AcDbImportDynBlockMetadataOptions
+} from './AcDbImportDynBlockMetadata'

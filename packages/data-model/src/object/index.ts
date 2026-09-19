@@ -17,6 +17,9 @@ export type {
   AcDbPlotScale
 } from './layout'
 export { AcDbDictionary } from './AcDbDictionary'
+export { AcDbBlockRepresentationData } from './AcDbBlockRepresentationData'
+export { AcDbDynBlockReference } from './AcDbDynBlockReference'
+export { AcDbDynBlockTableRecord } from './AcDbDynBlockTableRecord'
 export { AcDbFilter } from './AcDbFilter'
 export { AcDbGroup } from './AcDbGroup'
 export { AcDbIndex } from './AcDbIndex'

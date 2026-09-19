@@ -3,6 +3,7 @@ import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbArc } from '../entity/AcDbArc'
+import { AcDbArcAlignedText } from '../entity/AcDbArcAlignedText'
 import { AcDbAttribute } from '../entity/AcDbAttribute'
 import { AcDbAttributeDefinition } from '../entity/AcDbAttributeDefinition'
 import { AcDbBlockReference } from '../entity/AcDbBlockReference'
@@ -78,6 +79,8 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
       return new AcDbBlockReference('')
     case 'TEXT':
       return new AcDbText()
+    case 'ARCALIGNEDTEXT':
+      return new AcDbArcAlignedText()
     case 'MTEXT':
       return new AcDbMText()
     case 'SPLINE': {

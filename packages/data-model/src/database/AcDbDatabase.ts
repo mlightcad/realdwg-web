@@ -669,6 +669,26 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Creates an extension dictionary for `owner` and registers it in this database.
+   *
+   * Used by {@link AcDbObject.createExtensionDictionary}. Returns the existing
+   * dictionary id when one is already attached.
+   */
+  createExtensionDictionaryFor(owner: AcDbObject): AcDbObjectId | undefined {
+    const existingId = owner.extensionDictionary
+    if (existingId) {
+      return existingId
+    }
+
+    const dict = new AcDbDictionary(this)
+    dict.database = this
+    dict.ownerId = owner.objectId
+    this.commitObjectHandle(dict)
+    owner.extensionDictionary = dict.objectId
+    return dict.objectId
+  }
+
+  /**
    * Returns true when the transaction manager is actively recording changes.
    *
    * Shortcut for {@link AcDbDatabaseTransactionManager.isRecording}.

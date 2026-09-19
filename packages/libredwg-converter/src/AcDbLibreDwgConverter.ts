@@ -17,11 +17,13 @@ import {
   AcDbDimZeroSuppressionAngular,
   AcDbEntity,
   acdbHexStringsToBytes,
+  acdbImportDynBlockMetadata,
   AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLayout,
   AcDbLinetypeTableRecord,
   AcDbLinetypeTableRecordAttrs,
+  acdbNormalizeExtensionDictionaryId,
   AcDbObject,
   AcDbOpenDatabaseError,
   AcDbParsingTaskResult,
@@ -570,6 +572,67 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.processLayerIndexes(model, db)
     this.processLayerFilterTree(model, db)
     this.processMLeaderStyles(model, db)
+    this.processDynBlockMetadata(model, db)
+  }
+
+  /**
+   * Imports extension dictionaries and (when present) representation pointers
+   * so {@link AcDbDynBlockReference} works with LibreDWG-parsed drawings.
+   *
+   * LibreDWG does not expose a typed `ACDB_BLOCKREPRESENTATION_DATA` object;
+   * we still import the dictionary graph so `AcDbBlockRepresentation` /
+   * `ACAD_ENHANCEDBLOCK` keys resolve. When a dictionary entry named
+   * `AcDbRepData` points at a handle that is not a converted object, a
+   * placeholder is created by {@link acdbImportDynBlockMetadata}.
+   */
+  private processDynBlockMetadata(model: DwgDatabase, db: AcDbDatabase) {
+    const normalize = (handle?: string | number) =>
+      handle == null || handle === '' || handle === 0
+        ? ''
+        : String(handle).trim().toUpperCase()
+
+    // BTR extension dictionaries (when LibreDWG exposes them on entries).
+    for (const btr of model.tables.BLOCK_RECORD.entries) {
+      const dbBlock = db.tables.blockTable.getAt(btr.name)
+      if (!dbBlock) continue
+      const raw = btr as {
+        extensionDictionary?: string
+        ownerDictionaryHardId?: string | number
+        ownerDictionarySoftId?: string | number
+      }
+      const xdict = acdbNormalizeExtensionDictionaryId(
+        raw.extensionDictionary ??
+          raw.ownerDictionaryHardId ??
+          raw.ownerDictionarySoftId
+      )
+      if (xdict) {
+        dbBlock.extensionDictionary = xdict
+      }
+    }
+
+    const dictObjects = model.objects.DICTIONARY
+    if (!dictObjects?.length) return
+
+    const dictionaries = dictObjects.map(dict => {
+      const entries: Array<{ name: string; handle: string }> = []
+      const src = dict.entries ?? {}
+      for (const name in src) {
+        const target = src[name]
+        if (name && target) {
+          entries.push({ name, handle: normalize(String(target)) })
+        }
+      }
+      return {
+        handle: normalize(dict.handle),
+        ownerHandle: normalize(dict.ownerHandle) || undefined,
+        entries
+      }
+    })
+
+    // LibreDWG does not currently surface typed representation-data objects.
+    // Leave representationData empty; DynBlock still works for *U inserts via
+    // blockName, and ACAD_ENHANCEDBLOCK detection works via dictionaries.
+    acdbImportDynBlockMetadata(db, { dictionaries, representationData: [] })
   }
 
   /**

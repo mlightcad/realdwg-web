@@ -167,7 +167,12 @@ export {
   AcDb3dVertexType,
   AcDbAlignedDimension,
   AcDbArc,
+  AcDbArcAlignedText,
   AcDbArcDimension,
+  AcDbArcTextAlignment,
+  AcDbArcTextDirection,
+  AcDbArcTextPosition,
+  acdbParseArcAlignedNumber,
   AcDbAttribute,
   AcDbAttributeDefinition,
   AcDbAttributeFlags,
@@ -376,7 +381,17 @@ export {
   acdbOleBlobNeedsMetafileRasterization,
   acdbParseOle2FrameGeometryHeader,
   acdbRasterizeOleMetafile,
-  acdbReassembleEmfFromWmfEscapes
+  acdbReassembleEmfFromWmfEscapes,
+  ACDB_DYN_BLOCK_ENHANCED_BLOCK,
+  ACDB_DYN_BLOCK_GUID_APP,
+  ACDB_DYN_BLOCK_REP_BTAG_APP,
+  ACDB_DYN_BLOCK_REP_DATA,
+  ACDB_DYN_BLOCK_REP_ETAG_APP,
+  ACDB_DYN_BLOCK_REPRESENTATION_DICT,
+  ACDB_DYN_BLOCK_TRUE_NAME_APP,
+  acdbIsAnonymousUserBlockName,
+  acdbImportDynBlockMetadata,
+  acdbNormalizeExtensionDictionaryId
 } from './misc'
 export type {
   AcDbFormatterOptions,
@@ -391,11 +406,17 @@ export type {
   AcDbPatLine,
   AcDbPatParseIssue,
   AcDbPatPattern,
-  AcDbPatPreviewOptions
+  AcDbPatPreviewOptions,
+  AcDbDynBlockDictionarySource,
+  AcDbDynBlockRepresentationSource,
+  AcDbImportDynBlockMetadataOptions
 } from './misc'
 export {
+  AcDbBlockRepresentationData,
   AcDbDictionary,
   AcDbDuplicateRecordCloning,
+  AcDbDynBlockReference,
+  AcDbDynBlockTableRecord,
   AcDbFilter,
   AcDbIndex,
   AcDbLayerFilter,

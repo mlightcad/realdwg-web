@@ -6,6 +6,7 @@ import {
   AcDb3PointAngularDimension,
   AcDbAlignedDimension,
   AcDbArc,
+  AcDbArcAlignedText,
   AcDbAttribute,
   AcDbAttributeDefinition,
   AcDbAttributeFlags,
@@ -15,6 +16,7 @@ import {
   acdbDecodeMLeaderStyleRawColor,
   AcDbDiametricDimension,
   AcDbDimension,
+  AcDbDxfCode,
   AcDbEllipse,
   AcDbEntity,
   AcDbFace,
@@ -35,6 +37,7 @@ import {
   AcDbMLine,
   AcDbMLineJustification,
   AcDbMText,
+  acdbNormalizeExtensionDictionaryId,
   AcDbOle2Frame,
   AcDbOleFrame,
   AcDbOleObjectType,
@@ -51,6 +54,7 @@ import {
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
   AcDbRay,
+  AcDbResultBuffer,
   AcDbRotatedDimension,
   AcDbShape,
   AcDbSolid,
@@ -127,6 +131,43 @@ import type {
   DwgXlineEntity
 } from '@mlightcad/libredwg-web'
 
+/**
+ * Arc-aligned text. libredwg-web 0.7.x recognizes `DWG_TYPE_ARCALIGNEDTEXT`
+ * but does not decode its fields (the file open reports an unhandled class),
+ * so this shape is only produced once that decoder fills the entity.
+ */
+interface DwgArcAlignedTextEntity extends DwgEntity {
+  type: 'ARCALIGNEDTEXT'
+  text: string
+  textSize: number
+  xScale: number
+  characterSpacing: number
+  styleName: string
+  fontName: string
+  bigFontName: string
+  offsetFromArc: number
+  rightOffset: number
+  leftOffset: number
+  center: { x: number; y: number; z: number }
+  radius: number
+  startAngle: number
+  endAngle: number
+  extrusionDirection: { x: number; y: number; z: number }
+  rawTextColor: number
+  characterSet: number
+  pitchAndFamily: number
+  isShx: boolean
+  isBold: boolean
+  isItalic: boolean
+  isUnderlined: boolean
+  alignment: number
+  isReverse: boolean
+  wizardFlag: number
+  textPosition: number
+  textDirection: number
+  arcHandle: string
+}
+
 type ParsedMLeaderBreak = {
   index?: number
   start: AcGePoint3dLike
@@ -156,6 +197,10 @@ export class AcDbEntityConverter {
     const dbEntity = this.createEntity(entity)
     if (dbEntity) {
       this.processCommonAttrs(entity, dbEntity)
+      if (entity.type === 'ARCALIGNEDTEXT') {
+        const raw = (entity as DwgArcAlignedTextEntity).rawTextColor
+        ;(dbEntity as AcDbArcAlignedText).applyRawTextColor(raw)
+      }
     }
     return dbEntity
   }
@@ -230,6 +275,8 @@ export class AcDbEntityConverter {
       return this.convertOle2Frame(entity as DwgOle2FrameEntity)
     } else if (entity.type == 'OLEFRAME') {
       return this.convertOleFrame(entity as DwgOleFrameEntity)
+    } else if (entity.type == 'ARCALIGNEDTEXT') {
+      return this.convertArcAlignedText(entity as DwgArcAlignedTextEntity)
     }
     return null
   }
@@ -718,6 +765,47 @@ export class AcDbEntityConverter {
     dbEntity.horizontalMode = text.halign as unknown as AcDbTextHorizontalMode
     dbEntity.verticalMode = text.valign as unknown as AcDbTextVerticalMode
     dbEntity.widthFactor = text.xScale ?? 1
+    return dbEntity
+  }
+
+  private convertArcAlignedText(entity: DwgArcAlignedTextEntity) {
+    const dbEntity = new AcDbArcAlignedText()
+    dbEntity.textString = entity.text
+    dbEntity.textSize = entity.textSize
+    dbEntity.xScale = entity.xScale > 0 ? entity.xScale : 1
+    dbEntity.characterSpacing = entity.characterSpacing
+    if (entity.styleName) dbEntity.styleName = entity.styleName
+    dbEntity.fontName = entity.fontName
+    dbEntity.bigFontName = entity.bigFontName
+    dbEntity.offsetFromArc = entity.offsetFromArc
+    dbEntity.rightOffset = entity.rightOffset
+    dbEntity.leftOffset = entity.leftOffset
+    dbEntity.center = new AcGePoint3d(
+      entity.center.x,
+      entity.center.y,
+      entity.center.z
+    )
+    dbEntity.radius = entity.radius
+    dbEntity.startAngle = entity.startAngle
+    dbEntity.endAngle = entity.endAngle
+    dbEntity.normal = new AcGeVector3d(
+      entity.extrusionDirection.x,
+      entity.extrusionDirection.y,
+      entity.extrusionDirection.z || 1
+    )
+    dbEntity.characterSet = entity.characterSet
+    dbEntity.pitchAndFamily = entity.pitchAndFamily
+    dbEntity.isShx = entity.isShx
+    dbEntity.isBold = entity.isBold
+    dbEntity.isItalic = entity.isItalic
+    dbEntity.isUnderlined = entity.isUnderlined
+    dbEntity.alignment = entity.alignment as AcDbArcAlignedText['alignment']
+    dbEntity.isReverse = entity.isReverse
+    dbEntity.wizardFlag = entity.wizardFlag
+    dbEntity.textPosition = entity.textPosition as AcDbArcAlignedText['textPosition']
+    dbEntity.textDirection =
+      entity.textDirection as AcDbArcAlignedText['textDirection']
+    if (entity.arcHandle) dbEntity.arcId = entity.arcHandle
     return dbEntity
   }
 
@@ -1493,6 +1581,15 @@ export class AcDbEntityConverter {
     if (entity.ownerBlockRecordSoftId != null) {
       dbEntity.ownerId = entity.ownerBlockRecordSoftId
     }
+    const xdict = acdbNormalizeExtensionDictionaryId(
+      (entity as { extensionDictionary?: string }).extensionDictionary ??
+        entity.ownerDictionaryHardId ??
+        entity.ownerDictionarySoftId
+    )
+    if (xdict) {
+      dbEntity.extensionDictionary = xdict
+    }
+    this.applyExtendedData(entity, dbEntity)
     if (entity.lineType != null) {
       dbEntity.lineType = entity.lineType
     }
@@ -1545,6 +1642,41 @@ export class AcDbEntityConverter {
         transparency.alpha = entity.transparency
       }
       dbEntity.transparency = transparency
+    }
+  }
+
+  private applyExtendedData(entity: DwgEntity, dbEntity: AcDbEntity) {
+    const xdataList = entity.xdata
+    if (!xdataList) return
+    const blocks = Array.isArray(xdataList) ? xdataList : [xdataList]
+    for (const block of blocks) {
+      if (!block?.appName) continue
+      const values: Array<{ code: number; value: unknown }> = [
+        {
+          code: AcDbDxfCode.ExtendedDataRegAppName,
+          value: block.appName
+        }
+      ]
+      for (const entry of block.value ?? []) {
+        if (entry == null) continue
+        if (typeof entry === 'object' && 'code' in entry && 'value' in entry) {
+          const code = Number(entry.code)
+          const value = entry.value
+          if (
+            code === AcDbDxfCode.ExtendedDataHandle ||
+            (code >= 1000 && code <= 1071)
+          ) {
+            values.push({
+              code,
+              value:
+                typeof value === 'string' || typeof value === 'number'
+                  ? value
+                  : String(value)
+            })
+          }
+        }
+      }
+      dbEntity.setXData(new AcDbResultBuffer(values as never))
     }
   }
 
