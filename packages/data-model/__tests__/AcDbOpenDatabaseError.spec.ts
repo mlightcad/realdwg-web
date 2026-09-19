@@ -8,10 +8,62 @@ describe('AcDbOpenDatabaseError', () => {
       )
     ).toBe(true)
     expect(
+      AcDbOpenDatabaseError.isWorkerOutOfMemoryMessage(
+        'memory access out of bounds'
+      )
+    ).toBe(true)
+    expect(
+      AcDbOpenDatabaseError.isWorkerOutOfMemoryMessage('allocation failed')
+    ).toBe(true)
+    expect(
       AcDbOpenDatabaseError.classifyWorkerErrorMessage(
         'Worker operation timed out after 30ms'
       )
     ).toBe('worker_timeout')
+  })
+
+  it('preserves worker_oom from the worker result code', () => {
+    try {
+      AcDbOpenDatabaseError.throwOnWorkerParseFailure({
+        success: false,
+        error: 'memory access out of bounds',
+        errorCode: 'worker_oom',
+        duration: 1
+      })
+      fail('expected throw')
+    } catch (error) {
+      expect((error as AcDbOpenDatabaseError).code).toBe('worker_oom')
+    }
+  })
+
+  it('trusts an explicit worker_error code from the worker', () => {
+    try {
+      AcDbOpenDatabaseError.throwOnWorkerParseFailure({
+        success: false,
+        error: 'memory access out of bounds',
+        errorCode: 'worker_error',
+        duration: 1
+      })
+      fail('expected throw')
+    } catch (error) {
+      // Classification of WASM OOM wording belongs in AcDbBaseWorker so the
+      // worker reports worker_oom; mapWorkerResultCode does not second-guess
+      // an explicit worker_error code.
+      expect((error as AcDbOpenDatabaseError).code).toBe('worker_error')
+    }
+  })
+
+  it('classifies missing worker codes from the error message', () => {
+    try {
+      AcDbOpenDatabaseError.throwOnWorkerParseFailure({
+        success: false,
+        error: 'memory access out of bounds',
+        duration: 1
+      })
+      fail('expected throw')
+    } catch (error) {
+      expect((error as AcDbOpenDatabaseError).code).toBe('worker_oom')
+    }
   })
 
   it('normalizes generic errors', () => {
