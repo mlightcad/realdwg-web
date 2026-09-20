@@ -2768,9 +2768,11 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     for (const [name, style] of dictionary.entries()) {
+      // LibreDWG / incomplete dictionaries can yield entries whose key or
+      // `styleName` is missing — skip those instead of throwing mid-open.
       if (
-        name.toUpperCase() === normalizedName.toUpperCase() ||
-        style.styleName.toUpperCase() === normalizedName.toUpperCase()
+        name?.toUpperCase() === normalizedName.toUpperCase() ||
+        style.styleName?.toUpperCase() === normalizedName.toUpperCase()
       ) {
         return
       }
@@ -2806,7 +2808,7 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     for (const [name] of dictionary.entries()) {
-      if (name.toUpperCase() === normalizedName.toUpperCase()) {
+      if (name?.toUpperCase() === normalizedName.toUpperCase()) {
         return
       }
     }
