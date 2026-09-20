@@ -154,4 +154,25 @@ describe('DXF Korean (CP949) text decoding', () => {
       .map(entity => (entity as { textString: string }).textString)
     expect(texts).toContain('한글')
   })
+
+  it('decodes a stale pre-2007 ANSI_936 header as UTF-8 when the bytes are UTF-8', () => {
+    // Some tools rewrite a legacy header onto UTF-8 content: the declared
+    // version and code page are both stale. Byte validation must win over
+    // the header, or every string in such files turns into mojibake.
+    const lines = [
+      '0', 'SECTION', '2', 'HEADER',
+      '9', '$ACADVER', '1', 'AC1015',
+      '9', '$DWGCODEPAGE', '3', 'ANSI_936',
+      '0', 'ENDSEC',
+      '0', 'SECTION', '2', 'ENTITIES',
+      '0', 'TEXT', '5', '1A', '100', 'AcDbEntity',
+      '8', '图层',
+      '100', 'AcDbText', '10', '0', '20', '0', '30', '0', '40', '2.5', '1', '中文文本',
+      '0', 'ENDSEC', '0', 'EOF'
+    ]
+    const bytes = new TextEncoder().encode(lines.join('\r\n') + '\r\n')
+    const values = readStringPairs(acdbCreateDxfPairReader(bytes))
+    expect(values[1]).toBe('中文文本')
+    expect(values[8]).toBe('图层')
+  })
 })

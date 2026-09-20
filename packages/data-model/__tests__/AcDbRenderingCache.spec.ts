@@ -386,4 +386,83 @@ describe('AcDbRenderingCache', () => {
     expect(localPoint).toMatchObject({ x: 5, y: 5, z: 0 })
     expect(blockGroup.addChild).toHaveBeenCalledWith(attribute)
   })
+
+  it('evicts least-recently-used entries beyond the entry cap', () => {
+    AcDbRenderingCache.lruEnabled = true
+    AcDbRenderingCache.lruMaxEntries = 2
+    AcDbRenderingCache.lruMaxEstimatedBytes = 0
+    const cache = new AcDbRenderingCache()
+
+    const a = createMockGroup()
+    const b = createMockGroup()
+    cache.set('A', a as never)
+    cache.set('B', b as never)
+    expect(cache.has('A')).toBe(true)
+
+    cache.set('C', createMockGroup() as never)
+    expect(cache.has('A')).toBe(false)
+    expect(cache.has('B')).toBe(true)
+    expect(a.dispose).toHaveBeenCalled()
+
+    // Touching B makes it most-recent, so C is evicted next instead of B.
+    cache.get('B')
+    cache.set('D', createMockGroup() as never)
+    expect(cache.has('B')).toBe(true)
+    expect(cache.has('C')).toBe(false)
+
+    AcDbRenderingCache.lruMaxEntries = 512
+  })
+
+  it('evicts by estimated byte budget', () => {
+    AcDbRenderingCache.lruMaxEntries = 0
+    AcDbRenderingCache.lruMaxEstimatedBytes = 1000
+    const cache = new AcDbRenderingCache()
+
+    const big = createMockGroup({
+      geometry: { attributes: { position: { array: new Float32Array(1000) } } }
+    })
+    const small = createMockGroup({
+      geometry: { attributes: { position: { array: new Float32Array(10) } } }
+    })
+    cache.set('big', big as never)
+    cache.set('small', small as never)
+
+    expect(cache.has('big')).toBe(false)
+    expect(cache.has('small')).toBe(true)
+
+    AcDbRenderingCache.lruMaxEstimatedBytes = 64 * 1024 * 1024
+  })
+
+  it('retires compacted templates instead of disposing at eviction', () => {
+    AcDbRenderingCache.lruMaxEntries = 1
+    AcDbRenderingCache.lruMaxEstimatedBytes = 0
+    const cache = new AcDbRenderingCache()
+
+    const compacted = createMockGroup({ isCompacted: true })
+    cache.set('C', compacted as never)
+    cache.set('X', createMockGroup() as never) // evicts C
+
+    expect(compacted.dispose).not.toHaveBeenCalled()
+    expect(cache.has('C')).toBe(false)
+
+    cache.clear() // disposes retired + remaining entries
+    expect(compacted.dispose).toHaveBeenCalled()
+
+    AcDbRenderingCache.lruMaxEntries = 512
+  })
+
+  it('never evicts while LRU is disabled', () => {
+    AcDbRenderingCache.lruEnabled = false
+    AcDbRenderingCache.lruMaxEntries = 1
+    AcDbRenderingCache.lruMaxEstimatedBytes = 0
+    const cache = new AcDbRenderingCache()
+
+    cache.set('A', createMockGroup() as never)
+    cache.set('B', createMockGroup() as never)
+    expect(cache.has('A')).toBe(true)
+    expect(cache.has('B')).toBe(true)
+
+    AcDbRenderingCache.lruEnabled = true
+    AcDbRenderingCache.lruMaxEntries = 512
+  })
 })

@@ -84,6 +84,33 @@ describe('AcDbDatabase', () => {
     expect(db.generateHandle()).toBe('FFFF')
   })
 
+  it('generates handles beyond Number.MAX_SAFE_INTEGER without hanging', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    // Real drawings emit HANDSEED values past float-safe range; numeric
+    // increments stall at that magnitude (x + 1 === x), which used to spin
+    // generateUniqueHandle forever.
+    db.initializeHandleSeed('FFFFF10000002B')
+    expect(db.generateHandle()).toBe('FFFFF10000002B')
+    expect(db.generateHandle()).toBe('FFFFF10000002C')
+
+    const textStyle = new AcDbTextStyleTableRecord({
+      name: 'Standard',
+      font: 'txt'
+    })
+    textStyle.objectId = '11'
+    db.tables.textStyleTable.add(textStyle)
+
+    // Force handle regeneration by claiming the style's id from another table.
+    const layer = new AcDbLayerTableRecord({ name: '0' })
+    layer.objectId = '11'
+    db.tables.layerTable.add(layer)
+
+    expect(layer.objectId).toBe('11')
+    expect(textStyle.objectId).not.toBe('11')
+    expect(db.tables.textStyleTable.getIdAt(textStyle.objectId)).toBe(textStyle)
+  })
+
   it('exposes worker OOM failures via lastOpenError, openFailed, and openProgress', async () => {
     const db = new AcDbDatabase()
     const fileType = 'test-open-failure'

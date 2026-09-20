@@ -1,12 +1,13 @@
 import {
   AcGeCircArc3d,
   acgeGetOcsReferenceVector,
+  acgeGetOcsReferenceVectorInto,
   AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
-  acgeTransformOcsPointToWcs,
+  acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike,
@@ -19,6 +20,11 @@ import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
+
+/** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
+const _dxfInNormal = /*@__PURE__*/ new AcGeVector3d()
+const _dxfInRefVec = /*@__PURE__*/ new AcGeVector3d()
+const _dxfInPoint = /*@__PURE__*/ new AcGePoint3d()
 
 /** Quadrant grip angles in radians: 0°, 90°, 180°, 270°. */
 const CIRCLE_QUADRANT_GRIP_ANGLES = [0, Math.PI / 2, Math.PI, (Math.PI / 2) * 3]
@@ -52,10 +58,32 @@ export class AcDbCircle extends AcDbCurve {
     return 'CIRCLE'
   }
 
-  /** The underlying geometric circular arc object */
-  private _geo: AcGeCircArc3d
+  /** Backing for the lazily materialized geometric circular arc object. */
+  private _geoData: AcGeCircArc3d | null = null
   /** Thickness along the normal (DXF group 39) */
   private _thickness = 0
+
+  /**
+   * The underlying geometric circular arc object. Materialized lazily so that
+   * factory-created entities (dxfIn path) never allocate default geometry.
+   */
+  private get _geo(): AcGeCircArc3d {
+    if (this._geoData == null) {
+      this._geoData = new AcGeCircArc3d(
+        new AcGePoint3d(),
+        1,
+        0,
+        TAU,
+        AcGeVector3d.Z_AXIS,
+        AcGeVector3d.X_AXIS
+      )
+    }
+    return this._geoData
+  }
+
+  private set _geo(value: AcGeCircArc3d) {
+    this._geoData = value
+  }
 
   /**
    * Creates a new circle entity.
@@ -84,14 +112,22 @@ export class AcDbCircle extends AcDbCurve {
    * );
    * ```
    */
+  constructor()
   constructor(
     center: AcGePointLike,
     radius: number,
+    normal?: AcGeVector3dLike
+  )
+  constructor(
+    center?: AcGePointLike,
+    radius?: number,
     normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
-    const refVec = acgeGetOcsReferenceVector(normal)
-    this._geo = new AcGeCircArc3d(center, radius, 0, TAU, normal, refVec)
+    if (center !== undefined && radius !== undefined) {
+      const refVec = acgeGetOcsReferenceVector(normal)
+      this._geo = new AcGeCircArc3d(center, radius, 0, TAU, normal, refVec)
+    }
   }
 
   /**
@@ -551,13 +587,22 @@ export class AcDbCircle extends AcDbCurve {
     ny: number,
     nz: number
   ) {
-    const normal = new AcGeVector3d(nx, ny, nz)
-    // Keep OCS reference vector in sync when dxfIn replaces the default +Z
-    // normal from the entity factory (same issue as {@link AcDbArc}).
-    this._geo.normal = normal
-    this._geo.refVec = acgeGetOcsReferenceVector(this._geo.normal)
-    this.center = acgeTransformOcsPointToWcs({ x, y, z }, this.normal)
-    this.radius = radius
+    _dxfInNormal.set(nx, ny, nz)
+    if (_dxfInNormal.lengthSq() > 0) {
+      _dxfInNormal.normalize()
+    }
+    acgeGetOcsReferenceVectorInto(_dxfInRefVec, _dxfInNormal)
+    acgeTransformOcsPointToWcsInto(_dxfInPoint, { x, y, z }, _dxfInNormal)
+    // Build the final geometry in one pass; the entity's default geometry is
+    // never materialized (see the lazy _geo accessor).
+    this._geo = new AcGeCircArc3d(
+      _dxfInPoint,
+      radius,
+      0,
+      TAU,
+      _dxfInNormal,
+      _dxfInRefVec
+    )
   }
 
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {

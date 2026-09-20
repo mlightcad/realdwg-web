@@ -430,6 +430,12 @@ export class AcDbDatabase extends AcDbObject {
   private _currentSpace?: AcDbBlockTableRecord
   /** The maximum handle value in the database, used for generating unique object IDs */
   private _maxHandle: number
+  /**
+   * BigInt-tracked maximum handle. Engages once handles exceed
+   * {@link Number.MAX_SAFE_INTEGER}; beyond that point float increments no
+   * longer advance (`x + 1 === x`) and handle generation would spin forever.
+   */
+  private _maxHandleBig?: bigint
   /** Global registry of committed object handles across all database-resident objects */
   private _handleRegistry = new Map<AcDbObjectId, AcDbObject>()
   /** Lazily created formatter for lengths, angles, and coordinates */
@@ -1042,6 +1048,15 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   generateHandle(): AcDbObjectId {
+    if (this._maxHandleBig != null) {
+      this._maxHandleBig += BigInt(1)
+      return this._maxHandleBig.toString(16).toUpperCase()
+    }
+    if (this._maxHandle >= Number.MAX_SAFE_INTEGER) {
+      // Float precision can no longer advance the counter; switch to BigInt.
+      this._maxHandleBig = BigInt(this._maxHandle)
+      return this.generateHandle()
+    }
     this._maxHandle++
     return this._maxHandle.toString(16).toUpperCase()
   }
@@ -1068,12 +1083,23 @@ export class AcDbDatabase extends AcDbObject {
    * @param seed - Hexadecimal handle seed from the drawing header
    */
   initializeHandleSeed(seed: string) {
-    const next = parseInt(seed, 16)
-    if (!isNaN(next) && next > 0) {
-      const baseline = next - 1
-      if (baseline > this._maxHandle) {
-        this._maxHandle = baseline
+    const nextBig = BigInt('0x' + seed)
+    if (nextBig <= BigInt(0)) {
+      return
+    }
+    const baseline = nextBig - BigInt(1)
+    if (baseline <= BigInt(Number.MAX_SAFE_INTEGER)) {
+      if (this._maxHandleBig == null) {
+        const value = Number(baseline)
+        if (value > this._maxHandle) {
+          this._maxHandle = value
+        }
       }
+      return
+    }
+    // Handle seeds beyond float-safe range must be tracked with BigInt.
+    if (this._maxHandleBig == null || baseline > this._maxHandleBig) {
+      this._maxHandleBig = baseline
     }
   }
 
@@ -1208,9 +1234,37 @@ export class AcDbDatabase extends AcDbObject {
    * ```
    */
   updateMaxHandle(handle: string): void {
-    const handleValue = parseInt(handle, 16)
-    if (!isNaN(handleValue) && handleValue > this._maxHandle) {
-      this._maxHandle = handleValue
+    this.trackMaxHandle(handle)
+  }
+
+  /**
+   * Records the maximum seen handle, staying float-precise below
+   * {@link Number.MAX_SAFE_INTEGER} and switching to BigInt tracking above it.
+   */
+  private trackMaxHandle(handle: string): void {
+    if (this._maxHandleBig != null) {
+      // BigInt mode only engages for handles above float-safe range, so any
+      // handle with fewer than 14 hex digits is guaranteed smaller — skip the
+      // per-entity BigInt parse on the hot commit path.
+      if (handle.length >= 14) {
+        const big = BigInt('0x' + handle)
+        if (big > this._maxHandleBig) {
+          this._maxHandleBig = big
+        }
+      }
+      return
+    }
+
+    const value = parseInt(handle, 16)
+    if (isNaN(value)) {
+      return
+    }
+    if (value > Number.MAX_SAFE_INTEGER) {
+      this._maxHandleBig = BigInt('0x' + handle)
+      return
+    }
+    if (value > this._maxHandle) {
+      this._maxHandle = value
     }
   }
 

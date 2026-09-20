@@ -132,6 +132,16 @@ const emptyProfileStats = (): AcDbRenderingCacheProfileStats => ({
 export class AcDbRenderingCache {
   /** Map of cached rendering results indexed by key. */
   private _blocks: Map<string, AcGiEntity>
+  /** Estimated bytes per cached key (tracked only while LRU is enabled). */
+  private _lruBytes: Map<string, number>
+  /** Sum of {@link _lruBytes} values. */
+  private _lruTotalBytes = 0
+  /**
+   * Evicted compacted templates awaiting document-close disposal. Compacted
+   * templates share geometry buffers with clones already in the scene, so
+   * they cannot be disposed at eviction time.
+   */
+  private _retiredCompactedTemplates: AcGiEntity[] = []
   /** Singleton instance of the cache. */
   private static _instance?: AcDbRenderingCache
   /**
@@ -139,6 +149,18 @@ export class AcDbRenderingCache {
    * {@link profileStats}. Off by default (zero overhead when false).
    */
   static profiling = false
+  /**
+   * LRU master switch. When false, the cache never evicts and behaves like
+   * the pre-LRU implementation.
+   */
+  static lruEnabled = true
+  /** Max cached templates before the oldest entries are evicted (0 = unlimited). */
+  static lruMaxEntries = 512
+  /**
+   * Max estimated cached bytes before the oldest entries are evicted
+   * (0 = unlimited). Estimates duck-type walk the template tree geometry.
+   */
+  static lruMaxEstimatedBytes = 64 * 1024 * 1024
   /**
    * Mutable profile accumulator used while {@link profiling} is true.
    */
@@ -190,6 +212,7 @@ export class AcDbRenderingCache {
    */
   constructor() {
     this._blocks = new Map()
+    this._lruBytes = new Map()
   }
 
   /**
@@ -257,7 +280,95 @@ export class AcDbRenderingCache {
     // Templates are immutable after insert. Avoid a deep clone here — miss
     // path returns a per-INSERT clone, and compacted clones share buffers.
     this._blocks.set(key, group)
+    if (AcDbRenderingCache.lruEnabled) {
+      const prevBytes = this._lruBytes.get(key) ?? 0
+      const bytes = this.estimateTemplateBytes(group)
+      this._lruBytes.set(key, bytes)
+      this._lruTotalBytes += bytes - prevBytes
+      this.enforceLruBudget()
+    }
     return group
+  }
+
+  /**
+   * Evicts least-recently-used templates while the cache exceeds its entry or
+   * estimated-byte budget.
+   */
+  private enforceLruBudget() {
+    const maxEntries = AcDbRenderingCache.lruMaxEntries
+    while (maxEntries > 0 && this._blocks.size > maxEntries) {
+      this.evictOldest()
+    }
+    const maxBytes = AcDbRenderingCache.lruMaxEstimatedBytes
+    while (
+      maxBytes > 0 &&
+      this._lruTotalBytes > maxBytes &&
+      this._blocks.size > 1
+    ) {
+      this.evictOldest()
+    }
+  }
+
+  /** Evicts the least-recently-used entry, disposing it when safe. */
+  private evictOldest() {
+    const oldest = this._blocks.keys().next()
+    if (oldest.done || oldest.value === undefined) return
+    const key = oldest.value
+    const template = this._blocks.get(key)
+    this._blocks.delete(key)
+    this._lruTotalBytes -= this._lruBytes.get(key) ?? 0
+    this._lruBytes.delete(key)
+    if (!template) return
+    if (isTemplateCompacted(template)) {
+      // Compacted templates share geometry buffers with clones already handed
+      // to the scene (see three-renderer AcTrGroup.fastDeepClone) — disposing
+      // now would corrupt live INSERT instances. Retire instead; clear()
+      // disposes them when the document closes.
+      this._retiredCompactedTemplates.push(template)
+    } else {
+      template.dispose?.()
+    }
+  }
+
+  /**
+   * Estimates a template's byte footprint by walking its tree and summing
+   * geometry attribute/index buffers. Returns 0 for objects that do not
+   * expose `children`/`geometry` (non-three implementations).
+   */
+  private estimateTemplateBytes(template: AcGiEntity) {
+    let bytes = 0
+    const stack: unknown[] = [template]
+    while (stack.length > 0) {
+      const node = stack.pop() as
+        | {
+            children?: unknown[]
+            geometry?: {
+              attributes?: Record<string, { array?: ArrayBufferView }>
+              index?: { array?: ArrayBufferView } | null
+            }
+          }
+        | null
+        | undefined
+      if (node == null) continue
+      if (node.geometry) {
+        const attributes = node.geometry.attributes
+        if (attributes) {
+          for (const key in attributes) {
+            const array = attributes[key]?.array
+            if (array) bytes += array.byteLength
+          }
+        }
+        const indexArray = node.geometry.index?.array
+        if (indexArray) bytes += indexArray.byteLength
+      }
+      const children = node.children
+      if (children) {
+        for (let i = 0; i < children.length; i++) {
+          stack.push(children[i])
+        }
+      }
+    }
+    return bytes
   }
 
   /**
@@ -282,6 +393,11 @@ export class AcDbRenderingCache {
     const template = this._blocks.get(name)
     if (!template) {
       return undefined
+    }
+    if (AcDbRenderingCache.lruEnabled) {
+      // Map insertion order is the LRU order; re-insert to mark most-recent.
+      this._blocks.delete(name)
+      this._blocks.set(name, template)
     }
     // Compact mid-size templates on first reuse so one-shot blocks never pay
     // compactForInstancing, while repeated INSERTs still clone O(material) leaves.
@@ -342,6 +458,12 @@ export class AcDbRenderingCache {
       block.dispose?.()
     })
     this._blocks.clear()
+    this._lruBytes.clear()
+    this._lruTotalBytes = 0
+    this._retiredCompactedTemplates.forEach(template => {
+      template.dispose?.()
+    })
+    this._retiredCompactedTemplates.length = 0
   }
 
   /**
