@@ -2,12 +2,13 @@ import {
   AcGeCircArc3d,
   acgeGetOcsAngle,
   acgeGetOcsReferenceVector,
+  acgeGetOcsReferenceVectorInto,
   AcGeIntersectPrimitive,
   AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  acgeTransformOcsPointToWcs,
+  acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike} from '@mlightcad/geometry-engine'
@@ -19,6 +20,11 @@ import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
+
+/** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
+const _dxfInNormal = /*@__PURE__*/ new AcGeVector3d()
+const _dxfInRefVec = /*@__PURE__*/ new AcGeVector3d()
+const _dxfInPoint = /*@__PURE__*/ new AcGePoint3d()
 
 /**
  * Represents an arc entity in AutoCAD.
@@ -52,10 +58,32 @@ export class AcDbArc extends AcDbCurve {
     return 'ARC'
   }
 
-  /** The underlying geometric circular arc object */
-  private _geo: AcGeCircArc3d
+  /** Backing for the lazily materialized geometric circular arc object. */
+  private _geoData: AcGeCircArc3d | null = null
   /** Thickness along the normal (DXF group 39) */
   private _thickness = 0
+
+  /**
+   * The underlying geometric circular arc object. Materialized lazily so that
+   * factory-created entities (dxfIn path) never allocate default geometry.
+   */
+  private get _geo(): AcGeCircArc3d {
+    if (this._geoData == null) {
+      this._geoData = new AcGeCircArc3d(
+        new AcGePoint3d(),
+        1,
+        0,
+        Math.PI / 2,
+        AcGeVector3d.Z_AXIS,
+        AcGeVector3d.X_AXIS
+      )
+    }
+    return this._geoData
+  }
+
+  private set _geo(value: AcGeCircArc3d) {
+    this._geoData = value
+  }
 
   /**
    * Creates a new arc entity.
@@ -89,23 +117,38 @@ export class AcDbArc extends AcDbCurve {
    * );
    * ```
    */
+  constructor()
   constructor(
     center: AcGePoint3dLike,
     radius: number,
     startAngle: number,
     endAngle: number,
+    normal?: AcGeVector3dLike
+  )
+  constructor(
+    center?: AcGePoint3dLike,
+    radius?: number,
+    startAngle?: number,
+    endAngle?: number,
     normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
   ) {
     super()
-    const refVec = acgeGetOcsReferenceVector(normal)
-    this._geo = new AcGeCircArc3d(
-      center,
-      radius,
-      startAngle,
-      endAngle,
-      normal,
-      refVec
-    )
+    if (
+      center !== undefined &&
+      radius !== undefined &&
+      startAngle !== undefined &&
+      endAngle !== undefined
+    ) {
+      const refVec = acgeGetOcsReferenceVector(normal)
+      this._geo = new AcGeCircArc3d(
+        center,
+        radius,
+        startAngle,
+        endAngle,
+        normal,
+        refVec
+      )
+    }
   }
 
   /**
@@ -751,20 +794,31 @@ export class AcDbArc extends AcDbCurve {
     ny: number,
     nz: number
   ) {
-    const normal = new AcGeVector3d(nx, ny, nz)
+    _dxfInNormal.set(nx, ny, nz)
+    if (_dxfInNormal.lengthSq() > 0) {
+      _dxfInNormal.normalize()
+    }
     // DXF arcs are created with a default +Z normal/refVec, then filled via
     // dxfIn. Sync refVec with the OCS X axis or -Z extrusions tessellate on
     // the mirrored side of the center (messy chords for large-radius fillets).
-    this.setNormalAndRefVec(normal)
-    this.center = acgeTransformOcsPointToWcs({ x, y, z }, this.normal)
-    this.radius = radius
-    this.startAngle = AcGeMathUtil.degToRad(startDeg)
-    this.endAngle = AcGeMathUtil.degToRad(endDeg)
+    acgeGetOcsReferenceVectorInto(_dxfInRefVec, _dxfInNormal)
+    acgeTransformOcsPointToWcsInto(_dxfInPoint, { x, y, z }, _dxfInNormal)
+    // Build the final geometry in one pass; the entity's default geometry is
+    // never materialized (see the lazy _geo accessor).
+    this._geo = new AcGeCircArc3d(
+      _dxfInPoint,
+      radius,
+      AcGeMathUtil.degToRad(startDeg),
+      AcGeMathUtil.degToRad(endDeg),
+      _dxfInNormal,
+      _dxfInRefVec
+    )
   }
 
   private setNormalAndRefVec(normal: AcGeVector3dLike) {
     this._geo.normal = normal
-    this._geo.refVec = acgeGetOcsReferenceVector(this._geo.normal)
+    acgeGetOcsReferenceVectorInto(_dxfInRefVec, this._geo.normal)
+    this._geo.refVec = _dxfInRefVec
   }
 
   override getOffsetCurves(offsetDist: number): AcDbCurve[] {

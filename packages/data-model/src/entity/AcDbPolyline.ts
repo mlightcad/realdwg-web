@@ -33,6 +33,9 @@ import {
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers'
 
+/** Reused across dxfIn to avoid per-vertex temporaries (parse is sequential). */
+const _dxfInVertex = /*@__PURE__*/ new AcGePoint2d()
+
 /**
  * Represents one vertex of a polyline entity in AutoCAD.
  *
@@ -809,13 +812,9 @@ export class AcDbPolyline extends AcDbCurve {
       if (!hasPending) return
       const sw = startWidth < 0 ? constantWidth : startWidth
       const ew = endWidth < 0 ? constantWidth : endWidth
-      this.addVertexAt(
-        vertexIndex++,
-        new AcGePoint2d(pendingX, pendingY),
-        bulge,
-        sw,
-        ew
-      )
+      _dxfInVertex.x = pendingX
+      _dxfInVertex.y = pendingY
+      this.addVertexAt(vertexIndex++, _dxfInVertex, bulge, sw, ew)
       if (vertexId != null) {
         const vertex = this._geo.vertices[vertexIndex - 1]
         if (vertex) vertex.identifier = vertexId
@@ -887,9 +886,8 @@ export class AcDbPolyline extends AcDbCurve {
     this.closed = closed
     this.elevation = elevation
     this.thickness = thickness
-    const normal = new AcGeVector3d(nx, ny, nz)
-    if (normal.lengthSq() > 0) {
-      this.normal.copy(normal.normalize())
+    if (nx * nx + ny * ny + nz * nz > 0) {
+      this.normal.set(nx, ny, nz).normalize()
     }
     return this
   }

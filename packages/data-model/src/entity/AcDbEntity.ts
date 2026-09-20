@@ -55,6 +55,13 @@ export abstract class AcDbEntity extends AcDbObject {
   private _layer?: string
   /** The color of this entity */
   private _color?: AcCmColor
+  /**
+   * True when this entity's unresolved color is the ByLayer default (DXF file
+   * omitted color group 62/420). Keeps the entity's color lazily unallocated
+   * — {@link getEntityColor} materializes it as ByLayer on first access instead
+   * of eagerly allocating one `AcCmColor` per entity (~89% of typical drawings).
+   */
+  private _colorIsByLayerDefault: boolean = false
   /** The linetype name for this entity */
   private _lineType?: string
   /** The line weight for this entity */
@@ -63,8 +70,8 @@ export abstract class AcDbEntity extends AcDbObject {
   private _linetypeScale?: number
   /** Whether this entity is visible */
   private _visibility: boolean = true
-  /** The transparency level of this entity (0-1) */
-  private _transparency: AcCmTransparency = new AcCmTransparency()
+  /** The transparency level of this entity (0-1), materialized on first access. */
+  private _transparency?: AcCmTransparency
   /** Whether transparency was explicitly assigned on this entity. */
   private _transparencySet: boolean = false
   /** DXF group 67 paper-space flag captured during dxfIn. */
@@ -324,7 +331,7 @@ export abstract class AcDbEntity extends AcDbObject {
    * ```
    */
   get transparency() {
-    return this._transparency
+    return (this._transparency ??= new AcCmTransparency())
   }
 
   /**
@@ -353,17 +360,25 @@ export abstract class AcDbEntity extends AcDbObject {
    * Returns whether a color value has been explicitly assigned on this entity.
    */
   protected hasExplicitColor() {
-    return this._color != null
+    return this._color != null || this._colorIsByLayerDefault
   }
 
   /**
    * Returns the stored entity color, initializing it from CECOLOR if needed.
+   *
+   * Entities marked by {@link applyDxfFileDefaults} are materialized as the
+   * ByLayer default instead of the CECOLOR seed, which is exactly what the
+   * eager allocation used to store for them.
    */
   protected getEntityColor() {
     if (this._color == null) {
-      this._color = new AcCmColor()
-      if (this.database.cecolor) {
-        this._color.copy(this.database.cecolor)
+      if (this._colorIsByLayerDefault) {
+        this._color = new AcCmColor().setByLayer()
+      } else {
+        this._color = new AcCmColor()
+        if (this.database.cecolor) {
+          this._color.copy(this.database.cecolor)
+        }
       }
     }
     return this._color
@@ -373,15 +388,35 @@ export abstract class AcDbEntity extends AcDbObject {
    * Assigns the stored entity color.
    */
   protected setEntityColor(value: AcCmColor) {
+    this._colorIsByLayerDefault = false
     if (this._color == null) this._color = new AcCmColor()
     this._color.copy(value)
   }
 
   /**
    * Returns whether unresolved entity color should be initialized from CECOLOR.
+   * ByLayer-default entities (from DXF without color group) must NOT be seeded
+   * with CECOLOR — they should stay as ByLayer.
    */
   protected shouldResolveColorFromCecolor() {
-    return true
+    return !this._colorIsByLayerDefault
+  }
+
+  /**
+   * Applies DXF file defaults right after reading this entity from a DXF file.
+   *
+   * Per DXF spec, an entity whose color group (62/420) is absent defaults to
+   * ByLayer (256) — not CECOLOR. CECOLOR only seeds entities created
+   * programmatically (see {@link resolveEffectiveProperties}, mirroring
+   * `AcDbEntity::setDatabaseDefaults`). Records the default lazily instead of
+   * allocating an `AcCmColor` per entity.
+   *
+   * @internal
+   */
+  applyDxfFileDefaults() {
+    if (this._color == null) {
+      this._colorIsByLayerDefault = true
+    }
   }
 
   /**
@@ -501,12 +536,10 @@ export abstract class AcDbEntity extends AcDbObject {
       }
     }
 
-    // Omitted group 62 is ByLayer per the DXF spec. Do not leave `_color`
-    // unset: appendEntity copies CECOLOR, which only seeds newly created
-    // entities (LibreDWG dwg2dxf often writes $CECOLOR 0 / ByBlock).
-    if (!this.hasExplicitColor()) {
-      this.setEntityColor(new AcCmColor().setByLayer())
-    }
+    // Omitted group 62 is ByLayer per the DXF spec. Record the default lazily
+    // instead of allocating `new AcCmColor().setByLayer()` per entity (~89%
+    // of typical drawings); see {@link applyDxfFileDefaults}.
+    this.applyDxfFileDefaults()
 
     return this
   }

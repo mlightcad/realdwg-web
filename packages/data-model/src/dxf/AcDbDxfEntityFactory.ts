@@ -1,5 +1,3 @@
-import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
-
 import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDb3dSolid } from '../entity/AcDb3dSolid'
 import { AcDbArc } from '../entity/AcDbArc'
@@ -45,11 +43,11 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
   const type = typeName.toUpperCase()
   switch (type) {
     case 'LINE':
-      return new AcDbLine(new AcGePoint3d(), new AcGePoint3d())
+      return new AcDbLine()
     case 'CIRCLE':
-      return new AcDbCircle(new AcGePoint3d(), 1)
+      return new AcDbCircle()
     case 'ARC':
-      return new AcDbArc(new AcGePoint3d(), 1, 0, Math.PI / 2)
+      return new AcDbArc()
     case 'POINT':
       return new AcDbPoint()
     case 'RAY':
@@ -57,15 +55,7 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
     case 'XLINE':
       return new AcDbXline()
     case 'ELLIPSE':
-      return new AcDbEllipse(
-        new AcGePoint3d(),
-        AcGeVector3d.Z_AXIS,
-        AcGeVector3d.X_AXIS,
-        1,
-        1,
-        0,
-        Math.PI * 2
-      )
+      return new AcDbEllipse()
     case 'SOLID':
       // Converter maps SOLID → AcDbSolid (subclass of AcDbTrace).
       return new AcDbSolid()
@@ -83,21 +73,8 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
       return new AcDbArcAlignedText()
     case 'MTEXT':
       return new AcDbMText()
-    case 'SPLINE': {
-      const spline = AcDbSpline.fromControlPoints(
-        [
-          { x: 0, y: 0, z: 0 },
-          { x: 1, y: 0, z: 0 },
-          { x: 2, y: 0, z: 0 },
-          { x: 3, y: 0, z: 0 }
-        ],
-        [0, 0, 0, 0, 1, 1, 1, 1],
-        undefined,
-        3,
-        false
-      )
-      return spline
-    }
+    case 'SPLINE':
+      return new AcDbSpline()
     case 'ATTDEF':
       return new AcDbAttributeDefinition()
     case 'ATTRIB':

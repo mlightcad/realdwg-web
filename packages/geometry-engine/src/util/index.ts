@@ -52,7 +52,9 @@ export {
 export {
   acgeGetOcsAngle,
   acgeGetOcsReferenceVector,
+  acgeGetOcsReferenceVectorInto,
   acgeTransformOcsPointToWcs,
+  acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs
 } from './AcGeOcsUtil'
 export { AcGeTol, DEFAULT_TOL } from './AcGeTol'

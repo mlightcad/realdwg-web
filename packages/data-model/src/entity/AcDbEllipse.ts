@@ -6,6 +6,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
+  AcGeVector3d,
   AcGeVector3dLike,
   TAU
 } from '@mlightcad/geometry-engine'
@@ -61,8 +62,31 @@ export class AcDbEllipse extends AcDbCurve {
     return 'ELLIPSE'
   }
 
-  /** The underlying geometric ellipse arc object */
-  private _geo: AcGeEllipseArc3d
+  /** Backing for the lazily materialized geometric ellipse arc object. */
+  private _geoData: AcGeEllipseArc3d | null = null
+
+  /**
+   * The underlying geometric ellipse arc object. Materialized lazily so that
+   * factory-created entities (dxfIn path) never allocate default geometry.
+   */
+  private get _geo(): AcGeEllipseArc3d {
+    if (this._geoData == null) {
+      this._geoData = new AcGeEllipseArc3d(
+        new AcGePoint3d(),
+        AcGeVector3d.Z_AXIS,
+        AcGeVector3d.X_AXIS,
+        1,
+        1,
+        0,
+        Math.PI * 2
+      )
+    }
+    return this._geoData
+  }
+
+  private set _geo(value: AcGeEllipseArc3d) {
+    this._geoData = value
+  }
 
   /**
    * Creates a new ellipse entity.
@@ -103,6 +127,7 @@ export class AcDbEllipse extends AcDbCurve {
    * );
    * ```
    */
+  constructor()
   constructor(
     center: AcGePointLike,
     normal: AcGeVector3dLike,
@@ -111,17 +136,36 @@ export class AcDbEllipse extends AcDbCurve {
     minorAxisRadius: number,
     startAngle: number,
     endAngle: number
+  )
+  constructor(
+    center?: AcGePointLike,
+    normal?: AcGeVector3dLike,
+    majorAxis?: AcGeVector3dLike,
+    majorAxisRadius?: number,
+    minorAxisRadius?: number,
+    startAngle?: number,
+    endAngle?: number
   ) {
     super()
-    this._geo = new AcGeEllipseArc3d(
-      center,
-      normal,
-      majorAxis,
-      majorAxisRadius,
-      minorAxisRadius,
-      startAngle,
-      endAngle
-    )
+    if (
+      center !== undefined &&
+      normal !== undefined &&
+      majorAxis !== undefined &&
+      majorAxisRadius !== undefined &&
+      minorAxisRadius !== undefined &&
+      startAngle !== undefined &&
+      endAngle !== undefined
+    ) {
+      this._geo = new AcGeEllipseArc3d(
+        center,
+        normal,
+        majorAxis,
+        majorAxisRadius,
+        minorAxisRadius,
+        startAngle,
+        endAngle
+      )
+    }
   }
 
   /**

@@ -5,7 +5,7 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  acgeTransformOcsPointToWcs,
+  acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
@@ -17,6 +17,12 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbCurve } from './AcDbCurve'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
+
+/** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
+const _dxfInPointA = /*@__PURE__*/ new AcGePoint3d()
+const _dxfInPointB = /*@__PURE__*/ new AcGePoint3d()
+/** Scratch holding the OCS coordinates before they are transformed to WCS. */
+const _dxfInOcsPoint = /*@__PURE__*/ new AcGePoint3d()
 
 /**
  * Represents a line entity in AutoCAD.
@@ -47,10 +53,30 @@ export class AcDbLine extends AcDbCurve {
     return 'LINE'
   }
 
-  /** The underlying geometric line object */
-  private _geo: AcGeLine3d
-  /** Extrusion / OCS normal (DXF group 210) */
-  private _normal: AcGeVector3d = new AcGeVector3d(0, 0, 1)
+  /** Backing for the lazily materialized geometric line object. */
+  private _geoData: AcGeLine3d | null = null
+  /**
+   * Backing for the lazily materialized extrusion / OCS normal (DXF group
+   * 210). `null` means "not yet materialized"; the default `+Z` vector is
+   * created on first access.
+   */
+  private _normal: AcGeVector3d | null = null
+
+  /**
+   * The underlying geometric line object. Materialized lazily so that
+   * factory-created entities (dxfIn path) never allocate a default line
+   * that dxfIn would immediately replace.
+   */
+  private get _geo(): AcGeLine3d {
+    if (this._geoData == null) {
+      this._geoData = new AcGeLine3d(new AcGePoint3d(), new AcGePoint3d())
+    }
+    return this._geoData
+  }
+
+  private set _geo(value: AcGeLine3d) {
+    this._geoData = value
+  }
   /** Thickness along the normal (DXF group 39) */
   private _thickness = 0
 
@@ -71,9 +97,13 @@ export class AcDbLine extends AcDbCurve {
    * );
    * ```
    */
-  constructor(start: AcGePoint3dLike, end: AcGePoint3dLike) {
+  constructor()
+  constructor(start: AcGePoint3dLike, end: AcGePoint3dLike)
+  constructor(start?: AcGePoint3dLike, end?: AcGePoint3dLike) {
     super()
-    this._geo = new AcGeLine3d(start, end)
+    if (start !== undefined && end !== undefined) {
+      this._geo = new AcGeLine3d(start, end)
+    }
   }
 
   /**
@@ -146,12 +176,22 @@ export class AcDbLine extends AcDbCurve {
 
   /**
    * Extrusion direction / OCS normal (DXF group 210).
+   *
+   * The default `+Z` vector is materialized on first access. A DXF import only
+   * assigns a normal for the rare records that carry a 210/220/230 group, so
+   * the LINE/SOLID/TRACE entities of a large drawing never allocate the
+   * default vector at all.
    */
   get normal(): AcGeVector3d {
-    return this._normal
+    let normal = this._normal
+    if (normal == null) {
+      normal = new AcGeVector3d(0, 0, 1)
+      this._normal = normal
+    }
+    return normal
   }
   set normal(value: AcGeVector3dLike) {
-    this._normal.copy(value).normalize()
+    this.normal.copy(value).normalize()
   }
 
   /**
@@ -482,16 +522,22 @@ export class AcDbLine extends AcDbCurve {
     super.dxfInFields(filer)
     filer.atSubclassData('AcDbLine')
 
-    let x1 = this.startPoint.x
-    let y1 = this.startPoint.y
-    let z1 = this.startPoint.z
-    let x2 = this.endPoint.x
-    let y2 = this.endPoint.y
-    let z2 = this.endPoint.z
+    // Literal defaults instead of reading `this.startPoint`/`endPoint`/`normal`:
+    // those getters materialize the lazy `_geo` (an `AcGeLine3d` plus two
+    // points) that the assignment at the end of this method replaces
+    // immediately, allocating one throwaway geometry per LINE (~390k on a
+    // large drawing). The defaults below are the values a freshly constructed
+    // line exposes.
+    let x1 = 0
+    let y1 = 0
+    let z1 = 0
+    let x2 = 0
+    let y2 = 0
+    let z2 = 0
     let thickness = this.thickness
-    let nx = this.normal.x
-    let ny = this.normal.y
-    let nz = this.normal.z
+    let nx = 0
+    let ny = 0
+    let nz = 1
 
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
@@ -534,13 +580,23 @@ export class AcDbLine extends AcDbCurve {
       }
     }
 
-    const normal = new AcGeVector3d(nx, ny, nz)
-    if (normal.lengthSq() > 0) {
-      this.normal.copy(normal.normalize())
+    // Skip the (dominant) identity normal: `normalize()` on the already unit
+    // +Z vector is a no-op, and DXF group 210 is +Z for the vast majority of
+    // lines. Only a non-identity normal materializes `_normal`; the identity
+    // case hands the frozen `Z_AXIS` to the read-only OCS transform below so
+    // no vector is allocated for the entity at all.
+    let normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
+    if (nx !== 0 || ny !== 0 || nz !== 1) {
+      if (nx * nx + ny * ny + nz * nz > 0) {
+        normal = this.normal.set(nx, ny, nz).normalize()
+      }
     }
     this.thickness = thickness
-    this.startPoint = acgeTransformOcsPointToWcs({ x: x1, y: y1, z: z1 }, this.normal)
-    this.endPoint = acgeTransformOcsPointToWcs({ x: x2, y: y2, z: z2 }, this.normal)
+    _dxfInOcsPoint.set(x1, y1, z1)
+    acgeTransformOcsPointToWcsInto(_dxfInPointA, _dxfInOcsPoint, normal)
+    _dxfInOcsPoint.set(x2, y2, z2)
+    acgeTransformOcsPointToWcsInto(_dxfInPointB, _dxfInOcsPoint, normal)
+    this._geo = new AcGeLine3d(_dxfInPointA, _dxfInPointB)
     return this
   }
 
