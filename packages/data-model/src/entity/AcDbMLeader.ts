@@ -1774,7 +1774,8 @@ export class AcDbMLeader extends AcDbEntity {
         directionVector: this.textDirection,
         attachmentPoint: this.textAttachmentPoint,
         drawingDirection: this.textDrawingDirection,
-        lineSpaceFactor: this.textLineSpacingFactor
+        lineSpaceFactor: this.textLineSpacingFactor,
+        lineSpaceStyle: this.textLineSpacingStyle
       }
       // Nested MText must follow the same delay flag as top-level MTEXT so the
       // viewer can finish geometry asynchronously in worker render mode.

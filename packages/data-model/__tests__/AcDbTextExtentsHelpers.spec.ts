@@ -75,9 +75,18 @@ describe('AcDbTextExtentsHelpers', () => {
     })
 
     it('adds inter-line spacing for multiple lines', () => {
-      // Baseline distance = factor × (5/3) × textHeight
+      // Baseline distance = factor × (5/3) × textHeight when that is at least
+      // one text height. Factors below 0.6 are tighter than the text height.
       expect(acdbEstimateMTextHeight(2, 2, 1)).toBeCloseTo(2 + (5 / 3) * 2)
-      expect(acdbEstimateMTextHeight(2, 2, 0.25)).toBeCloseTo(
+      expect(acdbEstimateMTextHeight(2, 2, 0.8)).toBeCloseTo(
+        2 + 0.8 * (5 / 3) * 2
+      )
+      // At Least (default, style 0/1): do not pack closer than the text height.
+      expect(acdbEstimateMTextHeight(2, 2, 0.25)).toBeCloseTo(2 + 2)
+      expect(acdbEstimateMTextHeight(2, 2, 0.25, 0)).toBeCloseTo(2 + 2)
+      expect(acdbEstimateMTextHeight(2, 2, 0.25, 1)).toBeCloseTo(2 + 2)
+      // Exact style keeps the compact factor spacing.
+      expect(acdbEstimateMTextHeight(2, 2, 0.25, 2)).toBeCloseTo(
         2 + 0.25 * (5 / 3) * 2
       )
       expect(acdbEstimateMTextHeight(3, 2, 1.5)).toBeCloseTo(

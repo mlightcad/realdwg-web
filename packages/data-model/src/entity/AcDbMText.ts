@@ -466,7 +466,8 @@ export class AcDbMText extends AcDbEntity {
     const height = acdbEstimateMTextHeight(
       lineCount,
       this.height,
-      this.lineSpacingFactor
+      this.lineSpacingFactor,
+      this.lineSpacingStyle
     )
 
     return acdbExpandBoxByOrientedTextRect(
@@ -793,7 +794,8 @@ export class AcDbMText extends AcDbEntity {
       directionVector: this.direction,
       attachmentPoint: this.attachmentPoint,
       drawingDirection: this.drawingDirection,
-      lineSpaceFactor: this.lineSpacingFactor
+      lineSpaceFactor: this.lineSpacingFactor,
+      lineSpaceStyle: this.lineSpacingStyle
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
   }
