@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.14.12
+
+### Patch Changes
+
+- fix: keeps compact MTEXT line spacing under the At Least style so lines expand only when the factor would pack them closer than the text height, and passes Exact spacing through DWG import. DXF load and block draw allocate less via span-based pair parsing, lazy entity geometry, in-place OCS transforms, and LRU rendering-cache eviction. Incomplete MLINESTYLE entries no longer abort opens, and WASM out-of-memory faults are reported as worker_oom
+- Updated dependencies
+  - @mlightcad/data-model@1.14.12
+
 ## 3.14.11
 
 ### Patch Changes
