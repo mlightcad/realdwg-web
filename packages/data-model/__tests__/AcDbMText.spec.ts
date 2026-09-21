@@ -99,6 +99,21 @@ describe('AcDbMText', () => {
     expect(mtext.geometricExtents.max.y).toBeCloseTo(0)
   })
 
+  it('floors At Least spacing at text height and keeps Exact factor spacing', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.contents = 'A\nB'
+    mtext.height = 2
+    mtext.lineSpacingFactor = 0.25
+    mtext.lineSpacingStyle = 1
+    mtext.location = { x: 0, y: 0, z: 0 }
+
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(-4)
+
+    mtext.lineSpacingStyle = 2
+    expect(mtext.geometricExtents.min.y).toBeCloseTo(-(2 + 0.25 * (5 / 3) * 2))
+  })
+
   it('prefers extentsWidth over reference width in geometricExtents', () => {
     createWorkingDb()
     const mtext = new AcDbMText()

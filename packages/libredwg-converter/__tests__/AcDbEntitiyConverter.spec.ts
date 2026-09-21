@@ -398,6 +398,40 @@ describe('libredwg AcDbEntityConverter', () => {
     expect((result as AcDbMText).extentsWidth).toBeCloseTo(16.25)
   })
 
+  it('converts MTEXT line spacing factor and style', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MTEXT',
+      text: 'A\\PB',
+      textHeight: 2,
+      rectWidth: 10,
+      lineSpacing: 0.25,
+      lineSpacingStyle: 2,
+      insertionPoint: { x: 0, y: 0, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbMText)
+    const mtext = result as AcDbMText
+    expect(mtext.lineSpacingFactor).toBeCloseTo(0.25)
+    expect(mtext.lineSpacingStyle).toBe(2)
+  })
+
+  it('keeps the default line spacing factor when libredwg reports 0', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'MTEXT',
+      text: 'Note',
+      textHeight: 2.5,
+      rectWidth: 10,
+      lineSpacing: 0,
+      insertionPoint: { x: 0, y: 0, z: 0 }
+    } as any)
+
+    expect((result as AcDbMText).lineSpacingFactor).toBeCloseTo(1)
+  })
+
   it('keeps tapered LWPOLYLINE vertex widths (valve triangles)', () => {
     acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
     const converter = new AcDbEntityConverter()

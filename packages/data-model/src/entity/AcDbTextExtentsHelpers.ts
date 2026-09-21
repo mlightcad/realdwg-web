@@ -101,18 +101,25 @@ export function acdbCountMTextLines(text: string): number {
 /**
  * Estimates total MTEXT height from line count and line-spacing factor.
  *
- * Uses AutoCAD DXF group-44 semantics: baseline-to-baseline distance is
- * `lineSpacingFactor × (5/3) × textHeight`.
+ * Baseline distance starts as `lineSpacingFactor × (5/3) × textHeight`
+ * (DXF group 44; single spacing is factor `1`). At Least (DXF group 73 = `0`
+ * or `1`, the default) grows that distance when it is tighter than the text
+ * height, so nominal glyphs do not overlap. Exact (`2`) keeps the factor
+ * spacing. This estimate does not measure per-glyph overflow above the text
+ * height.
  */
 export function acdbEstimateMTextHeight(
   lineCount: number,
   textHeight: number,
-  lineSpacingFactor: number
+  lineSpacingFactor: number,
+  lineSpacingStyle: number = 1
 ): number {
   if (textHeight <= 0 || lineCount <= 0) return 0
   if (lineCount === 1) return textHeight
 
-  const spacing = Math.max(lineSpacingFactor, 0) * (5 / 3)
+  const factorSpacing = Math.max(lineSpacingFactor, 0) * (5 / 3)
+  const spacing =
+    lineSpacingStyle === 2 ? factorSpacing : Math.max(factorSpacing, 1)
   return textHeight + (lineCount - 1) * textHeight * spacing
 }
 
@@ -307,6 +314,8 @@ export interface AcDbMTextAssociationPadding {
  * @param input.width - Reference/wrap width from the entity.
  * @param input.extentsWidth - Cached actual rendered width from the source file.
  * @param input.lineSpacingFactor - Line spacing factor (DXF group 44 semantics).
+ * @param input.lineSpacingStyle - Line spacing style (DXF group 73). `2` is Exact;
+ *   omitted, `0`, and `1` are At Least.
  * @param input.attachmentPoint - Attachment point for local bound anchoring.
  * @param input.rotation - Text rotation in radians.
  * @param input.direction - Text direction vector; takes precedence over rotation when non-zero.
@@ -319,6 +328,7 @@ export function acdbResolveMTextLayoutMetrics(input: {
   width: number
   extentsWidth: number
   lineSpacingFactor: number
+  lineSpacingStyle?: number
   attachmentPoint: AcGiMTextAttachmentPoint
   rotation: number
   direction: AcGeVector3d
@@ -333,7 +343,8 @@ export function acdbResolveMTextLayoutMetrics(input: {
   const height = acdbEstimateMTextHeight(
     acdbCountMTextLines(input.contents),
     input.height,
-    input.lineSpacingFactor
+    input.lineSpacingFactor,
+    input.lineSpacingStyle ?? 1
   )
 
   return {

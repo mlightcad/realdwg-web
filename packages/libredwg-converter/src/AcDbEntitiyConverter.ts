@@ -840,6 +840,12 @@ export class AcDbEntityConverter {
     }
     dbEntity.drawingDirection =
       mtext.drawingDirection as unknown as AcGiMTextFlowDirection
+    if (mtext.lineSpacing != null && mtext.lineSpacing > 0) {
+      dbEntity.lineSpacingFactor = mtext.lineSpacing
+    }
+    if (mtext.lineSpacingStyle != null) {
+      dbEntity.lineSpacingStyle = mtext.lineSpacingStyle
+    }
     if (mtext.extentsWidth != null && mtext.extentsWidth > 0) {
       dbEntity.extentsWidth = mtext.extentsWidth
     }
@@ -1077,6 +1083,14 @@ export class AcDbEntityConverter {
       ]) ??
       this.readNumber(raw, ['textLineSpacingFactor']) ??
       dbEntity.textLineSpacingFactor
+    const textLineSpacingStyle =
+      this.readNumber(rawTextContentRecord ?? {}, [
+        'lineSpacingStyle',
+        'textLineSpacingStyle'
+      ]) ?? this.readNumber(raw, ['textLineSpacingStyle'])
+    if (textLineSpacingStyle != null) {
+      dbEntity.textLineSpacingStyle = textLineSpacingStyle
+    }
     const textRotation =
       this.readNumber(rawTextContentRecord ?? {}, [
         'textRotation',

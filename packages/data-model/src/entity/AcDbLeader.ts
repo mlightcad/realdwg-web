@@ -716,6 +716,7 @@ export class AcDbLeader extends AcDbCurve {
       width: mtext.width,
       extentsWidth: mtext.extentsWidth,
       lineSpacingFactor: mtext.lineSpacingFactor,
+      lineSpacingStyle: mtext.lineSpacingStyle,
       attachmentPoint: mtext.attachmentPoint,
       rotation: mtext.rotation,
       direction: mtext.direction,
