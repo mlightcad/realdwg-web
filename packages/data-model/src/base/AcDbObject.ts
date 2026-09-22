@@ -371,6 +371,17 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
+   * Database this object has been added to, or `undefined` if it is still detached.
+   *
+   * Unlike {@link database}, this does not fall back to the host working database.
+   * DWG/DXF import assigns real handles before `add()`; write-access checks must
+   * not consult a possibly-unset or second-copy working-database singleton.
+   */
+  protected get residentDatabase(): AcDbDatabase | undefined {
+    return this._database
+  }
+
+  /**
    * Associates this object with a database. Subclasses may override {@link database}
    * and call this helper to avoid `super` setter restrictions.
    */

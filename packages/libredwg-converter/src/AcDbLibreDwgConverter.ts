@@ -271,7 +271,6 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const viewports = model.tables.VPORT.entries
     viewports.forEach(item => {
       const record = new AcDbViewportTableRecord()
-      this.processCommonTableEntryAttrs(item, record)
       if (item.circleSides) {
         record.circleSides = item.circleSides
       }
@@ -381,6 +380,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (item.ambientColor) {
         record.gsView.ambientColor = item.ambientColor
       }
+      // Assign the DWG handle last so VPORT setters do not hit assertOpenForWrite
+      // on an unbound non-TEMP record (working-database singleton).
+      this.processCommonTableEntryAttrs(item, record)
       db.tables.viewportTable.add(record)
     })
   }
