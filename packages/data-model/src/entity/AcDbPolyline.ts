@@ -651,7 +651,11 @@ export class AcDbPolyline extends AcDbCurve {
    * @internal
    */
   override get directBatchPrimitive() {
-    return this.hasRenderableWidth() ? ('area' as const) : ('lineStrip' as const)
+    if (!this.hasRenderableWidth()) return 'lineStrip' as const
+    // Closed wide polylines prefer offsetRing when both loops align; leave them
+    // unbatched so capture does not assume a single area() call.
+    if (this.closed) return null
+    return 'area' as const
   }
 
   /**
@@ -668,6 +672,26 @@ export class AcDbPolyline extends AcDbCurve {
     const centerline = this._geo.tessellate(tessellateOptions)
     const widthProfile = this.createWidthProfile(tessellateOptions)
     if (widthProfile != null) {
+      if (this.closed) {
+        const ring = createClosedWidePolylineOffsetRing(widthProfile)
+        if (ring != null) {
+          const traits = renderer.subEntityTraits
+          traits.fillType = {
+            solidFill: true,
+            patternAngle: 0,
+            definitionLines: []
+          }
+          const elevation = this.elevation
+          return renderer.offsetRing(
+            ring.outer.map(point =>
+              new AcGePoint3d().set(point.x, point.y, elevation)
+            ),
+            ring.inner.map(point =>
+              new AcGePoint3d().set(point.x, point.y, elevation)
+            )
+          )
+        }
+      }
       const area = createWidePolylineArea(widthProfile, this.closed)
       if (area != null) {
         const traits = renderer.subEntityTraits
@@ -1138,6 +1162,31 @@ interface WidePolylinePoint {
   x: number
   y: number
   width: number
+}
+
+/**
+ * Closed wide polyline whose inner offset did not collapse.
+ *
+ * Both loops keep centerline order, so index `i` is one sample's two sides.
+ * Returns `null` when a side is missing or the counts differ; the caller then
+ * uses {@link createWidePolylineArea}.
+ */
+function createClosedWidePolylineOffsetRing(points: WidePolylinePoint[]): {
+  outer: Array<{ x: number; y: number }>
+  inner: Array<{ x: number; y: number }>
+} | null {
+  const centerline = normalizeCenterline(points, true)
+  if (centerline.length < 2) return null
+  const { left, right } = createWidePolylineBoundaries(centerline, true)
+  const leftLoop = compactBoundaryLoop(left)
+  const rightLoop = compactBoundaryLoop(right)
+  if (!isRenderableLoop(leftLoop) || !isRenderableLoop(rightLoop)) return null
+  if (leftLoop.length !== rightLoop.length) return null
+  const leftArea = Math.abs(calculateSignedArea(leftLoop))
+  const rightArea = Math.abs(calculateSignedArea(rightLoop))
+  const [outer, inner] =
+    leftArea >= rightArea ? [leftLoop, rightLoop] : [rightLoop, leftLoop]
+  return { outer, inner }
 }
 
 /**

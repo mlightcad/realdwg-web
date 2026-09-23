@@ -361,6 +361,7 @@ describe('AcDbPolyline', () => {
     const renderer = {
       lines: jest.fn(),
       area: jest.fn(() => giEntity),
+      offsetRing: jest.fn(() => giEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -378,14 +379,12 @@ describe('AcDbPolyline', () => {
     }
 
     const result = polyline.subWorldDraw(renderer as never)
-    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
-      area: number
-      loops: Array<{
-        getPoints: (numPoints: number) => Array<{ x: number; y: number }>
-      }>
-    }
-    const boundaries = areaArg.loops.map(loop => loop.getPoints(4))
-    const loopBoxes = boundaries
+    const [outer, inner] = (renderer.offsetRing as jest.Mock).mock
+      .calls[0] as [
+      Array<{ x: number; y: number; z: number }>,
+      Array<{ x: number; y: number; z: number }>
+    ]
+    const loopBoxes = [outer, inner]
       .map(points => ({
         minX: Math.min(...points.map(point => point.x)),
         maxX: Math.max(...points.map(point => point.x)),
@@ -399,10 +398,11 @@ describe('AcDbPolyline', () => {
       )
 
     expect(result).toBe(giEntity)
-    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.offsetRing).toHaveBeenCalledTimes(1)
+    expect(renderer.area).not.toHaveBeenCalled()
     expect(renderer.lines).not.toHaveBeenCalled()
-    expect(areaArg.loops).toHaveLength(2)
-    expect(areaArg.area).toBeCloseTo(60, 8)
+    expect(outer).toHaveLength(inner.length)
+    expect(outer.every(point => point.z === 2)).toBe(true)
     expect(loopBoxes[0]).toMatchObject({
       minX: -1,
       maxX: 11,
