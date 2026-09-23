@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.14.13
+
+### Patch Changes
+
+- feat: draws closed wide polylines with index-aligned offsetRing so outer and inner stroke loops share sample order and count, letting renderers triangulate the stroke band without area holes. fillType updates stay on the successful draw path, and closed wide polylines skip area batching
+- Updated dependencies
+  - @mlightcad/common@1.14.13
+  - @mlightcad/geometry-engine@3.14.13
+
 ## 3.14.12
 
 ### Patch Changes
