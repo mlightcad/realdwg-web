@@ -1,13 +1,16 @@
 /**
  * Rasterizes Windows metafile blobs extracted from OLE frames (WMF / EMF)
- * into browser-decodable PNG images via `emf-converter`.
+ * into browser-decodable PNG images via `@mlightcad/emf-converter`.
  *
  * AutoCAD Excel OLE previews are typically stored as CF_ENHMETAFILE / WMF
  * presentation streams. Browsers cannot decode those formats natively, so
  * viewers must convert them to PNG (or similar) before texturing.
+ *
+ * The converter is a static import so the data-model CJS/Vite bundle inlines
+ * the (small) `@mlightcad/emf-converter` implementation.
  */
 
-import { convertEmfToDataUrl, convertWmfToDataUrl } from 'emf-converter'
+import { convertEmfToDataUrl, convertWmfToDataUrl } from '@mlightcad/emf-converter'
 
 import {
   ACDB_OLE_METAFILE_EMF_MIME,
@@ -87,7 +90,7 @@ export async function acdbRasterizeOleMetafile(
     }
   }
 
-  // Fresh ArrayBuffer — `emf-converter` requires ArrayBuffer (not SharedArrayBuffer).
+  // Fresh ArrayBuffer — converter requires ArrayBuffer (not SharedArrayBuffer).
   const buffer = bytes.buffer.slice(
     bytes.byteOffset,
     bytes.byteOffset + bytes.byteLength
