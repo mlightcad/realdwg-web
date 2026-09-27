@@ -97,14 +97,20 @@ describe('AcDbOpenDatabaseError', () => {
   it('classifies license failures from message markers', () => {
     expect(
       AcDbOpenDatabaseError.classifyWorkerErrorMessage(
-        'Your 30-day evaluation of @mlight-cad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
+        'Your 30-day evaluation of @mlightcad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
       )
     ).toBe('license_expired')
     expect(
       AcDbOpenDatabaseError.classifyWorkerErrorMessage(
-        'Invalid @mlight-cad/dwg-converter license key. Check the key or contact MLightCAD support.'
+        'Invalid @mlightcad/dwg-converter license key. Check the key or contact MLightCAD support.'
       )
     ).toBe('license_invalid')
+    // Legacy package scope still classifies.
+    expect(
+      AcDbOpenDatabaseError.classifyWorkerErrorMessage(
+        'Your 30-day evaluation of @mlight-cad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
+      )
+    ).toBe('license_expired')
   })
 
   it('throws typed parse failures from worker results', () => {

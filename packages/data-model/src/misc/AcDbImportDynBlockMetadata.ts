@@ -42,7 +42,7 @@ function normalizeHandle(handle: string | undefined | null): string {
 /**
  * Imports dynamic-block dictionary / representation objects into `db`.
  *
- * Both `@mlightcad/libredwg-converter` and `@mlight-cad/dwg-converter` should
+ * Both `@mlightcad/libredwg-converter` and `@mlightcad/dwg-converter` should
  * call this after entities and block table records exist, and after setting
  * `extensionDictionary` handles on INSERTs / BTRs.
  *
