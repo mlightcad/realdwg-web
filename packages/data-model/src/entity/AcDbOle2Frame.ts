@@ -19,6 +19,7 @@ import {
   acdbCombineDxfBinaryChunks
 } from '../misc/proxyGraphic'
 import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntityProperties } from './AcDbEntityProperties'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
@@ -507,6 +508,245 @@ export class AcDbOle2Frame extends AcDbOleFrame {
   }
 
   /**
+   * Returns the full property definition for this OLE 2 frame entity, including
+   * general, geometry, and OLE-specific groups.
+   *
+   * Geometry accessors update location / size / rotation via the ObjectARX-style
+   * setters so aspect locking and size preservation stay consistent.
+   */
+  override get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'positionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.upperLeftCorner.x,
+                set: (v: number) => {
+                  this.setLocation({
+                    x: v,
+                    y: this.upperLeftCorner.y,
+                    z: this.upperLeftCorner.z
+                  })
+                }
+              }
+            },
+            {
+              name: 'positionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.upperLeftCorner.y,
+                set: (v: number) => {
+                  this.setLocation({
+                    x: this.upperLeftCorner.x,
+                    y: v,
+                    z: this.upperLeftCorner.z
+                  })
+                }
+              }
+            },
+            {
+              name: 'positionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.upperLeftCorner.z,
+                set: (v: number) => {
+                  this.setLocation({
+                    x: this.upperLeftCorner.x,
+                    y: this.upperLeftCorner.y,
+                    z: v
+                  })
+                }
+              }
+            },
+            {
+              name: 'rotation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rotation(),
+                set: (v: number) => {
+                  this.setRotation(v)
+                }
+              }
+            },
+            {
+              name: 'width',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.wcsWidth(),
+                set: (v: number) => {
+                  this.setWcsWidth(v)
+                }
+              }
+            },
+            {
+              name: 'height',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.wcsHeight(),
+                set: (v: number) => {
+                  this.setWcsHeight(v)
+                }
+              }
+            },
+            {
+              name: 'scaleWidth',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scaleWidth(),
+                set: (v: number) => {
+                  this.setScaleWidth(v)
+                }
+              }
+            },
+            {
+              name: 'scaleHeight',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scaleHeight(),
+                set: (v: number) => {
+                  this.setScaleHeight(v)
+                }
+              }
+            },
+            {
+              name: 'lockAspect',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.lockAspect(),
+                set: (v: boolean) => {
+                  this.setLockAspect(v)
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'ole',
+          properties: [
+            ...this.getOleProperties().properties,
+            {
+              name: 'userType',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.userType,
+                set: (v: string) => {
+                  this.userType = v
+                }
+              }
+            },
+            {
+              name: 'oleObjectType',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label: AcDbOleObjectType[AcDbOleObjectType.Link],
+                  value: AcDbOleObjectType.Link
+                },
+                {
+                  label: AcDbOleObjectType[AcDbOleObjectType.Embedded],
+                  value: AcDbOleObjectType.Embedded
+                },
+                {
+                  label: AcDbOleObjectType[AcDbOleObjectType.Static],
+                  value: AcDbOleObjectType.Static
+                }
+              ],
+              accessor: {
+                get: () => this.oleObjectType,
+                set: (v: AcDbOleObjectType) => {
+                  this.oleObjectType = v
+                }
+              }
+            },
+            {
+              name: 'tileMode',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label: AcDbOleTileMode[AcDbOleTileMode.ModelSpace],
+                  value: AcDbOleTileMode.ModelSpace
+                },
+                {
+                  label: AcDbOleTileMode[AcDbOleTileMode.PaperSpace],
+                  value: AcDbOleTileMode.PaperSpace
+                }
+              ],
+              accessor: {
+                get: () => this.tileMode,
+                set: (v: AcDbOleTileMode) => {
+                  this.tileMode = v
+                }
+              }
+            },
+            {
+              name: 'linkName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.getLinkName(),
+                set: (v: string) => {
+                  this.setLinkName(v)
+                }
+              }
+            },
+            {
+              name: 'linkPath',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.getLinkPath(),
+                set: (v: string) => {
+                  this.setLinkPath(v)
+                }
+              }
+            },
+            {
+              name: 'outputQuality',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.outputQuality(),
+                set: (v: number) => {
+                  this.setOutputQuality(v)
+                }
+              }
+            },
+            {
+              name: 'autoOutputQuality',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.autoOutputQuality(),
+                set: (v: number) => {
+                  this.setAutoOutputQuality(v)
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+
+  /**
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
@@ -882,4 +1122,3 @@ export class AcDbOle2Frame extends AcDbOleFrame {
     this._lowerRight.x = this._upperLeft.x + sign * Math.abs(width)
   }
 }
-

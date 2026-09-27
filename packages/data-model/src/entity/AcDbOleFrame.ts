@@ -6,6 +6,10 @@ import {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks
 } from '../misc/proxyGraphic'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyGroup
+} from './AcDbEntityProperties'
 import { AcDbFrame } from './AcDbFrame'
 
 /**
@@ -133,6 +137,43 @@ export class AcDbOleFrame extends AcDbFrame {
   protected onOleObjectChanged() {}
 
   /**
+   * Returns property-group metadata for OLE-frame-specific attributes
+   * (currently the OLE version number).
+   *
+   * Subclasses such as {@link AcDbOle2Frame} merge these properties into their
+   * own `ole` group.
+   */
+  protected getOleProperties(): AcDbEntityPropertyGroup {
+    return {
+      groupName: 'ole',
+      properties: [
+        {
+          name: 'oleVersion',
+          type: 'int',
+          editable: true,
+          accessor: {
+            get: () => this.oleVersion,
+            set: (v: number) => {
+              this.oleVersion = v
+            }
+          }
+        }
+      ]
+    }
+  }
+
+  /**
+   * Returns the full property definition for this OLE frame entity, including
+   * the general group and OLE-specific attributes.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [this.getGeneralProperties(), this.getOleProperties()]
+    }
+  }
+
+  /**
    * Gets the geometric extents of this OLE frame.
    *
    * Legacy OLEFRAME entities do not store independent corner geometry in DXF;
@@ -226,4 +267,3 @@ export class AcDbOleFrame extends AcDbFrame {
     return this
   }
 }
-

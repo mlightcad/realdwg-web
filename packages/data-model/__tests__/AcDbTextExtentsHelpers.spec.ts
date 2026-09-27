@@ -8,6 +8,7 @@ import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 import {
   acdbCollectMTextOrientedCorners,
   acdbCountMTextLines,
+  acdbEscapePlainTextForMText,
   acdbEstimateMTextHeight,
   acdbEstimatePlainTextWidth,
   acdbEstimateToleranceCellWidth,
@@ -25,6 +26,18 @@ describe('AcDbTextExtentsHelpers', () => {
     it('converts paragraph breaks and removes formatting codes', () => {
       expect(acdbStripMTextControlCodes('A\\PB')).toBe('A\nB')
       expect(acdbStripMTextControlCodes('{\\C1;Red}')).toBe('Red')
+    })
+  })
+
+  describe('acdbEscapePlainTextForMText', () => {
+    it('escapes backslashes and braces so Windows paths stay literal', () => {
+      expect(acdbEscapePlainTextForMText('A\\PB')).toBe('A\\\\PB')
+      expect(
+        acdbEscapePlainTextForMText(
+          '..\\..\\..\\Pictures\\Screenshots\\file.png'
+        )
+      ).toBe('..\\\\..\\\\..\\\\Pictures\\\\Screenshots\\\\file.png')
+      expect(acdbEscapePlainTextForMText('a{b}c')).toBe('a\\{b\\}c')
     })
   })
 
@@ -183,7 +196,10 @@ describe('AcDbTextExtentsHelpers', () => {
 
     it('maps world points into MTEXT-local coordinates using rotation/direction', () => {
       const layout = createRotatedLayout()
-      const local = acdbWorldPointToMTextLocal(new AcGePoint3d(12, 20, 0), layout)
+      const local = acdbWorldPointToMTextLocal(
+        new AcGePoint3d(12, 20, 0),
+        layout
+      )
 
       expect(local.x).toBeCloseTo(10)
       expect(local.y).toBeCloseTo(-2)
@@ -215,12 +231,12 @@ describe('AcDbTextExtentsHelpers', () => {
       const corners = acdbCollectMTextOrientedCorners(layout)
 
       expect(corners).toHaveLength(4)
-      expect(
-        corners.some(corner => corner.x === 14 && corner.y === 10)
-      ).toBe(true)
-      expect(
-        corners.some(corner => corner.x === 14 && corner.y === 30)
-      ).toBe(true)
+      expect(corners.some(corner => corner.x === 14 && corner.y === 10)).toBe(
+        true
+      )
+      expect(corners.some(corner => corner.x === 14 && corner.y === 30)).toBe(
+        true
+      )
     })
   })
 })

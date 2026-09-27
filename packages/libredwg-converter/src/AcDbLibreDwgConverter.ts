@@ -271,7 +271,9 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     const viewports = model.tables.VPORT.entries
     viewports.forEach(item => {
       const record = new AcDbViewportTableRecord()
-      this.processCommonTableEntryAttrs(item, record)
+      // Keep the record TEMP while applying attrs. Assigning the DWG handle
+      // first makes assertOpenForWrite consult workingDatabase and abort
+      // conversion when it is unset (same fix as AcDbDwgConverter).
       if (item.circleSides) {
         record.circleSides = item.circleSides
       }
@@ -381,6 +383,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (item.ambientColor) {
         record.gsView.ambientColor = item.ambientColor
       }
+      this.processCommonTableEntryAttrs(item, record)
       db.tables.viewportTable.add(record)
     })
   }
@@ -391,7 +394,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       let dbBlock = db.tables.blockTable.getAt(btr.name)
       if (!dbBlock) {
         dbBlock = new AcDbBlockTableRecord()
-        dbBlock.objectId = btr.handle
+        // Assign handle last so setAttr stays on a TEMP record (avoids
+        // workingDatabase lookup while the BTR is still unbound).
         dbBlock.name = btr.name
         dbBlock.ownerId = btr.ownerHandle
         dbBlock.layoutId = btr.layout
@@ -403,6 +407,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dbBlock.blockInsertUnits = btr.insertionUnits
         dbBlock.explodability = btr.explodability
         dbBlock.blockScaling = btr.scalability as AcDbBlockScaling
+        dbBlock.objectId = btr.handle
         db.tables.blockTable.add(dbBlock)
       }
       // Always sync PreviewIcon (DXF/DWG group 310) — including when the BTR
