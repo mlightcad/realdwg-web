@@ -75,7 +75,7 @@ describe('AcDbOpenDatabaseError', () => {
 
   it('classifies structured license errors from thrown values', () => {
     const expired = new Error(
-      'Your 30-day evaluation of @mlight-cad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
+      'Your 30-day evaluation of @mlightcad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
     )
     expired.name = 'DwgConverterLicenseError'
     ;(expired as Error & { code: string }).code = 'license_expired'
@@ -86,7 +86,7 @@ describe('AcDbOpenDatabaseError', () => {
     expect(AcDbOpenDatabaseError.isLicenseErrorCode(openError.code)).toBe(true)
 
     const invalid = new Error(
-      'Invalid @mlight-cad/dwg-converter license key. Check the key or contact MLightCAD support.'
+      'Invalid @mlightcad/dwg-converter license key. Check the key or contact MLightCAD support.'
     )
     invalid.name = 'DwgConverterLicenseError'
     ;(invalid as Error & { code: string }).code = 'license_invalid'
@@ -97,12 +97,12 @@ describe('AcDbOpenDatabaseError', () => {
   it('classifies license failures from message markers', () => {
     expect(
       AcDbOpenDatabaseError.classifyWorkerErrorMessage(
-        'Your 30-day evaluation of @mlight-cad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
+        'Your 30-day evaluation of @mlightcad/dwg-converter has expired. Contact MLightCAD to obtain a license key.'
       )
     ).toBe('license_expired')
     expect(
       AcDbOpenDatabaseError.classifyWorkerErrorMessage(
-        'Invalid @mlight-cad/dwg-converter license key. Check the key or contact MLightCAD support.'
+        'Invalid @mlightcad/dwg-converter license key. Check the key or contact MLightCAD support.'
       )
     ).toBe('license_invalid')
   })
@@ -137,7 +137,7 @@ describe('AcDbOpenDatabaseError', () => {
       AcDbOpenDatabaseError.throwOnWorkerParseFailure({
         success: false,
         error:
-          'Your 30-day evaluation of @mlight-cad/dwg-converter has expired. Contact MLightCAD to obtain a license key.',
+          'Your 30-day evaluation of @mlightcad/dwg-converter has expired. Contact MLightCAD to obtain a license key.',
         errorCode: 'license_expired',
         duration: 1
       })
@@ -150,7 +150,7 @@ describe('AcDbOpenDatabaseError', () => {
       AcDbOpenDatabaseError.throwOnWorkerParseFailure({
         success: false,
         error:
-          'Invalid @mlight-cad/dwg-converter license key. Check the key or contact MLightCAD support.',
+          'Invalid @mlightcad/dwg-converter license key. Check the key or contact MLightCAD support.',
         errorCode: 'license_invalid',
         duration: 1
       })

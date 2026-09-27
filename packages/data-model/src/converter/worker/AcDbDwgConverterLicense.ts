@@ -1,10 +1,10 @@
 /**
- * Shared helpers for classifying `@mlight-cad/dwg-converter` license failures.
+ * Shared helpers for classifying `@mlightcad/dwg-converter` license failures.
  *
  * Markers are kept in sync with the converter's user-facing license messages.
  */
 
-/** Error name thrown by `@mlight-cad/dwg-converter` for license failures. */
+/** Error name thrown by `@mlightcad/dwg-converter` for license failures. */
 export const ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME =
   'DwgConverterLicenseError'
 
@@ -14,11 +14,11 @@ export type AcDbDwgConverterLicenseCode =
   | 'license_invalid'
 
 const LICENSE_EXPIRED_MARKERS = [
-  'evaluation of @mlight-cad/dwg-converter has expired'
+  'evaluation of @mlightcad/dwg-converter has expired'
 ] as const
 
 const LICENSE_INVALID_MARKERS = [
-  'invalid @mlight-cad/dwg-converter license key'
+  'invalid @mlightcad/dwg-converter license key'
 ] as const
 
 /**
