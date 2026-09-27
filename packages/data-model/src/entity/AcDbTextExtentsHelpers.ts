@@ -10,8 +10,7 @@ import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
 const CHAR_WIDTH_FACTOR = 1
 
 /** `\Ffont|params;symbol` tolerance/GDT inline font override including symbol char. */
-const TOLERANCE_INLINE_FONT_PATTERN =
-  /\\[fF][^\\|{}]*(?:\|[^;\\|{}]*)*;./i
+const TOLERANCE_INLINE_FONT_PATTERN = /\\[fF][^\\|{}]*(?:\|[^;\\|{}]*)*;./i
 const TOLERANCE_INLINE_FONT_PATTERN_GLOBAL =
   /\\[fF][^\\|{}]*(?:\|[^;\\|{}]*)*;./gi
 
@@ -23,6 +22,17 @@ export function acdbStripMTextControlCodes(text: string): string {
     .replace(/\\[PpNn]/g, '\n')
     .replace(/\\[A-Za-z][^;]*;/g, '')
     .replace(/[{}]/g, '')
+}
+
+/**
+ * Escapes plain text so it renders literally through MTEXT (no control codes).
+ *
+ * Windows paths are the common case: `\Pictures` would otherwise become a
+ * paragraph break (`\P`) plus `ictures`, and `\Screenshots` would start a
+ * stack (`\S`) — exactly the garbled missing-image frame labels.
+ */
+export function acdbEscapePlainTextForMText(text: string): string {
+  return text.replace(/\\/g, '\\\\').replace(/([{}])/g, '\\$1')
 }
 
 /**

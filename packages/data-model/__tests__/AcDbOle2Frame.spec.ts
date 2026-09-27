@@ -6,7 +6,11 @@ import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { AcDbDatabase } from '../src/database'
 import { acdbDxfInEntity } from '../src/dxf/AcDbDxfEntityFactory'
-import { AcDbOle2Frame } from '../src/entity'
+import {
+  AcDbOle2Frame,
+  AcDbOleObjectType,
+  AcDbOleTileMode
+} from '../src/entity'
 import { acdbParseOle2FrameGeometryHeader } from '../src/misc/AcDbOle2FrameGeometry'
 import { acdbExtractOleImageBlob } from '../src/misc/AcDbOleImageExtractor'
 import { acdbReassembleEmfFromWmfEscapes } from '../src/misc/AcDbOleMetafileDetect'
@@ -74,7 +78,9 @@ describe('acdbExtractOleImageBlob', () => {
   })
 
   it('returns undefined for non-image payloads', () => {
-    expect(acdbExtractOleImageBlob(new Uint8Array([1, 2, 3, 4]))).toBeUndefined()
+    expect(
+      acdbExtractOleImageBlob(new Uint8Array([1, 2, 3, 4]))
+    ).toBeUndefined()
     expect(acdbExtractOleImageBlob(undefined)).toBeUndefined()
   })
 
@@ -196,9 +202,7 @@ describe('acdbParseOle2FrameGeometryHeader', () => {
   })
 
   it('returns undefined for payloads without a CFB geometry header', () => {
-    expect(
-      acdbParseOle2FrameGeometryHeader(createMinimalBmp())
-    ).toBeUndefined()
+    expect(acdbParseOle2FrameGeometryHeader(createMinimalBmp())).toBeUndefined()
   })
 })
 
@@ -206,10 +210,7 @@ describe('AcDbOle2Frame image drawing', () => {
   it('applies frame corners from the OLE binary geometry header', () => {
     const ole = new AcDbOle2Frame()
     // Simulate DWG conversion: payload only, no DXF group 10/11 corners.
-    ole.loadOleObjectFromDxf(
-      undefined,
-      createOle2FramePayloadWithGeometry()
-    )
+    ole.loadOleObjectFromDxf(undefined, createOle2FramePayloadWithGeometry())
 
     expect(ole.upperLeftCorner.x).toBeCloseTo(-3680.787802750127)
     expect(ole.upperLeftCorner.y).toBeCloseTo(5561.435617040696)
@@ -410,5 +411,68 @@ describe('AcDbOle2Frame image drawing', () => {
 
     ole.setOleObject(new Uint8Array([0, 1, 2, 3]))
     expect(ole.image).toBeUndefined()
+  })
+
+  it('exposes geometry and OLE properties with editable accessors', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const ole = new AcDbOle2Frame()
+    ole.setLocation(new AcGePoint3d(10, 20, 5))
+    ole.setWcsWidth(40)
+    ole.setWcsHeight(30)
+    ole.setRotation(0.5)
+    ole.setScaleWidth(1.2)
+    ole.setScaleHeight(0.8)
+    ole.setLockAspect(true)
+    ole.oleVersion = 2
+    ole.userType = 'Paintbrush Picture'
+    ole.oleObjectType = AcDbOleObjectType.Embedded
+    ole.tileMode = AcDbOleTileMode.ModelSpace
+    ole.setLinkName('chart')
+    ole.setLinkPath('C:\\docs\\chart.xls')
+    ole.setOutputQuality(3)
+    ole.setAutoOutputQuality(1)
+
+    const props = ole.properties
+    expect(props.type).toBe('Ole2Frame')
+    const geometry = props.groups.find(g => g.groupName === 'geometry')
+    const oleGroup = props.groups.find(g => g.groupName === 'ole')
+    expect(geometry).toBeDefined()
+    expect(oleGroup).toBeDefined()
+
+    const byName = Object.fromEntries(
+      [...(geometry?.properties ?? []), ...(oleGroup?.properties ?? [])].map(
+        p => [p.name, p]
+      )
+    )
+
+    expect(byName.positionX.accessor.get()).toBe(10)
+    expect(byName.positionY.accessor.get()).toBe(20)
+    expect(byName.positionZ.accessor.get()).toBe(5)
+    expect(byName.width.accessor.get()).toBe(40)
+    expect(byName.height.accessor.get()).toBe(30)
+    expect(byName.rotation.accessor.get()).toBe(0.5)
+    expect(byName.scaleWidth.accessor.get()).toBe(1.2)
+    expect(byName.scaleHeight.accessor.get()).toBe(0.8)
+    expect(byName.lockAspect.accessor.get()).toBe(true)
+    expect(byName.oleVersion.accessor.get()).toBe(2)
+    expect(byName.userType.accessor.get()).toBe('Paintbrush Picture')
+    expect(byName.oleObjectType.accessor.get()).toBe(AcDbOleObjectType.Embedded)
+    expect(byName.tileMode.accessor.get()).toBe(AcDbOleTileMode.ModelSpace)
+    expect(byName.linkName.accessor.get()).toBe('chart')
+    expect(byName.linkPath.accessor.get()).toBe('C:\\docs\\chart.xls')
+    expect(byName.outputQuality.accessor.get()).toBe(3)
+    expect(byName.autoOutputQuality.accessor.get()).toBe(1)
+
+    byName.positionX.accessor.set?.(15)
+    byName.width.accessor.set?.(50)
+    byName.userType.accessor.set?.('Excel Worksheet')
+    byName.oleObjectType.accessor.set?.(AcDbOleObjectType.Link)
+    byName.lockAspect.accessor.set?.(false)
+
+    expect(ole.upperLeftCorner.x).toBe(15)
+    expect(ole.wcsWidth()).toBe(50)
+    expect(ole.userType).toBe('Excel Worksheet')
+    expect(ole.oleObjectType).toBe(AcDbOleObjectType.Link)
+    expect(ole.lockAspect()).toBe(false)
   })
 })

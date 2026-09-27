@@ -242,11 +242,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     // the global working database — that fails when the host DB was never set,
     // or when a second data-model singleton is in play (e.g. Vite + peer deps).
     // commitObjectHandle updates maxHandle once the object is added.
-    if (
-      value &&
-      !value.startsWith(TEMP_OBJECT_ID_PREFIX) &&
-      this._database
-    ) {
+    if (value && !value.startsWith(TEMP_OBJECT_ID_PREFIX) && this._database) {
       this._database.updateMaxHandle(value)
     }
   }
@@ -726,6 +722,14 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
 
     if (value instanceof ArrayBuffer) {
       return value.slice(0)
+    }
+
+    // Blob/File must be shared by reference. Deep-cloning via Object.create +
+    // Object.keys yields an empty shell with no bytes — undo/redo of image
+    // replace would then lose pixel data, and any restore from that snapshot
+    // would leave RasterImage undrawable.
+    if (typeof Blob !== 'undefined' && value instanceof Blob) {
+      return value
     }
 
     if (
