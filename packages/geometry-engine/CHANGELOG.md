@@ -1,5 +1,16 @@
 # @mlightcad/geometry-engine
 
+## 3.15.0
+
+### Minor Changes
+
+- fix: aligns DWG converter license failure markers with the current @mlightcad/dwg-converter messages so expired evaluation and invalid license key errors classify correctly as license_expired and license_invalid instead of falling through as generic open failures
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/common@1.15.0
+
 ## 3.14.14
 
 ### Patch Changes

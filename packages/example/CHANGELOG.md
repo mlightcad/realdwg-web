@@ -1,5 +1,17 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.0
+
+### Minor Changes
+
+- fix: aligns DWG converter license failure markers with the current @mlightcad/dwg-converter messages so expired evaluation and invalid license key errors classify correctly as license_expired and license_invalid instead of falling through as generic open failures
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.15.0
+  - @mlightcad/libredwg-converter@3.15.0
+
 ## 0.14.14
 
 ### Patch Changes
