@@ -54,7 +54,6 @@ import {
   AcDbRasterImage,
   AcDbRasterImageClipBoundaryType,
   AcDbRay,
-  AcDbResultBuffer,
   AcDbRotatedDimension,
   AcDbShape,
   AcDbSolid,
@@ -802,7 +801,8 @@ export class AcDbEntityConverter {
     dbEntity.alignment = entity.alignment as AcDbArcAlignedText['alignment']
     dbEntity.isReverse = entity.isReverse
     dbEntity.wizardFlag = entity.wizardFlag
-    dbEntity.textPosition = entity.textPosition as AcDbArcAlignedText['textPosition']
+    dbEntity.textPosition =
+      entity.textPosition as AcDbArcAlignedText['textPosition']
     dbEntity.textDirection =
       entity.textDirection as AcDbArcAlignedText['textDirection']
     if (entity.arcHandle) dbEntity.arcId = entity.arcHandle
@@ -1690,7 +1690,7 @@ export class AcDbEntityConverter {
           }
         }
       }
-      dbEntity.setXData(new AcDbResultBuffer(values as never))
+      dbEntity.setImportedXData(values as never)
     }
   }
 

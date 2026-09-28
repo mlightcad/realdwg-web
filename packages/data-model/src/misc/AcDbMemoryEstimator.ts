@@ -327,7 +327,11 @@ function resolveChildCategory(
   key: string,
   value: unknown
 ): Category {
-  if (key === '_xDataMap' || parentCategory === 'xdata') {
+  if (
+    key === '_xDataMap' ||
+    key === '_importedXData' ||
+    parentCategory === 'xdata'
+  ) {
     return 'xdata'
   }
   if (key === '_tables' || parentCategory === 'tables') {
@@ -582,7 +586,12 @@ function walkValue(
     for (const item of obj) {
       bytes += walkValue(state, item, localCategory, localEntityType)
     }
-    addBytes(state, localCategory, SET_OVERHEAD + obj.size * SET_ENTRY_OVERHEAD, 1)
+    addBytes(
+      state,
+      localCategory,
+      SET_OVERHEAD + obj.size * SET_ENTRY_OVERHEAD,
+      1
+    )
     if (localEntityType) {
       ensureBucket(state.byEntityType, localEntityType).bytes +=
         SET_OVERHEAD + obj.size * SET_ENTRY_OVERHEAD
@@ -655,10 +664,7 @@ function walkValue(
     }
 
     const childCategory = resolveChildCategory(localCategory, key, child)
-    if (
-      !state.includeTransactionManager &&
-      childCategory === 'transaction'
-    ) {
+    if (!state.includeTransactionManager && childCategory === 'transaction') {
       continue
     }
     if (!state.includeEventManagers && childCategory === 'events') {
