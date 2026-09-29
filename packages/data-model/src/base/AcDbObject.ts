@@ -5,6 +5,7 @@ import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbDxfCode } from './AcDbDxfCode'
 import { AcDbDxfFiler } from './AcDbDxfFiler'
 import { AcDbResultBuffer } from './AcDbResultBuffer'
+import type { AcDbTypedValue } from './AcDbTypedValue'
 
 /** Type alias for object ID as string */
 export type AcDbObjectId = string
@@ -92,8 +93,14 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    *
    * The traditional Map/ResultBuffer graph is created only for an AppId that
    * is actually accessed or mutated through the public XData API.
+   * After that, this array is no longer the DXF order — {@link _xDataOrder} is.
    */
   private _importedXData?: Array<number | string>
+  /**
+   * AppIds in DXF output order, across compact imported values and
+   * materialized ResultBuffers. Absent when this object has no XData.
+   */
+  private _xDataOrder?: string[]
 
   /**
    * Creates a new AcDbObject instance.
@@ -426,16 +433,48 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     }
   }
 
+  /** Keeps an existing AppId where it is; appends one that is new. */
+  private rememberXDataApp(appId: string): void {
+    if (!appId) return
+    const order = (this._xDataOrder ??= [])
+    if (order.indexOf(appId) === -1) {
+      order.push(appId)
+    }
+  }
+
+  private forgetXDataApp(appId: string): void {
+    const order = this._xDataOrder
+    if (!order) return
+
+    const index = order.indexOf(appId)
+    if (index >= 0) {
+      order.splice(index, 1)
+    }
+    if (order.length === 0) {
+      this._xDataOrder = undefined
+    }
+  }
+
+  private clearMaterializedXData(appId: string): void {
+    const map = this._xDataMap
+    if (!map) return
+
+    map.delete(appId)
+    if (map.size === 0) {
+      this._xDataMap = undefined
+    }
+  }
+
   private *importedXDataValues(
     start: number,
     end: number
-  ): IterableIterator<{ code: number; value: unknown }> {
+  ): IterableIterator<AcDbTypedValue> {
     const data = this._importedXData
     if (!data) return
 
     for (let i = start; i < end; i += 2) {
       yield {
-        code: Number(data[i]),
+        code: Number(data[i]) as AcDbDxfCode,
         value: data[i + 1]
       }
     }
@@ -444,34 +483,49 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   /**
    * Lossless parser/import fast path.
    *
-   * Imported XData stays compact until callers explicitly request that AppId.
-   * Existing getXData/setXData/removeXData behavior remains authoritative.
+   * Each 1001 group starts an AppId. That AppId stays in the compact list
+   * until `getXData`, `setXData`, or `removeXData` touches it. Replacing an
+   * AppId keeps its DXF position; a new AppId is appended.
+   *
+   * `getXData` materializes that AppId into an `AcDbResultBuffer` and keeps
+   * the buffer afterwards, so later reads observe in-place edits. Calling it
+   * during import gives up the compact representation for that AppId.
    */
   setImportedXData(
     values: Iterable<{ code: number; value: string | number }>
   ): void {
-    const flat: Array<number | string> = []
+    const blocks: Array<{ appId: string; flat: Array<number | string> }> = []
     let appId: string | undefined
+    let flat: Array<number | string> | undefined
 
     for (const item of values) {
       const code = Number(item.code)
-      if (code === AcDbDxfCode.ExtendedDataRegAppName && appId === undefined) {
+      if (code === AcDbDxfCode.ExtendedDataRegAppName) {
+        if (appId && flat) {
+          blocks.push({ appId, flat })
+        }
         appId = String(item.value)
+        flat = [code, item.value]
+        continue
       }
+      if (!appId || !flat) continue
       flat.push(code, item.value)
     }
-
-    if (!appId || flat.length === 0) return
-
-    this.removeImportedXData(appId)
-    this._xDataMap?.delete(appId)
-    if (this._xDataMap?.size === 0) {
-      this._xDataMap = undefined
+    if (appId && flat) {
+      blocks.push({ appId, flat })
     }
+    if (blocks.length === 0) return
 
-    const target = (this._importedXData ??= [])
-    for (const value of flat) {
-      target.push(value)
+    for (const block of blocks) {
+      if (!block.appId) continue
+      this.removeImportedXData(block.appId)
+      this.clearMaterializedXData(block.appId)
+
+      const target = (this._importedXData ??= [])
+      for (const value of block.flat) {
+        target.push(value)
+      }
+      this.rememberXDataApp(block.appId)
     }
   }
 
@@ -488,6 +542,11 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * @param appId - The application ID (registered AppId name) that owns the XData
    * @returns The AcDbResultBuffer associated with the AppId, or `undefined`
    *          if no XData exists for that AppId
+   *
+   * Imported XData stays compact until the first call for that AppId. The call
+   * materializes an AcDbResultBuffer and keeps it, so later reads and in-place
+   * edits use that buffer. DXF output order does not change. Avoid calling this
+   * while importing when the compact form should be retained.
    *
    * @example
    * ```typescript
@@ -509,8 +568,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
       buffer.add(item as never)
     }
 
-    // Once accessed, the traditional ResultBuffer becomes authoritative so
-    // callers keep the exact same mutable-object semantics as before.
+    // Once accessed, the ResultBuffer becomes authoritative so callers keep
+    // the same mutable-object semantics as before. App order is unchanged.
     this.removeImportedXData(appId)
     ;(this._xDataMap ??= new Map()).set(appId, buffer)
     return buffer
@@ -546,6 +605,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
         const appId = item.value as string
         this.removeImportedXData(appId)
         ;(this._xDataMap ??= new Map()).set(appId, resbuf)
+        this.rememberXDataApp(appId)
       }
     }
   }
@@ -568,14 +628,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    */
   removeXData(appId: string): void {
     this.removeImportedXData(appId)
-
-    const map = this._xDataMap
-    if (!map) return
-
-    map.delete(appId)
-    if (map.size === 0) {
-      this._xDataMap = undefined
-    }
+    this.clearMaterializedXData(appId)
+    this.forgetXDataApp(appId)
   }
 
   /**
@@ -924,6 +978,23 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
 
   /** Emit all attached XData buffers (DXF groups 1000–1071). */
   protected dxfOutXData(filer: AcDbDxfFiler): void {
+    const order = this._xDataOrder
+    if (order) {
+      for (const appId of order) {
+        const materialized = this._xDataMap?.get(appId)
+        if (materialized) {
+          filer.writeResultBuffer(materialized)
+          continue
+        }
+
+        const range = this.findImportedXDataRange(appId)
+        if (range) {
+          filer.writeTypedValues(this.importedXDataValues(range[0], range[1]))
+        }
+      }
+      return
+    }
+
     const compact = this._importedXData
     if (compact) {
       let start = 0
@@ -936,7 +1007,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
           end += 2
         }
 
-        filer.writeTypedValues(this.importedXDataValues(start, end) as never)
+        filer.writeTypedValues(this.importedXDataValues(start, end))
         start = end
       }
     }
