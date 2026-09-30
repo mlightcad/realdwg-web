@@ -14,15 +14,13 @@ import {
 
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
-import {
-  acdbDxfIsInt32Code,
-  acdbDxfValueType
-} from './AcDbDxfGroupCodeTypes'
+import { acdbDxfIsInt32Code, acdbDxfValueType } from './AcDbDxfGroupCodeTypes'
 import type { AcDbDxfPair } from './AcDbDxfPair'
 import {
   acdbCreateDxfPairReader,
   type AcDbDxfPairReader,
-  acdbMakeAsciiDxfPairReader} from './AcDbDxfPairReader'
+  acdbMakeAsciiDxfPairReader
+} from './AcDbDxfPairReader'
 import {
   ACDB_DXF_XDATA_BINARY_MAX_BYTES,
   ACDB_DXF_XDATA_STRING_MAX_BYTES,
@@ -670,6 +668,14 @@ export class AcDbDxfFiler {
   }
 
   writeResultBuffer(data?: AcDbResultBuffer | null) {
+    return this.writeTypedValues(data)
+  }
+
+  /**
+   * Writes any typed-value iterable using the same XData chunking rules as
+   * ResultBuffer output. This lets compact imported XData stream directly.
+   */
+  writeTypedValues(data?: Iterable<AcDbTypedValue> | null) {
     if (!data) return this
     for (const item of data) {
       const code = Number(item.code)
@@ -696,7 +702,6 @@ export class AcDbDxfFiler {
             bytes,
             ACDB_DXF_XDATA_BINARY_MAX_BYTES
           )) {
-            // ASCII DXF stores 1004 as hex; binary DXF stores raw bytes.
             if (this._outputFormat === 'binary') {
               this.writeGroup(1004, chunk)
             } else {
@@ -812,11 +817,7 @@ export class AcDbDxfFiler {
       case 'double': {
         const buf = new Uint8Array(8)
         const n = Number(value)
-        new DataView(buf.buffer).setFloat64(
-          0,
-          Number.isFinite(n) ? n : 0,
-          true
-        )
+        new DataView(buf.buffer).setFloat64(0, Number.isFinite(n) ? n : 0, true)
         this.appendBinary(buf)
         break
       }
@@ -829,10 +830,7 @@ export class AcDbDxfFiler {
         break
       }
       case 'binary': {
-        const bytes =
-          value instanceof Uint8Array
-            ? value
-            : new Uint8Array(0)
+        const bytes = value instanceof Uint8Array ? value : new Uint8Array(0)
         const length = Math.min(255, bytes.length)
         const chunk = new Uint8Array(1 + length)
         chunk[0] = length
@@ -894,11 +892,7 @@ export class AcDbDxfFiler {
       )
       return undefined
     }
-    if (
-      pair.type === 'double' ||
-      pair.type === 'int' ||
-      pair.type === 'long'
-    ) {
+    if (pair.type === 'double' || pair.type === 'int' || pair.type === 'long') {
       const v = pair.value
       return typeof v === 'bigint' ? Number(v) : v
     }
