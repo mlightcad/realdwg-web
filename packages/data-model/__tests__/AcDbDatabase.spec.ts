@@ -1,14 +1,18 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
+import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServices'
-import { AcDbOpenDatabaseError } from '../src/database/AcDbOpenDatabaseError'
+import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbDatabaseConverterManager } from '../src/database/AcDbDatabaseConverterManager'
 import { AcDbLayerTableRecord } from '../src/database/AcDbLayerTableRecord'
-import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
-import { DEFAULT_TEXT_STYLE } from '../src/misc/AcDbConstants'
+import { AcDbOpenDatabaseError } from '../src/database/AcDbOpenDatabaseError'
 import { AcDbSystemVariables } from '../src/database/AcDbSystemVariables'
 import { AcDbSysVarManager } from '../src/database/AcDbSysVarManager'
+import { AcDbTextStyleTableRecord } from '../src/database/AcDbTextStyleTableRecord'
+import { AcDbAttributeDefinition } from '../src/entity/AcDbAttributeDefinition'
+import { AcDbLine } from '../src/entity/AcDbLine'
+import { DEFAULT_TEXT_STYLE } from '../src/misc/AcDbConstants'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 describe('AcDbDatabase', () => {
@@ -78,6 +82,43 @@ describe('AcDbDatabase', () => {
     expect(db.tables.textStyleTable.getIdAt(textStyle.objectId)).toBe(textStyle)
   })
 
+  it('rewires block entity ownerIds when a BTR handle is displaced', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const block = new AcDbBlockTableRecord()
+    block.name = 'TITLE_BLOCK'
+    block.objectId = 'BTR1'
+    db.tables.blockTable.add(block)
+    expect(block.objectId).toBe('BTR1')
+
+    const line = new AcDbLine(new AcGePoint3d(0, 0, 0), new AcGePoint3d(1, 0, 0))
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = '设计日期'
+    attDef.height = 2.5
+    block.appendEntity([line, attDef])
+    expect(line.ownerId).toBe('BTR1')
+    expect(attDef.ownerId).toBe('BTR1')
+
+    // A later non-temp object claims BTR1 → BTR is displaced to a generated id.
+    const usurper = new AcDbLayerTableRecord({
+      name: 'USURPER',
+      isOff: false,
+      isPlottable: true,
+      color: new AcCmColor(AcCmColorMethod.ByACI, 1),
+      linetype: 'Continuous'
+    })
+    usurper.objectId = 'BTR1'
+    db.tables.layerTable.add(usurper)
+
+    expect(usurper.objectId).toBe('BTR1')
+    expect(block.objectId).not.toBe('BTR1')
+    expect(line.ownerId).toBe(block.objectId)
+    expect(attDef.ownerId).toBe(block.objectId)
+    expect(db.tables.blockTable.getIdAt(attDef.ownerId)).toBe(block)
+  })
+
   it('initializes handle seed from hexadecimal HANDSEED values', () => {
     const db = new AcDbDatabase()
     db.initializeHandleSeed('FFFF')
@@ -115,7 +156,7 @@ describe('AcDbDatabase', () => {
     const db = new AcDbDatabase()
     const fileType = 'test-open-failure'
     const oomError = new AcDbOpenDatabaseError(
-      "Failed to parse drawing due to error: 'Data cannot be cloned, out of memory.'",
+      'Failed to parse drawing due to error: \'Data cannot be cloned, out of memory.\'',
       'worker_oom',
       { stage: 'PARSE' }
     )

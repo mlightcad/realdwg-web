@@ -1,4 +1,5 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
+
 import { AcDbDxfFiler, acdbHostApplicationServices } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import {
@@ -143,6 +144,31 @@ describe('AcDbAttributeDefinition', () => {
     }
 
     expect(attDef.isConst).toBe(false)
+    expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
+    expect(renderer.mtext).not.toHaveBeenCalled()
+  })
+
+  it('does not draw tags when ownerId does not resolve to a block table record', () => {
+    const db = setWorkingDb()
+    const blockRecord = new AcDbBlockTableRecord()
+    blockRecord.name = 'STALE_OWNER_BLOCK'
+    db.tables.blockTable.add(blockRecord)
+
+    const attDef = new AcDbAttributeDefinition()
+    attDef.tag = '设计日期'
+    attDef.textString = ''
+    attDef.height = 2.5
+    blockRecord.appendEntity(attDef)
+    // Simulate BTR handle displacement leaving a stale soft-pointer ownerId
+    // that no longer names a block table record (common after DWG import).
+    attDef.ownerId = 'DEADBEEF'
+
+    const renderer = {
+      mtext: jest.fn(() => ({ objectId: 'ATTDEF' }))
+    } as unknown as {
+      mtext: jest.Mock
+    }
+
     expect(attDef.subWorldDraw(renderer as never)).toBeUndefined()
     expect(renderer.mtext).not.toHaveBeenCalled()
   })

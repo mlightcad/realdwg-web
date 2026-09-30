@@ -323,15 +323,25 @@ export class AcDbAttributeDefinition extends AcDbText {
   /**
    * Returns true when this ATTDEF is loose in model/paper space rather than
    * stored inside a named block definition.
+   *
+   * Fail closed when ownership cannot be resolved to a block table record.
+   * DWG import may reassign a BTR handle after entities are appended (handle
+   * collision), leaving ATTDEF.ownerId pointing at a non-BTR object. Treating
+   * that as "loose" would draw attribute tags into the block render cache and
+   * overlap INSERT ATTRIB values.
    */
   private isLooseInDrawingSpace(): boolean {
     const db = this.database
-    if (!db || !this.ownerId) {
-      return true
+    if (!db) {
+      return false
     }
-    const owner = db.tables.blockTable.getIdAt(this.ownerId)
+    const ownerId = this.getAttrWithoutException('ownerId')
+    if (!ownerId) {
+      return false
+    }
+    const owner = db.tables.blockTable.getIdAt(ownerId)
     if (!owner) {
-      return true
+      return false
     }
     return owner.isModelSapce || owner.isPaperSapce
   }
