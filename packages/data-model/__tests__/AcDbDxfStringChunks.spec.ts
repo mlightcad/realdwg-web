@@ -95,6 +95,32 @@ describe('AcDbDxfFiler XData chunking', () => {
     expect(values[1]).toHaveLength((200 - ACDB_DXF_XDATA_BINARY_MAX_BYTES) * 2)
   })
 
+  it('expands XData 1010 point objects to 1010/1020/1030 doubles', () => {
+    const filer = new AcDbDxfFiler({ precision: 6 })
+    filer.writeResultBuffer(
+      new AcDbResultBuffer([
+        { code: 1001, value: 'MYAPP' },
+        { code: 1010, value: { x: 1.5, y: 2.25, z: 3 } },
+        { code: 1011, value: [10, 20, 30] }
+      ])
+    )
+    const out = filer.toString()
+    expect(out).not.toContain('[object Object]')
+    expect(out).toContain('1010\n1.5\n1020\n2.25\n1030\n3\n')
+    expect(out).toContain('1011\n10\n1021\n20\n1031\n30\n')
+  })
+
+  it('writes group-1004 binary from number arrays as valid hex', () => {
+    const filer = new AcDbDxfFiler()
+    filer.writeResultBuffer(
+      new AcDbResultBuffer([{ code: 1004, value: [0xab, 0xcd, 0xef] }])
+    )
+    const out = filer.toString()
+    expect(out).toBe('1004\nABCDEF\n')
+    expect(out).not.toContain('[object Object]')
+    expect(out).not.toContain('171,205,239')
+  })
+
   it('writeMTextContents emits AutoCAD group 3 / group 1 order', () => {
     const filer = new AcDbDxfFiler()
     const text = 'C'.repeat(520)

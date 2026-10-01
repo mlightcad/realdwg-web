@@ -1680,18 +1680,78 @@ export class AcDbEntityConverter {
             code === AcDbDxfCode.ExtendedDataHandle ||
             (code >= 1000 && code <= 1071)
           ) {
-            values.push({
-              code,
-              value:
-                typeof value === 'string' || typeof value === 'number'
-                  ? value
-                  : String(value)
-            })
+            const normalized = this.normalizeXDataValue(code, value)
+            if (normalized !== undefined) {
+              values.push({ code, value: normalized })
+            }
           }
         }
       }
       dbEntity.setImportedXData(values as never)
     }
+  }
+
+  /**
+   * Preserve XData point objects and binary chunks so DXF export can emit
+   * numeric 1010/1020/1030 triples and hex 1004 data instead of
+   * "[object Object]" / invalid binary strings.
+   */
+  private normalizeXDataValue(code: number, value: unknown): unknown {
+    if (code >= 1010 && code <= 1013) {
+      if (this.isPointLike(value)) {
+        return {
+          x: value.x,
+          y: value.y,
+          z: typeof value.z === 'number' ? value.z : 0
+        }
+      }
+      if (
+        Array.isArray(value) &&
+        typeof value[0] === 'number' &&
+        typeof value[1] === 'number'
+      ) {
+        return {
+          x: value[0],
+          y: value[1],
+          z: typeof value[2] === 'number' ? value[2] : 0
+        }
+      }
+      if (typeof value === 'number' && Number.isFinite(value)) return value
+    }
+
+    if (code === AcDbDxfCode.ExtendedDataBinaryChunk) {
+      if (value instanceof Uint8Array) return value
+      if (value instanceof ArrayBuffer) return new Uint8Array(value)
+      if (typeof value === 'string') return value
+      if (
+        Array.isArray(value) &&
+        value.every(
+          (n) =>
+            typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 255
+        )
+      ) {
+        return Uint8Array.from(value as number[])
+      }
+      return undefined
+    }
+
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean'
+    ) {
+      return value
+    }
+    if (value instanceof Uint8Array) return value
+    if (this.isPointLike(value)) {
+      return {
+        x: value.x,
+        y: value.y,
+        z: typeof value.z === 'number' ? value.z : 0
+      }
+    }
+    // Avoid String(object) → "[object Object]" in DXF.
+    return undefined
   }
 
   private convertMLeaderEntityColor(color: number) {
