@@ -8,3 +8,4 @@ allowBuilds:
   core-js: true
   esbuild: true
   nx: true
+  unrs-resolver: true

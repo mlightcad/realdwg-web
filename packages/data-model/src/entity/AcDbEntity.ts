@@ -871,6 +871,8 @@ export abstract class AcDbEntity extends AcDbObject {
     traits.transparency = this.transparency
     traits.layer = this.layer
     traits.drawOrder = 0
+    // Reset per-entity; wipeouts set this in subWorldDraw.
+    traits.isBackgroundFill = false
     if ('thickness' in this) {
       traits.thickness = this.thickness as number
     }
