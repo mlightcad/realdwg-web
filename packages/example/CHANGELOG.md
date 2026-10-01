@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.1
+
+### Patch Changes
+
+- feat: paints wipeouts with the layout background fill so covered geometry stays hidden. DXF export expands XData points and binary chunks, and attribute definitions keep their owner ids when block table record handles collide. Imported XData is stored in a compacted form that uses less memory
+- Updated dependencies
+  - @mlightcad/data-model@1.15.1
+  - @mlightcad/libredwg-converter@3.15.1
+
 ## 0.15.0
 
 ### Minor Changes
