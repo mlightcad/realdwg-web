@@ -199,4 +199,24 @@ describe('compact imported XData', () => {
     expect(dxf).toContain(`1004\n${hex.slice(0, 254)}\n`)
     expect(dxf).toContain(`1004\n${hex.slice(254)}\n`)
   })
+
+  it('expands compact imported XData point objects on DXF out', () => {
+    const { db, line } = createBackedLine()
+    line.setImportedXData([
+      { code: AcDbDxfCode.ExtendedDataRegAppName, value: 'MYAPP' },
+      {
+        code: AcDbDxfCode.ExtendedDataXCoordinate,
+        value: { x: 12.5, y: -3, z: 0.25 }
+      },
+      {
+        code: AcDbDxfCode.ExtendedDataBinaryChunk,
+        value: new Uint8Array([0xde, 0xad, 0xbe, 0xef])
+      }
+    ] as never)
+
+    const dxf = dxfOf(db, line)
+    expect(dxf).not.toContain('[object Object]')
+    expect(dxf).toContain('1010\n12.5\n1020\n-3\n1030\n0.25\n')
+    expect(dxf).toContain('1004\nDEADBEEF\n')
+  })
 })

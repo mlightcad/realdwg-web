@@ -690,13 +690,9 @@ export class AcDbDxfFiler {
         continue
       }
       // XData binary chunks are limited to 127 bytes per group 1004.
+      // Coerce ArrayBuffer / number[] / hex so we never emit String(bytes).
       if (code === 1004) {
-        const bytes =
-          item.value instanceof Uint8Array
-            ? item.value
-            : typeof item.value === 'string'
-              ? acdbHexToBytes(item.value)
-              : undefined
+        const bytes = acdbCoerceBinaryBytes(item.value)
         if (bytes) {
           for (const chunk of acdbChunkBinaryByMaxBytes(
             bytes,
@@ -708,6 +704,16 @@ export class AcDbDxfFiler {
               this.writeGroup(1004, acdbBytesToHex(chunk))
             }
           }
+          continue
+        }
+      }
+      // ObjectARX ResultBuffers store one 1010–1013 entry with a 3D point.
+      // DXF requires three doubles (code / code+10 / code+20). Expand here so
+      // importers that keep `{x,y,z}` do not stringify to "[object Object]".
+      if (code >= 1010 && code <= 1013) {
+        const point = acdbCoercePoint3d(item.value)
+        if (point) {
+          this.writePoint3d(code, point)
           continue
         }
       }
@@ -969,4 +975,66 @@ function acdbHexToBytes(hex: string): Uint8Array {
     bytes[j] = Number.parseInt(trimmed.slice(j * 2, j * 2 + 2), 16) || 0
   }
   return bytes
+}
+
+/** Coerce common binary payloads into bytes for group 1004 / similar. */
+function acdbCoerceBinaryBytes(value: unknown): Uint8Array | undefined {
+  if (value instanceof Uint8Array) return value
+  if (value instanceof ArrayBuffer) return new Uint8Array(value)
+  if (ArrayBuffer.isView(value) && !(value instanceof DataView)) {
+    const view = value as ArrayBufferView
+    return new Uint8Array(view.buffer, view.byteOffset, view.byteLength)
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.replace(/\s+/g, '')
+    if (trimmed.length === 0) return new Uint8Array(0)
+    // Accept only hex; other strings would produce invalid DXF binary data.
+    if (!/^[0-9A-Fa-f]*$/.test(trimmed) || trimmed.length % 2 !== 0) {
+      return undefined
+    }
+    return acdbHexToBytes(trimmed)
+  }
+  if (
+    Array.isArray(value) &&
+    value.every(
+      (n) => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 255
+    )
+  ) {
+    return Uint8Array.from(value as number[])
+  }
+  return undefined
+}
+
+/**
+ * Coerce a ResultBuffer-style 3D point (object or `[x,y,z]`) for XData codes
+ * 1010–1013. Plain numbers are left alone (already expanded DXF pairs).
+ */
+function acdbCoercePoint3d(
+  value: unknown
+): AcGePoint3dLike | undefined {
+  if (value == null || typeof value === 'number' || typeof value === 'string') {
+    return undefined
+  }
+  if (
+    typeof value === 'object' &&
+    'x' in value &&
+    'y' in value &&
+    typeof (value as AcGePoint3dLike).x === 'number' &&
+    typeof (value as AcGePoint3dLike).y === 'number'
+  ) {
+    const p = value as AcGePoint3dLike
+    return { x: p.x, y: p.y, z: p.z ?? 0 }
+  }
+  if (
+    Array.isArray(value) &&
+    typeof value[0] === 'number' &&
+    typeof value[1] === 'number'
+  ) {
+    return {
+      x: value[0],
+      y: value[1],
+      z: typeof value[2] === 'number' ? value[2] : 0
+    }
+  }
+  return undefined
 }

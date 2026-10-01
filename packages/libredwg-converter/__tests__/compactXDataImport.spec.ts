@@ -1,5 +1,6 @@
 import {
   AcDbDatabase,
+  AcDbDxfFiler,
   acdbHostApplicationServices,
   AcDbLine
 } from '@mlightcad/data-model'
@@ -36,5 +37,42 @@ describe('LibreDWG compact XData import', () => {
       { code: 1000, value: 'hello-xdata' },
       { code: 1070, value: 42 }
     ])
+  })
+
+  it('keeps XData points and binary chunks without stringifying objects', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const line = converter.convert({
+      type: 'LINE',
+      handle: 'A2',
+      layer: '0',
+      ownerBlockRecordSoftId: 'MS',
+      startPoint: { x: 0, y: 0, z: 0 },
+      endPoint: { x: 1, y: 0, z: 0 },
+      xdata: {
+        appName: 'GEOAPP',
+        value: [
+          { code: 1010, value: { x: 1.25, y: 2.5, z: 3.75 } },
+          { code: 1004, value: [0x01, 0x02, 0xff] }
+        ]
+      }
+    } as unknown as DwgEntity) as AcDbLine
+
+    const xdata = line.getXData('GEOAPP')?.toArray()
+    expect(xdata).toEqual([
+      { code: 1001, value: 'GEOAPP' },
+      { code: 1010, value: { x: 1.25, y: 2.5, z: 3.75 } },
+      { code: 1004, value: new Uint8Array([0x01, 0x02, 0xff]) }
+    ])
+
+    const filer = new AcDbDxfFiler({
+      database: acdbHostApplicationServices().workingDatabase
+    })
+    line.dxfOut(filer, true)
+    const dxf = filer.toString()
+    expect(dxf).not.toContain('[object Object]')
+    expect(dxf).toContain('1010\n1.25\n1020\n2.5\n1030\n3.75\n')
+    expect(dxf).toContain('1004\n0102FF\n')
   })
 })
