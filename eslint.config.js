@@ -56,6 +56,9 @@ export default [
   eslintConfigPrettier,
   {
     rules: {
+      'no-unassigned-vars': 'off',
+      'no-useless-assignment': 'off',
+      'preserve-caught-error': 'off',
       '@intlify/vue-i18n/no-dynamic-keys': 'error',
       '@intlify/vue-i18n/no-unused-keys': [
         'error',
