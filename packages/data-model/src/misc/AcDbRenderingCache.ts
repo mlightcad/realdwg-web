@@ -372,6 +372,20 @@ export class AcDbRenderingCache {
   }
 
   /**
+   * Returns the cached template without cloning.
+   *
+   * Used by three-renderer to bake static TEXT/MTEXT into the template once
+   * and share glyph buffers across INSERT instances. Does not update LRU order
+   * (call {@link get} when a scene instance is needed).
+   *
+   * @param name - Cache key (block name, or `name_color` for ByBlock blocks).
+   * @returns The immutable template, or `undefined` if not cached.
+   */
+  peek(name: string): AcGiEntity | undefined {
+    return this._blocks.get(name)
+  }
+
+  /**
    * Gets rendering results with the specified key.
    *
    * Returns a deep clone so callers can transform the instance without
@@ -421,10 +435,13 @@ export class AcDbRenderingCache {
       if (AcDbRenderingCache._drawDepth === 1) {
         AcDbRenderingCache._profileStats.topLevel.cloneMs += dt
       }
+      stampBlockCacheKey(block, name)
       return block
     }
     this.maybeCompactTemplate(template, true)
-    return template.fastDeepClone()
+    const block = template.fastDeepClone()
+    stampBlockCacheKey(block, name)
+    return block
   }
 
   /**
@@ -464,7 +481,16 @@ export class AcDbRenderingCache {
       template.dispose?.()
     })
     this._retiredCompactedTemplates.length = 0
+    // Notify three-renderer so in-flight template glyph bake promises are dropped.
+    AcDbRenderingCache.onCleared?.()
   }
+
+  /**
+   * Optional hook invoked at the end of {@link clear}.
+   *
+   * three-renderer sets this to reset shared block-template glyph bake state.
+   */
+  static onCleared: (() => void) | undefined
 
   /**
    * Prebuilds color-independent block templates before entity flush.
@@ -666,6 +692,7 @@ export class AcDbRenderingCache {
             } else {
               block = block.fastDeepClone()
             }
+            stampBlockCacheKey(block, key)
           }
           if (profile) {
             stats.misses++
@@ -923,6 +950,18 @@ function prepareCacheTemplate(entity: AcGiEntity): void {
   if (typeof prepare === 'function') {
     prepare.call(entity)
   }
+}
+
+/**
+ * Stamps the cache key onto a per-INSERT clone so three-renderer can bake
+ * static glyphs once on the template and share them across instances.
+ *
+ * @param entity - Scene-bound clone returned by {@link AcDbRenderingCache.draw}.
+ * @param key - Cache key used to store the immutable template.
+ */
+function stampBlockCacheKey(entity: AcGiEntity, key: string): void {
+  const data = entity.userData as { blockCacheKey?: string }
+  data.blockCacheKey = key
 }
 
 /**
