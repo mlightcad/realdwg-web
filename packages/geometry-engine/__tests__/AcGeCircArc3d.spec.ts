@@ -20,6 +20,26 @@ describe('Test AcGeCircArc3d', () => {
     expect(arc.length).toBe(Math.PI)
   })
 
+  it('preserves an open arc ending at a full turn under rotated, scaled and mirrored placement', () => {
+    for (const mirror of [1, -1]) {
+      const arc = new AcGeCircArc3d(
+        ORIGIN_POINT_3D, 2, Math.PI / 2, TAU, AcGeVector3d.Z_AXIS
+      )
+      const matrix = new AcGeMatrix3d().makeTranslation(10, 20, 0)
+        .multiply(new AcGeMatrix3d().makeRotationZ(Math.PI / 3))
+        .multiply(new AcGeMatrix3d().makeScale(3 * mirror, 3, 3))
+      const start = arc.startPoint.clone().applyMatrix4(matrix)
+      const end = arc.endPoint.clone().applyMatrix4(matrix)
+      const mid = arc.midPoint.clone().applyMatrix4(matrix)
+      arc.transform(matrix)
+      expect(arc.closed).toBe(false)
+      expect(arc.deltaAngle).toBeCloseTo(3 * Math.PI / 2)
+      expect(arc.startPoint.distanceTo(start)).toBeCloseTo(0)
+      expect(arc.endPoint.distanceTo(end)).toBeCloseTo(0)
+      expect(arc.midPoint.distanceTo(mid)).toBeCloseTo(0)
+    }
+  })
+
   it('covers edge branches in arc helpers', () => {
     expect(
       AcGeCircArc3d.computeCenterPoint(

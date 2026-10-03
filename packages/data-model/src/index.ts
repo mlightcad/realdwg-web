@@ -527,6 +527,8 @@ export type {
 } from '@mlightcad/common'
 export {
   AcGeArea2d,
+  acgeIntersectCurves,
+  acgeTransformIntersectPrimitive,
   AcGeBox2d,
   AcGeBox3d,
   AcGeCatmullRomCurve3d,
@@ -609,6 +611,7 @@ export type {
   AcGeCircumcircle2d,
   AcGeCircumcircle3d,
   AcGeIndexNode,
+  AcGeIntersectPrimitive,
   AcGeKnotParameterizationType,
   AcGeLoop2dType,
   AcGePoint,

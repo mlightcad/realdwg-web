@@ -555,11 +555,12 @@ export class AcGeCircArc3d extends AcGeCurve3d {
    * @inheritdoc
    */
   transform(matrix: AcGeMatrix3d) {
+    const wasClosed = this.closed
     const transformedCenter = this.center.clone().applyMatrix4(matrix)
     const transformedStart = this.startPoint.clone().applyMatrix4(matrix)
     const transformedEnd = this.endPoint.clone().applyMatrix4(matrix)
     const referencePoint = this.getPointAtAngle(
-      this.closed ? Math.PI / 2 : this.startAngle + this.deltaAngle / 2
+      wasClosed ? Math.PI / 2 : this.startAngle + this.deltaAngle / 2
     )
       .clone()
       .applyMatrix4(matrix)
@@ -593,7 +594,7 @@ export class AcGeCircArc3d extends AcGeCurve3d {
     this.normal = normal
     this.refVec = refVector
     this.startAngle = 0
-    this.endAngle = this.closed ? TAU : getAngle(transformedEnd)
+    this.endAngle = wasClosed ? TAU : getAngle(transformedEnd)
     this._boundingBoxNeedsUpdate = true
     return this
   }
