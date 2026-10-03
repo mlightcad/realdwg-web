@@ -5,8 +5,6 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  acgeTransformOcsPointToWcsInto,
-  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -21,8 +19,6 @@ import { acdbForEachGripIndex } from './AcDbGripHelpers'
 /** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
 const _dxfInPointA = /*@__PURE__*/ new AcGePoint3d()
 const _dxfInPointB = /*@__PURE__*/ new AcGePoint3d()
-/** Scratch holding the OCS coordinates before they are transformed to WCS. */
-const _dxfInOcsPoint = /*@__PURE__*/ new AcGePoint3d()
 
 /**
  * Represents a line entity in AutoCAD.
@@ -510,10 +506,9 @@ export class AcDbLine extends AcDbCurve {
     if (this.thickness !== 0) {
       filer.writeDouble(39, this.thickness)
     }
-    const startOcs = acgeTransformWcsPointToOcs(this.startPoint, this.normal)
-    const endOcs = acgeTransformWcsPointToOcs(this.endPoint, this.normal)
-    filer.writePoint3d(10, startOcs)
-    filer.writePoint3d(11, endOcs)
+    // LINE start/end are WCS (DXF group 10/11); extrusion only affects thickness.
+    filer.writePoint3d(10, this.startPoint)
+    filer.writePoint3d(11, this.endPoint)
     filer.writeVector3d(210, this.normal)
     return this
   }
@@ -582,20 +577,17 @@ export class AcDbLine extends AcDbCurve {
 
     // Skip the (dominant) identity normal: `normalize()` on the already unit
     // +Z vector is a no-op, and DXF group 210 is +Z for the vast majority of
-    // lines. Only a non-identity normal materializes `_normal`; the identity
-    // case hands the frozen `Z_AXIS` to the read-only OCS transform below so
-    // no vector is allocated for the entity at all.
-    let normal: AcGeVector3dLike = AcGeVector3d.Z_AXIS
+    // lines. Only a non-identity normal materializes `_normal`.
+    // LINE 10/11 are WCS — do not run them through the OCS transform (that
+    // wrongly mirrored X for extrusion (0,0,-1) from MIRROR).
     if (nx !== 0 || ny !== 0 || nz !== 1) {
       if (nx * nx + ny * ny + nz * nz > 0) {
-        normal = this.normal.set(nx, ny, nz).normalize()
+        this.normal.set(nx, ny, nz).normalize()
       }
     }
     this.thickness = thickness
-    _dxfInOcsPoint.set(x1, y1, z1)
-    acgeTransformOcsPointToWcsInto(_dxfInPointA, _dxfInOcsPoint, normal)
-    _dxfInOcsPoint.set(x2, y2, z2)
-    acgeTransformOcsPointToWcsInto(_dxfInPointB, _dxfInOcsPoint, normal)
+    _dxfInPointA.set(x1, y1, z1)
+    _dxfInPointB.set(x2, y2, z2)
     this._geo = new AcGeLine3d(_dxfInPointA, _dxfInPointB)
     return this
   }

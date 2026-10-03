@@ -823,7 +823,9 @@ export class AcDbBlockReference extends AcDbEntity {
         box.union(entity.geometricExtents)
       }
     }
-    const matrix = this.blockTransform
+    // Include extrusion so extents match drawn geometry for normals such as
+    // (0,0,-1) from MIRROR (blockTransform alone leaves insertion X unmirrored).
+    const matrix = this.getFullInsertionTransform()
     box.applyMatrix4(matrix)
 
     return box

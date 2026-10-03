@@ -4,10 +4,9 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePointLike,
-  acgeTransformOcsPointToWcs,
-  acgeTransformWcsPointToOcs,
   AcGeVector3d,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
@@ -306,7 +305,8 @@ export class AcDbPoint extends AcDbEntity {
     if (this.thickness !== 0) {
       filer.writeDouble(39, this.thickness)
     }
-    filer.writePoint3d(10, acgeTransformWcsPointToOcs(this.position, this.normal))
+    // POINT position is WCS; extrusion only affects thickness / ECS rotation.
+    filer.writePoint3d(10, this.position)
     if (this.ecsRotation !== 0) {
       filer.writeAngle(50, this.ecsRotation)
     }
@@ -368,7 +368,7 @@ export class AcDbPoint extends AcDbEntity {
     }
     this.thickness = thickness
     this.ecsRotation = (angleDeg * Math.PI) / 180
-    this.position = acgeTransformOcsPointToWcs({ x, y, z }, this.normal)
+    this.position = new AcGePoint3d(x, y, z)
     return this
   }
 }

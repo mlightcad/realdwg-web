@@ -4,6 +4,8 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -574,11 +576,11 @@ export class AcDbText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
     const { anchor, attachmentPoint } = this.resolveTextAnchor()
-
+    const draw = this.extrusionDrawingAdjust()
     const width = acdbEstimatePlainTextWidth(
       this.textString,
       this.height,
-      this.widthFactor
+      Math.abs(draw.widthFactor)
     )
     return acdbExpandBoxByOrientedTextRect(
       box,
@@ -586,7 +588,7 @@ export class AcDbText extends AcDbEntity {
       width,
       this.height,
       attachmentPoint,
-      this.rotation
+      draw.rotation
     )
   }
 
@@ -596,15 +598,17 @@ export class AcDbText extends AcDbEntity {
    * @returns Array containing the text insertion point.
    */
   subGetGripPoints() {
-    return [this._position]
+    return [this.pointToWcs(this._position)]
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
-    acdbMovePrimaryGripPointAt(indices, offset, this._position)
+    // Grips are exposed in WCS; storage is OCS — convert the drag delta.
+    const ocsOffset = acgeTransformWcsPointToOcs(offset, this._normal)
+    acdbMovePrimaryGripPointAt(indices, ocsOffset, this._position)
     // Non-default alignments render from group 11 (`alignmentPoint`), so a grip
     // drag on group 10 must translate both anchors together.
-    this._alignmentPoint.add(offset)
+    this._alignmentPoint.add(ocsOffset)
     return this
   }
 
@@ -627,7 +631,7 @@ export class AcDbText extends AcDbEntity {
     snapPoints: AcGePoint3dLike[]
   ) {
     if (AcDbOsnapMode.Insertion === osnapMode) {
-      snapPoints.push(this._position)
+      snapPoints.push(this.pointToWcs(this._position))
     }
   }
 
@@ -851,20 +855,70 @@ export class AcDbText extends AcDbEntity {
     // attachment point so the renderer can compute the offset itself
     // from the real bbox of the laid-out glyphs.
     const { anchor: position, attachmentPoint } = this.resolveTextAnchor()
+    const draw = this.extrusionDrawingAdjust()
     const mtextData: AcGiMTextData = {
       text: this.textString,
       height: this.height,
       width: Infinity,
-      widthFactor: this.widthFactor,
+      widthFactor: draw.widthFactor,
       position,
       // Please use 'rotation' and do not set value of 'directionVector' because it will overrides
       // rotation value.
-      rotation: this.rotation,
+      rotation: draw.rotation,
       // MText draw text from top to bottom.
       drawingDirection: AcGiMTextFlowDirection.BOTTOM_TO_TOP,
       attachmentPoint
     }
     return renderer.mtext(mtextData, this.getTextStyle(), delay)
+  }
+
+  /**
+   * Maps an OCS text point into WCS using {@link normal}.
+   */
+  private pointToWcs(point: AcGePoint3dLike): AcGePoint3d {
+    return acgeTransformOcsPointToWcs(point, this._normal)
+  }
+
+  /**
+   * Plan-view drawing adjustments for entity extrusion.
+   *
+   * For extrusion (0,0,-1) the flat WCS equivalent is an XY mirror: negate
+   * rotation and width factor (see issue #226). Other extrusions map the OCS
+   * X axis into WCS for rotation only.
+   */
+  private extrusionDrawingAdjust(): {
+    rotation: number
+    widthFactor: number
+  } {
+    if (
+      this._normal.x === 0 &&
+      this._normal.y === 0 &&
+      this._normal.z === 1
+    ) {
+      return { rotation: this._rotation, widthFactor: this._widthFactor }
+    }
+    if (
+      this._normal.x === 0 &&
+      this._normal.y === 0 &&
+      this._normal.z < 0
+    ) {
+      return {
+        rotation: -this._rotation,
+        widthFactor: -this._widthFactor
+      }
+    }
+    const axis = new AcGeVector3d(
+      Math.cos(this._rotation),
+      Math.sin(this._rotation),
+      0
+    )
+    axis.transformDirection(
+      new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
+    )
+    return {
+      rotation: Math.atan2(axis.y, axis.x),
+      widthFactor: this._widthFactor
+    }
   }
 
   /**
@@ -881,7 +935,7 @@ export class AcDbText extends AcDbEntity {
     const attachmentPoint = this.resolveAttachmentPoint()
 
     if (attachmentPoint === AcGiMTextAttachmentPoint.BaselineLeft) {
-      return { anchor: this._position, attachmentPoint }
+      return { anchor: this.pointToWcs(this._position), attachmentPoint }
     }
 
     const ap = this._alignmentPoint
@@ -895,12 +949,12 @@ export class AcDbText extends AcDbEntity {
       (ap.x === 0 && ap.y === 0 && ap.z === 0)
     if (apIsUnset) {
       return {
-        anchor: this._position,
+        anchor: this.pointToWcs(this._position),
         attachmentPoint: AcGiMTextAttachmentPoint.BaselineLeft
       }
     }
 
-    return { anchor: ap, attachmentPoint }
+    return { anchor: this.pointToWcs(ap), attachmentPoint }
   }
 
   /**

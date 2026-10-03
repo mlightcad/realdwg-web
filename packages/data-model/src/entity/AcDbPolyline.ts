@@ -11,6 +11,8 @@ import {
   AcGePolyline2d,
   AcGePolyline2dVertex,
   type AcGeTessellateOptions,
+  acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -325,7 +327,7 @@ export class AcDbPolyline extends AcDbCurve {
    */
   getPoint3dAt(index: number): AcGePoint3d {
     const vertex = this.getPoint2dAt(index)
-    return new AcGePoint3d(vertex.x, vertex.y, this._elevation)
+    return this.ocsPointToWcs(vertex.x, vertex.y)
   }
 
   /**
@@ -341,12 +343,26 @@ export class AcDbPolyline extends AcDbCurve {
    */
   get geometricExtents(): AcGeBox3d {
     const box = this._geo.box
+    // Empty OCS box uses ±Infinity; transforming those through the OCS matrix
+    // yields NaN and can poison spatial indexes downstream.
     if (box.isEmpty()) {
       return new AcGeBox3d()
     }
-    return new AcGeBox3d(
-      { x: box.min.x, y: box.min.y, z: this._elevation },
-      { x: box.max.x, y: box.max.y, z: this._elevation }
+    return new AcGeBox3d().setFromPoints([
+      this.ocsPointToWcs(box.min.x, box.min.y),
+      this.ocsPointToWcs(box.max.x, box.min.y),
+      this.ocsPointToWcs(box.max.x, box.max.y),
+      this.ocsPointToWcs(box.min.x, box.max.y)
+    ])
+  }
+
+  /**
+   * Maps an OCS polyline point (plus elevation) into WCS using {@link normal}.
+   */
+  private ocsPointToWcs(x: number, y: number): AcGePoint3d {
+    return acgeTransformOcsPointToWcs(
+      { x, y, z: this._elevation },
+      this._normal
     )
   }
 
@@ -391,21 +407,23 @@ export class AcDbPolyline extends AcDbCurve {
     const vertexCount = this.numberOfVertices
     const includeMidpoints = this.shouldIncludeSegmentMidpointGrips()
     const segmentCount = includeMidpoints ? this.getSegmentCount() : 0
+    // Grips are exposed in WCS; 2D vertices are stored in OCS.
+    const ocsOffset = acgeTransformWcsPointToOcs(offset, this._normal)
 
     acdbForEachGripIndex(indices, index => {
       if (index < vertexCount) {
-        acdbMovePolyline2dVertexAt(this._geo.vertices, index, offset)
+        acdbMovePolyline2dVertexAt(this._geo.vertices, index, ocsOffset)
         return
       }
       if (!includeMidpoints || index >= vertexCount + segmentCount) {
         return
       }
       const segmentIndex = index - vertexCount
-      acdbMovePolyline2dVertexAt(this._geo.vertices, segmentIndex, offset)
+      acdbMovePolyline2dVertexAt(this._geo.vertices, segmentIndex, ocsOffset)
       acdbMovePolyline2dVertexAt(
         this._geo.vertices,
         (segmentIndex + 1) % vertexCount,
-        offset
+        ocsOffset
       )
     })
     return this
@@ -466,7 +484,9 @@ export class AcDbPolyline extends AcDbCurve {
         { x: 0, y: 0, z: 0 },
         segmentSnaps
       )
-      gripPoints.push(...segmentSnaps)
+      for (const snap of segmentSnaps) {
+        gripPoints.push(this.ocsPointToWcs(snap.x, snap.y))
+      }
     }
   }
 
@@ -496,8 +516,7 @@ export class AcDbPolyline extends AcDbCurve {
     switch (osnapMode) {
       case AcDbOsnapMode.EndPoint:
         for (let index = 0; index < vertexCount; index++) {
-          const vertex = geo.getPointAt(index)
-          snapPoints.push(new AcGePoint3d(vertex.x, vertex.y, elevation))
+          snapPoints.push(this.getPoint3dAt(index))
         }
         break
       case AcDbOsnapMode.MidPoint:
@@ -517,7 +536,9 @@ export class AcDbPolyline extends AcDbCurve {
             pickPoint,
             segmentSnaps
           )
-          candidates.push(...segmentSnaps)
+          for (const snap of segmentSnaps) {
+            candidates.push(this.ocsPointToWcs(snap.x, snap.y))
+          }
         }
         if (osnapMode === AcDbOsnapMode.MidPoint) {
           snapPoints.push(...candidates)
@@ -681,14 +702,9 @@ export class AcDbPolyline extends AcDbCurve {
             patternAngle: 0,
             definitionLines: []
           }
-          const elevation = this.elevation
           return renderer.offsetRing(
-            ring.outer.map(point =>
-              new AcGePoint3d().set(point.x, point.y, elevation)
-            ),
-            ring.inner.map(point =>
-              new AcGePoint3d().set(point.x, point.y, elevation)
-            )
+            ring.outer.map(point => this.ocsPointToWcs(point.x, point.y)),
+            ring.inner.map(point => this.ocsPointToWcs(point.x, point.y))
           )
         }
       }
@@ -700,15 +716,38 @@ export class AcDbPolyline extends AcDbCurve {
           patternAngle: 0,
           definitionLines: []
         }
+        this.mapAreaLoopsToWcs(area)
         return renderer.area(area)
       }
     }
 
     const points: AcGePoint3d[] = []
     centerline.forEach(point =>
-      points.push(new AcGePoint3d().set(point.x, point.y, this.elevation))
+      points.push(this.ocsPointToWcs(point.x, point.y))
     )
     return renderer.lines(points)
+  }
+
+  /**
+   * Remaps filled wide-polyline loops from OCS into WCS XY for plan drawing.
+   * Full 3D tipping of area fills is not supported by {@link AcGeArea2d}.
+   */
+  private mapAreaLoopsToWcs(area: AcGeArea2d) {
+    if (
+      this._normal.x === 0 &&
+      this._normal.y === 0 &&
+      this._normal.z === 1
+    ) {
+      return
+    }
+    for (const loop of area.loops) {
+      if (!('vertices' in loop)) continue
+      for (const vertex of loop.vertices) {
+        const wcs = this.ocsPointToWcs(vertex.x, vertex.y)
+        vertex.x = wcs.x
+        vertex.y = wcs.y
+      }
+    }
   }
 
   /**
