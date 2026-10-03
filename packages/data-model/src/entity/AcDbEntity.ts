@@ -19,6 +19,7 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import { AcDbObject } from '../base/AcDbObject'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue'
 import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants'
 import { AcDbIntersect } from '../misc/AcDbIntersect'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
@@ -464,8 +465,9 @@ export abstract class AcDbEntity extends AcDbObject {
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
 
-    // Tolerate missing AcDbEntity marker (some writers omit it).
-    if (!filer.atSubclassData('AcDbEntity')) {
+    // R12 has no subclass markers; some newer writers omit them as well.
+    const hasEntitySubclass = filer.atSubclassData('AcDbEntity')
+    if (!hasEntitySubclass) {
       const next = filer.peekItem()
       if (next && Number(next.code) === 100) {
         // Different subclass — leave for derived class.
@@ -473,12 +475,19 @@ export abstract class AcDbEntity extends AcDbObject {
       }
     }
 
+    // Unframed records may interleave common fields with geometry. Retain only
+    // this object's derived fields so its reader receives them in source order.
+    // Framed modern records keep the streaming path without this allocation.
+    let derivedFields: AcDbTypedValue[] | undefined
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
       if (!item) break
       const code = Number(item.code)
 
       if (code === 100) {
+        // A later explicit marker also identifies preceding unknown pairs as
+        // common-section extras, even if the AcDbEntity marker was omitted.
+        derivedFields = undefined
         // Next subclass (e.g. AcDbLine) — push back for derived dxfInFields.
         filer.pushBackItem(item)
         break
@@ -529,10 +538,16 @@ export abstract class AcDbEntity extends AcDbObject {
           // Shadow mode / material / plot style / color name — optional.
           break
         default:
-          // Stay resilient to unknown AcDbEntity codes (forward compatible).
-          // Do not push back — that would abort derived subclass readers
-          // (TEXT/MTEXT/DIMENSION/TABLE often carry layout/material extras).
+          // Explicit AcDbEntity sections can contain optional unknown common
+          // fields. Without that framing, these pairs belong to the entity's
+          // geometry reader and must not disappear (e.g. R12 LINE endpoints).
+          if (!hasEntitySubclass) (derivedFields ??= []).push(item)
           break
+      }
+    }
+    if (derivedFields) {
+      for (let i = derivedFields.length - 1; i >= 0; i--) {
+        filer.pushBackItem(derivedFields[i])
       }
     }
 
