@@ -104,4 +104,30 @@ describe('AcCmTaskScheduler', () => {
 
     await expect(scheduler.run(3)).rejects.toThrow('boom')
   })
+  it('awaits async error reporting before deciding to continue', async () => {
+    const scheduler = new AcCmTaskScheduler<number, number>()
+    const order: string[] = []
+    scheduler.addTask(new ThrowTask())
+    scheduler.addTask(new AddOneTask())
+    scheduler.setErrorCallback(async () => {
+      await Promise.resolve()
+      order.push('reported')
+      return false
+    })
+    scheduler.setCompleteCallback(() => order.push('completed'))
+    await scheduler.run(1)
+    expect(order).toEqual(['reported', 'completed'])
+  })
+
+  it('propagates failure from async error reporting without completing', async () => {
+    const scheduler = new AcCmTaskScheduler<number, number>()
+    const complete = jest.fn()
+    scheduler.addTask(new ThrowTask())
+    scheduler.setCompleteCallback(complete)
+    scheduler.setErrorCallback(async () => {
+      throw new Error('report cancelled')
+    })
+    await expect(scheduler.run(1)).rejects.toThrow('report cancelled')
+    expect(complete).not.toHaveBeenCalled()
+  })
 })

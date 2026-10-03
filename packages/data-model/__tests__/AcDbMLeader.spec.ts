@@ -12,11 +12,7 @@ import {
   AcDbDatabase,
   AcDbLinetypeTableRecord
 } from '../src/database'
-import {
-  AcDbLine,
-  AcDbMLeader,
-  AcDbMLeaderContentType
-} from '../src/entity'
+import { AcDbLine, AcDbMLeader, AcDbMLeaderContentType } from '../src/entity'
 import {
   AcDbOsnapMode,
   AcDbRenderingCache,
@@ -139,7 +135,7 @@ describe('AcDbMLeader arrowhead rendering', () => {
     const renderer = createRenderer()
     const cacheResult = { kind: 'arrow-block' }
     const drawSpy = jest
-      .spyOn(AcDbRenderingCache.instance, 'draw')
+      .spyOn(AcDbRenderingCache.forContext(renderer.context, db), 'draw')
       .mockReturnValue(cacheResult as never)
 
     mleader.worldDraw(renderer as never)
@@ -167,7 +163,7 @@ describe('AcDbMLeader arrowhead rendering', () => {
 
     const renderer = createRenderer()
     const drawSpy = jest
-      .spyOn(AcDbRenderingCache.instance, 'draw')
+      .spyOn(AcDbRenderingCache.forContext(renderer.context, db), 'draw')
       .mockReturnValue({ kind: 'arrow-block' } as never)
 
     mleader.worldDraw(renderer as never)

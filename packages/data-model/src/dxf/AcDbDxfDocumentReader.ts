@@ -7,6 +7,7 @@ import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
 import type { AcDbObjectId } from '../base/AcDbObject'
+import { acdbWithDatabase } from '../base/AcDbObject'
 import {
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag
@@ -35,6 +36,8 @@ import { acdbDxfInHeader } from './AcDbDxfHeaderReader'
 import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader'
 
 export interface AcDbDxfDocumentReaderOptions {
+  /** Cancels before the next synchronous parse/construction chunk. */
+  signal?: AbortSignal
   /**
    * How often to check parse progress / UI yield while streaming entities
    * (entity count). Actual yields are time-budgeted via {@link yieldBudgetMs}.
@@ -92,6 +95,7 @@ export class AcDbDxfDocumentReader {
   }
 
   async read(filer: AcDbDxfFiler): Promise<AcDbDxfDocumentReaderResult> {
+    this._options.signal?.throwIfAborted()
     this._unknownEntityCount = 0
     this._unknownObjectCount = 0
     this._attributeMap.clear()
@@ -111,7 +115,7 @@ export class AcDbDxfDocumentReader {
       }
     }
 
-    this.flushRemainingAttributes()
+    acdbWithDatabase(this._db, () => this.flushRemainingAttributes())
 
     return {
       unknownEntityCount: this._unknownEntityCount,
@@ -129,17 +133,18 @@ export class AcDbDxfDocumentReader {
   }
 
   private async readSection(filer: AcDbDxfFiler, section: string) {
+    this._options.signal?.throwIfAborted()
     switch (section) {
       case 'HEADER':
-        acdbDxfInHeader(filer, this._db)
+        acdbWithDatabase(this._db, () => acdbDxfInHeader(filer, this._db))
         await this.reportParseProgress(filer)
         break
       case 'CLASSES':
-        this.readClassesSection(filer)
+        acdbWithDatabase(this._db, () => this.readClassesSection(filer))
         await this.reportParseProgress(filer)
         break
       case 'TABLES':
-        this.readTablesSection(filer)
+        acdbWithDatabase(this._db, () => this.readTablesSection(filer))
         await this.reportParseProgress(filer)
         break
       case 'BLOCKS':
@@ -153,7 +158,7 @@ export class AcDbDxfDocumentReader {
       case 'OBJECTS':
         {
           const objectsReader = new AcDbDxfObjectsReader(this._db)
-          objectsReader.read(filer)
+          acdbWithDatabase(this._db, () => objectsReader.read(filer))
           this._unknownObjectCount += objectsReader.unknownObjectCount
         }
         await this.reportParseProgress(filer)
@@ -363,9 +368,14 @@ export class AcDbDxfDocumentReader {
   private readTable(filer: AcDbDxfFiler, tableName: string) {
     switch (tableName) {
       case 'LAYER':
-        this.readNamedTable(filer, 'LAYER', () => new AcDbLayerTableRecord(), r => {
-          if (r.name) this._db.tables.layerTable.add(r)
-        })
+        this.readNamedTable(
+          filer,
+          'LAYER',
+          () => new AcDbLayerTableRecord(),
+          r => {
+            if (r.name) this._db.tables.layerTable.add(r)
+          }
+        )
         break
       case 'LTYPE':
         this.readNamedTable(
@@ -576,7 +586,9 @@ export class AcDbDxfDocumentReader {
     sinceYield: number
   ): Promise<number> {
     const header = this.readBlockBeginFields(filer)
-    const btr = this.ensureBlockTableRecord(header)
+    const btr = acdbWithDatabase(this._db, () =>
+      this.ensureBlockTableRecord(header)
+    )
 
     while (!filer.atEof) {
       const item = filer.peekItem()
@@ -607,7 +619,9 @@ export class AcDbDxfDocumentReader {
         continue
       }
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
-      const entity = acdbDxfInEntity(filer, typeName)
+      const entity = acdbWithDatabase(this._db, () =>
+        acdbDxfInEntity(filer, typeName)
+      )
       if (entity) {
         // Model/paper geometry lives in ENTITIES; skip space BTRs here to
         // avoid duplicating entities that also appear with group 67 / owner.
@@ -776,7 +790,9 @@ export class AcDbDxfDocumentReader {
         continue
       }
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
-      const entity = acdbDxfInEntity(filer, name)
+      const entity = acdbWithDatabase(this._db, () =>
+        acdbDxfInEntity(filer, name)
+      )
       if (entity) {
         this.acceptEntity(entity, this.resolveEntityOwner(entity, modelSpace))
       } else {
@@ -819,10 +835,7 @@ export class AcDbDxfDocumentReader {
   /**
    * Appends an entity (or links ATTRIB → INSERT).
    */
-  private acceptEntity(
-    entity: AcDbEntity,
-    owner: AcDbBlockTableRecord
-  ): void {
+  private acceptEntity(entity: AcDbEntity, owner: AcDbBlockTableRecord): void {
     if (entity instanceof AcDbAttribute) {
       this.linkOrDeferAttribute(entity, owner)
       return
@@ -893,10 +906,15 @@ export class AcDbDxfDocumentReader {
   }
 
   private async reportParseProgress(filer: AcDbDxfFiler) {
+    this._options.signal?.throwIfAborted()
     const { onProgress, totalBytes } = this._options
     if (!onProgress || !totalBytes || totalBytes <= 0) return
-    const ratio = Math.min(1, Math.max(0, filer.position().byteOffset / totalBytes))
+    const ratio = Math.min(
+      1,
+      Math.max(0, filer.position().byteOffset / totalBytes)
+    )
     await onProgress(ratio)
+    this._options.signal?.throwIfAborted()
   }
 
   private async yieldAndReportProgress(filer: AcDbDxfFiler) {
@@ -904,5 +922,6 @@ export class AcDbDxfDocumentReader {
     // Progress may fire every batch; UI yield is time-budgeted so large DXFs
     // are not dominated by per-batch requestAnimationFrame waits.
     await this._yieldGate.maybeYield(accmYieldToUi)
+    this._options.signal?.throwIfAborted()
   }
 }

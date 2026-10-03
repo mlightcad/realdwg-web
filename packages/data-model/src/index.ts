@@ -15,6 +15,7 @@ export {
   acdbMakeUtf8AsciiDxfPairReader,
   acdbPeekDxfHeaderInfo,
   acdbAssignWorkingDatabase,
+  acdbWithDatabase,
   acdbGetWorkingDatabase,
   acdbSetHostApplicationServicesProvider,
   acdbSetLayoutManagerFactory,

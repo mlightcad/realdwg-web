@@ -10,7 +10,6 @@ import {
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
 import { AcDbMText, AcDbTable } from '../src/entity'
-import { AcDbRenderingCache } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createGiEntity = () => {
@@ -57,10 +56,6 @@ const setWorkingDb = () => {
 }
 
 describe('AcDbTable', () => {
-  beforeEach(() => {
-    AcDbRenderingCache.instance.clear()
-  })
-
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbTable('TEST', 1, 1))
   })

@@ -1,13 +1,23 @@
-import {
-  AcCmColor,
-  AcCmUiYieldGate,
-  accmYieldToUi
-} from '@mlightcad/common'
+import { AcCmColor, AcCmUiYieldGate, accmYieldToUi } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
-import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
+import {
+  AcGiContext,
+  AcGiEntity,
+  AcGiRenderer
+} from '@mlightcad/graphic-interface'
 
 import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
+import type { AcDbDatabase } from '../database/AcDbDatabase'
 import { AcDbEntity } from '../entity/AcDbEntity'
+
+/** CPU geometry estimates, including templates still borrowed by live instances. */
+export interface AcDbRenderingCacheStats {
+  cachedEntries: number
+  cachedBytes: number
+  retiredEntries: number
+  retiredBytes: number
+  retainedBytes: number
+}
 
 /**
  * Optional timing counters for one cache-miss block build during
@@ -123,7 +133,7 @@ const emptyProfileStats = (): AcDbRenderingCacheProfileStats => ({
  *
  * @example
  * ```typescript
- * const cache = AcDbRenderingCache.instance;
+ * const cache = AcDbRenderingCache.forContext(renderer.context, blockRecord.database);
  * const color = new AcCmColor().setRGBValue(0xFF0000);
  * const key = cache.createKey('MyBlock', color);
  * const renderedEntity = cache.draw(renderer, blockRecord, color);
@@ -132,18 +142,52 @@ const emptyProfileStats = (): AcDbRenderingCacheProfileStats => ({
 export class AcDbRenderingCache {
   /** Map of cached rendering results indexed by key. */
   private _blocks: Map<string, AcGiEntity>
-  /** Estimated bytes per cached key (tracked only while LRU is enabled). */
+  /** Estimated bytes per cached key, independent of whether LRU is enabled. */
   private _lruBytes: Map<string, number>
   /** Sum of {@link _lruBytes} values. */
   private _lruTotalBytes = 0
   /**
-   * Evicted compacted templates awaiting document-close disposal. Compacted
+   * Evicted compacted templates awaiting source-scope disposal. Compacted
    * templates share geometry buffers with clones already in the scene, so
    * they cannot be disposed at eviction time.
    */
   private _retiredCompactedTemplates: AcGiEntity[] = []
-  /** Singleton instance of the cache. */
-  private static _instance?: AcDbRenderingCache
+  private _retiredBytes = 0
+  private _generation = 0
+  private _databaseRevision = 0
+  private _disposed = false
+  private _unsubscribe?: () => void
+  private static readonly _contexts = new WeakMap<
+    AcGiContext,
+    Map<AcDbDatabase, AcDbRenderingCache>
+  >()
+  private static readonly _releasedContexts = new WeakSet<AcGiContext>()
+
+  /** Called after invalidation; pending native glyph work must fence its generation. */
+  onInvalidated?: () => void
+
+  /** Changes whenever templates are invalidated or this cache is disposed. */
+  get generation(): number {
+    this.synchronizeRevision()
+    return this._generation
+  }
+
+  /** Includes retired templates; eviction alone does not release borrowed buffers. */
+  get stats(): Readonly<AcDbRenderingCacheStats> {
+    this.synchronizeRevision()
+    // Deferred glyph finalization/compaction can change a template after insertion.
+    this.refreshEstimates()
+    return {
+      cachedEntries: this._blocks.size,
+      cachedBytes: this._lruTotalBytes,
+      retiredEntries: this._retiredCompactedTemplates.length,
+      retiredBytes: this._retiredBytes,
+      retainedBytes: this.estimateTemplatesBytes([
+        ...this._blocks.values(),
+        ...this._retiredCompactedTemplates
+      ])
+    }
+  }
   /**
    * When true, {@link draw} / {@link get} / {@link set} accumulate
    * {@link profileStats}. Off by default (zero overhead when false).
@@ -186,33 +230,67 @@ export class AcDbRenderingCache {
   }
 
   /**
-   * Gets the singleton instance of the rendering cache.
-   *
-   * @returns The singleton instance of AcDbRenderingCache
-   *
-   * @example
-   * ```typescript
-   * const cache = AcDbRenderingCache.instance;
-   * ```
+   * Gets the template owner for one database rendered in one stable context.
+   * Different sources and rendering contexts never share native templates.
    */
-  static get instance() {
-    if (!this._instance) {
-      this._instance = new AcDbRenderingCache()
+  static forContext(context: AcGiContext, database: AcDbDatabase) {
+    if (this._releasedContexts.has(context)) {
+      throw new Error('Cannot render using a released context.')
     }
-    return this._instance
+    let caches = this._contexts.get(context)
+    if (!caches) {
+      caches = new Map()
+      this._contexts.set(context, caches)
+    }
+    let cache = caches.get(database)
+    if (!cache) {
+      cache = new AcDbRenderingCache(database)
+      caches.set(database, cache)
+    }
+    cache.synchronizeRevision()
+    return cache
+  }
+
+  /** Release after this database's scene instances and pending work have ended. */
+  static releaseDatabase(context: AcGiContext, database: AcDbDatabase): void {
+    const caches = this._contexts.get(context)
+    const cache = caches?.get(database)
+    caches?.delete(database)
+    cache?.dispose()
+  }
+
+  /** Terminal release after every scene/pending operation owned by the context ends. */
+  static releaseContext(context: AcGiContext): void {
+    this._releasedContexts.add(context)
+    const caches = this._contexts.get(context)
+    this._contexts.delete(context)
+    if (caches) {
+      for (const cache of caches.values()) cache.dispose()
+    }
   }
 
   /**
-   * Creates a new AcDbRenderingCache instance.
-   *
-   * @example
-   * ```typescript
-   * const cache = new AcDbRenderingCache();
-   * ```
+   * Scopes are created only through forContext; no unbound/global cache exists.
    */
-  constructor() {
+  private constructor(private readonly database: AcDbDatabase) {
     this._blocks = new Map()
     this._lruBytes = new Map()
+    this._databaseRevision = database.renderingRevision
+    const invalidate = () => this.synchronizeRevision()
+    const events = [
+      database.events.entityAppended,
+      database.events.entityModified,
+      database.events.entityErased,
+      database.events.layerAppended,
+      database.events.layerModified,
+      database.events.layerErased,
+      database.events.dictObjetSet,
+      database.events.dictObjectErased
+    ]
+    for (const event of events) event.addEventListener(invalidate)
+    this._unsubscribe = () => {
+      for (const event of events) event.removeEventListener(invalidate)
+    }
   }
 
   /**
@@ -277,14 +355,17 @@ export class AcDbRenderingCache {
    * ```
    */
   set(key: string, group: AcGiEntity) {
+    this.assertActive()
     // Templates are immutable after insert. Avoid a deep clone here — miss
     // path returns a per-INSERT clone, and compacted clones share buffers.
+    const previous = this._blocks.get(key)
+    if (previous && previous !== group) this.invalidate()
     this._blocks.set(key, group)
+    const prevBytes = this._lruBytes.get(key) ?? 0
+    const bytes = this.estimateTemplateBytes(group)
+    this._lruBytes.set(key, bytes)
+    this._lruTotalBytes += bytes - prevBytes
     if (AcDbRenderingCache.lruEnabled) {
-      const prevBytes = this._lruBytes.get(key) ?? 0
-      const bytes = this.estimateTemplateBytes(group)
-      this._lruBytes.set(key, bytes)
-      this._lruTotalBytes += bytes - prevBytes
       this.enforceLruBudget()
     }
     return group
@@ -318,13 +399,16 @@ export class AcDbRenderingCache {
     this._blocks.delete(key)
     this._lruTotalBytes -= this._lruBytes.get(key) ?? 0
     this._lruBytes.delete(key)
-    if (!template) return
+    if (template) this.retireTemplate(template)
+  }
+
+  private retireTemplate(template: AcGiEntity) {
     if (isTemplateCompacted(template)) {
       // Compacted templates share geometry buffers with clones already handed
       // to the scene (see three-renderer AcTrGroup.fastDeepClone) — disposing
-      // now would corrupt live INSERT instances. Retire instead; clear()
-      // disposes them when the document closes.
+      // now would invalidate live INSERT instances. Final source disposal owns it.
       this._retiredCompactedTemplates.push(template)
+      this._retiredBytes += this.estimateTemplateBytes(template)
     } else {
       template.dispose?.()
     }
@@ -336,30 +420,50 @@ export class AcDbRenderingCache {
    * expose `children`/`geometry` (non-three implementations).
    */
   private estimateTemplateBytes(template: AcGiEntity) {
+    return this.estimateTemplatesBytes([template])
+  }
+
+  private estimateTemplatesBytes(templates: Iterable<AcGiEntity>) {
     let bytes = 0
-    const stack: unknown[] = [template]
+    const buffers = new Set<ArrayBufferLike>()
+    const visited = new Set<unknown>()
+    const stack: unknown[] = [...templates]
+    const countArray = (array?: ArrayBufferView) => {
+      if (array && !buffers.has(array.buffer)) {
+        buffers.add(array.buffer)
+        bytes += array.buffer.byteLength
+      }
+    }
     while (stack.length > 0) {
       const node = stack.pop() as
         | {
             children?: unknown[]
             geometry?: {
-              attributes?: Record<string, { array?: ArrayBufferView }>
+              attributes?: Record<
+                string,
+                {
+                  array?: ArrayBufferView
+                  data?: { array?: ArrayBufferView }
+                }
+              >
               index?: { array?: ArrayBufferView } | null
             }
           }
         | null
         | undefined
       if (node == null) continue
+      if (visited.has(node)) continue
+      visited.add(node)
       if (node.geometry) {
         const attributes = node.geometry.attributes
         if (attributes) {
           for (const key in attributes) {
-            const array = attributes[key]?.array
-            if (array) bytes += array.byteLength
+            const attribute = attributes[key]
+            countArray(attribute?.array ?? attribute?.data?.array)
           }
         }
         const indexArray = node.geometry.index?.array
-        if (indexArray) bytes += indexArray.byteLength
+        countArray(indexArray)
       }
       const children = node.children
       if (children) {
@@ -369,6 +473,32 @@ export class AcDbRenderingCache {
       }
     }
     return bytes
+  }
+
+  private refreshEstimates() {
+    this._lruTotalBytes = 0
+    for (const [key, template] of this._blocks) {
+      const bytes = this.estimateTemplateBytes(template)
+      this._lruBytes.set(key, bytes)
+      this._lruTotalBytes += bytes
+    }
+    this._retiredBytes = this.estimateTemplatesBytes(
+      this._retiredCompactedTemplates
+    )
+  }
+
+  private assertActive() {
+    if (this._disposed) throw new Error('Rendering cache has been disposed.')
+    this.synchronizeRevision()
+  }
+
+  private synchronizeRevision() {
+    if (
+      !this._disposed &&
+      this._databaseRevision !== this.database.renderingRevision
+    ) {
+      this.invalidate()
+    }
   }
 
   /**
@@ -382,6 +512,7 @@ export class AcDbRenderingCache {
    * @returns The immutable template, or `undefined` if not cached.
    */
   peek(name: string): AcGiEntity | undefined {
+    this.synchronizeRevision()
     return this._blocks.get(name)
   }
 
@@ -404,6 +535,7 @@ export class AcDbRenderingCache {
    * ```
    */
   get(name: string) {
+    this.assertActive()
     const template = this._blocks.get(name)
     if (!template) {
       return undefined
@@ -435,12 +567,12 @@ export class AcDbRenderingCache {
       if (AcDbRenderingCache._drawDepth === 1) {
         AcDbRenderingCache._profileStats.topLevel.cloneMs += dt
       }
-      stampBlockCacheKey(block, name)
+      stampBlockCacheKey(block, name, this.generation)
       return block
     }
     this.maybeCompactTemplate(template, true)
     const block = template.fastDeepClone()
-    stampBlockCacheKey(block, name)
+    stampBlockCacheKey(block, name, this.generation)
     return block
   }
 
@@ -458,22 +590,39 @@ export class AcDbRenderingCache {
    * ```
    */
   has(name: string) {
+    this.synchronizeRevision()
     return this._blocks.has(name)
   }
 
   /**
-   * Clears all cached rendering results and disposes owned geometry.
-   *
-   * @example
-   * ```typescript
-   * cache.clear();
-   * console.log('Cache cleared');
-   * ```
+   * Invalidates lookup results while live scene instances may still borrow
+   * compacted templates. Retired buffers remain owned and accounted until dispose.
+   * Call explicitly after a mutation that does not emit database entity/layer events.
    */
-  clear() {
-    this._blocks.forEach(block => {
-      block.dispose?.()
-    })
+  invalidate() {
+    if (this._disposed) return
+    this._databaseRevision = this.database.renderingRevision
+    this._generation++
+    for (const block of this._blocks.values()) this.retireTemplate(block)
+    this._blocks.clear()
+    this._lruBytes.clear()
+    this._lruTotalBytes = 0
+    this.onInvalidated?.()
+  }
+
+  /**
+   * Final release. The caller must first end pending conversion/glyph work and
+   * remove all scene instances borrowing this scope's templates.
+   */
+  dispose() {
+    if (this._disposed) return
+    this._disposed = true
+    this._generation++
+    this._unsubscribe?.()
+    this._unsubscribe = undefined
+    const onInvalidated = this.onInvalidated
+    this.onInvalidated = undefined
+    this._blocks.forEach(block => block.dispose?.())
     this._blocks.clear()
     this._lruBytes.clear()
     this._lruTotalBytes = 0
@@ -481,16 +630,9 @@ export class AcDbRenderingCache {
       template.dispose?.()
     })
     this._retiredCompactedTemplates.length = 0
-    // Notify three-renderer so in-flight template glyph bake promises are dropped.
-    AcDbRenderingCache.onCleared?.()
+    this._retiredBytes = 0
+    onInvalidated?.()
   }
-
-  /**
-   * Optional hook invoked at the end of {@link clear}.
-   *
-   * three-renderer sets this to reset shared block-template glyph bake state.
-   */
-  static onCleared: (() => void) | undefined
 
   /**
    * Prebuilds color-independent block templates before entity flush.
@@ -512,6 +654,7 @@ export class AcDbRenderingCache {
       blockName: string
     ) => void | Promise<void>
   ) {
+    this.assertActive()
     const candidates: AcDbBlockTableRecord[] = []
     for (const block of blocks) {
       if (!block || !block.name) {
@@ -531,6 +674,7 @@ export class AcDbRenderingCache {
     // large blocks without stalling on many small ones.
     const yieldGate = new AcCmUiYieldGate()
     for (const block of candidates) {
+      this.assertActive()
       const key = this.createCacheKey(block.name, prebuildColor, false)
       if (!this.has(key)) {
         this.draw(renderer, block, prebuildColor, [], true)
@@ -581,6 +725,10 @@ export class AcDbRenderingCache {
     transform?: AcGeMatrix3d,
     normal?: AcGeVector3d
   ) {
+    this.assertActive()
+    if (blockTableRecord && blockTableRecord.database !== this.database) {
+      throw new Error('Block belongs to a different rendering-cache database.')
+    }
     const profile = AcDbRenderingCache.profiling
     if (profile) {
       AcDbRenderingCache._drawDepth++
@@ -596,9 +744,9 @@ export class AcDbRenderingCache {
         // Color-independent templates are keyed by name; ByBlock templates use
         // name+color. Miss path discovers ByBlock while building (one walk).
         let key: string | undefined
-        if (blockName && this.has(blockName)) {
+        if (cache && blockName && this.has(blockName)) {
           key = blockName
-        } else if (blockName) {
+        } else if (cache && blockName) {
           const colorKey = this.createKey(blockName, blockColor)
           if (this.has(colorKey)) {
             key = colorKey
@@ -678,21 +826,24 @@ export class AcDbRenderingCache {
           const setCloneBefore = profile ? stats.setCloneMs : 0
           if (block && willCache) {
             prepareCacheTemplate(block)
-            // Store the immutable template by reference, then hand the scene a
-            // per-INSERT clone so applyMatrix cannot mutate the cache entry.
-            this.set(key, block)
+            // Prepare a per-INSERT clone before transferring the immutable
+            // template to the cache; applyMatrix never mutates the template.
+            const template = block
             if (profile) {
               const tClone0 = performance.now()
-              block = block.fastDeepClone()
+              block = template.fastDeepClone()
               const dt = performance.now() - tClone0
               stats.setCloneMs += dt
               if (isTop) {
                 stats.topLevel.setCloneMs += dt
               }
             } else {
-              block = block.fastDeepClone()
+              block = template.fastDeepClone()
             }
-            stampBlockCacheKey(block, key)
+            // Cloning may compact/share buffers. Establish the instance before
+            // LRU decides whether the now-owned template can be released.
+            this.set(key, template)
+            stampBlockCacheKey(block, key, this.generation)
           }
           if (profile) {
             stats.misses++
@@ -788,7 +939,9 @@ export class AcDbRenderingCache {
    * @param blockTableRecord - Block whose entities are scanned.
    * @returns `true` when at least one visible ByBlock-colored entity exists.
    */
-  private blockHasByBlockColor(blockTableRecord: AcDbBlockTableRecord): boolean {
+  private blockHasByBlockColor(
+    blockTableRecord: AcDbBlockTableRecord
+  ): boolean {
     for (const entity of blockTableRecord.newIterator()) {
       if (entity.visibility && entity.color.isByBlock) {
         return true
@@ -944,9 +1097,8 @@ function shouldCompactTemplate(
  * @param entity - Block template about to be stored in the cache.
  */
 function prepareCacheTemplate(entity: AcGiEntity): void {
-  const prepare = (
-    entity as AcGiEntity & { prepareCacheTemplate?: () => void }
-  ).prepareCacheTemplate
+  const prepare = (entity as AcGiEntity & { prepareCacheTemplate?: () => void })
+    .prepareCacheTemplate
   if (typeof prepare === 'function') {
     prepare.call(entity)
   }
@@ -959,9 +1111,17 @@ function prepareCacheTemplate(entity: AcGiEntity): void {
  * @param entity - Scene-bound clone returned by {@link AcDbRenderingCache.draw}.
  * @param key - Cache key used to store the immutable template.
  */
-function stampBlockCacheKey(entity: AcGiEntity, key: string): void {
-  const data = entity.userData as { blockCacheKey?: string }
+function stampBlockCacheKey(
+  entity: AcGiEntity,
+  key: string,
+  generation: number
+): void {
+  const data = entity.userData as {
+    blockCacheKey?: string
+    blockCacheGeneration?: number
+  }
   data.blockCacheKey = key
+  data.blockCacheGeneration = generation
 }
 
 /**

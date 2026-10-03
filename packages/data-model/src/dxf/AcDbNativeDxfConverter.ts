@@ -5,6 +5,7 @@ import {
 } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { acdbWithDatabase } from '../base/AcDbObject'
 import type { AcDbDatabase } from '../database/AcDbDatabase'
 import {
   type AcDbConversionProgressCallback,
@@ -53,13 +54,9 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
     db: AcDbDatabase,
     options: AcDbDatabaseConverterReadOptions = {}
   ) {
-    const {
-      minimumChunkSize = 10,
-      progress,
-      encoding
-    } = options
+    const { minimumChunkSize = 10, progress, encoding, signal } = options
 
-    this.progress = progress
+    signal?.throwIfAborted()
 
     const emit = async (
       percentage: number,
@@ -67,8 +64,9 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
       status: Parameters<AcDbConversionProgressCallback>[2],
       stageData?: unknown
     ) => {
-      if (!progress) return
-      await progress(percentage, stage, status, stageData)
+      signal?.throwIfAborted()
+      await progress?.(percentage, stage, status, stageData)
+      signal?.throwIfAborted()
     }
 
     await emit(0, 'START', 'START')
@@ -93,6 +91,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
         entityBatchSize: Math.max(1, minimumChunkSize || 200),
         yieldBudgetMs: ACCM_DEFAULT_UI_YIELD_BUDGET_MS,
         totalBytes,
+        signal,
         onProgress: async ratio => {
           const pct = Math.min(
             PARSE_END_PCT - 1,
@@ -140,7 +139,7 @@ export class AcDbNativeDxfConverter extends AcDbDatabaseConverter<null> {
       await emit(100, 'END', 'END')
     } catch (error) {
       if (batchOpen) {
-        db.endEventBatch()
+        acdbWithDatabase(db, () => db.endEventBatch())
       }
       throw error
     }

@@ -3,7 +3,10 @@ export { AcDbFormatter } from './AcDbFormatter'
 export type { AcDbFormatterOptions } from './AcDbFormatter'
 export { AcDbLinearUnits } from './AcDbLinearUnits'
 export { AcDbRenderingCache } from './AcDbRenderingCache'
-export type { AcDbRenderingCacheProfileStats } from './AcDbRenderingCache'
+export type {
+  AcDbRenderingCacheProfileStats,
+  AcDbRenderingCacheStats
+} from './AcDbRenderingCache'
 export {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
@@ -143,7 +146,10 @@ export {
   acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
 } from './proxyGraphic'
-export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon'
+export {
+  acdbPreviewIconToDataUrl,
+  acdbThumbnailImageToDataUrl
+} from './AcDbPreviewIcon'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,

@@ -12,7 +12,8 @@ import {
   AcDbObject,
   AcDbObjectId,
   TEMP_OBJECT_ID_PREFIX,
-  acdbAssignWorkingDatabase
+  acdbAssignWorkingDatabase,
+  acdbWithDatabase
 } from '../base/AcDbObject'
 import { AcDbOpenMode } from '../base/AcDbOpenMode'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator'
@@ -195,6 +196,10 @@ export interface AcDbOpenFailedEventArgs {
  * These options control how a drawing database is opened and processed.
  */
 export interface AcDbOpenDatabaseOptions {
+  /** Whether this read selects the active document. References must pass false. */
+  activateWorkingDatabase?: boolean
+  /** Cancels parsing/conversion at the native converter's interruption points. */
+  signal?: AbortSignal
   /**
    * Opens the drawing database in read-only mode.
    *
@@ -472,6 +477,16 @@ export class AcDbDatabase extends AcDbObject {
   private _pendingDictObjectSet: { object: AcDbObject; key: string }[] = []
   private _pendingDictObjectErased: { object: AcDbObject; key: string }[] = []
   private _lastOpenError: AcDbOpenDatabaseError | null = null
+  private _renderingRevision = 0
+
+  /**
+   * Revision of native entity/layer/dictionary mutations. Updated before external
+   * event listeners can redraw, regardless of cache/view registration order.
+   * Mutations without these notifications require explicit renderer invalidation.
+   */
+  get renderingRevision(): number {
+    return this._renderingRevision
+  }
 
   /**
    * Events that can be triggered by the database.
@@ -575,6 +590,30 @@ export class AcDbDatabase extends AcDbObject {
     this._layerFilters = new AcLyLayerFilterTree()
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
     this.registerBootstrapHandles()
+    const advanceRenderingRevision = () => {
+      this._renderingRevision++
+    }
+    // Progressive model/paper-space loading creates INSERT occurrences, not
+    // changes to their block definitions. Keep existing templates across chunks.
+    this.events.entityAppended.addEventListener(({ entity }) => {
+      const entities = Array.isArray(entity) ? entity : [entity]
+      if (entities.some(item => {
+        const owner = this.tables.blockTable.getIdAt(item.ownerId)
+        return !owner || (!AcDbBlockTableRecord.isModelSapceName(owner.name) &&
+          !AcDbBlockTableRecord.isPaperSapceName(owner.name))
+      })) advanceRenderingRevision()
+    })
+    for (const event of [
+      this.events.entityModified,
+      this.events.entityErased,
+      this.events.layerAppended,
+      this.events.layerModified,
+      this.events.layerErased,
+      this.events.dictObjetSet,
+      this.events.dictObjectErased
+    ]) {
+      event.addEventListener(advanceRenderingRevision)
+    }
   }
 
   /**
@@ -2383,7 +2422,8 @@ export class AcDbDatabase extends AcDbObject {
         `Database converter for file type '${fileType}' isn't registered and can can't read this file!`
       )
 
-    this.clear()
+    options.signal?.throwIfAborted()
+    acdbWithDatabase(this, () => this.clear())
     this._lastOpenError = null
     this._drawNoPlotLayers = options?.drawNoPlotLayers ?? true
     this.drawCircleSides = options?.circleSides ?? ACDB_DRAW_CIRCLE_SIDES_DRAFT
@@ -2391,11 +2431,9 @@ export class AcDbDatabase extends AcDbObject {
       this.setDwgName(options.fileName)
     }
 
-    // Ensure this database is the host working database for the duration of
-    // conversion. Converters (including peer packages such as dxf-json-converter)
-    // assign real handles on unbound objects; some entity getters still fall
-    // back to the working database before append/add binds them.
-    acdbAssignWorkingDatabase(this)
+    // Source construction is scoped by the converter, independently of which
+    // document the application has selected. Never hold a global swap over await.
+    if (options.activateWorkingDatabase !== false) acdbAssignWorkingDatabase(this)
 
     try {
       await converter.read(data, this, {
@@ -2403,9 +2441,12 @@ export class AcDbDatabase extends AcDbObject {
         progress: this.createConversionProgressHandler(),
         timeout: options?.timeout,
         encoding: options?.encoding,
-        sysVars: options?.sysVars
+        sysVars: options?.sysVars,
+        signal: options.signal
       })
+      options.signal?.throwIfAborted()
     } catch (error) {
+      options.signal?.throwIfAborted()
       const openError = AcDbOpenDatabaseError.from(error)
       this._lastOpenError = openError
       this.events.openFailed.dispatch({ database: this, error: openError })
@@ -2413,7 +2454,7 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     this._lastOpenError = null
-    this.ensureDatabaseDefaults()
+    acdbWithDatabase(this, () => this.ensureDatabaseDefaults())
   }
 
   private createConversionProgressHandler(): AcDbConversionProgressCallback {

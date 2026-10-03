@@ -17,6 +17,26 @@ let hostApplicationServicesProvider:
   | (() => { workingDatabase: AcDbDatabase })
   | undefined
 
+// Object construction may belong to a reference without activating that document.
+// This scope is synchronous: it is always restored before control yields.
+let constructionDatabase: AcDbDatabase | undefined
+
+/** Runs synchronous object construction against a database without changing the
+ * active application document. Call separately for each asynchronous conversion
+ * chunk; never pass an async callback. Bound objects retain their own database. */
+export function acdbWithDatabase<T>(
+  database: AcDbDatabase,
+  operation: () => T
+): T {
+  const previous = constructionDatabase
+  constructionDatabase = database
+  try {
+    return operation()
+  } finally {
+    constructionDatabase = previous
+  }
+}
+
 export function acdbSetHostApplicationServicesProvider(
   provider: () => { workingDatabase: AcDbDatabase }
 ) {
@@ -38,6 +58,7 @@ export function acdbAssignWorkingDatabase(database: AcDbDatabase) {
 }
 
 export function acdbGetWorkingDatabase(): AcDbDatabase {
+  if (constructionDatabase) return constructionDatabase
   if (hostApplicationServicesProvider) {
     return hostApplicationServicesProvider().workingDatabase
   }
@@ -357,10 +378,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     if (this._database) {
       return this._database
     }
-    if (hostApplicationServicesProvider) {
-      return hostApplicationServicesProvider().workingDatabase
-    }
-    throw new Error('The current working database must be set before using it!')
+    return acdbGetWorkingDatabase()
   }
 
   /**

@@ -879,7 +879,10 @@ export class AcDbBlockReference extends AcDbEntity {
       const cols = Math.max(1, this.columnCount)
       const rows = Math.max(1, this.rowCount)
       if (cols === 1 && rows === 1) {
-        return AcDbRenderingCache.instance.draw(
+        return AcDbRenderingCache.forContext(
+          renderer.context,
+          this.database
+        ).draw(
           renderer,
           blockTableRecord,
           this.resolvedColor,
@@ -901,7 +904,10 @@ export class AcDbBlockReference extends AcDbEntity {
             this.blockTransform,
             localOffset
           )
-          const drawn = AcDbRenderingCache.instance.draw(
+          const drawn = AcDbRenderingCache.forContext(
+            renderer.context,
+            this.database
+          ).draw(
             renderer,
             blockTableRecord,
             this.resolvedColor,

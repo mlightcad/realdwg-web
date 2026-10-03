@@ -6,6 +6,7 @@ import {
   AcCmTaskScheduler
 } from '@mlightcad/common'
 
+import { acdbWithDatabase } from '../base/AcDbObject'
 import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSysVarManager } from './AcDbSysVarManager'
 
@@ -133,6 +134,8 @@ export type AcDbConversionProgressCallback = (
  * Keeps the converter read API extensible without growing positional arguments.
  */
 export interface AcDbDatabaseConverterReadOptions {
+  /** Cooperative cancellation, including the parser worker when supported. */
+  signal?: AbortSignal
   /**
    * Minimum number of items in one processing chunk.
    *
@@ -383,9 +386,6 @@ export interface AcDbDatabaseConverterConfig {
  * ```
  */
 export abstract class AcDbDatabaseConverter<TModel = unknown> {
-  /** Optional progress callback for tracking conversion progress */
-  progress?: AcDbConversionProgressCallback
-
   /** Configuration for the converter */
   readonly config: AcDbDatabaseConverterConfig
 
@@ -434,7 +434,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
   ) {
     const {
       minimumChunkSize = 10,
-      progress,
+      progress: onProgress,
+      signal,
       timeout,
       sysVars
     } = options
@@ -456,12 +457,20 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
       }
     AcCmPerformanceCollector.getInstance().collect(loadDbTimeEntry)
 
-    this.progress = progress
+    signal?.throwIfAborted()
+    // A registered converter can serve concurrent databases. Progress belongs
+    // to this read, never to the shared converter instance.
+    const progress: AcDbConversionProgressCallback = async (...args) => {
+      signal?.throwIfAborted()
+      await onProgress?.(...args)
+      signal?.throwIfAborted()
+    }
 
     const percentage = { value: 0 }
     const scheduler = new AcCmTaskScheduler<string | ArrayBuffer, void>()
-    scheduler.setCompleteCallback(() => this.onFinished())
-    scheduler.setErrorCallback((error: AcCmTaskError) => this.onError(error))
+    scheduler.setErrorCallback((error: AcCmTaskError) =>
+      signal?.aborted ? true : this.onError(error, progress)
+    )
     scheduler.addTask(
       new AcDbConversionTask(
         {
@@ -482,7 +491,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: ArrayBuffer) => {
-            return await this.parse(data, timeout)
+            return await this.parse(data, timeout, signal)
           }
         },
         progress
@@ -495,7 +504,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processLineTypes(data.model, db)
+            acdbWithDatabase(db, () => this.processLineTypes(data.model, db))
             return data
           }
         },
@@ -509,7 +518,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processTextStyles(data.model, db)
+            acdbWithDatabase(db, () => this.processTextStyles(data.model, db))
             return data
           }
         },
@@ -523,7 +532,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processDimStyles(data.model, db)
+            acdbWithDatabase(db, () => this.processDimStyles(data.model, db))
             return data
           }
         },
@@ -537,12 +546,12 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processLayers(data.model, db)
-
-            // Guarantee layer '0' is created at least
-            if (db.tables.layerTable.numEntries === 0) {
-              db.createDefaultData({ layer: true })
-            }
+            acdbWithDatabase(db, () => {
+              this.processLayers(data.model, db)
+              if (db.tables.layerTable.numEntries === 0) {
+                db.createDefaultData({ layer: true })
+              }
+            })
             return data
           }
         },
@@ -556,7 +565,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processViewports(data.model, db)
+            acdbWithDatabase(db, () => this.processViewports(data.model, db))
             return data
           }
         },
@@ -570,15 +579,17 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 1,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processClasses(data.model, db)
-            this.processHeader(data.model, db)
-            // Override system variable values
-            if (sysVars) {
-              const sysVarManager = AcDbSysVarManager.instance()
-              for (const [name, value] of Object.entries(sysVars)) {
-                sysVarManager.setVar(name, value, db)
+            acdbWithDatabase(db, () => {
+              this.processClasses(data.model, db)
+              this.processHeader(data.model, db)
+              // Override system variable values
+              if (sysVars) {
+                const sysVarManager = AcDbSysVarManager.instance()
+                for (const [name, value] of Object.entries(sysVars)) {
+                  sysVarManager.setVar(name, value, db)
+                }
               }
-            }
+            })
             return data
           }
         },
@@ -592,7 +603,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processBlockTables(data.model, db)
+            acdbWithDatabase(db, () => this.processBlockTables(data.model, db))
             return data
           }
         },
@@ -606,11 +617,12 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
           step: 5,
           progress: percentage,
           task: async (data: { model: TModel }) => {
-            this.processObjects(data.model, db)
-            // Guarantee one layout is created for MODEL_SPACE at least
-            if (db.objects.layout.numEntries === 0) {
-              db.createDefaultData({ layout: true })
-            }
+            acdbWithDatabase(db, () => {
+              this.processObjects(data.model, db)
+              if (db.objects.layout.numEntries === 0) {
+                db.createDefaultData({ layout: true })
+              }
+            })
             return data
           }
         },
@@ -643,7 +655,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
               db,
               minimumChunkSize,
               percentage,
-              progress
+              progress,
+              signal
             )
             return data
           }
@@ -667,13 +680,17 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
 
     const t = Date.now()
     await scheduler.run(data)
+    signal?.throwIfAborted()
     loadDbTimeEntry.data.total = Date.now() - t
   }
 
-  protected onError(error: AcCmTaskError) {
-    if (this.progress) {
+  protected async onError(
+    error: AcCmTaskError,
+    progress?: AcDbConversionProgressCallback
+  ) {
+    if (progress) {
       const task = error.task as AcDbConversionTask<unknown, unknown>
-      this.progress(
+      await progress(
         task.data.progress.value,
         task.data.stage,
         'ERROR',
@@ -692,18 +709,7 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     if (error.task.name === 'ENTITY') {
       return false
     }
-    this.onFinished()
     return true
-  }
-
-  protected onFinished() {
-    if (this.progress) {
-      this.progress(100, 'END', 'END')
-      // Do not clear AcDbRenderingCache here: scene convert often continues
-      // draining after END (batchConvert / deferred glyph bake). Clearing mid-
-      // convert forces miss rebuilds and drops templates that INSERT instances
-      // still share. The viewer clears the cache on the next open / view.clear.
-    }
   }
 
   /**
@@ -729,7 +735,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
 
   protected async parse(
     _data: ArrayBuffer,
-    _timeout?: number
+    _timeout?: number,
+    _signal?: AbortSignal
   ): Promise<AcDbParsingTaskResult<TModel>> {
     throw new Error('Not impelemented yet!')
   }
@@ -787,7 +794,8 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
     _db: AcDbDatabase,
     _minimumChunkSize: number,
     _percentage: { value: number },
-    _progress?: AcDbConversionProgressCallback
+    _progress?: AcDbConversionProgressCallback,
+    _signal?: AbortSignal
   ) {
     throw new Error('Not impelemented yet!')
   }

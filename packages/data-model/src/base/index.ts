@@ -48,6 +48,7 @@ export {
   AcDbObject,
   TEMP_OBJECT_ID_PREFIX,
   acdbAssignWorkingDatabase,
+  acdbWithDatabase,
   acdbGetWorkingDatabase,
   acdbSetHostApplicationServicesProvider
 } from './AcDbObject'

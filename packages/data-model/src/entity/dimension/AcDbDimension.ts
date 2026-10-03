@@ -552,7 +552,10 @@ export abstract class AcDbDimension extends AcDbEntity {
     const blockTableRecord = this.getDimBlockTableRecord()
     if (blockTableRecord) {
       const matrix = this.computeDimBlockTransform()
-      const group = AcDbRenderingCache.instance.draw(
+      const group = AcDbRenderingCache.forContext(
+        renderer.context,
+        this.database
+      ).draw(
         renderer,
         blockTableRecord,
         this.resolvedColor,

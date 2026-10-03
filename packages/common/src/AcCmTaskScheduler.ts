@@ -129,9 +129,9 @@ export type AcCmCompleteCallback<T> = (finalResult: T) => void
  * Returning `false` will allow the scheduler to continue executing remaining tasks.
  *
  * @param {AcCmTaskError} error - Detailed information about the task error.
- * @returns {boolean} Whether to interrupt the task execution flow.
+ * @returns Whether to interrupt the task execution flow, after async reporting settles.
  */
-type AcCmErrorCallback = (error: AcCmTaskError) => boolean
+type AcCmErrorCallback = (error: AcCmTaskError) => boolean | Promise<boolean>
 
 /**
  * Type-safe task scheduler that executes a chain of named tasks in order.
@@ -232,7 +232,11 @@ export class AcCmTaskScheduler<TInitial, TFinal = TInitial> {
           return output
         })
       } catch (error) {
-        const shouldInterrupt = this.onError({ error, taskIndex: i, task })
+        const shouldInterrupt = await this.onError({
+          error,
+          taskIndex: i,
+          task
+        })
         if (shouldInterrupt) {
           // Stop executing further tasks
           return Promise.reject(error)

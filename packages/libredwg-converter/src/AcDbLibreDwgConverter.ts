@@ -5,6 +5,7 @@ import {
   AcDbBlockTableRecord,
   AcDbConversionProgressCallback,
   acdbCreateWorkerApi,
+  acdbWithDatabase,
   AcDbDatabase,
   AcDbDatabaseConverter,
   AcDbDatabaseConverterConfig,
@@ -69,7 +70,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     }
   }
 
-  protected async parse(data: ArrayBuffer, timeout?: number) {
+  protected async parse(
+    data: ArrayBuffer,
+    timeout?: number,
+    signal?: AbortSignal
+  ) {
+    signal?.throwIfAborted()
     const effectiveConfig = this.config
     const resolvedTimeout = this.getParserWorkerTimeout(data, timeout)
 
@@ -80,14 +86,23 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         // One concurrent worker needed for parser
         maxConcurrentWorkers: 1
       })
-      const result = await api.execute<
-        ArrayBuffer,
-        AcDbParsingTaskResult<DwgDatabase>
-      >(data)
-      // Release worker
-      api.destroy()
-      AcDbOpenDatabaseError.throwOnWorkerParseFailure(result)
-      return result.data!
+      const abort = () => api.destroy()
+      signal?.addEventListener('abort', abort, { once: true })
+      try {
+        const result = await api.execute<
+          ArrayBuffer,
+          AcDbParsingTaskResult<DwgDatabase>
+        >(data)
+        signal?.throwIfAborted()
+        AcDbOpenDatabaseError.throwOnWorkerParseFailure(result)
+        return result.data!
+      } catch (error) {
+        signal?.throwIfAborted()
+        throw error
+      } finally {
+        signal?.removeEventListener('abort', abort)
+        api.destroy()
+      }
     } else {
       throw new Error('dwg converter can run in web worker only!')
     }
@@ -428,7 +443,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     // Do nothing because entities are already processsed in method processBlockTables
   }
 
-  private async processEntitiesInBlock(
+  private processEntitiesInBlock(
     entities: DwgEntity[],
     blockTableRecord: AcDbBlockTableRecord
   ) {
@@ -456,7 +471,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db: AcDbDatabase,
     minimumChunkSize: number,
     startPercentage: { value: number },
-    progress?: AcDbConversionProgressCallback
+    progress?: AcDbConversionProgressCallback,
+    signal?: AbortSignal
   ) {
     const converter = new AcDbEntityConverter()
 
@@ -481,17 +497,20 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     // Process the ordered entities in chunks
     const blockTableRecord = db.tables.blockTable.modelSpace
     await batchProcessor.processChunk(async (start, end) => {
-      // Logic for processing each chunk of entities
-      const dbEntities: AcDbEntity[] = []
-      for (let i = start; i < end; i++) {
-        const entity = entities[i]
-        const dbEntity = converter.convert(entity)
-        if (dbEntity) {
-          dbEntities.push(dbEntity)
+      signal?.throwIfAborted()
+      acdbWithDatabase(db, () => {
+        // Logic for processing each chunk of entities
+        const dbEntities: AcDbEntity[] = []
+        for (let i = start; i < end; i++) {
+          const entity = entities[i]
+          const dbEntity = converter.convert(entity)
+          if (dbEntity) {
+            dbEntities.push(dbEntity)
+          }
         }
-      }
-      // Use batch append to improve performance
-      blockTableRecord.appendEntity(dbEntities)
+        // Use batch append to improve performance
+        blockTableRecord.appendEntity(dbEntities)
+      })
 
       // Update progress
       if (progress) {

@@ -2126,8 +2126,7 @@ export class AcDbMLeader extends AcDbEntity {
           }
           break
         case 271:
-          this.textAttachmentDirection =
-            n as AcDbMLeaderTextAttachmentDirection
+          this.textAttachmentDirection = n as AcDbMLeaderTextAttachmentDirection
           break
         case 272:
           this.bottomTextAttachmentDirection = n
@@ -2276,7 +2275,9 @@ export class AcDbMLeader extends AcDbEntity {
 
     // Resolve text style handle → name so font collection / renderer can find it.
     if (!this.textStyleName && this.textStyleId) {
-      const record = this.database.tables.textStyleTable.getIdAt(this.textStyleId)
+      const record = this.database.tables.textStyleTable.getIdAt(
+        this.textStyleId
+      )
       if (record?.name) this.textStyleName = record.name
     }
 
@@ -2291,7 +2292,11 @@ export class AcDbMLeader extends AcDbEntity {
       if (!contentTypeSet) {
         this.contentType = AcDbMLeaderContentType.MTextContent
       }
-    } else if ((hasMTextContent || this.hasMText) && textContent != null && !anchor) {
+    } else if (
+      (hasMTextContent || this.hasMText) &&
+      textContent != null &&
+      !anchor
+    ) {
       if (!contentTypeSet) {
         this.contentType = AcDbMLeaderContentType.MTextContent
       }
@@ -3166,7 +3171,7 @@ export class AcDbMLeader extends AcDbEntity {
       .multiply(mScale)
       .multiply(mBase)
 
-    return AcDbRenderingCache.instance.draw(
+    return AcDbRenderingCache.forContext(renderer.context, this.database).draw(
       renderer,
       blockTableRecord,
       this.resolvedColor,
@@ -3658,4 +3663,3 @@ export class AcDbMLeader extends AcDbEntity {
     }
   }
 }
-

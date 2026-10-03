@@ -1,4 +1,5 @@
 import { AcCmColor } from '@mlightcad/common'
+import { AcGiContext } from '@mlightcad/graphic-interface'
 import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -139,9 +140,7 @@ describe('AcDbBlockReference', () => {
   it('keeps nested elevated INSERT extents in the plan-view Z band', () => {
     const db = createDb()
     const stamp = createNamedBlock(db, 'STAMP')
-    stamp.appendEntity(
-      new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 })
-    )
+    stamp.appendEntity(new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }))
 
     const titleBlock = createNamedBlock(db, 'TITLE_BLOCK')
     const stampRef = new AcDbBlockReference('STAMP')
@@ -441,12 +440,12 @@ describe('AcDbBlockReference', () => {
     jest.spyOn(visibleLine, 'worldDraw').mockReturnValue(visibleDrawn as never)
     const invisibleSpy = jest.spyOn(invisibleLine, 'worldDraw')
 
-    AcDbRenderingCache.instance.clear()
     const renderer = {
+      context: new AcGiContext(),
       group: (items: unknown[]) => ({ items })
     }
 
-    const drawn = AcDbRenderingCache.instance.draw(
+    const drawn = AcDbRenderingCache.forContext(renderer.context, db).draw(
       renderer as never,
       block,
       new AcCmColor(),
@@ -471,12 +470,12 @@ describe('AcDbBlockReference', () => {
       return { id: 'line' } as never
     })
 
-    AcDbRenderingCache.instance.clear()
     const renderer = {
+      context: new AcGiContext(),
       group: (items: unknown[]) => ({ items })
     }
 
-    AcDbRenderingCache.instance.draw(
+    AcDbRenderingCache.forContext(renderer.context, db).draw(
       renderer as never,
       block,
       new AcCmColor().setRGBValue(0x000000),
@@ -512,13 +511,13 @@ describe('AcDbBlockReference', () => {
     blockRef.appendAttributes(hiddenAttr)
 
     const cacheResult = { id: 'block-rendered' }
-    const drawSpy = jest
-      .spyOn(AcDbRenderingCache.instance, 'draw')
-      .mockReturnValue(cacheResult as never)
-
     const renderer = {
+      context: new AcGiContext(),
       group: jest.fn((children: unknown[]) => ({ children }))
     }
+    const drawSpy = jest
+      .spyOn(AcDbRenderingCache.forContext(renderer.context, db), 'draw')
+      .mockReturnValue(cacheResult as never)
 
     expect(blockRef.subWorldDraw(renderer as never)).toBe(cacheResult)
     expect(drawSpy).toHaveBeenCalledTimes(1)
