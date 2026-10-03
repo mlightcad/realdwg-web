@@ -29,6 +29,7 @@ function createMockGroup(overrides: Record<string, unknown> = {}) {
     applyMatrix: jest.fn(),
     addChild: jest.fn(),
     isCompacted: false,
+    userData: {} as { blockCacheKey?: string },
     compactForInstancing: jest.fn(function (this: {
       isCompacted: boolean
     }) {
@@ -39,7 +40,8 @@ function createMockGroup(overrides: Record<string, unknown> = {}) {
     fastDeepClone() {
       return createMockGroup({
         ...overrides,
-        isCompacted: group.isCompacted
+        isCompacted: group.isCompacted,
+        userData: { ...group.userData }
       })
     },
     ...overrides
@@ -464,5 +466,32 @@ describe('AcDbRenderingCache', () => {
 
     AcDbRenderingCache.lruEnabled = true
     AcDbRenderingCache.lruMaxEntries = 512
+  })
+
+  it('stamps blockCacheKey on get clones and exposes peek without cloning', () => {
+    const cache = new AcDbRenderingCache()
+    const template = createMockGroup()
+    cache.set('Door', template as never)
+
+    expect(cache.peek('Door')).toBe(template)
+
+    const clone = cache.get('Door') as unknown as ReturnType<
+      typeof createMockGroup
+    >
+    expect(clone).not.toBe(template)
+    expect(clone.userData.blockCacheKey).toBe('Door')
+    expect((template.userData as { blockCacheKey?: string }).blockCacheKey).toBe(
+      undefined
+    )
+  })
+
+  it('invokes onCleared when clear runs', () => {
+    const cache = new AcDbRenderingCache()
+    cache.set('A', createMockGroup() as never)
+    const onCleared = jest.fn()
+    AcDbRenderingCache.onCleared = onCleared
+    cache.clear()
+    expect(onCleared).toHaveBeenCalledTimes(1)
+    AcDbRenderingCache.onCleared = undefined
   })
 })

@@ -6,7 +6,6 @@ import {
   AcCmTaskScheduler
 } from '@mlightcad/common'
 
-import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
 import type { AcDbDatabase } from './AcDbDatabase'
 import { AcDbSysVarManager } from './AcDbSysVarManager'
 
@@ -700,8 +699,10 @@ export abstract class AcDbDatabaseConverter<TModel = unknown> {
   protected onFinished() {
     if (this.progress) {
       this.progress(100, 'END', 'END')
-      // Clear cache to reduce memory consumption
-      AcDbRenderingCache.instance.clear()
+      // Do not clear AcDbRenderingCache here: scene convert often continues
+      // draining after END (batchConvert / deferred glyph bake). Clearing mid-
+      // convert forces miss rebuilds and drops templates that INSERT instances
+      // still share. The viewer clears the cache on the next open / view.clear.
     }
   }
 
