@@ -198,7 +198,39 @@ describe('AcDbText', () => {
     text.position = new AcGePoint3d(3, 4, 5)
     const grips = text.subGetGripPoints()
     expect(grips).toHaveLength(1)
-    expect(grips[0]).toBe(text.position)
+    expect(grips[0]).toMatchObject({
+      x: text.position.x,
+      y: text.position.y,
+      z: text.position.z
+    })
+  })
+
+  it('places TEXT with extrusion (0,0,-1) at mirrored WCS X', () => {
+    const text = new AcDbText()
+    text.dxfInFields(
+      AcDbDxfFiler.fromString(
+        '100\nAcDbEntity\n100\nAcDbText\n10\n1000\n20\n500\n30\n0\n40\n2.5\n1\nHi\n' +
+          '50\n0\n41\n1\n210\n0\n220\n0\n230\n-1\n100\nAcDbText\n73\n0\n'
+      )
+    )
+    expect(text.normal.z).toBeCloseTo(-1, 8)
+    expect(text.position).toMatchObject({ x: 1000, y: 500, z: 0 })
+
+    const extents = text.geometricExtents
+    expect(extents.min.x).toBeCloseTo(-1000, 5)
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+    text.database = db
+    const renderer = { mtext: jest.fn(() => ({})) } as unknown as {
+      mtext: jest.Mock
+    }
+    text.subWorldDraw(renderer as never, true)
+    const [mtextData] = renderer.mtext.mock.calls[0]
+    expect(mtextData.position).toMatchObject({ x: -1000, y: 500, z: 0 })
+    expect(mtextData.rotation).toBeCloseTo(0, 8)
+    expect(mtextData.widthFactor).toBeCloseTo(-1, 8)
   })
 
   it('transforms text with normal scale and rotation updates', () => {

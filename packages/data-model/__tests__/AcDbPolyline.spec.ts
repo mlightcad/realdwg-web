@@ -787,4 +787,28 @@ describe('AcDbPolyline', () => {
     polyline.closed = false
     expect(polyline.area).toBe(0)
   })
+
+  it('maps OCS vertices to WCS for extrusion (0,0,-1)', () => {
+    const polyline = new AcDbPolyline()
+    polyline.normal = new AcGeVector3d(0, 0, -1)
+    polyline.addVertexAt(0, new AcGePoint2d(1000, 500))
+    polyline.addVertexAt(1, new AcGePoint2d(1100, 520))
+
+    expect(polyline.getPoint2dAt(0)).toEqual(new AcGePoint2d(1000, 500))
+    expect(polyline.getPoint3dAt(0)).toMatchObject({ x: -1000, y: 500, z: 0 })
+    expect(polyline.getPoint3dAt(1)).toMatchObject({ x: -1100, y: 520, z: 0 })
+
+    const extents = polyline.geometricExtents
+    expect(extents.min.x).toBeCloseTo(-1100, 8)
+    expect(extents.max.x).toBeCloseTo(-1000, 8)
+    expect(extents.min.y).toBeCloseTo(500, 8)
+    expect(extents.max.y).toBeCloseTo(520, 8)
+
+    const renderer = { lines: jest.fn(() => ({})) }
+    polyline.subWorldDraw(renderer as never)
+    expect(renderer.lines).toHaveBeenCalledWith([
+      expect.objectContaining({ x: -1000, y: 500, z: 0 }),
+      expect.objectContaining({ x: -1100, y: 520, z: 0 })
+    ])
+  })
 })

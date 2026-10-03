@@ -405,6 +405,23 @@ describe('AcDbBlockReference', () => {
     expect(blockRef.geometricExtents.max).toMatchObject({ x: 6, y: 11, z: 0 })
   })
 
+  it('includes extrusion in geometricExtents for normal (0,0,-1)', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'MIRROR_BLOCK')
+    block.appendEntity(new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }))
+
+    const blockRef = new AcDbBlockReference('MIRROR_BLOCK')
+    blockRef.position = new AcGePoint3d(1000, 500, 0)
+    blockRef.normal = { x: 0, y: 0, z: -1 }
+    db.tables.blockTable.modelSpace.appendEntity(blockRef)
+
+    const extents = blockRef.geometricExtents
+    expect(extents.min.x).toBeCloseTo(-1001, 8)
+    expect(extents.max.x).toBeCloseTo(-1000, 8)
+    expect(extents.min.y).toBeCloseTo(500, 8)
+    expect(extents.max.y).toBeCloseTo(500, 8)
+  })
+
   it('skips invisible entities inside block definitions when drawing through cache', () => {
     const db = createDb()
     const block = createNamedBlock(db, 'INV_BLK')

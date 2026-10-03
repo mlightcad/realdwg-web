@@ -251,6 +251,55 @@ describe('AcDbLine', () => {
     expect(out).toContain('10\n1.25\n20\n-2.5\n30\n3.75\n')
     expect(out).toContain('11\n4.5\n21\n5.25\n31\n-6.75\n')
   })
+
+  it('keeps WCS start/end when dxfIn reads extrusion (0,0,-1)', () => {
+    // LINE 10/11 are WCS; applying OCS for -Z wrongly mirrored X (issue #226).
+    createWorkingDb()
+    const dxf = [
+      '0',
+      'LINE',
+      '5',
+      'AA',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbLine',
+      '10',
+      '1000',
+      '20',
+      '500',
+      '30',
+      '0',
+      '11',
+      '1100',
+      '21',
+      '520',
+      '31',
+      '0',
+      '210',
+      '0',
+      '220',
+      '0',
+      '230',
+      '-1',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf)
+    expect(filer.readItem()?.value).toBe('LINE')
+
+    const line = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
+    line.dxfIn(filer)
+
+    expect(line.normal.z).toBeCloseTo(-1, 8)
+    expect(line.startPoint.x).toBeCloseTo(1000, 8)
+    expect(line.startPoint.y).toBeCloseTo(500, 8)
+    expect(line.endPoint.x).toBeCloseTo(1100, 8)
+    expect(line.endPoint.y).toBeCloseTo(520, 8)
+  })
   it('creates a detached clone with a new objectId', () => {
     createWorkingDb()
     expectDetachedClone(

@@ -8,6 +8,7 @@ import {
   AcGePolyline2d,
   AcGePolyline2dVertex,
   acgeTransformOcsPointToWcs,
+  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -247,23 +248,21 @@ export class AcDb2dPolyline extends AcDbCurve {
       return new AcGeBox3d()
     }
     return new AcGeBox3d().setFromPoints([
-      acgeTransformOcsPointToWcs(
-        { x: box.min.x, y: box.min.y, z: this._elevation },
-        this._normal
-      ),
-      acgeTransformOcsPointToWcs(
-        { x: box.max.x, y: box.min.y, z: this._elevation },
-        this._normal
-      ),
-      acgeTransformOcsPointToWcs(
-        { x: box.max.x, y: box.max.y, z: this._elevation },
-        this._normal
-      ),
-      acgeTransformOcsPointToWcs(
-        { x: box.min.x, y: box.max.y, z: this._elevation },
-        this._normal
-      )
+      this.ocsPointToWcs(box.min.x, box.min.y),
+      this.ocsPointToWcs(box.max.x, box.min.y),
+      this.ocsPointToWcs(box.max.x, box.max.y),
+      this.ocsPointToWcs(box.min.x, box.max.y)
     ])
+  }
+
+  /**
+   * Maps an OCS polyline point (plus elevation) into WCS using {@link normal}.
+   */
+  private ocsPointToWcs(x: number, y: number): AcGePoint3d {
+    return acgeTransformOcsPointToWcs(
+      { x, y, z: this._elevation },
+      this._normal
+    )
   }
 
   /** @inheritdoc */
@@ -288,15 +287,17 @@ export class AcDb2dPolyline extends AcDbCurve {
     const gripPoints = new Array<AcGePoint3d>()
     for (let i = 0; i < this._geo.numberOfVertices; ++i) {
       const temp = this._geo.getPointAt(i)
-      gripPoints.push(new AcGePoint3d(temp.x, temp.y, this._elevation))
+      gripPoints.push(this.ocsPointToWcs(temp.x, temp.y))
     }
     return gripPoints
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    // Grips are exposed in WCS; 2D vertices are stored in OCS.
+    const ocsOffset = acgeTransformWcsPointToOcs(offset, this._normal)
     acdbForEachGripIndex(indices, index => {
-      acdbMovePolyline2dVertexAt(this._geo.vertices, index, offset)
+      acdbMovePolyline2dVertexAt(this._geo.vertices, index, ocsOffset)
     })
     return this
   }
@@ -328,7 +329,7 @@ export class AcDb2dPolyline extends AcDbCurve {
       case AcDbOsnapMode.EndPoint:
         for (let index = 0; index < vertexCount; index++) {
           const vertex = geo.getPointAt(index)
-          snapPoints.push(new AcGePoint3d(vertex.x, vertex.y, elevation))
+          snapPoints.push(this.ocsPointToWcs(vertex.x, vertex.y))
         }
         break
       case AcDbOsnapMode.MidPoint:
@@ -348,7 +349,9 @@ export class AcDb2dPolyline extends AcDbCurve {
             pickPoint,
             segmentSnaps
           )
-          candidates.push(...segmentSnaps)
+          for (const snap of segmentSnaps) {
+            candidates.push(this.ocsPointToWcs(snap.x, snap.y))
+          }
         }
         if (osnapMode === AcDbOsnapMode.MidPoint) {
           snapPoints.push(...candidates)
@@ -495,9 +498,7 @@ export class AcDb2dPolyline extends AcDbCurve {
   subWorldDraw(renderer: AcGiRenderer) {
     const points: AcGePoint3d[] = []
     const tmp = this._geo.tessellate(acdbDrawTessellateOptions(renderer))
-    tmp.forEach(point =>
-      points.push(new AcGePoint3d().set(point.x, point.y, this.elevation))
-    )
+    tmp.forEach(point => points.push(this.ocsPointToWcs(point.x, point.y)))
     return renderer.lines(points)
   }
 

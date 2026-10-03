@@ -360,4 +360,38 @@ describe('AcDb2dPolyline', () => {
     }
     expect(minY).toBeLessThan(-5)
   })
+
+  it('maps OCS grips and draw points to WCS for extrusion (0,0,-1)', () => {
+    const polyline = new AcDb2dPolyline(
+      AcDbPoly2dType.SimplePoly,
+      [new AcGePoint3d(1000, 500, 0), new AcGePoint3d(1100, 520, 0)],
+      0,
+      false
+    )
+    polyline.normal = { x: 0, y: 0, z: -1 }
+
+    const grips = polyline.subGetGripPoints()
+    expect(grips[0]).toMatchObject({ x: -1000, y: 500, z: 0 })
+    expect(grips[1]).toMatchObject({ x: -1100, y: 520, z: 0 })
+
+    const extents = polyline.geometricExtents
+    expect(extents.min.x).toBeCloseTo(-1100, 8)
+    expect(extents.max.x).toBeCloseTo(-1000, 8)
+
+    const snapPoints: AcGePoint3d[] = []
+    polyline.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      snapPoints
+    )
+    expect(snapPoints[0]).toMatchObject({ x: -1000, y: 500, z: 0 })
+
+    const renderer = { lines: jest.fn(() => ({})) }
+    polyline.subWorldDraw(renderer as never)
+    expect(renderer.lines).toHaveBeenCalledWith([
+      expect.objectContaining({ x: -1000, y: 500, z: 0 }),
+      expect.objectContaining({ x: -1100, y: 520, z: 0 })
+    ])
+  })
 })
