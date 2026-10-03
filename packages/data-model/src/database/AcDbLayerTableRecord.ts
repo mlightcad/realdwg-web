@@ -189,8 +189,9 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     return (this.standardFlags & 0x01) == 1
   }
   set isFrozen(value: boolean) {
-    const flag = value ? 1 : 0
-    this.standardFlags = this.standardFlags | flag
+    this.standardFlags = value
+      ? this.standardFlags | 0x01
+      : this.standardFlags & ~0x01
   }
 
   /**
