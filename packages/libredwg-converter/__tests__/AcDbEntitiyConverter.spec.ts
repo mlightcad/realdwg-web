@@ -13,6 +13,8 @@ import {
   AcDbPolyline,
   AcDbProxyEntity,
   AcDbShape,
+  AcDbSolid,
+  AcDbTrace,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
 
@@ -489,5 +491,49 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(fcf.dimensionStyle).toBe('Standard')
     expect(fcf.normal).toMatchObject({ x: 0, y: 0, z: 1 })
     expect(fcf.direction).toMatchObject({ x: 1, y: 0, z: 0 })
+  })
+
+  it('converts TRACE to AcDbTrace and SOLID to AcDbSolid', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const corners = {
+      corner1: { x: 0, y: 0, z: 4 },
+      corner2: { x: 10, y: 0, z: 4 },
+      corner3: { x: 10, y: 5, z: 4 },
+      corner4: { x: 0, y: 5, z: 4 },
+      thickness: 2,
+      extrusionDirection: { x: 0, y: 0, z: 1 }
+    }
+
+    const trace = converter.convert({ type: 'TRACE', ...corners } as any)
+    const solid = converter.convert({ type: 'SOLID', ...corners } as any)
+
+    expect(trace?.constructor).toBe(AcDbTrace)
+    expect(solid?.constructor).toBe(AcDbSolid)
+    const dbTrace = trace as AcDbTrace
+    expect(dbTrace.dxfTypeName).toBe('TRACE')
+    expect(dbTrace.thickness).toBe(2)
+    expect(dbTrace.elevation).toBeCloseTo(4)
+    expect(dbTrace.getPointAt(0)).toMatchObject({ x: 0, y: 0, z: 4 })
+    expect(dbTrace.getPointAt(3)).toMatchObject({ x: 0, y: 5, z: 4 })
+    expect((solid as AcDbSolid).dxfTypeName).toBe('SOLID')
+  })
+
+  it('maps TRACE corners from OCS into WCS when extrusion points to -Z', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const trace = converter.convert({
+      type: 'TRACE',
+      corner1: { x: 1, y: 2, z: 4 },
+      corner2: { x: 1, y: 2 },
+      corner3: { x: 1, y: 2 },
+      extrusionDirection: { x: 0, y: 0, z: -1 },
+      thickness: 0
+    } as any) as AcDbTrace
+
+    expect(trace.getPointAt(0)).toMatchObject({ x: -1, y: 2, z: -4 })
+    expect(trace.getPointAt(3)).toMatchObject({ x: -1, y: 2, z: 0 })
+    expect(trace.normal).toMatchObject({ x: 0, y: 0, z: -1 })
+    expect(trace.elevation).toBeCloseTo(-4)
   })
 })
