@@ -63,6 +63,7 @@ import {
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode,
+  AcDbTrace,
   AcDbViewport,
   AcDbWipeout,
   AcDbXline,
@@ -125,6 +126,7 @@ import type {
   DwgTableEntity,
   DwgTextEntity,
   DwgToleranceEntity,
+  DwgTraceEntity,
   DwgViewportEntity,
   DwgWipeoutEntity,
   DwgXlineEntity
@@ -260,6 +262,8 @@ export class AcDbEntityConverter {
       return this.convertShape(entity as DwgShapeEntity)
     } else if (entity.type == 'SOLID') {
       return this.convertSolid(entity as DwgSolidEntity)
+    } else if (entity.type == 'TRACE') {
+      return this.convertTrace(entity as DwgTraceEntity)
     } else if (entity.type == 'VIEWPORT') {
       return this.convertViewport(entity as DwgViewportEntity)
     } else if (entity.type == 'WIPEOUT') {
@@ -392,15 +396,35 @@ export class AcDbEntityConverter {
   }
 
   private convertSolid(solid: DwgSolidEntity) {
-    const dbEntity = new AcDbSolid()
-    dbEntity.setPointAt(0, { ...solid.corner1, z: 0 })
-    dbEntity.setPointAt(1, { ...solid.corner2, z: 0 })
-    dbEntity.setPointAt(2, { ...solid.corner3, z: 0 })
-    dbEntity.setPointAt(
-      3,
-      solid.corner4 ? { ...solid.corner4, z: 0 } : { ...solid.corner3, z: 0 }
-    )
-    dbEntity.thickness = solid.thickness ?? 0
+    return this.convertTraceLike(new AcDbSolid(), solid)
+  }
+
+  private convertTrace(trace: DwgTraceEntity) {
+    return this.convertTraceLike(new AcDbTrace(), trace)
+  }
+
+  /**
+   * SOLID and TRACE share corner, thickness, and extrusion data. LibreDWG
+   * stores the four corners in OCS; {@link AcDbTrace} keeps them in WCS.
+   */
+  private convertTraceLike(
+    dbEntity: AcDbTrace,
+    entity: DwgSolidEntity | DwgTraceEntity
+  ) {
+    const normal = entity.extrusionDirection ?? AcGeVector3d.Z_AXIS
+    const toWcs = (corner: { x: number; y: number; z?: number }) =>
+      acgeTransformOcsPointToWcs(
+        { x: corner.x, y: corner.y, z: corner.z ?? 0 },
+        normal
+      )
+    const corner4 = entity.corner4 ?? entity.corner3
+    dbEntity.setPointAt(0, toWcs(entity.corner1))
+    dbEntity.setPointAt(1, toWcs(entity.corner2))
+    dbEntity.setPointAt(2, toWcs(entity.corner3))
+    dbEntity.setPointAt(3, toWcs(corner4))
+    dbEntity.thickness = entity.thickness ?? 0
+    dbEntity.normal.copy(normal)
+    dbEntity.elevation = dbEntity.getPointAt(0).z
     return dbEntity
   }
 
