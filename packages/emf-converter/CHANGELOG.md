@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.2
+
+### Patch Changes
+
+- fix: maps OCS geometry into WCS so TRACE and SOLID corners convert correctly and entities with extrusion (0,0,-1) land in world space. Rendering cache is kept across convert finish so drawings do not drop cached graphics when conversion completes
+
 ## 1.15.1
 
 ### Patch Changes
