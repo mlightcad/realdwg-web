@@ -557,6 +557,67 @@ describe('AcDbMLeader dxfInFields CONTEXT_DATA', () => {
     expect(mleader.doglegLength).toBe(8)
   })
 
+  it('prefers CONTEXT_DATA arrowhead size over unscaled entity group 42', () => {
+    // Native MULTILEADER stores arrowhead size twice: scaled in CONTEXT_DATA
+    // (group 140) and unscaled at entity level (group 42). Group 42 must not
+    // overwrite the context value (see mlightcad/realdwg-web#235).
+    const db = createWorkingDb()
+    const groups = [
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbMLeader',
+      '270',
+      '2',
+      '300',
+      'CONTEXT_DATA{',
+      '40',
+      '0.01',
+      '140',
+      '0.025',
+      '301',
+      '}',
+      '42',
+      '2.5'
+    ]
+    const mleader = new AcDbMLeader()
+    mleader.dxfIn(
+      AcDbDxfFiler.fromString(groups.join('\n') + '\n', { database: db })
+    )
+    expect(mleader.arrowheadSize).toBe(0.025)
+    expect(mleader.contentScale).toBe(0.01)
+  })
+
+  it('scales entity-level arrowhead size by content scale when CONTEXT_DATA omits it', () => {
+    const db = createWorkingDb()
+    const groups = [
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbMLeader',
+      '270',
+      '2',
+      '300',
+      'CONTEXT_DATA{',
+      '40',
+      '0.01',
+      '301',
+      '}',
+      '42',
+      '2.5'
+    ]
+    const mleader = new AcDbMLeader()
+    mleader.dxfIn(
+      AcDbDxfFiler.fromString(groups.join('\n') + '\n', { database: db })
+    )
+    expect(mleader.arrowheadSize).toBeCloseTo(0.025)
+    expect(mleader.contentScale).toBe(0.01)
+  })
+
   it('still reads legacy flat dxfOutFields leader format', () => {
     const db = createWorkingDb()
     const written = new AcDbMLeader()
