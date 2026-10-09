@@ -83,6 +83,26 @@ describe('AcDbViewport', () => {
     expect(giViewport.viewCenter).toMatchObject({ x: 1, y: 1, z: 0 })
     expect(giViewport.viewTarget).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(giViewport.viewTwistAngle).toBe(0)
+    expect(giViewport.frozenLayerIds).toEqual([])
+    expect(giViewport.frozenLayers).toEqual([])
+  })
+
+  it('passes frozen layer ids and resolved names through toGiViewport', () => {
+    const db = createDb()
+    const layer = new AcDbLayerTableRecord({ name: 'DetailA' })
+    db.tables.layerTable.add(layer)
+
+    const viewport = new AcDbViewport()
+    viewport.frozenLayerIds = [layer.objectId, 'missing-handle']
+    db.tables.blockTable.modelSpace.appendEntity(viewport)
+
+    const giViewport = viewport.toGiViewport()
+    expect(giViewport.frozenLayerIds).toEqual([layer.objectId, 'missing-handle'])
+    expect(giViewport.frozenLayers).toEqual(['DetailA'])
+
+    const cloned = giViewport.clone()
+    expect(cloned.frozenLayerIds).toEqual(giViewport.frozenLayerIds)
+    expect(cloned.frozenLayers).toEqual(['DetailA'])
   })
 
   it('maps DCS view center through viewTarget into WCS viewBox', () => {
