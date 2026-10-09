@@ -321,6 +321,18 @@ export class AcDbAttribute extends AcDbText {
       const item = filer.readItem()
       if (!item) break
       const code = Number(item.code)
+      if (code === 100) {
+        // Embedded objects (e.g. AcDbXrecord) share group 70/280 with ATTRIB.
+        // Skip their payload so those codes are not applied as attribute flags,
+        // but keep scanning until XData so dxfInXData can still run.
+        if (String(item.value) === 'AcDbAttribute') {
+          continue
+        }
+        while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
+          if (!filer.readItem()) break
+        }
+        break
+      }
       const n = Number(item.value)
       switch (code) {
         case 2:
