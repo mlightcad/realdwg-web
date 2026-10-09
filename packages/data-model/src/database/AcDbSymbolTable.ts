@@ -94,9 +94,12 @@ export class AcDbSymbolTable<
     const tableName = manager.resolveSymbolTableName(this)
 
     record.database = this.database
-    record.ownerId = this.objectId
 
+    // Commit before assigning ownerId: if the record's handle displaces this
+    // table, assignGeneratedHandle remints the table first; ownerId must then
+    // point at the table's post-remint id (see issue #233).
     this.database.commitObjectHandle(record, id => this.hasId(id))
+    record.ownerId = this.objectId
 
     const normalizedName = this.normalizeName(record.name)
     if (normalizedName) {
