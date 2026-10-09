@@ -15,6 +15,8 @@ export class AcGiViewport {
   private _number: number
   private _id: string
   private _groupId: string
+  private _frozenLayerIds: string[]
+  private _frozenLayers: string[]
 
   constructor() {
     this._number = -1
@@ -27,6 +29,8 @@ export class AcGiViewport {
     this._viewTarget = new AcGePoint3d()
     this._viewTwistAngle = 0
     this._viewHeight = 0
+    this._frozenLayerIds = []
+    this._frozenLayers = []
   }
 
   /**
@@ -57,6 +61,29 @@ export class AcGiViewport {
   }
   set groupId(value: string) {
     this._groupId = value
+  }
+
+  /**
+   * Soft-pointer object ids of layers frozen in this viewport (DXF group 331 /
+   * VPLAYER). Empty when the viewport does not freeze any layers.
+   */
+  get frozenLayerIds() {
+    return this._frozenLayerIds
+  }
+  set frozenLayerIds(value: string[]) {
+    this._frozenLayerIds = [...value]
+  }
+
+  /**
+   * Names of layers frozen in this viewport (resolved from
+   * {@link frozenLayerIds}). Used by renderers to hide model-space layer
+   * groups while drawing through the viewport.
+   */
+  get frozenLayers() {
+    return this._frozenLayers
+  }
+  set frozenLayers(value: string[]) {
+    this._frozenLayers = [...value]
   }
 
   /**
@@ -219,6 +246,8 @@ export class AcGiViewport {
     viewport.viewTarget.copy(this.viewTarget)
     viewport.viewTwistAngle = this.viewTwistAngle
     viewport.viewHeight = this.viewHeight
+    viewport.frozenLayerIds = this.frozenLayerIds
+    viewport.frozenLayers = this.frozenLayers
     return viewport
   }
 
@@ -238,6 +267,8 @@ export class AcGiViewport {
     this.viewTarget.copy(viewport.viewTarget)
     this.viewTwistAngle = viewport.viewTwistAngle
     this.viewHeight = viewport.viewHeight
+    this.frozenLayerIds = viewport.frozenLayerIds
+    this.frozenLayers = viewport.frozenLayers
     return this
   }
 }

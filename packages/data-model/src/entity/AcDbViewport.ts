@@ -748,6 +748,18 @@ export class AcDbViewport extends AcDbEntity {
     viewport.viewCenter = this.viewCenter
     viewport.viewTarget = this.viewTarget
     viewport.viewTwistAngle = this.viewTwistAngle
+    viewport.frozenLayerIds = this.frozenLayerIds
+    const frozenLayers: string[] = []
+    const layerTable = this.database?.tables.layerTable
+    if (layerTable) {
+      for (const id of this.frozenLayerIds) {
+        const layer = layerTable.getIdAt(id)
+        if (layer) {
+          frozenLayers.push(layer.name)
+        }
+      }
+    }
+    viewport.frozenLayers = frozenLayers
     return viewport
   }
 
