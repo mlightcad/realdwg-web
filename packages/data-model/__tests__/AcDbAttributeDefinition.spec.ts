@@ -290,6 +290,56 @@ describe('AcDbAttributeDefinition', () => {
     expect(out).toContain('\n74\n1\n')
   })
 
+  it('does not treat an embedded Xrecord group 70 as attribute flags', () => {
+    setWorkingDb()
+    const groups = [
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbText',
+      '10',
+      0,
+      '20',
+      0,
+      '30',
+      0,
+      '40',
+      3.2,
+      '1',
+      'default',
+      '100',
+      'AcDbAttributeDefinition',
+      '3',
+      'Prompt',
+      '2',
+      'PROJEKT',
+      '70',
+      0,
+      '74',
+      1,
+      '280',
+      0,
+      '100',
+      'AcDbXrecord',
+      '280',
+      0,
+      '70',
+      1,
+      '1001',
+      'MYAPP',
+      '1000',
+      'xdata-value'
+    ]
+    const attDef = new AcDbAttributeDefinition()
+    attDef.dxfIn(AcDbDxfFiler.fromString(groups.join('\n') + '\n'))
+    expect(attDef.isInvisible).toBe(false)
+    expect(attDef.tag).toBe('PROJEKT')
+    expect(attDef.prompt).toBe('Prompt')
+    expect(attDef.getXData('MYAPP')?.at(1)?.value).toBe('xdata-value')
+  })
+
   it('creates a detached clone with a new objectId', () => {
     expectDetachedClone(() => new AcDbAttributeDefinition())
   })
