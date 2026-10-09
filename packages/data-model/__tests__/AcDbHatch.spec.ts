@@ -246,6 +246,91 @@ describe('AcDbHatch', () => {
     }
   })
 
+  it('dxfInFields keeps DXF groups 62/420 instead of cloning HPCOLOR/CECOLOR', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousHpColor = manager.getVar(AcDbSystemVariables.HPCOLOR, db)
+
+    try {
+      db.cecolor = new AcCmColor().setByLayer()
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'None', db)
+
+      const solid = [
+        '10',
+        0,
+        '20',
+        0,
+        '30',
+        0,
+        '2',
+        'SOLID',
+        '70',
+        1,
+        '71',
+        0,
+        '91',
+        0,
+        '75',
+        0,
+        '76',
+        1,
+        '98',
+        0
+      ]
+
+      const named = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(named)
+      named.dxfIn(
+        AcDbDxfFiler.fromString(
+          [
+            '100',
+            'AcDbEntity',
+            '8',
+            '0',
+            '62',
+            254,
+            '420',
+            0xcfcfcf,
+            '100',
+            'AcDbHatch',
+            ...solid
+          ].join('\n') + '\n',
+          { database: db }
+        )
+      )
+      expect(named.color.RGB).toBe(0xcfcfcf)
+
+      const unnamed = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(unnamed)
+      unnamed.dxfIn(
+        AcDbDxfFiler.fromString(
+          [
+            '100',
+            'AcDbEntity',
+            '8',
+            '0',
+            '100',
+            'AcDbHatch',
+            ...solid
+          ].join('\n') + '\n',
+          { database: db }
+        )
+      )
+      expect(unnamed.color.colorIndex).toBe(256)
+
+      const live = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(live)
+      manager.setVar(AcDbSystemVariables.HPCOLOR, 'RGB:10,20,30', db)
+      expect(live.color.RGB).toBe(0x0a141e)
+    } finally {
+      manager.setVar(
+        AcDbSystemVariables.HPCOLOR,
+        previousHpColor as AcCmColor,
+        db
+      )
+    }
+  })
+
   it('uses hatch system variables while rendering hatches without explicit pattern metadata', () => {
     const db = createWorkingDb()
     const manager = AcDbSysVarManager.instance()
