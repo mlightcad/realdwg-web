@@ -473,6 +473,11 @@ export abstract class AcDbEntity extends AcDbObject {
       }
     }
 
+    // Groups 62/420 must be assigned through the color setter. Mutating
+    // `this.color` in place is wrong when a subclass getter returns a clone
+    // (AcDbHatch follows HPCOLOR/CECOLOR until color is explicit).
+    let color: AcCmColor | undefined
+
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
       if (!item) break
@@ -498,10 +503,12 @@ export abstract class AcDbEntity extends AcDbObject {
           this.visibility = Number(item.value) === 0
           break
         case 62:
-          this.color.colorIndex = Number(item.value)
+          if (color == null) color = new AcCmColor()
+          color.colorIndex = Number(item.value)
           break
         case 420:
-          this.color.setRGBValue(Number(item.value))
+          if (color == null) color = new AcCmColor()
+          color.setRGBValue(Number(item.value))
           break
         case 370:
           this.lineWeight = Number(item.value)
@@ -534,6 +541,10 @@ export abstract class AcDbEntity extends AcDbObject {
           // (TEXT/MTEXT/DIMENSION/TABLE often carry layout/material extras).
           break
       }
+    }
+
+    if (color != null) {
+      this.color = color
     }
 
     // Omitted group 62 is ByLayer per the DXF spec. Record the default lazily
