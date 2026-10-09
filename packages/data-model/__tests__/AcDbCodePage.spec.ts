@@ -175,4 +175,125 @@ describe('DXF Korean (CP949) text decoding', () => {
     expect(values[1]).toBe('中文文本')
     expect(values[8]).toBe('图层')
   })
+
+  it('decodes legacy code-page ASCII DXF span by span, not as one string', () => {
+    // Large enough that a full-file TextDecoder pass would be visible, and
+    // larger than the 64 KiB header-peek chunk.
+    const payload = new Uint8Array(80 * 1024)
+    payload.fill(0x41)
+    payload[0] = 0xdf // ß in windows-1252; invalid UTF-8 lead
+    const lines: (string | Uint8Array)[] = [
+      '0', 'SECTION', '2', 'HEADER',
+      '9', '$ACADVER', '1', 'AC1015',
+      '9', '$DWGCODEPAGE', '3', 'ANSI_1252',
+      '0', 'ENDSEC',
+      '0', 'SECTION', '2', 'ENTITIES',
+      '0', 'TEXT', '1', payload,
+      '0', 'ENDSEC', '0', 'EOF'
+    ]
+    const bytes = new Uint8Array(buildDxfBytes(lines))
+    const decodeLengths: number[] = []
+    const original = TextDecoder.prototype.decode
+    TextDecoder.prototype.decode = function (
+      this: TextDecoder,
+      input?: AllowSharedBufferSource,
+      options?: TextDecodeOptions
+    ) {
+      if (input != null) {
+        decodeLengths.push(
+          input instanceof ArrayBuffer ? input.byteLength : input.byteLength
+        )
+      }
+      return original.call(this, input, options)
+    }
+    try {
+      const values = readStringPairs(acdbCreateDxfPairReader(bytes))
+      expect(values[1].startsWith('ß')).toBe(true)
+      expect(values[1].length).toBe(payload.length)
+    } finally {
+      TextDecoder.prototype.decode = original
+    }
+    expect(decodeLengths.length).toBeGreaterThan(0)
+    expect(Math.max(...decodeLengths)).toBeLessThan(bytes.byteLength)
+  })
+})
+
+function buildBinaryDxfLayer(
+  version: string,
+  codePage: string,
+  nameBytes: number[]
+): Uint8Array {
+  const bytes: number[] = [
+    ...new TextEncoder().encode('AutoCAD Binary DXF\r\n'),
+    0x1a,
+    0x00
+  ]
+  const str = (code: number, value: number[]) => {
+    bytes.push(code & 0xff, code >> 8, ...value, 0)
+  }
+  const ascii = (s: string) => [...s].map(c => c.charCodeAt(0))
+  str(0, ascii('SECTION'))
+  str(2, ascii('HEADER'))
+  str(9, ascii('$ACADVER'))
+  str(1, ascii(version))
+  str(9, ascii('$DWGCODEPAGE'))
+  str(3, ascii(codePage))
+  str(0, ascii('ENDSEC'))
+  str(0, ascii('SECTION'))
+  str(2, ascii('TABLES'))
+  str(0, ascii('LAYER'))
+  str(2, nameBytes)
+  str(0, ascii('ENDSEC'))
+  str(0, ascii('EOF'))
+  return new Uint8Array(bytes)
+}
+
+function readFirstNonSectionName(
+  data: Uint8Array,
+  options?: { encoding?: string }
+): string | undefined {
+  const reader = acdbCreateDxfPairReader(data, options)
+  let name: string | undefined
+  for (let pair = reader.next(); pair; pair = reader.next()) {
+    if (
+      pair.code === 2 &&
+      pair.type === 'string' &&
+      pair.value !== 'HEADER' &&
+      pair.value !== 'TABLES'
+    ) {
+      name = pair.value as string
+    }
+  }
+  return name
+}
+
+describe('Binary DXF $DWGCODEPAGE', () => {
+  it('decodes ANSI_1252 layer names from a pre-R2007 binary DXF header', () => {
+    const data = buildBinaryDxfLayer('AC1018', 'ANSI_1252', [
+      0x41, 0x75, 0xdf, 0x65, 0x6e, 0x77, 0x61, 0x6e, 0x64
+    ])
+    expect(readFirstNonSectionName(data)).toBe('Außenwand')
+  })
+
+  it('still honors an explicit encoding override on binary DXF', () => {
+    const data = buildBinaryDxfLayer('AC1018', 'ANSI_1252', [
+      0x41, 0x75, 0xdf, 0x65, 0x6e, 0x77, 0x61, 0x6e, 0x64
+    ])
+    expect(readFirstNonSectionName(data, { encoding: 'utf-8' })).toBe(
+      'Au\uFFFDenwand'
+    )
+    expect(
+      readFirstNonSectionName(data, { encoding: 'windows-1252' })
+    ).toBe('Außenwand')
+  })
+
+  it('keeps UTF-8 for R2007+ binary DXF even if $DWGCODEPAGE is stale', () => {
+    const name = new TextEncoder().encode('Außenwand')
+    const data = buildBinaryDxfLayer(
+      'AC1021',
+      'ANSI_1252',
+      Array.from(name)
+    )
+    expect(readFirstNonSectionName(data)).toBe('Außenwand')
+  })
 })

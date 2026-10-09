@@ -109,21 +109,27 @@ function acdbDecodeAsciiSpan(
 }
 
 /**
- * Decodes a UTF-8 byte span, taking the ASCII fast path when possible.
+ * Decodes a text byte span, taking the ASCII fast path when possible.
  *
  * `nonAscii` must be true exactly when the span holds a byte `>= 0x80`. It is
  * produced by the line scanner, so this function never re-scans the span.
+ *
+ * For legacy DXF code pages (windows-1252, euc-kr, gbk, shift-jis, …) the
+ * trail-byte ranges never include `0x0A`/`0x0D`, so each line is a complete
+ * character sequence and may be decoded independently — same invariant the
+ * UTF-8 reader relies on.
  */
-function acdbDecodeUtf8Span(
+function acdbDecodeTextSpan(
   bytes: Uint8Array,
   start: number,
   end: number,
-  nonAscii: boolean
+  nonAscii: boolean,
+  decoder: TextDecoder
 ): string {
   if (!nonAscii) {
     return acdbDecodeAsciiSpan(bytes, start, end)
   }
-  return UTF8_DECODER.decode(bytes.subarray(start, end))
+  return decoder.decode(bytes.subarray(start, end))
 }
 
 /**
@@ -137,10 +143,11 @@ function acdbReadDxfCodeFromBytes(
   bytes: Uint8Array,
   start: number,
   end: number,
-  nonAscii: boolean
+  nonAscii: boolean,
+  decoder: TextDecoder
 ): number {
   if (nonAscii) {
-    const n = Number(acdbDecodeUtf8Span(bytes, start, end, true).trim())
+    const n = Number(acdbDecodeTextSpan(bytes, start, end, true, decoder).trim())
     return Number.isFinite(n) ? n : NaN
   }
 
@@ -420,13 +427,14 @@ function acdbDecodeHexBinarySpan(
   bytes: Uint8Array,
   start: number,
   end: number,
-  nonAscii: boolean
+  nonAscii: boolean,
+  decoder: TextDecoder
 ): Uint8Array {
   while (start < end && acdbIsAsciiWhitespace(bytes[start])) start++
   while (end > start && acdbIsAsciiWhitespace(bytes[end - 1])) end--
 
   if (nonAscii) {
-    const text = acdbDecodeUtf8Span(bytes, start, end, true)
+    const text = acdbDecodeTextSpan(bytes, start, end, true, decoder)
     return acdbDecodeHexBinaryText(text, 0, text.length)
   }
 
@@ -451,7 +459,8 @@ function parseAsciiValueSpan(
   bytes: Uint8Array,
   start: number,
   end: number,
-  nonAscii: boolean
+  nonAscii: boolean,
+  decoder: TextDecoder
 ): AcDbDxfPair | null {
   const type = acdbDxfValueType(code)
   if (type === 'comment') return null
@@ -461,20 +470,23 @@ function parseAsciiValueSpan(
       return {
         code,
         type,
-        value: acdbDecodeUtf8Span(bytes, start, end, nonAscii)
+        value: acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder)
       }
     case 'int': {
       const fast = acdbParseIntSpan(bytes, start, end)
       const n =
         fast === undefined
-          ? parseInt(acdbDecodeUtf8Span(bytes, start, end, nonAscii), 10)
+          ? parseInt(
+              acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder),
+              10
+            )
           : fast
       return { code, type, value: Number.isFinite(n) ? n : 0 }
     }
     case 'long': {
       const fast = acdbParseLongSpan(bytes, start, end)
       if (fast !== undefined) return { code, type, value: fast }
-      const raw = acdbDecodeUtf8Span(bytes, start, end, nonAscii)
+      const raw = acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder)
       const n = Number(raw)
       if (Number.isSafeInteger(n)) return { code, type, value: n }
       try {
@@ -487,18 +499,24 @@ function parseAsciiValueSpan(
       const fast = acdbParseDoubleSpan(bytes, start, end)
       const n =
         fast === undefined
-          ? Number(acdbDecodeUtf8Span(bytes, start, end, nonAscii))
+          ? Number(acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder))
           : fast
       return { code, type, value: Number.isFinite(n) ? n : 0 }
     }
     case 'bool': {
       const fast = acdbDxfRawBoolIsTrue(bytes, start, end, nonAscii)
       if (fast !== undefined) return { code, type, value: fast }
-      const trimmed = acdbDecodeUtf8Span(bytes, start, end, nonAscii).trim()
+      const trimmed = acdbDecodeTextSpan(
+        bytes,
+        start,
+        end,
+        nonAscii,
+        decoder
+      ).trim()
       return { code, type, value: trimmed !== '' && trimmed !== '0' }
     }
     case 'handle': {
-      const value = acdbDecodeUtf8Span(bytes, start, end, nonAscii)
+      const value = acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder)
       if (value.length === 0) return { code, type, value }
       const first = value.charCodeAt(0)
       const last = value.charCodeAt(value.length - 1)
@@ -511,20 +529,36 @@ function parseAsciiValueSpan(
       return {
         code,
         type,
-        value: acdbDecodeHexBinarySpan(bytes, start, end, nonAscii)
+        value: acdbDecodeHexBinarySpan(bytes, start, end, nonAscii, decoder)
       }
     default:
       return null
   }
 }
 
+function isUtf8Encoding(encoding: string): boolean {
+  const e = encoding.toLowerCase().replace(/_/g, '-')
+  return e === 'utf-8' || e === 'utf8' || e === 'unicode-1-1-utf-8'
+}
+
 /**
- * ASCII/UTF-8 pair reader over raw bytes.
+ * ASCII pair reader over raw bytes, decoding non-ASCII spans with `encoding`.
  *
- * Line breaks are single bytes and UTF-8 continuation bytes never equal
- * 0x0A/0x0D, so non-ASCII text values never straddle line boundaries.
+ * Line breaks are single bytes. For UTF-8, continuation bytes never equal
+ * `0x0A`/`0x0D`. The same holds for the legacy DXF code pages we support
+ * (windows-125x, euc-kr/cp949, gbk, shift-jis, big5, …): their trail-byte
+ * ranges exclude CR/LF, so non-ASCII text values never straddle line
+ * boundaries and each line may be decoded independently.
+ *
+ * @param encoding - WHATWG / `TextDecoder` label. Defaults to UTF-8.
  */
-function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
+function acdbMakeByteAsciiDxfPairReader(
+  bytes: Uint8Array,
+  encoding = 'utf-8'
+): AcDbDxfPairReader {
+  const decoder = isUtf8Encoding(encoding)
+    ? UTF8_DECODER
+    : new TextDecoder(encoding)
   let pos =
     bytes.length >= 3 &&
     bytes[0] === 0xef &&
@@ -572,7 +606,8 @@ function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
         bytes,
         codeSpan.start,
         codeSpan.end,
-        codeSpan.nonAscii
+        codeSpan.nonAscii,
+        decoder
       )
       if (Number.isNaN(code)) continue
       if (code === 999) {
@@ -588,7 +623,8 @@ function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
         bytes,
         valueSpan.start,
         valueSpan.end,
-        valueSpan.nonAscii
+        valueSpan.nonAscii,
+        decoder
       )
       if (pair) return pair
     }
@@ -616,6 +652,111 @@ function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
       return { line: lineNumber, byteOffset: pos }
     }
   }
+}
+
+function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
+  return acdbMakeByteAsciiDxfPairReader(bytes, 'utf-8')
+}
+
+/**
+ * Resolve a `$DWGCODEPAGE` header value to a `TextDecoder` label.
+ * Unknown names yield `null` so callers keep their UTF-8 fallback.
+ */
+function acdbResolveDwgCodePageEncoding(
+  value: string | null | undefined
+): string | null {
+  if (!value) return null
+  const codePage = AcDbCodePage[value as keyof typeof AcDbCodePage]
+  if (codePage === undefined) return null
+  return acdbDwgCodePageToEncoding(codePage) ?? null
+}
+
+/**
+ * Peek `$ACADVER` / `$DWGCODEPAGE` from a binary DXF HEADER section.
+ *
+ * Header keywords and code-page names are ASCII, so the temporary reader
+ * uses UTF-8 regardless of the drawing's text encoding.
+ */
+function acdbPeekBinaryDxfHeaderInfo(
+  data: Uint8Array,
+  legacyR12: boolean
+): AcDbDxfHeaderInfo {
+  const reader = acdbMakeBinaryDxfPairReader(data, {
+    encoding: 'utf-8',
+    legacyR12
+  })
+  let version: AcDbDwgVersion | null = null
+  let encoding: string | null = null
+  let inHeader = false
+  let pendingVar: string | null = null
+
+  for (let pair = reader.next(); pair; pair = reader.next()) {
+    if (pair.code === 0 && pair.type === 'string') {
+      const name = pair.value as string
+      if (name === 'SECTION') {
+        const section = reader.next()
+        if (
+          section?.code === 2 &&
+          section.type === 'string' &&
+          section.value === 'HEADER'
+        ) {
+          inHeader = true
+        }
+        pendingVar = null
+        continue
+      }
+      if (name === 'ENDSEC' && inHeader) {
+        return { version, encoding }
+      }
+      pendingVar = null
+      continue
+    }
+
+    if (!inHeader) continue
+
+    if (pair.code === 9 && pair.type === 'string') {
+      pendingVar = pair.value as string
+      continue
+    }
+
+    if (pendingVar === '$ACADVER' && pair.code === 1 && pair.type === 'string') {
+      try {
+        version = new AcDbDwgVersion(pair.value as string)
+      } catch {
+        // Unrecognized spelling: leave version null.
+      }
+    } else if (
+      pendingVar === '$DWGCODEPAGE' &&
+      pair.code === 3 &&
+      pair.type === 'string'
+    ) {
+      encoding = acdbResolveDwgCodePageEncoding(pair.value as string)
+    }
+
+    if (pendingVar !== null) {
+      pendingVar = null
+      if (version && encoding) return { version, encoding }
+    }
+  }
+
+  return { version, encoding }
+}
+
+/**
+ * Prefer a pre-2007 `$DWGCODEPAGE` when the header declares both a legacy
+ * version and a known code page; otherwise return null (caller keeps UTF-8).
+ */
+function acdbLegacyEncodingFromHeader(
+  info: AcDbDxfHeaderInfo
+): string | null {
+  if (
+    info.version &&
+    !info.version.capabilities.supportsUtf8CodePage &&
+    info.encoding
+  ) {
+    return info.encoding
+  }
+  return null
 }
 
 /**
@@ -653,10 +794,7 @@ export function acdbPeekDxfHeaderInfo(buffer: ArrayBuffer): AcDbDxfHeaderInfo {
         if (value) version = new AcDbDwgVersion(value)
       } else if (inHeader && line === '$DWGCODEPAGE') {
         const value = lines[i + 2]?.trim()
-        if (value) {
-          const codePage = AcDbCodePage[value as keyof typeof AcDbCodePage]
-          encoding = acdbDwgCodePageToEncoding(codePage)
-        }
+        if (value) encoding = acdbResolveDwgCodePageEncoding(value)
       }
 
       if (version && encoding) return { version, encoding }
@@ -786,26 +924,11 @@ export function acdbMakeAsciiDxfPairReader(text: string): AcDbDxfPairReader {
   }
 }
 
-function isUtf8Encoding(encoding: string): boolean {
-  const e = encoding.toLowerCase().replace(/_/g, '-')
-  return e === 'utf-8' || e === 'utf8' || e === 'unicode-1-1-utf-8'
-}
-
 /**
- * Bytes decoded per `TextDecoder` call in {@link acdbMakeUtf8AsciiDxfPairReader}.
- *
- * Sized as a compromise: large enough that a multi-MB DXF costs hundreds of
- * decode calls rather than one per line, small enough that windows still holding
- * a retained value slice do not pin much memory.
- */
-
-/**
- * ASCII pair reader that decodes UTF-8 bytes one line-aligned window at a time,
- * instead of allocating a full-file decoded string (peak memory ≈ input bytes
- * plus one window).
- *
- * Non-UTF-8 code pages still go through {@link acdbMakeAsciiDxfPairReader}
- * after a full `TextDecoder` pass.
+ * ASCII pair reader that decodes UTF-8 bytes one line at a time, instead of
+ * allocating a full-file decoded string (peak memory ≈ input bytes plus one
+ * line). Legacy code pages use the same span path via
+ * {@link acdbCreateDxfPairReader}.
  */
 export function acdbMakeUtf8AsciiDxfPairReader(
   bytes: Uint8Array
@@ -831,6 +954,7 @@ export function acdbMakeBinaryDxfPairReader(
 ): AcDbDxfPairReader {
   const encoding = options.encoding ?? 'utf-8'
   const legacyR12 = options.legacyR12 ?? false
+  const decoder = new TextDecoder(encoding)
   const PREFIX = 22
   const view = new DataView(data.buffer, data.byteOffset, data.byteLength)
   let offset = data.length >= PREFIX ? PREFIX : data.length
@@ -865,7 +989,7 @@ export function acdbMakeBinaryDxfPairReader(
     if (offset >= data.length) return undefined
     const bytes = data.subarray(start, offset)
     offset += 1
-    return new TextDecoder(encoding).decode(bytes)
+    return decoder.decode(bytes)
   }
 
   function readInt16(): number | undefined {
@@ -996,14 +1120,16 @@ export function acdbMakeBinaryDxfPairReader(
 
 export interface AcDbCreateDxfPairReaderOptions {
   /**
-   * Override text encoding for ASCII DXF.
+   * Override text encoding for ASCII and binary DXF.
    *
-   * When omitted, the encoding is chosen automatically: bytes that validate
-   * as UTF-8 decode as UTF-8; otherwise a declared pre-2007 `$DWGCODEPAGE`
-   * is honored (see {@link acdbCreateDxfPairReader}). When provided, it wins
-   * over detection — use it to force e.g. `'cp949'` for Korean drawings whose
-   * header lies. Common non-WHATWG aliases such as `'cp949'` are normalized
-   * to a supported `TextDecoder` label (`'euc-kr'`).
+   * When omitted, the encoding is chosen automatically: ASCII bytes that
+   * validate as UTF-8 decode as UTF-8; otherwise a declared pre-2007
+   * `$DWGCODEPAGE` is honored. Binary DXF peeks the same header fields and
+   * applies a pre-2007 code page to null-terminated strings (see
+   * {@link acdbCreateDxfPairReader}). When provided, it wins over detection
+   * — use it to force e.g. `'cp949'` for Korean drawings whose header lies.
+   * Common non-WHATWG aliases such as `'cp949'` are normalized to a
+   * supported `TextDecoder` label (`'euc-kr'`).
    */
   encoding?: string
   /** Force R12 1-byte group codes for binary DXF. */
@@ -1067,16 +1193,23 @@ function acdbIsValidUtf8(bytes: Uint8Array): boolean {
  * ASCII path encoding strategy (hybrid of byte-trust and header sniffing):
  *
  * 1. An explicit `options.encoding` always wins — the caller asserts the
- *    encoding, no sniffing contradicts it.
+ *    encoding, no sniffing contradicts it. Non-UTF-8 overrides decode
+ *    line-by-line (never a single full-file string).
  * 2. Otherwise the bytes are strictly validated as UTF-8. Valid UTF-8
  *    (including pure ASCII) decodes correctly regardless of any stale
  *    `$DWGCODEPAGE`, so the header is never consulted — modern files skip
  *    the header pre-scan entirely and stream straight from bytes.
  * 3. Invalid UTF-8 means the file is not a spec-conformant modern DXF. The
  *    HEADER is then peeked for `$ACADVER`/`$DWGCODEPAGE`: pre-2007 drawings
- *    with a declared code page decode through it (matching AutoCAD), while
- *    R2007+ or headerless files fall back to UTF-8 (replacement chars mark
- *    the broken bytes).
+ *    with a declared code page decode through it span-by-span (matching
+ *    AutoCAD, without materializing one giant string), while R2007+ or
+ *    headerless files fall back to UTF-8 (replacement chars mark the
+ *    broken bytes).
+ *
+ * Binary path: when `options.encoding` is omitted, the HEADER is peeked for
+ * a pre-2007 `$DWGCODEPAGE` and that code page is used for null-terminated
+ * string values (same AutoCAD rule as ASCII). R2007+ / missing header keep
+ * UTF-8.
  */
 export function acdbCreateDxfPairReader(
   data: ArrayBuffer | Uint8Array,
@@ -1092,34 +1225,38 @@ export function acdbCreateDxfPairReader(
   if (acdbIsBinaryDxf(bytes)) {
     let encoding = overrideEncoding
     let legacyR12 = options.legacyR12
-    if (encoding == null || legacyR12 == null) {
-      encoding = encoding ?? 'utf-8'
-      if (legacyR12 == null) {
-        // After the 22-byte magic: R12 uses 1-byte codes (`0,'S'`), modern
-        // uses 2-byte LE codes (`0,0,'S'`) for the first SECTION marker.
-        const PREFIX = 22
-        const b0 = bytes[PREFIX]
-        const b1 = bytes[PREFIX + 1]
-        const b2 = bytes[PREFIX + 2]
-        if (b0 === 0 && b1 === 0x53 /* 'S' */) {
-          legacyR12 = true
-        } else if (b0 === 0 && b1 === 0 && b2 === 0x53 /* 'S' */) {
-          legacyR12 = false
-        } else {
-          legacyR12 = false
-        }
+    if (legacyR12 == null) {
+      // After the 22-byte magic: R12 uses 1-byte codes (`0,'S'`), modern
+      // uses 2-byte LE codes (`0,0,'S'`) for the first SECTION marker.
+      const PREFIX = 22
+      const b0 = bytes[PREFIX]
+      const b1 = bytes[PREFIX + 1]
+      const b2 = bytes[PREFIX + 2]
+      if (b0 === 0 && b1 === 0x53 /* 'S' */) {
+        legacyR12 = true
+      } else if (b0 === 0 && b1 === 0 && b2 === 0x53 /* 'S' */) {
+        legacyR12 = false
+      } else {
+        legacyR12 = false
       }
+    }
+    if (encoding == null) {
+      try {
+        encoding =
+          acdbLegacyEncodingFromHeader(
+            acdbPeekBinaryDxfHeaderInfo(bytes, legacyR12)
+          ) ?? undefined
+      } catch {
+        // Unrecognized $ACADVER: stay on UTF-8.
+      }
+      encoding = encoding ?? 'utf-8'
     }
     return acdbMakeBinaryDxfPairReader(bytes, { encoding, legacyR12 })
   }
 
   // 1. Explicit override wins: the caller asserts the encoding.
   if (overrideEncoding) {
-    if (isUtf8Encoding(overrideEncoding)) {
-      return acdbMakeUtf8DxfPairReader(bytes)
-    }
-    const text = new TextDecoder(overrideEncoding).decode(bytes)
-    return acdbMakeAsciiDxfPairReader(text)
+    return acdbMakeByteAsciiDxfPairReader(bytes, overrideEncoding)
   }
 
   // 2. Trust the bytes first: valid UTF-8 (including pure ASCII) is decoded
@@ -1130,30 +1267,24 @@ export function acdbCreateDxfPairReader(
   }
 
   // 3. Invalid UTF-8: fall back to the pre-2007 $DWGCODEPAGE when one is
-  //    declared (genuine legacy ANSI content). R2007+ or headerless files
-  //    stay on UTF-8, where replacement characters mark the broken bytes.
+  //    declared (genuine legacy ANSI content). Decode span-by-span so large
+  //    drawings never hit the V8 max-string-length ceiling. R2007+ or
+  //    headerless files stay on UTF-8, where replacement characters mark
+  //    the broken bytes.
   let legacyEncoding: string | null = null
   try {
     const buffer =
       bytes.byteOffset === 0 && bytes.byteLength === bytes.buffer.byteLength
         ? bytes.buffer
         : bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
-    const info = acdbPeekDxfHeaderInfo(buffer)
-    if (
-      info.version &&
-      !info.version.capabilities.supportsUtf8CodePage &&
-      info.encoding
-    ) {
-      legacyEncoding = info.encoding
-    }
+    legacyEncoding = acdbLegacyEncodingFromHeader(acdbPeekDxfHeaderInfo(buffer))
   } catch {
     // Unrecognized $ACADVER spelling: treat as version-less and stay UTF-8
     // instead of failing the whole read.
   }
 
   if (legacyEncoding) {
-    const text = new TextDecoder(legacyEncoding).decode(bytes)
-    return acdbMakeAsciiDxfPairReader(text)
+    return acdbMakeByteAsciiDxfPairReader(bytes, legacyEncoding)
   }
 
   return acdbMakeUtf8DxfPairReader(bytes)
