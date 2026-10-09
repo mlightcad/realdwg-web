@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.3
+
+### Patch Changes
+
+- fix: corrects DXF import for DIMENSION block insertion, VIEWPORT width/height, hatch colors, multileader arrowhead size from CONTEXT_DATA, and $DWGCODEPAGE encoding for binary and legacy ASCII DXF. ATTRIB/ATTDEF ignore embedded Xrecord flags, and model space stays findable when it claims handle 2
+
 ## 1.15.2
 
 ### Patch Changes
