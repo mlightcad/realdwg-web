@@ -1861,6 +1861,9 @@ export class AcDbMLeader extends AcDbEntity {
     // Native AutoCAD MULTILEADER uses CONTEXT_DATA / version (270). Older
     // dxfOutFields used a flat layout without those markers.
     let nativeFormat = false
+    // CONTEXT_DATA group 140 is the scaled arrowhead size AutoCAD draws.
+    // Entity-level group 42 is the unscaled override and must not overwrite it.
+    let arrowheadSizeFromContext = false
 
     // Legacy flat-format accumulators (written by older dxfOutFields).
     let legacyLanding = this._landingPoint?.clone()
@@ -1916,6 +1919,7 @@ export class AcDbMLeader extends AcDbEntity {
           if (s === 'CONTEXT_DATA{') {
             nativeFormat = true
             const ctx = this.dxfInContextData(filer)
+            if (ctx.hasArrowheadSize) arrowheadSizeFromContext = true
             if (ctx.textContent != null) {
               textContent = ctx.textContent
               hasMTextContent = true
@@ -2018,8 +2022,16 @@ export class AcDbMLeader extends AcDbEntity {
           this.arrowheadId = s
           break
         case 42:
-          if (nativeFormat) this.arrowheadSize = n
-          else this.textWidth = n
+          if (nativeFormat) {
+            // Prefer CONTEXT_DATA's scaled size (group 140). Entity-level
+            // group 42 is unscaled and only applies when context omitted it;
+            // multiply by overall content scale (CONTEXT_DATA group 40).
+            if (!arrowheadSizeFromContext) {
+              this.arrowheadSize = n * (this.contentScale ?? 1)
+            }
+          } else {
+            this.textWidth = n
+          }
           break
         case 172:
           this.contentType = n as AcDbMLeaderContentType
@@ -2334,6 +2346,7 @@ export class AcDbMLeader extends AcDbEntity {
     textAnchor?: AcGePoint3d
     hasMText?: boolean
     hasBlock?: boolean
+    hasArrowheadSize?: boolean
     blockContentId?: string
     blockPosition?: AcGePoint3d
     blockScale?: AcGeVector3d
@@ -2347,6 +2360,7 @@ export class AcDbMLeader extends AcDbEntity {
       textAnchor?: AcGePoint3d
       hasMText?: boolean
       hasBlock?: boolean
+      hasArrowheadSize?: boolean
       blockContentId?: string
       blockPosition?: AcGePoint3d
       blockScale?: AcGeVector3d
@@ -2463,7 +2477,9 @@ export class AcDbMLeader extends AcDbEntity {
           this.planeYAxisDirection = filer.readVector3d(112)
           break
         case 140:
+          // Scaled arrowhead size (what AutoCAD draws).
           this.arrowheadSize = n
+          result.hasArrowheadSize = true
           break
         case 141:
           this.textBackgroundScaleFactor = n
