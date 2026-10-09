@@ -107,9 +107,11 @@ export class AcDbDictionary<
     }
 
     value.database = this.database
-    value.ownerId = this.objectId
 
+    // Commit before assigning ownerId so a handle collision that remints this
+    // dictionary leaves the entry pointing at the new dictionary objectId.
     this.database.commitObjectHandle(value, id => this.hasId(id))
+    value.ownerId = this.objectId
 
     this._recordsByName.set(key, value)
 

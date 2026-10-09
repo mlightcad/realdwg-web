@@ -1229,6 +1229,25 @@ export class AcDbDatabase extends AcDbObject {
           }
         }
       }
+      // Same for symbol tables / dictionaries: getIdAt requires ownerId ===
+      // the container's objectId. A DXF *Model_Space with handle "2" displaces
+      // the bootstrap block table (also "2"); without rewriting record
+      // ownerIds, getIdAt("2") returns undefined and layouts fail to open
+      // (https://github.com/mlightcad/realdwg-web/issues/233).
+      if (object instanceof AcDbSymbolTable) {
+        for (const record of object.newIterator(true)) {
+          if (record.getAttrWithoutException('ownerId') === oldId) {
+            record.ownerId = handle
+          }
+        }
+      }
+      if (object instanceof AcDbDictionary) {
+        for (const entry of object.newIterator()) {
+          if (entry.getAttrWithoutException('ownerId') === oldId) {
+            entry.ownerId = handle
+          }
+        }
+      }
     }
     return handle
   }

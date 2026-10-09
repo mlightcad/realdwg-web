@@ -55,4 +55,29 @@ describe('AcDbBlockTable', () => {
     expect(table.getEntityById(blockLine.objectId)).toBeUndefined()
     expect(table.removeEntity('NOT_EXISTS')).toBe(false)
   })
+
+  // https://github.com/mlightcad/realdwg-web/issues/233
+  it('resolves model space when its handle displaces the block table id', () => {
+    const db = new AcDbDatabase()
+    const table = db.tables.blockTable
+    const displacedTableId = table.objectId
+
+    table.removeAll()
+    const modelSpace = new AcDbBlockTableRecord()
+    modelSpace.name = AcDbBlockTableRecord.MODEL_SPACE_NAME
+    modelSpace.objectId = displacedTableId
+    table.add(modelSpace)
+
+    const paperSpace = new AcDbBlockTableRecord()
+    paperSpace.name = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+    paperSpace.objectId = '1E'
+    table.add(paperSpace)
+
+    expect(modelSpace.objectId).toBe(displacedTableId)
+    expect(table.objectId).not.toBe(displacedTableId)
+    expect(modelSpace.ownerId).toBe(table.objectId)
+    expect(paperSpace.ownerId).toBe(table.objectId)
+    expect(table.getIdAt(displacedTableId)).toBe(modelSpace)
+    expect(table.getIdAt(paperSpace.objectId)).toBe(paperSpace)
+  })
 })

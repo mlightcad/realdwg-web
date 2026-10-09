@@ -339,8 +339,8 @@ export class AcDbBlockReference extends AcDbEntity {
       const next = new Map<string, AcDbAttribute>()
       this._attribs.forEach(attrib => {
         attrib.database = db
-        attrib.ownerId = this.objectId
         db.commitObjectHandle(attrib)
+        attrib.ownerId = this.objectId
         next.set(attrib.objectId, attrib)
       })
       this._attribs = next
