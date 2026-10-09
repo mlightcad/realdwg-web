@@ -214,6 +214,9 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(valuesByCode(dimensionRecord!, '72')).toContain('2')
     expect(valuesByCode(dimensionRecord!, '41')).toContain('1.25')
     expect(valuesByCode(dimensionRecord!, '42')).toContain('10')
+    expect(valuesByCode(dimensionRecord!, '12')).toContain('0')
+    expect(valuesByCode(dimensionRecord!, '22')).toContain('0')
+    expect(valuesByCode(dimensionRecord!, '32')).toContain('0')
   })
 
   it('writes block definitions and insert attributes to BLOCKS and ENTITIES sections', () => {

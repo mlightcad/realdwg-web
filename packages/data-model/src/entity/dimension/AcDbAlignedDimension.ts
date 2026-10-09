@@ -682,8 +682,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
     }
     this.rotation = (rotDeg * Math.PI) / 180
     this.oblique = (oblDeg * Math.PI) / 180
-    // Match dxf-json-converter: group 12 (clone insertion) sets dim block
-    // position when present; otherwise leave at origin (do not use group 10).
+    // Group 12 in the AcDbDimension section is applied by the base class.
+    // Writers that emit it after the typed subclass marker are handled here.
+    // A missing group 12 must not fall back to group 10.
     if (hasInsertion) {
       this.dimBlockPosition = { x: ix, y: iy, z: iz }
     }

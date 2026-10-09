@@ -2144,6 +2144,154 @@ describe('AcDbNativeDxfConverter', () => {
     expect(dim!.dimBlockPosition.z).toBeCloseTo(0)
   })
 
+  it('reads AcDbDimension group 12 as the anonymous block insertion point', async () => {
+    // Issue #714: group 12/22/32 sit in the AcDbDimension section (before the
+    // typed subclass). *D* geometry is stored far from the drawing and must
+    // be translated by that insertion point.
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'BLOCKS',
+      '0',
+      'BLOCK',
+      '5',
+      '20',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbBlockBegin',
+      '2',
+      '*D436',
+      '70',
+      '1',
+      '10',
+      '0',
+      '20',
+      '0',
+      '30',
+      '0',
+      '0',
+      'LINE',
+      '5',
+      '21',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbLine',
+      '10',
+      '7328.991417614428',
+      '20',
+      '-801.0158748021001',
+      '30',
+      '0',
+      '11',
+      '7330.991417614428',
+      '21',
+      '-799.0158748021001',
+      '31',
+      '0',
+      '0',
+      'ENDBLK',
+      '5',
+      '22',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbBlockEnd',
+      '0',
+      'ENDSEC',
+      '0',
+      'SECTION',
+      '2',
+      'ENTITIES',
+      '0',
+      'DIMENSION',
+      '5',
+      '1FBF',
+      '100',
+      'AcDbEntity',
+      '8',
+      'DIM',
+      '100',
+      'AcDbDimension',
+      '2',
+      '*D436',
+      '10',
+      '59.8262479688874',
+      '20',
+      '402.5821122823306',
+      '30',
+      '0.0',
+      '11',
+      '59.82624796888649',
+      '21',
+      '399.0821122821906',
+      '31',
+      '0.0',
+      '12',
+      '-7282.836164834722',
+      '22',
+      '1194.811509508789',
+      '32',
+      '0.0',
+      '70',
+      '128',
+      '100',
+      'AcDbAlignedDimension',
+      '13',
+      '40',
+      '23',
+      '400',
+      '33',
+      '0',
+      '14',
+      '60',
+      '24',
+      '400',
+      '34',
+      '0',
+      '100',
+      'AcDbRotatedDimension',
+      '50',
+      '0',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+
+    const converter = new AcDbNativeDxfConverter()
+    const buffer = new TextEncoder().encode(dxf).buffer
+    await converter.read(buffer, db, { minimumChunkSize: 50 })
+
+    const dim = [...db.tables.blockTable.modelSpace.newIterator()].find(
+      e => e instanceof AcDbRotatedDimension
+    ) as AcDbRotatedDimension | undefined
+
+    expect(dim).toBeDefined()
+    expect(dim!.dimBlockPosition.x).toBeCloseTo(-7282.836164834722)
+    expect(dim!.dimBlockPosition.y).toBeCloseTo(1194.811509508789)
+    expect(dim!.dimBlockPosition.z).toBeCloseTo(0)
+    expect(dim!.textPosition.x).toBeCloseTo(59.82624796888649)
+    expect(dim!.textPosition.y).toBeCloseTo(399.0821122821906)
+    // Block-local (7328.99, -801.02) + group 12 lands next to the drawing.
+    expect(dim!.geometricExtents.min.x).toBeCloseTo(46.155252779706, 4)
+    expect(dim!.geometricExtents.min.y).toBeCloseTo(393.795634706689, 4)
+    expect(dim!.geometricExtents.max.x).toBeCloseTo(48.155252779706, 4)
+    expect(dim!.geometricExtents.max.y).toBeCloseTo(395.795634706689, 4)
+  })
+
   it('suppresses entityAppended until ENTITY flush after PARSE', async () => {
     const dxf = [
       '0',
