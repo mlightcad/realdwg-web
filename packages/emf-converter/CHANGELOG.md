@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.4
+
+### Patch Changes
+
+- feat: exposes paper-space viewport frozen layers so renderers can honor VPLAYER freezes. AcGiViewport now carries frozenLayerIds and the resolved frozen layer names from AcDbViewport, so model-space entities on layers frozen in a paper-space viewport can be hidden during display.
+
 ## 1.15.3
 
 ### Patch Changes

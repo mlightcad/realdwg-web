@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.4
+
+### Patch Changes
+
+- feat: exposes paper-space viewport frozen layers so renderers can honor VPLAYER freezes. AcGiViewport now carries frozenLayerIds and the resolved frozen layer names from AcDbViewport, so model-space entities on layers frozen in a paper-space viewport can be hidden during display.
+- Updated dependencies
+  - @mlightcad/common@1.15.4
+  - @mlightcad/emf-converter@1.15.4
+  - @mlightcad/geometry-engine@3.15.4
+  - @mlightcad/graphic-interface@3.15.4
+
 ## 1.15.3
 
 ### Patch Changes

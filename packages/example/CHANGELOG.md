@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.4
+
+### Patch Changes
+
+- feat: exposes paper-space viewport frozen layers so renderers can honor VPLAYER freezes. AcGiViewport now carries frozenLayerIds and the resolved frozen layer names from AcDbViewport, so model-space entities on layers frozen in a paper-space viewport can be hidden during display.
+- Updated dependencies
+  - @mlightcad/data-model@1.15.4
+  - @mlightcad/libredwg-converter@3.15.4
+
 ## 0.15.3
 
 ### Patch Changes
