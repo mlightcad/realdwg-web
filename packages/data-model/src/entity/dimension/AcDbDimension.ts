@@ -1093,6 +1093,9 @@ export abstract class AcDbDimension extends AcDbEntity {
       filer.writeAngle(51, this.horizontalRotation)
     }
     filer.writePoint3d(11, this.textPosition)
+    // Group 12 is the anonymous-block insertion point (OCS). It lives in the
+    // AcDbDimension section, before any typed subclass marker.
+    filer.writePoint3d(12, this.dimBlockPosition)
     filer.writeInt16(70, this.dimensionType)
     filer.writeInt16(71, this.attachmentPoint)
     filer.writeInt16(72, this.textLineSpacingStyle)
@@ -1108,15 +1111,21 @@ export abstract class AcDbDimension extends AcDbEntity {
     // Tolerate missing AcDbDimension marker.
     filer.atSubclassData('AcDbDimension')
 
-    // Group 10 is the definition point — NOT dimBlockPosition (group 12).
-    // Leaving dimBlockPosition at (0,0,0) unless a subclass sees group 12
-    // matches dxf-json-converter and avoids double-offsetting *D* blocks.
+    // Group 10 is the definition point. Group 12 is the anonymous-block
+    // insertion point. Do not substitute group 10 for a missing group 12:
+    // *D* block geometry is often already in WCS, and using group 10 would
+    // double-offset it. Some writers place group 12 after the typed subclass
+    // marker; those are applied by the subclass and must not be cleared here.
     let dx = this._dxfDefinitionPoint.x
     let dy = this._dxfDefinitionPoint.y
     let dz = this._dxfDefinitionPoint.z
     let tx = this.textPosition.x
     let ty = this.textPosition.y
     let tz = this.textPosition.z
+    let ix = this._dimBlockPosition.x
+    let iy = this._dimBlockPosition.y
+    let iz = this._dimBlockPosition.z
+    let hasBlockPosition = false
     let textRotDeg = (this.textRotation * 180) / Math.PI
     let nx = this.normal.x
     let ny = this.normal.y
@@ -1159,6 +1168,18 @@ export abstract class AcDbDimension extends AcDbEntity {
           break
         case 31:
           tz = n
+          break
+        case 12:
+          ix = n
+          hasBlockPosition = true
+          break
+        case 22:
+          iy = n
+          hasBlockPosition = true
+          break
+        case 32:
+          iz = n
+          hasBlockPosition = true
           break
         case 41:
           this.textLineSpacingFactor = n
@@ -1205,6 +1226,9 @@ export abstract class AcDbDimension extends AcDbEntity {
 
     this._dxfDefinitionPoint.set(dx, dy, dz)
     this.textPosition.copy(new AcGePoint3d(tx, ty, tz))
+    if (hasBlockPosition) {
+      this.dimBlockPosition = { x: ix, y: iy, z: iz }
+    }
     this.textRotation = (textRotDeg * Math.PI) / 180
     this.normal.copy(new AcGeVector3d(nx, ny, nz))
     return this
