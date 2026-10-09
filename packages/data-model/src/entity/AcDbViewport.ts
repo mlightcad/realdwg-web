@@ -834,8 +834,8 @@ export class AcDbViewport extends AcDbEntity {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbViewport')
     filer.writePoint3d(10, this.centerPoint)
-    filer.writeDouble(40, this.height)
-    filer.writeDouble(41, this.width)
+    filer.writeDouble(40, this.width)
+    filer.writeDouble(41, this.height)
     filer.writePoint3d(12, this.viewCenter)
     filer.writePoint3d(13, this.snapBase)
     filer.writePoint3d(14, this.snapSpacing)
@@ -1016,10 +1016,10 @@ export class AcDbViewport extends AcDbEntity {
           vtz = n
           break
         case 40:
-          this.height = n
+          this.width = n
           break
         case 41:
-          this.width = n
+          this.height = n
           break
         case 42:
           this.perspectiveLensLength = n
