@@ -9,6 +9,7 @@ import {
   acdbDxfValueType
 } from './AcDbDxfGroupCodeTypes'
 import type { AcDbDxfPair } from './AcDbDxfPair'
+import { acdbExpandDxfUnicodeEscapes } from './AcDbDxfStringChunks'
 
 /** Magic prefix for AutoCAD Binary DXF files (22 bytes). */
 const BINARY_DXF_MAGIC = (() => {
@@ -470,7 +471,9 @@ function parseAsciiValueSpan(
       return {
         code,
         type,
-        value: acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder)
+        value: acdbExpandDxfUnicodeEscapes(
+          acdbDecodeTextSpan(bytes, start, end, nonAscii, decoder)
+        )
       }
     case 'int': {
       const fast = acdbParseIntSpan(bytes, start, end)
@@ -822,7 +825,7 @@ function parseAsciiValue(code: number, valueRaw: string): AcDbDxfPair | null {
 
   switch (type) {
     case 'string':
-      return { code, type, value: valueRaw }
+      return { code, type, value: acdbExpandDxfUnicodeEscapes(valueRaw) }
     case 'int': {
       const n = parseInt(valueRaw.trim(), 10)
       return { code, type, value: Number.isFinite(n) ? n : 0 }
@@ -1052,7 +1055,11 @@ export function acdbMakeBinaryDxfPairReader(
         case 'string': {
           const value = readString()
           if (value === undefined) return undefined
-          return { code, type: 'string', value }
+          return {
+            code,
+            type: 'string',
+            value: acdbExpandDxfUnicodeEscapes(value)
+          }
         }
         case 'int': {
           const v = acdbDxfIsInt32Code(code) ? readInt32() : readInt16()

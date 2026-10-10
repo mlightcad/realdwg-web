@@ -5,8 +5,10 @@ import {
   AcDbDxfFiler,
   AcDbResultBuffer,
   acdbChunkBinaryByMaxBytes,
+  acdbChunkDxfLegacyXDataString,
   acdbChunkDxfMTextContents,
-  acdbChunkUtf8ByMaxBytes
+  acdbChunkUtf8ByMaxBytes,
+  acdbEncodeDxfUnicodeEscapes
 } from '../src/base'
 
 describe('AcDbDxfStringChunks', () => {
@@ -47,6 +49,21 @@ describe('AcDbDxfStringChunks', () => {
     expect(chunks.join('')).toBe(text)
   })
 
+  it('chunks legacy XData by post-\\U+ escape byte length', () => {
+    // Each CJK becomes `\U+XXXX` (7 ASCII bytes) → 255/7 = 36 chars per chunk.
+    const text = '中'.repeat(50)
+    const chunks = acdbChunkDxfLegacyXDataString(
+      text,
+      ACDB_DXF_XDATA_STRING_MAX_BYTES
+    )
+    expect(chunks.length).toBeGreaterThan(1)
+    for (const chunk of chunks) {
+      const encoded = acdbEncodeDxfUnicodeEscapes(chunk)
+      expect(encoded.length).toBeLessThanOrEqual(ACDB_DXF_XDATA_STRING_MAX_BYTES)
+    }
+    expect(chunks.join('')).toBe(text)
+  })
+
   it('chunks binary payloads to the XData 1004 max', () => {
     const bytes = new Uint8Array(300)
     bytes.fill(0xab)
@@ -76,6 +93,25 @@ describe('AcDbDxfFiler XData chunking', () => {
     expect(values).toHaveLength(2)
     expect(values.join('')).toBe(long)
     expect(out).toContain('1001\nMYAPP')
+  })
+
+  it('keeps AC1009 group-1000 chunks ≤255 bytes after \\U+ escaping', () => {
+    const filer = new AcDbDxfFiler({ version: 'AC1009' })
+    const long = 'é'.repeat(80) // 80 * 7 = 560 escape bytes if unchunked
+    filer.writeResultBuffer(
+      new AcDbResultBuffer([
+        { code: 1001, value: 'MYAPP' },
+        { code: 1000, value: long }
+      ])
+    )
+    const out = filer.toString()
+    const values = [...out.matchAll(/(?:^|\n)1000\n([^\n]*)/g)].map(m => m[1]!)
+    expect(values.length).toBeGreaterThan(1)
+    for (const value of values) {
+      expect(value.length).toBeLessThanOrEqual(ACDB_DXF_XDATA_STRING_MAX_BYTES)
+      expect(value).toMatch(/^(?:\\U\+00E9)+$/)
+    }
+    expect(values.join('')).toBe('\\U+00E9'.repeat(80))
   })
 
   it('splits long group-1004 binary into 127-byte hex chunks', () => {

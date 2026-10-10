@@ -801,7 +801,7 @@ export class AcDbPolyline extends AcDbCurve {
    *
    * Used when the target DXF version does not support LWPOLYLINE.
    */
-  dxfOutAs2dPolyline(filer: AcDbDxfFiler, _allXdata = false) {
+  dxfOutAs2dPolyline(filer: AcDbDxfFiler, allXdata = false) {
     filer.writeHandle(5, this.objectId)
     filer.writeObjectId(330, this.ownerId)
     filer.writeObjectId(360, this.extensionDictionary)
@@ -823,6 +823,9 @@ export class AcDbPolyline extends AcDbCurve {
     filer.writeDouble(10, 0)
     filer.writeDouble(20, 0)
     filer.writeDouble(30, this.elevation)
+    if (allXdata) {
+      this.dxfOutXData(filer)
+    }
 
     for (let i = 0; i < this.numberOfVertices; ++i) {
       const vertex = this._geo.vertices[i]
