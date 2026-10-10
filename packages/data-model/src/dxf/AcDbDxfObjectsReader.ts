@@ -216,7 +216,21 @@ export class AcDbDxfObjectsReader {
       for (const [entryName, entryHandle] of Object.entries(child.entries)) {
         const obj = objectsByHandle.get(normalizeHandle(entryHandle))
         if (!obj) continue
-        if (!typed.getAt(entryName)) {
+        // Skip when the object is already stored under another key (e.g. LAYOUT
+        // was keyed by layoutName while ACAD_LAYOUT entry uses a different
+        // spelling/encoding). Re-adding would create duplicate layout tabs.
+        // Scan entries() rather than hasId(): this method reassigns typed.objectId
+        // from the NOD child handle before merging, so ownerId-based hasId()
+        // misses objects that were setAt under the previous dictionary handle.
+        const targetId = normalizeHandle(obj.objectId)
+        let alreadyStored = false
+        for (const [, existing] of typed.entries()) {
+          if (normalizeHandle(existing.objectId) === targetId) {
+            alreadyStored = true
+            break
+          }
+        }
+        if (!typed.getAt(entryName) && !alreadyStored) {
           typed.setAt(entryName, obj)
         }
       }

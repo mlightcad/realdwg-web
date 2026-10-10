@@ -124,4 +124,31 @@ describe('AcDbDynBlockReference', () => {
     expect(dyn.anonymousBlockTableRecord()?.toUpperCase()).toBe('U101')
     expect(dyn.dynamicBlockTableRecord()?.toUpperCase()).toBe('ABCD')
   })
+
+  it('does not alias existing layouts when ACAD_LAYOUT dict entries use mojibake keys', () => {
+    const db = createDb()
+    const layoutDict = db.objects.layout
+    const model = layoutDict.getAt('Model')
+    expect(model).toBeDefined()
+
+    // Simulate LibreDWG handing us the layout dictionary handle plus entry
+    // names decoded with the wrong code page (GBK bytes as UTF-16LE).
+    acdbImportDynBlockMetadata(db, {
+      dictionaries: [
+        {
+          handle: layoutDict.objectId,
+          ownerHandle: '0',
+          entries: [
+            { name: '潍敤l', handle: model!.objectId },
+            { name: '벲횾1', handle: model!.objectId }
+          ]
+        }
+      ]
+    })
+
+    expect(layoutDict.numEntries).toBe(1)
+    expect(layoutDict.getAt('Model')).toBe(model)
+    expect(layoutDict.getAt('潍敤l')).toBeUndefined()
+    expect(layoutDict.getAt('벲횾1')).toBeUndefined()
+  })
 })

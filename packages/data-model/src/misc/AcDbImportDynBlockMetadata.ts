@@ -75,6 +75,11 @@ export function acdbImportDynBlockMetadata(
   }
 
   const dictSources = [...(options.dictionaries ?? [])]
+  // Root NOD children (ACAD_LAYOUT, ACAD_GROUP, …) are already populated by the
+  // DWG/DXF converter. Re-importing their dictionary entry names can add
+  // duplicate keys for the same object when LibreDWG decodes those names with a
+  // different code page than the object's own name (e.g. layoutName).
+  const rootDictionaries = new Set(db.getRootDictionaries())
   // Create empty dictionaries first so setAt can reference children that are
   // also dictionaries.
   const dictByHandle = new Map<string, AcDbDictionary>()
@@ -83,6 +88,9 @@ export function acdbImportDynBlockMetadata(
     if (!handle) continue
 
     let dict = db.getObjectById(handle)
+    if (dict instanceof AcDbDictionary && rootDictionaries.has(dict)) {
+      continue
+    }
     if (!(dict instanceof AcDbDictionary)) {
       dict = new AcDbDictionary(db)
       dict.objectId = handle
@@ -97,12 +105,24 @@ export function acdbImportDynBlockMetadata(
   for (const src of dictSources) {
     const handle = normalizeHandle(src.handle)
     const dict = dictByHandle.get(handle)
-    if (!dict) continue
+    if (!dict || rootDictionaries.has(dict)) continue
 
     for (const entry of src.entries) {
       const name = entry.name
       const targetHandle = normalizeHandle(entry.handle)
       if (!name || !targetHandle) continue
+
+      // Already stored under another key — do not create a second alias.
+      // Check entries() rather than hasId(): ownerId may be pre-assigned from
+      // the DWG before setAt wires the dictionary slot.
+      let alreadyStored = false
+      for (const [, obj] of dict.entries()) {
+        if (normalizeHandle(obj.objectId) === targetHandle) {
+          alreadyStored = true
+          break
+        }
+      }
+      if (alreadyStored) continue
 
       let target = db.getObjectById(targetHandle)
       if (!target) {
