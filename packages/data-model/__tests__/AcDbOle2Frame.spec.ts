@@ -114,6 +114,24 @@ describe('acdbExtractOleImageBlob', () => {
     expect(blob?.size || 0).toBe(76788)
   })
 
+  it('prefers CONTENTS bitmap over an OlePres clipboard icon', () => {
+    // Title-block OLE stores the real logo in CONTENTS (wide BMP) and a
+    // 1-bpp clipboard icon inside \2OlePres000. A raw scan of OlePres used
+    // to return that icon and stretch it into a blurry bar.
+    const icon = createPackedDib({ width: 8, height: 8, bitCount: 1 })
+    const olePres = wrapAsMetafilePict(icon)
+    const contents = createBmp({ width: 16, height: 16, bitCount: 24 })
+    const blob = acdbExtractOleImageBlob(
+      buildCfb({
+        '\u0002OlePres000': olePres,
+        CONTENTS: contents
+      })
+    )
+    expect(blob).toBeDefined()
+    expect(blob?.type).toBe('image/bmp')
+    expect(blob?.size).toBe(contents.length)
+  })
+
   it('prefers Ole10Native BMP over OlePres WMF for Paintbrush OLE', () => {
     // From ole-image.dxf handle 28D: `\2OlePres000` is CF_METAFILEPICT (WMF)
     // while `\1Ole10Native` holds the real BMP (white + CJK glyph). Preferring
@@ -476,3 +494,173 @@ describe('AcDbOle2Frame image drawing', () => {
     expect(ole.lockAspect()).toBe(false)
   })
 })
+
+const CFB_ENDOFCHAIN = 0xfffffffe
+const CFB_FATSECT = 0xfffffffd
+const CFB_FREESECT = 0xffffffff
+
+function wrapAsMetafilePict(picture: Uint8Array) {
+  const header = new Uint8Array(40)
+  const view = new DataView(header.buffer)
+  view.setUint32(0, 0xffffffff, true)
+  view.setUint32(4, 3, true)
+  view.setUint32(8, 4, true)
+  view.setUint32(36, picture.length, true)
+  const out = new Uint8Array(header.length + picture.length)
+  out.set(header)
+  out.set(picture, header.length)
+  return out
+}
+
+function createPackedDib(options: {
+  width: number
+  height: number
+  bitCount: 1
+}) {
+  const { width, height, bitCount } = options
+  const rowSize = ((width * bitCount + 31) >> 5) << 2
+  const sizeImage = rowSize * height
+  const paletteBytes = (1 << bitCount) * 4
+  const dib = new Uint8Array(40 + paletteBytes + sizeImage)
+  const view = new DataView(dib.buffer)
+  view.setUint32(0, 40, true)
+  view.setInt32(4, width, true)
+  view.setInt32(8, height, true)
+  view.setUint16(12, 1, true)
+  view.setUint16(14, bitCount, true)
+  view.setUint32(20, sizeImage, true)
+  return dib
+}
+
+function createBmp(options: { width: number; height: number; bitCount: 24 }) {
+  const { width, height, bitCount } = options
+  const rowSize = ((width * bitCount + 31) >> 5) << 2
+  const sizeImage = rowSize * height
+  const offBits = 54
+  const bmp = new Uint8Array(offBits + sizeImage)
+  const view = new DataView(bmp.buffer)
+  bmp[0] = 0x42
+  bmp[1] = 0x4d
+  view.setUint32(2, bmp.length, true)
+  view.setUint32(10, offBits, true)
+  view.setUint32(14, 40, true)
+  view.setInt32(18, width, true)
+  view.setInt32(22, height, true)
+  view.setUint16(26, 1, true)
+  view.setUint16(28, bitCount, true)
+  view.setUint32(34, sizeImage, true)
+  bmp.fill(0x11, offBits)
+  return bmp
+}
+
+/**
+ * Builds a version-3 compound file whose streams fit in the mini stream.
+ */
+function buildCfb(streams: Record<string, Uint8Array>) {
+  const names = Object.keys(streams)
+  const miniSector = 64
+  const sectorSize = 512
+  const chunks = names.map(name => {
+    const data = streams[name]
+    const padded = Math.ceil(data.length / miniSector) * miniSector
+    const buf = new Uint8Array(padded)
+    buf.set(data)
+    return buf
+  })
+  const miniStream = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0))
+  const starts: number[] = []
+  let miniCursor = 0
+  chunks.forEach(chunk => {
+    starts.push(miniCursor / miniSector)
+    miniStream.set(chunk, miniCursor)
+    miniCursor += chunk.length
+  })
+
+  const miniStreamSectors = Math.ceil(miniStream.length / sectorSize)
+  const firstMiniSector = 3
+  const file = new Uint8Array((1 + 3 + miniStreamSectors) * sectorSize)
+  const header = new DataView(file.buffer)
+  ;[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].forEach(
+    (byte, index) => {
+      file[index] = byte
+    }
+  )
+  header.setUint16(0x18, 0x003e, true)
+  header.setUint16(0x1a, 3, true)
+  header.setUint16(0x1c, 0xfffe, true)
+  header.setUint16(0x1e, 9, true)
+  header.setUint16(0x20, 6, true)
+  header.setUint32(0x2c, 1, true)
+  header.setUint32(0x30, 1, true)
+  header.setUint32(0x38, 4096, true)
+  header.setUint32(0x3c, 2, true)
+  header.setUint32(0x40, 1, true)
+  header.setUint32(0x44, CFB_ENDOFCHAIN, true)
+  header.setUint32(0x4c, 0, true)
+  for (let index = 1; index < 109; index++) {
+    header.setUint32(0x4c + index * 4, CFB_FREESECT, true)
+  }
+
+  const fat = new DataView(file.buffer, sectorSize, sectorSize)
+  for (let index = 0; index < sectorSize / 4; index++) {
+    fat.setUint32(index * 4, CFB_FREESECT, true)
+  }
+  fat.setUint32(0, CFB_FATSECT, true)
+  fat.setUint32(4, CFB_ENDOFCHAIN, true)
+  fat.setUint32(8, CFB_ENDOFCHAIN, true)
+  for (let index = 0; index < miniStreamSectors; index++) {
+    const sector = firstMiniSector + index
+    const next =
+      index + 1 < miniStreamSectors ? sector + 1 : CFB_ENDOFCHAIN
+    fat.setUint32(sector * 4, next, true)
+  }
+
+  writeCfbDirEntry(file, 2 * sectorSize, 'Root Entry', 5, firstMiniSector, miniStream.length)
+  names.forEach((name, index) => {
+    writeCfbDirEntry(
+      file,
+      2 * sectorSize + (index + 1) * 128,
+      name,
+      2,
+      starts[index],
+      streams[name].length
+    )
+  })
+
+  const miniFat = new DataView(file.buffer, 3 * sectorSize, sectorSize)
+  for (let index = 0; index < sectorSize / 4; index++) {
+    miniFat.setUint32(index * 4, CFB_FREESECT, true)
+  }
+  chunks.forEach((chunk, index) => {
+    const count = chunk.length / miniSector
+    for (let step = 0; step < count; step++) {
+      const sector = starts[index] + step
+      const next = step + 1 < count ? sector + 1 : CFB_ENDOFCHAIN
+      miniFat.setUint32(sector * 4, next, true)
+    }
+  })
+
+  file.set(miniStream, 4 * sectorSize)
+  return file
+}
+
+function writeCfbDirEntry(
+  file: Uint8Array,
+  offset: number,
+  name: string,
+  type: number,
+  start: number,
+  size: number
+) {
+  const encoded = Buffer.from(name, 'utf16le')
+  file.set(encoded, offset)
+  const view = new DataView(file.buffer, file.byteOffset + offset, 128)
+  view.setUint16(64, encoded.length + 2, true)
+  view.setUint8(66, type)
+  view.setUint8(67, 1)
+  view.setUint32(68, CFB_FREESECT, true)
+  view.setUint32(72, CFB_FREESECT, true)
+  view.setUint32(76, CFB_FREESECT, true)
+  view.setUint32(116, start, true)
+  view.setUint32(120, size, true)
+}
