@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.15.5
+
+### Patch Changes
+
+- fix: restores R12 DXF read/write round-trip, skips mojibake ACAD_LAYOUT aliases that would collide with existing layouts, and prefers CONTENTS bitmaps over OlePres clipboard icons so OLE frames show the embedded picture instead of a generic icon
+- Updated dependencies
+  - @mlightcad/common@1.15.5
+
 ## 3.15.4
 
 ### Patch Changes

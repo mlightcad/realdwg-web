@@ -1,6 +1,6 @@
 {
   "name": "@mlightcad/emf-converter",
-  "version": "1.15.4",
+  "version": "1.15.5",
   "description": "Fork of emf-converter@2.0.2 with Excel OLE EMF clip / LOGFONT fixes for RealDWG-Web",
   "license": "Apache-2.0",
   "type": "module",
