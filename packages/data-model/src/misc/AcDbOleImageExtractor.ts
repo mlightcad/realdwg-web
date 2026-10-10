@@ -90,9 +90,14 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
     return undefined
   }
 
-  // 1) OlePres raster first (CF_DIB / CF_BITMAP). Do not take WMF/EMF yet —
-  // Paintbrush OLE often pairs a poor metafile preview with a good BMP in
-  // Ole10Native / CONTENTS.
+  // 1) Structured OlePres rasters (CF_DIB / CF_BITMAP) only. Do not take
+  // WMF/EMF yet — Paintbrush OLE often pairs a poor metafile preview with a
+  // good BMP in Ole10Native / CONTENTS.
+  //
+  // Do not raw-scan the presentation stream here. `\2OlePres000` often embeds
+  // a tiny clipboard icon (for example a 32×64 1-bpp DIB) next to metadata.
+  // Treating that icon as the picture stretches it across the frame and hides
+  // the real bitmap in CONTENTS.
   for (const entry of file.entries()) {
     if (entry.type !== 'stream') continue
     if (!isOlePresStreamName(entry.name)) continue
@@ -102,8 +107,6 @@ function extractImageFromCfb(data: Uint8Array): Blob | undefined {
       allowMetafile: false
     })
     if (fromPres) return fromPres
-    const fromRaw = extractRasterImageFromRawBytes(stream)
-    if (fromRaw) return fromRaw
   }
 
   const preferredNames = [
@@ -235,6 +238,16 @@ function extractPresentationPicture(
   options: ExtractOlePresentationOptions = {}
 ): Blob | undefined {
   const allowMetafile = options.allowMetafile !== false
+  const isMetafileFormat =
+    clipboardFormat === CF_ENHMETAFILE ||
+    clipboardFormat === CF_METAFILEPICT
+
+  // A metafile payload often contains an incidental clipboard icon DIB.
+  // Sniffing that icon when the caller asked for a raster hides the real
+  // CONTENTS bitmap and stretches a few dozen pixels across the frame.
+  if (isMetafileFormat && !allowMetafile) {
+    return undefined
+  }
 
   if (clipboardFormat === CF_DIB) {
     const dib = dibToBmpBlob(presentationData)
