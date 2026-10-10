@@ -399,6 +399,91 @@ describe('DXF Phase 3–5 extensions', () => {
     expect(sortents?.entityIds).toEqual(['E2', 'E1'])
   })
 
+  it('does not alias LAYOUT objects when ACAD_LAYOUT keys use mojibake names', async () => {
+    // LAYOUT is keyed by layoutName first; finishNamedObjectDictionaries then
+    // reassigns the layout dictionary objectId from the NOD child handle and
+    // merges ACAD_LAYOUT entries. Mojibake keys must not create a second slot
+    // for the same layout object (hasId() would miss it after the reassignment).
+    const dxf = [
+      '0',
+      'SECTION',
+      '2',
+      'OBJECTS',
+      '0',
+      'DICTIONARY',
+      '5',
+      'C',
+      '330',
+      '0',
+      '100',
+      'AcDbDictionary',
+      '281',
+      '1',
+      '3',
+      'ACAD_LAYOUT',
+      '350',
+      '1A',
+      '0',
+      'DICTIONARY',
+      '5',
+      '1A',
+      '330',
+      'C',
+      '100',
+      'AcDbDictionary',
+      '281',
+      '1',
+      '3',
+      '潍敤l',
+      '350',
+      '22',
+      '0',
+      'LAYOUT',
+      '5',
+      '22',
+      '330',
+      '1A',
+      '100',
+      'AcDbPlotSettings',
+      '1',
+      '',
+      '70',
+      '0',
+      '100',
+      'AcDbLayout',
+      '1',
+      'Model',
+      '70',
+      '1',
+      '71',
+      '0',
+      '10',
+      '0',
+      '20',
+      '0',
+      '11',
+      '420',
+      '21',
+      '297',
+      '330',
+      '2',
+      '0',
+      'ENDSEC',
+      '0',
+      'EOF'
+    ].join('\n')
+
+    const db = createWorkingDb()
+    await new AcDbDxfDocumentReader(db).read(
+      AcDbDxfFiler.fromString(dxf, { database: db })
+    )
+
+    const model = db.objects.layout.getAt('Model')
+    expect(model?.objectId.toUpperCase()).toBe('22')
+    expect(db.objects.layout.numEntries).toBe(1)
+    expect(db.objects.layout.getAt('潍敤l')).toBeUndefined()
+  })
+
   it('reads LAYER records that include ACAD_XDICTIONARY control strings', () => {
     const snippet = [
       '0',
