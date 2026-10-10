@@ -464,8 +464,9 @@ export abstract class AcDbEntity extends AcDbObject {
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
 
-    // Tolerate missing AcDbEntity marker (some writers omit it).
-    if (!filer.atSubclassData('AcDbEntity')) {
+    // Tolerate missing AcDbEntity marker (R12 / some writers omit it).
+    const hadEntityMarker = filer.atSubclassData('AcDbEntity')
+    if (!hadEntityMarker) {
       const next = filer.peekItem()
       if (next && Number(next.code) === 100) {
         // Different subclass — leave for derived class.
@@ -536,9 +537,18 @@ export abstract class AcDbEntity extends AcDbObject {
           // Shadow mode / material / plot style / color name — optional.
           break
         default:
-          // Stay resilient to unknown AcDbEntity codes (forward compatible).
-          // Do not push back — that would abort derived subclass readers
-          // (TEXT/MTEXT/DIMENSION/TABLE often carry layout/material extras).
+          if (!hadEntityMarker) {
+            // R12 flat layout: entity-specific groups (10/20/1/…) follow common
+            // fields with no subclass marker. Hand them to the derived reader.
+            filer.pushBackItem(item)
+            if (color != null) {
+              this.color = color
+            }
+            this.applyDxfFileDefaults()
+            return this
+          }
+          // With an AcDbEntity marker, stay resilient to unknown common codes
+          // (forward compatible) until the next subclass marker.
           break
       }
     }

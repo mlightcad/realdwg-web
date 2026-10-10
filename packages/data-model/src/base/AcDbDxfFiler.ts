@@ -26,7 +26,9 @@ import {
   ACDB_DXF_XDATA_STRING_MAX_BYTES,
   acdbChunkBinaryByMaxBytes,
   acdbChunkDxfMTextContents,
-  acdbChunkUtf8ByMaxBytes
+  acdbChunkDxfLegacyXDataString,
+  acdbChunkUtf8ByMaxBytes,
+  acdbEncodeDxfUnicodeEscapes
 } from './AcDbDxfStringChunks'
 import { AcDbResultBuffer } from './AcDbResultBuffer'
 import type { AcDbTypedValue } from './AcDbTypedValue'
@@ -680,11 +682,19 @@ export class AcDbDxfFiler {
     for (const item of data) {
       const code = Number(item.code)
       // XData ASCII strings are limited to 255 bytes per group 1000.
+      // Pre-R2007 writes expand non-ASCII to `\U+nnnn`, so chunk against the
+      // post-escape size; UTF-8 targets still chunk by UTF-8 byte length.
       if (code === 1000 && typeof item.value === 'string') {
-        for (const chunk of acdbChunkUtf8ByMaxBytes(
-          item.value,
-          ACDB_DXF_XDATA_STRING_MAX_BYTES
-        )) {
+        const chunks = this.capabilities.supportsUtf8CodePage
+          ? acdbChunkUtf8ByMaxBytes(
+              item.value,
+              ACDB_DXF_XDATA_STRING_MAX_BYTES
+            )
+          : acdbChunkDxfLegacyXDataString(
+              this.sanitizeStringForDxfLine(item.value),
+              ACDB_DXF_XDATA_STRING_MAX_BYTES
+            )
+        for (const chunk of chunks) {
           this.writeGroup(1000, chunk)
         }
         continue
@@ -787,7 +797,7 @@ export class AcDbDxfFiler {
       case 'handle': {
         const text =
           typeof value === 'string'
-            ? this.sanitizeStringForDxfLine(value)
+            ? this.encodeStringForWrite(value)
             : this.formatValue(value)
         const encoded = new TextEncoder().encode(text === '' ? '0' : text)
         const withNul = new Uint8Array(encoded.length + 1)
@@ -930,7 +940,7 @@ export class AcDbDxfFiler {
     if (typeof value === 'string') {
       // ASCII DXF: one value must occupy a single line. Raw CR/LF inside a value
       // breaks the code/value sequence and strict readers (e.g. AutoCAD) report corruption.
-      return this.sanitizeStringForDxfLine(value)
+      return this.encodeStringForWrite(value)
     }
     if (typeof value === 'boolean') return value ? '1' : '0'
     if (typeof value === 'number') {
@@ -956,6 +966,16 @@ export class AcDbDxfFiler {
         // eslint-disable-next-line no-control-regex
         .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F]/g, '')
     )
+  }
+
+  /**
+   * Sanitize a string for DXF output, escaping non-ASCII as `\U+nnnn` when the
+   * target version predates UTF-8 `$DWGCODEPAGE` (R2007 / AC1021).
+   */
+  private encodeStringForWrite(s: string): string {
+    const sanitized = this.sanitizeStringForDxfLine(s)
+    if (this.capabilities.supportsUtf8CodePage) return sanitized
+    return acdbEncodeDxfUnicodeEscapes(sanitized)
   }
 }
 

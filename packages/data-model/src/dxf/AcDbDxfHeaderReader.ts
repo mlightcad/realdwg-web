@@ -58,6 +58,11 @@ function applyHeaderVar(
       if (v) db.version = v
       break
     }
+    case '$DWGCODEPAGE': {
+      const v = readHeaderString(filer)
+      if (v) db.dwgCodePage = v
+      break
+    }
     case '$CECOLOR': {
       const n = readHeaderNumber(filer)
       db.cecolor.colorIndex = n ?? 256

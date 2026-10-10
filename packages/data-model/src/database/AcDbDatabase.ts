@@ -335,6 +335,11 @@ export class AcDbDatabase extends AcDbObject {
 
   /** Version of the database */
   private _version: AcDbDwgVersion
+  /**
+   * Drawing code page name from `$DWGCODEPAGE` (e.g. `ANSI_1252`, `UTF-8`).
+   * Used when writing pre-R2007 DXF so text encoding matches the header.
+   */
+  private _dwgCodePage: string | undefined
   /** Angle base for the database */
   private _angbase: number
   /** Angle direction for the database */
@@ -510,6 +515,7 @@ export class AcDbDatabase extends AcDbObject {
     AcDbDatabase._unsavedDrawingSequence += 1
     this._dwgname = `Drawing${AcDbDatabase._unsavedDrawingSequence}.dwg`
     this._version = new AcDbDwgVersion('AC1014')
+    this._dwgCodePage = undefined
     this._angbase = 0
     this._angdir = 0
     this._aunits = AcDbAngleUnits.DecimalDegrees
@@ -1556,6 +1562,25 @@ export class AcDbDatabase extends AcDbObject {
         this._version = nextValue
       }
     )
+  }
+
+  /**
+   * Gets the drawing code page name (`$DWGCODEPAGE`), when known.
+   *
+   * Populated from the HEADER when a DXF/DWG is read. Used by {@link dxfOut}
+   * for pre-R2007 targets; R2007+ always writes `UTF-8`.
+   */
+  get dwgCodePage(): string | undefined {
+    return this._dwgCodePage
+  }
+
+  /**
+   * Sets the drawing code page name written as `$DWGCODEPAGE` for legacy DXF.
+   *
+   * @param value - Code page token such as `ANSI_1252` or `ANSI_936`
+   */
+  set dwgCodePage(value: string | undefined) {
+    this._dwgCodePage = value?.trim() ? value.trim() : undefined
   }
 
   /**
@@ -2927,9 +2952,16 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(1, filer.version?.name ?? this.version.name)
     filer.writeString(9, '$HANDSEED')
     filer.writeString(5, filer.nextHandle.toString(16).toUpperCase())
+    filer.writeString(9, '$DWGCODEPAGE')
     if (filer.capabilities.supportsUtf8CodePage) {
-      filer.writeString(9, '$DWGCODEPAGE')
       filer.writeString(3, 'UTF-8')
+    } else {
+      // Pre-R2007: declare a legacy code page. Non-ASCII text is written as
+      // `\U+nnnn` escapes (see AcDbDxfFiler) so the ASCII payload matches.
+      const name = this._dwgCodePage
+      const legacy =
+        name && !/^utf-?8$/i.test(name) ? name : 'ANSI_1252'
+      filer.writeString(3, legacy)
     }
     filer.writeString(9, '$INSUNITS')
     filer.writeInt16(70, this.insunits)

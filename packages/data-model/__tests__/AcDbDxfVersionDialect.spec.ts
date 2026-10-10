@@ -30,7 +30,7 @@ describe('AcDbDxf version write dialect', () => {
     expect(dxf).toContain('$ACADVER\n1\nAC1015')
     expect(dxf).not.toContain('\n420\n')
     expect(dxf).not.toContain('\n440\n')
-    expect(dxf).not.toContain('$DWGCODEPAGE')
+    expect(dxf).toContain('$DWGCODEPAGE\n3\nANSI_1252')
     // AC1015 still has lineweight
     expect(dxf).toContain('\n370\n')
   })
@@ -40,13 +40,20 @@ describe('AcDbDxf version write dialect', () => {
     const dxf = db.dxfOut(undefined, 6, 'AC1018') as string
     expect(dxf).toContain('\n420\n')
     expect(dxf).toContain('\n440\n')
-    expect(dxf).not.toContain('$DWGCODEPAGE')
+    expect(dxf).toContain('$DWGCODEPAGE\n3\nANSI_1252')
   })
 
   it('emits $DWGCODEPAGE for AC1021+', () => {
     const db = createDbWithStyledLine()
     const dxf = db.dxfOut(undefined, 6, 'AC1021') as string
     expect(dxf).toContain('$DWGCODEPAGE\n3\nUTF-8')
+  })
+
+  it('preserves source $DWGCODEPAGE for pre-UTF8 targets', () => {
+    const db = createDbWithStyledLine()
+    db.dwgCodePage = 'ANSI_936'
+    const dxf = db.dxfOut(undefined, 6, 'AC1009') as string
+    expect(dxf).toContain('$DWGCODEPAGE\n3\nANSI_936')
   })
 
   it('skips subclass markers and BLOCK_RECORD for AC1009', () => {

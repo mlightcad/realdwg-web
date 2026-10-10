@@ -108,3 +108,103 @@ export function acdbChunkBinaryByMaxBytes(
   }
   return chunks
 }
+
+/**
+ * Byte length of one code point after {@link acdbEncodeDxfUnicodeEscapes}.
+ * ASCII stays 1 byte; BMP becomes `\U+nnnn` (7); higher planes use 8 hex digits.
+ */
+function acdbEncodedDxfUnicodeByteLength(codePoint: number): number {
+  if (codePoint <= 0x7f) return 1
+  // `\U+` (3) + 4 or 8 hex digits
+  return 3 + (codePoint <= 0xffff ? 4 : 8)
+}
+
+/**
+ * Split a Unicode string so each piece is ≤ `maxBytes` after legacy `\U+`
+ * encoding. Used for XData group 1000 on pre-R2007 DXF targets, where chunking
+ * by UTF-8 length first would overflow once non-ASCII expands to escapes.
+ */
+export function acdbChunkDxfLegacyXDataString(
+  text: string,
+  maxBytes: number
+): string[] {
+  if (maxBytes <= 0) return [text ?? '']
+  const value = text ?? ''
+  if (value.length === 0) return ['']
+
+  const chunks: string[] = []
+  let current = ''
+  let currentBytes = 0
+
+  for (const char of value) {
+    const cp = char.codePointAt(0)!
+    const encodedBytes = acdbEncodedDxfUnicodeByteLength(cp)
+    if (encodedBytes > maxBytes) {
+      if (current.length > 0) {
+        chunks.push(current)
+        current = ''
+        currentBytes = 0
+      }
+      chunks.push(char)
+      continue
+    }
+    if (currentBytes + encodedBytes > maxBytes && current.length > 0) {
+      chunks.push(current)
+      current = char
+      currentBytes = encodedBytes
+    } else {
+      current += char
+      currentBytes += encodedBytes
+    }
+  }
+  if (current.length > 0) chunks.push(current)
+  return chunks
+}
+
+/**
+ * Encode non-ASCII code points as AutoCAD DXF `\U+nnnn` escapes.
+ *
+ * Used when writing pre-R2007 DXF as a JavaScript string: the payload stays
+ * pure ASCII so callers can save with UTF-8 without mojibake, and R12–R2004
+ * readers that honor `\U+` recover the original characters.
+ */
+export function acdbEncodeDxfUnicodeEscapes(text: string): string {
+  const value = text ?? ''
+  let needsEscape = false
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) > 0x7f) {
+      needsEscape = true
+      break
+    }
+  }
+  if (!needsEscape) return value
+
+  let out = ''
+  for (const ch of value) {
+    const cp = ch.codePointAt(0)!
+    if (cp <= 0x7f) {
+      out += ch
+    } else {
+      const hex = cp.toString(16).toUpperCase()
+      out += '\\U+' + (hex.length <= 4 ? hex.padStart(4, '0') : hex.padStart(8, '0'))
+    }
+  }
+  return out
+}
+
+/**
+ * Expand AutoCAD DXF `\U+nnnn` / `\U+nnnnnnnn` escapes into Unicode characters.
+ */
+export function acdbExpandDxfUnicodeEscapes(text: string): string {
+  const value = text ?? ''
+  if (!value.includes('\\U+') && !value.includes('\\u+')) return value
+  return value.replace(/\\U\+([0-9A-Fa-f]{4,8})/gi, (match, hex: string) => {
+    const cp = Number.parseInt(hex, 16)
+    if (!Number.isFinite(cp) || cp < 0 || cp > 0x10ffff) return match
+    try {
+      return String.fromCodePoint(cp)
+    } catch {
+      return match
+    }
+  })
+}

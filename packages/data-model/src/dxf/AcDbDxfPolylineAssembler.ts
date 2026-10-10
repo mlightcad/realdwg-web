@@ -1,11 +1,16 @@
 import type { AcGePoint3dLike } from '@mlightcad/geometry-engine'
 
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import type { AcDbDxfPair } from '../base/AcDbDxfPair'
 import { AcDb2dPolyline, AcDbPoly2dType } from '../entity/AcDb2dPolyline'
 import { AcDb3dPolyline, AcDbPoly3dType } from '../entity/AcDb3dPolyline'
 import type { AcDbEntity } from '../entity/AcDbEntity'
 import { AcDbPolyFaceMesh } from '../entity/AcDbPolyFaceMesh'
 import { AcDbPolygonMesh } from '../entity/AcDbPolygonMesh'
+import {
+  AcDbDxfPairArrayReader,
+  acdbTypedValueToDxfPair
+} from './AcDbDxfPairArrayReader'
 
 /** DXF VERTEX flag: spline frame control point (skip when assembling path). */
 const VERTEX_SPLINE_CONTROL_POINT = 16
@@ -49,11 +54,50 @@ interface PolylineHeaderScratch {
  * `AcDbEntityConverter.convertPolyline`).
  *
  * Expects the filer positioned just after the `(0, POLYLINE)` pair.
+ * XData on the POLYLINE header (before VERTEX) is preserved on the result.
  */
 export function acdbDxfInPolyline(filer: AcDbDxfFiler): AcDbEntity | null {
   const header = readPolylineHeader(filer)
+  const xdataPairs = drainPolylineXDataPairs(filer)
   const vertices = readPolylineVertices(filer)
-  return assemblePolyline(header, vertices)
+  const entity = assemblePolyline(header, vertices)
+  if (entity && xdataPairs.length > 0) {
+    applyPolylineXData(entity, xdataPairs, filer)
+  }
+  return entity
+}
+
+/**
+ * Drain XData groups (1000–1071) that sit on the POLYLINE header before the
+ * first VERTEX / SEQEND. Without this, `readPolylineVertices` would discard
+ * them while skipping non-zero group codes.
+ */
+function drainPolylineXDataPairs(filer: AcDbDxfFiler): AcDbDxfPair[] {
+  const pairs: AcDbDxfPair[] = []
+  while (!filer.atEndOfObject && !filer.atEof) {
+    const peek = filer.peekItem()
+    if (!peek) break
+    const code = Number(peek.code)
+    if (code === 0) break
+    if (code < 1000 || code > 1071) break
+    const item = filer.readItem()
+    if (!item) break
+    pairs.push(acdbTypedValueToDxfPair(item))
+  }
+  return pairs
+}
+
+function applyPolylineXData(
+  entity: AcDbEntity,
+  pairs: readonly AcDbDxfPair[],
+  filer: AcDbDxfFiler
+): void {
+  const replay = AcDbDxfFiler.forReading(new AcDbDxfPairArrayReader(pairs), {
+    database: filer.database
+  })
+  // dxfIn's common-field loop pushes back the first 1001, then dxfInXData
+  // materializes AppId blocks onto the entity.
+  entity.dxfIn(replay)
 }
 
 function readPolylineHeader(filer: AcDbDxfFiler): PolylineHeaderScratch {
@@ -137,8 +181,9 @@ function readPolylineVertices(filer: AcDbDxfFiler): PolylineVertexScratch[] {
     const peek = filer.peekItem()
     if (!peek) break
     if (Number(peek.code) !== 0) {
-      filer.readItem()
-      continue
+      // Leftover header/XData pairs should already be consumed; stop rather
+      // than discarding unknown groups.
+      break
     }
 
     const name = String(peek.value).toUpperCase()

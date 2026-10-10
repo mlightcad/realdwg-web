@@ -36,7 +36,10 @@ export {
   ACDB_DXF_XDATA_STRING_MAX_BYTES,
   acdbChunkBinaryByMaxBytes,
   acdbChunkDxfMTextContents,
-  acdbChunkUtf8ByMaxBytes
+  acdbChunkDxfLegacyXDataString,
+  acdbChunkUtf8ByMaxBytes,
+  acdbEncodeDxfUnicodeEscapes,
+  acdbExpandDxfUnicodeEscapes
 } from './AcDbDxfStringChunks'
 export type { AcDbDxfMTextContentChunk } from './AcDbDxfStringChunks'
 export {
