@@ -25,8 +25,8 @@ import {
   ACDB_DXF_XDATA_BINARY_MAX_BYTES,
   ACDB_DXF_XDATA_STRING_MAX_BYTES,
   acdbChunkBinaryByMaxBytes,
-  acdbChunkDxfMTextContents,
   acdbChunkDxfLegacyXDataString,
+  acdbChunkDxfMTextContents,
   acdbChunkUtf8ByMaxBytes,
   acdbEncodeDxfUnicodeEscapes
 } from './AcDbDxfStringChunks'
