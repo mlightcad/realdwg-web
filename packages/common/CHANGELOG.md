@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.6
+
+### Patch Changes
+
+- fix: renders nearly-closed wide polylines through offsetRing instead of rejecting open loops that close on themselves, drops the thin-ring area-ratio gate that blocked building-scale outlines, and makes area hierarchy nesting deterministic so polyline fills stay correct
+
 ## 1.15.5
 
 ### Patch Changes

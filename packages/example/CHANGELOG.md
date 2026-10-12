@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.6
+
+### Patch Changes
+
+- fix: renders nearly-closed wide polylines through offsetRing instead of rejecting open loops that close on themselves, drops the thin-ring area-ratio gate that blocked building-scale outlines, and makes area hierarchy nesting deterministic so polyline fills stay correct
+- Updated dependencies
+  - @mlightcad/data-model@1.15.6
+  - @mlightcad/libredwg-converter@3.15.6
+
 ## 0.15.5
 
 ### Patch Changes
