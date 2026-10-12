@@ -1,5 +1,5 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math'
-import { AcGeGeometryUtil, AcGeMathUtil } from '../util'
+import { AcGeGeometryUtil } from '../util'
 import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
 import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
 import { AcGeLoop2d } from './AcGeLoop2d'
@@ -136,13 +136,12 @@ export class AcGeArea2d extends AcGeShape2d {
         const index2 = areaSortIndex[j]
         const boundary2 = pointBoundaries[index2]
         const box2 = boundaryBoxes[index2]
-        // Determine whether the boundary is within the boundary2
+        // Determine whether the boundary is within the boundary2.
+        // Use a deterministic sample (first vertex) — randInt made hatch /
+        // multi-quad wide-polyline nesting non-deterministic across reloads.
         if (
           box2.containsBox(box) &&
-          AcGeGeometryUtil.isPointInPolygon(
-            boundary[AcGeMathUtil.randInt(0, boundary.length - 1)],
-            boundary2
-          )
+          AcGeGeometryUtil.isPointInPolygon(boundary[0], boundary2)
         ) {
           indexNodeMap
             .get(index2)
