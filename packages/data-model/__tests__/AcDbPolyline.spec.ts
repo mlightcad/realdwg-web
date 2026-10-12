@@ -595,7 +595,7 @@ describe('AcDbPolyline', () => {
     expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
   })
 
-  it('renders nearly-closed open wide polyline as outer and inner loops', () => {
+  it('renders nearly-closed open wide polyline via offsetRing', () => {
     const polyline = new AcDbPolyline()
     polyline.closed = false
     polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 2, 2)
@@ -606,7 +606,8 @@ describe('AcDbPolyline', () => {
     const giEntity = { id: 'nearly-closed-wide-polyline-gi' }
     const renderer = {
       lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      area: jest.fn(),
+      offsetRing: jest.fn(() => giEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -617,14 +618,52 @@ describe('AcDbPolyline', () => {
     }
 
     const result = polyline.subWorldDraw(renderer as never)
-    const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
-      loops: unknown[]
-    }
 
     expect(result).toBe(giEntity)
-    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(renderer.offsetRing).toHaveBeenCalledTimes(1)
+    expect(renderer.area).not.toHaveBeenCalled()
     expect(renderer.lines).not.toHaveBeenCalled()
-    expect(areaArg.loops).toHaveLength(2)
+    const [outer, inner] = (renderer.offsetRing as jest.Mock).mock.calls[0] as [
+      Array<{ x: number; y: number }>,
+      Array<{ x: number; y: number }>
+    ]
+    expect(outer.length).toBeGreaterThanOrEqual(3)
+    expect(inner.length).toBe(outer.length)
+  })
+
+  it('renders large nearly-closed building-outline wide polyline via offsetRing', () => {
+    // Building-scale outline: inner/outer area ratio is ~1.0. The old
+    // INNER_TO_OUTER_MAX_RATIO gate rejected these and fell back to open-band
+    // quads that dropped segments under area hierarchy nesting (#722).
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    const width = 60
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, width, width)
+    polyline.addVertexAt(1, new AcGePoint2d(25000, 0), 0, width, width)
+    polyline.addVertexAt(2, new AcGePoint2d(25000, 10500), 0, width, width)
+    polyline.addVertexAt(3, new AcGePoint2d(0, 10500), 0, width, width)
+    polyline.addVertexAt(4, new AcGePoint2d(0, 0), 0, width, width)
+
+    const giEntity = { id: 'building-outline-wide-polyline-gi' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(),
+      offsetRing: jest.fn(() => giEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+
+    expect(result).toBe(giEntity)
+    expect(renderer.offsetRing).toHaveBeenCalledTimes(1)
+    expect(renderer.area).not.toHaveBeenCalled()
+    expect(renderer.lines).not.toHaveBeenCalled()
   })
 
   it('renders open stadium wide polyline as a segment band instead of a ring', () => {

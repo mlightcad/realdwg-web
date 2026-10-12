@@ -693,7 +693,15 @@ export class AcDbPolyline extends AcDbCurve {
     const centerline = this._geo.tessellate(tessellateOptions)
     const widthProfile = this.createWidthProfile(tessellateOptions)
     if (widthProfile != null) {
-      if (this.closed) {
+      // Closed and nearly-closed open wide polylines (first≈last, common in
+      // DWG exports that omit the closed flag) prefer the index-aligned
+      // offsetRing path. Falling through to multi-quad area fills can nest
+      // overlapping segment quads as holes in AcGeArea2d.buildHierarchy and
+      // drop wall segments non-deterministically.
+      const preferOffsetRing =
+        this.closed ||
+        isNearlyClosedWidePolyline(normalizeCenterline(widthProfile, false))
+      if (preferOffsetRing) {
         const ring = createClosedWidePolylineOffsetRing(widthProfile)
         if (ring != null) {
           const traits = renderer.subEntityTraits
@@ -1195,7 +1203,6 @@ export function acdbOffsetVertexPathAsPolyline(
 
 const WIDTH_EPSILON = 1e-6
 const MITER_LIMIT = 4
-const INNER_TO_OUTER_MAX_RATIO = 0.75
 
 /**
  * A sampled centerline point with local width used for wide polyline rendering.
@@ -1321,6 +1328,11 @@ function createWidePolylineAreaForSingleProfile(
 /**
  * Splits a sampled centerline when it revisits the same point so each subpath
  * can be stroked independently without forming one enclosing fill region.
+ *
+ * When the final sample closes back onto the current segment start (open
+ * polylines that repeat the first vertex instead of setting the closed flag),
+ * emit that span once and stop. Re-emitting the same span as a tail produces
+ * duplicate quads that cancel each other when nested as holes.
  */
 function splitWidePolylineProfileAtRevisits(points: WidePolylinePoint[]) {
   if (points.length < 2) {
@@ -1338,6 +1350,11 @@ function splitWidePolylineProfileAtRevisits(points: WidePolylinePoint[]) {
       const subpath = points.slice(segmentStart, i + 1)
       if (subpath.length >= 2) {
         subpaths.push(subpath)
+      }
+      // Final sample closed back onto the segment start — do not also emit
+      // the identical span as a trailing subpath.
+      if (firstIndex === segmentStart && i === points.length - 1) {
+        return subpaths.length > 0 ? subpaths : [points]
       }
       segmentStart = firstIndex
       firstIndexByKey.clear()
@@ -1362,7 +1379,11 @@ function widePolylinePointKey(point: WidePolylinePoint) {
 }
 
 /**
- * Validates that two offset loops form a thin ring rather than a near-solid slab.
+ * Validates that two offset loops form a stroke ring with positive thickness.
+ *
+ * Large building outlines have inner/outer area ratios near 1.0; an earlier
+ * `inner/outer <= 0.75` gate rejected those thin rings and forced the open-band
+ * quad path, which then dropped segments under area hierarchy nesting.
  */
 function isValidWidePolylineRing(outerArea: number, innerArea: number) {
   const outer = Math.max(outerArea, innerArea)
@@ -1371,10 +1392,7 @@ function isValidWidePolylineRing(outerArea: number, innerArea: number) {
     return false
   }
   const ringArea = outer - inner
-  if (ringArea <= WIDTH_EPSILON) {
-    return false
-  }
-  return inner / outer <= INNER_TO_OUTER_MAX_RATIO
+  return ringArea > WIDTH_EPSILON
 }
 
 /**
