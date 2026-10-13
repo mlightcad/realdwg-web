@@ -716,16 +716,19 @@ export class AcDbPolyline extends AcDbCurve {
           )
         }
       }
-      const area = createWidePolylineArea(widthProfile, this.closed)
-      if (area != null) {
+      const areas = createWidePolylineArea(widthProfile, this.closed)
+      if (areas != null) {
         const traits = renderer.subEntityTraits
         traits.fillType = {
           solidFill: true,
           patternAngle: 0,
           definitionLines: []
         }
-        this.mapAreaLoopsToWcs(area)
-        return renderer.area(area)
+        const entities = areas.map(area => {
+          this.mapAreaLoopsToWcs(area)
+          return renderer.area(area)
+        })
+        return entities.length === 1 ? entities[0] : renderer.group(entities)
       }
     }
 
@@ -1239,7 +1242,7 @@ function createClosedWidePolylineOffsetRing(points: WidePolylinePoint[]): {
 }
 
 /**
- * Builds a renderable filled area for a wide polyline.
+ * Builds renderable filled area(s) for a wide polyline.
  *
  * Open wide polylines are tessellated into per-segment quads so the stroke band
  * follows the centerline without enclosing interior regions when the path bends
@@ -1247,35 +1250,40 @@ function createClosedWidePolylineOffsetRing(points: WidePolylinePoint[]): {
  * inner hole) so the stroke ring does not degenerate into a self-intersecting
  * polygon.
  *
+ * A path that revisits a point (a closed polyline missing the closed flag, or
+ * an open polyline with a retraced/orthogonal corner) is split into subpaths
+ * by {@link splitWidePolylineProfileAtRevisits} so each strokes independently.
+ * Each subpath gets its own {@link AcGeArea2d} rather than sharing one: in
+ * `AcGeArea2d`, only the first loop added is the outer loop and every loop
+ * after it is an inner hole, so pouring a second subpath's loops into the
+ * first subpath's area turned its own outer band into a (wrong) hole and
+ * silently dropped it (#730).
+ *
  * @param points - Centerline samples with per-point widths.
  * @param closed - Whether the source polyline is topologically closed.
- * @returns An area ready for fill rendering, or `null` when no valid area can
- * be constructed.
+ * @returns One area per renderable subpath, or `null` when none could be
+ * constructed.
  */
-function createWidePolylineArea(points: WidePolylinePoint[], closed: boolean) {
+function createWidePolylineArea(
+  points: WidePolylinePoint[],
+  closed: boolean
+): AcGeArea2d[] | null {
   if (points.length < 2) return null
   if (closed) {
-    return createWidePolylineAreaForSingleProfile(points, true)
+    const area = createWidePolylineAreaForSingleProfile(points, true)
+    return area ? [area] : null
   }
 
   const subpaths = splitWidePolylineProfileAtRevisits(points)
-  if (subpaths.length === 1) {
-    return createWidePolylineAreaForSingleProfile(subpaths[0], false)
-  }
-
-  const area = new AcGeArea2d()
-  let added = false
+  const areas: AcGeArea2d[] = []
   for (const subpath of subpaths) {
     const part = createWidePolylineAreaForSingleProfile(subpath, false)
     if (part == null) {
       continue
     }
-    for (const loop of part.loops) {
-      area.add(loop)
-    }
-    added = true
+    areas.push(part)
   }
-  return added ? area : null
+  return areas.length > 0 ? areas : null
 }
 
 function createWidePolylineAreaForSingleProfile(

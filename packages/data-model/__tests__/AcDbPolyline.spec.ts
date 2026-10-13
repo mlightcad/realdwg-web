@@ -595,6 +595,58 @@ describe('AcDbPolyline', () => {
     expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
   })
 
+  it('renders every segment of a retraced wide polyline instead of merging subpaths into one hole-cancelling area (#730)', () => {
+    // Out-and-back path: 0,0 -> 10,0 -> 20,0 -> 10,0 -> 10,50. The point
+    // (10,0) is revisited more than one step later, so
+    // splitWidePolylineProfileAtRevisits splits this into two overlapping
+    // subpaths. Start and end stay far apart so this does not take the
+    // nearly-closed offsetRing path. Pouring both subpaths' loops into one
+    // shared AcGeArea2d treated the second subpath's own outer band as a
+    // hole inside the first's, silently losing coverage. Each subpath must
+    // now get its own area and its own renderer.area() call.
+    const polyline = new AcDbPolyline()
+    polyline.closed = false
+    polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 4, 4)
+    polyline.addVertexAt(1, new AcGePoint2d(10, 0), 0, 4, 4)
+    polyline.addVertexAt(2, new AcGePoint2d(20, 0), 0, 4, 4)
+    polyline.addVertexAt(3, new AcGePoint2d(10, 0), 0, 4, 4)
+    polyline.addVertexAt(4, new AcGePoint2d(10, 50), 0, 4, 4)
+
+    const areaEntities = [{ id: 'subpath-1' }, { id: 'subpath-2' }]
+    const groupEntity = { id: 'retraced-wide-polyline-group' }
+    const renderer = {
+      lines: jest.fn(),
+      area: jest.fn(() => areaEntities.shift()),
+      group: jest.fn(() => groupEntity),
+      subEntityTraits: {
+        fillType: {
+          solidFill: false,
+          patternAngle: 0,
+          definitionLines: []
+        }
+      }
+    }
+
+    const result = polyline.subWorldDraw(renderer as never)
+
+    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.area.mock.calls.length).toBeGreaterThan(1)
+    expect(renderer.group).toHaveBeenCalledTimes(1)
+    expect(result).toBe(groupEntity)
+
+    let totalCoveredArea = 0
+    const areaCalls = renderer.area.mock.calls as unknown as Array<
+      [{ area: number }]
+    >
+    for (const [areaArg] of areaCalls) {
+      totalCoveredArea += Math.abs(areaArg.area)
+    }
+    // Two 4-wide bands: 0-10 (40 sq units) and 10-20 traversed twice (40 each).
+    // Each subpath keeps its own full area now, so none of it is cancelled
+    // out by being nested as a hole in another subpath's region.
+    expect(totalCoveredArea).toBeGreaterThan(100)
+  })
+
   it('renders nearly-closed open wide polyline via offsetRing', () => {
     const polyline = new AcDbPolyline()
     polyline.closed = false
