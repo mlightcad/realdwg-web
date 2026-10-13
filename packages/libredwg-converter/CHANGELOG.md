@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.15.7
+
+### Patch Changes
+
+- fix: keeps MLeader textWidth 0 as auto wrap and lands doglegs on contentBasePosition when dogleg length is undersized, and builds splines from fit-point arrays when the declared count is omitted. Also upgrades the LibreDWG web dependency to v0.8.0
+- Updated dependencies
+  - @mlightcad/data-model@1.15.7
+
 ## 3.15.6
 
 ### Patch Changes
