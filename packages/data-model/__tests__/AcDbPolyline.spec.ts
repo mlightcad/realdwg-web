@@ -531,6 +531,9 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(3, new AcGePoint2d(0, 400), 0, 40, 40)
     polyline.addVertexAt(4, new AcGePoint2d(0, 200), 0, 40, 40)
 
+    // Single open-band area() remains eligible for direct batching.
+    expect(polyline.directBatchPrimitive).toBe('area')
+
     const giEntity = { id: 'open-wide-polyline-gi' }
     const renderer = {
       lines: jest.fn(),
@@ -612,6 +615,9 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(3, new AcGePoint2d(10, 0), 0, 4, 4)
     polyline.addVertexAt(4, new AcGePoint2d(10, 50), 0, 4, 4)
 
+    // Multi-area draw must stay off the direct-batch 'area' path.
+    expect(polyline.directBatchPrimitive).toBeNull()
+
     const areaEntities = [{ id: 'subpath-1' }, { id: 'subpath-2' }]
     const groupEntity = { id: 'retraced-wide-polyline-group' }
     const renderer = {
@@ -630,21 +636,25 @@ describe('AcDbPolyline', () => {
     const result = polyline.subWorldDraw(renderer as never)
 
     expect(renderer.lines).not.toHaveBeenCalled()
-    expect(renderer.area.mock.calls.length).toBeGreaterThan(1)
+    expect(renderer.area).toHaveBeenCalledTimes(2)
     expect(renderer.group).toHaveBeenCalledTimes(1)
+    expect(renderer.group).toHaveBeenCalledWith([
+      { id: 'subpath-1' },
+      { id: 'subpath-2' }
+    ])
     expect(result).toBe(groupEntity)
 
-    let totalCoveredArea = 0
+    // Subpath 1: three 10×4 quads (out-and-back). Subpath 2: one 50×4 vertical
+    // band. Loops stay in separate areas so they are not nested as holes.
     const areaCalls = renderer.area.mock.calls as unknown as Array<
-      [{ area: number }]
+      [{ loops: unknown[] }]
     >
+    let totalLoops = 0
     for (const [areaArg] of areaCalls) {
-      totalCoveredArea += Math.abs(areaArg.area)
+      expect(areaArg.loops.length).toBeGreaterThan(0)
+      totalLoops += areaArg.loops.length
     }
-    // Two 4-wide bands: 0-10 (40 sq units) and 10-20 traversed twice (40 each).
-    // Each subpath keeps its own full area now, so none of it is cancelled
-    // out by being nested as a hole in another subpath's region.
-    expect(totalCoveredArea).toBeGreaterThan(100)
+    expect(totalLoops).toBeGreaterThanOrEqual(4)
   })
 
   it('renders nearly-closed open wide polyline via offsetRing', () => {
@@ -654,6 +664,9 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(1, new AcGePoint2d(10, 0), 0, 2, 2)
     polyline.addVertexAt(2, new AcGePoint2d(10, 5), 0, 2, 2)
     polyline.addVertexAt(3, new AcGePoint2d(0, 5), 0, 2, 2)
+
+    // offsetRing is not a single area() call — stay off direct batching.
+    expect(polyline.directBatchPrimitive).toBeNull()
 
     const giEntity = { id: 'nearly-closed-wide-polyline-gi' }
     const renderer = {
