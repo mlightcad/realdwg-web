@@ -1,4 +1,4 @@
-# CAD Fidelity Extensions (Fork Roadmap)
+﻿# CAD Fidelity Extensions (Fork Roadmap)
 
 This document describes the **planned and in-progress extensions** on the
 [`OuroborosNo2/realdwg-web`](https://github.com/OuroborosNo2/realdwg-web) fork of
@@ -20,7 +20,7 @@ License remains **MIT** (same as upstream).
 
 | Goal | Success criterion |
 |------|-------------------|
-| ODA-readable `dxfOut` | Minimal database (LINE + CIRCLE) → DXF → ODA → DWG (ACAD2010) succeeds |
+| ODA-readable `dxfOut` | Minimal database (LINE + CIRCLE) 鈫?DXF 鈫?ODA 鈫?DWG (ACAD2010) succeeds |
 | DIMENSION definition points | Linear / aligned / angular / diameter / radius expose and serialize definition points matching DXF group codes |
 | HATCH boundary loops | Stable ordered loops (polyline and/or edge list) survive `dxfIn` / dump / `dxfOut` |
 | Upstream-friendly PRs | One concern per PR; English commit/PR text; minimal reproducible DXF fixtures |
@@ -43,7 +43,7 @@ Primary work lands in **`packages/data-model`**.
 
 ---
 
-## 3. Track A — `dxfOut` handles / symbol tables (ODA)
+## 3. Track A 鈥?`dxfOut` handles / symbol tables (ODA)
 
 ### Problem
 
@@ -60,7 +60,7 @@ ODA File Converter with errors such as:
 |------|-------------------|-------|
 | `$HANDSEED` | HEADER group 9 / 5 | Must be the **next** unused handle (hex), not a stale seed |
 | Entity handles | group 5 | Monotonic, unique across database |
-| Soft/hard pointers | groups 330 / 360 / 340… | Must point at real objects of the declared type |
+| Soft/hard pointers | groups 330 / 360 / 340鈥?| Must point at real objects of the declared type |
 | Block table | `BLOCK_RECORD` / `*Model_Space` / `*Paper_Space` | Must remain block records, not dictionaries |
 | Named object dictionary | `ACAD_GROUP`, layout dict, etc. | Owner/reactor graph must be consistent |
 | `AcDbDxfFiler.nextHandle` | filer state during `dxfOut` | Seed written at end of HEADER must match filer |
@@ -84,7 +84,7 @@ ODA File Converter with errors such as:
 
 ---
 
-## 4. Track B — DIMENSION definition points
+## 4. Track B 鈥?DIMENSION definition points
 
 ### Problem
 
@@ -103,14 +103,14 @@ to recreate the dimension without guessing geometry.
 | `AcDbRadialDimension` | DIMENSION (radius) | `center`, `chordPoint`, leader length |
 | `AcDbArcDimension` | DIMENSION (arc) | Center / ext points / arc point (as implemented) |
 | `AcDbOrdinateDimension` | DIMENSION (ordinate) | Origin / defining point / leader end |
-| `AcDbDimension` (base) | — | `dimBlockId`, `dimBlockPosition` (g12), `_dxfDefinitionPoint` (g10), `dimensionText`, `measurement`, `textPosition`, `textRotation`, `horizontalRotation`, `dimensionType` (g70), `attachmentPoint` (g71), `dimensionStyleName`, `normal` |
+| `AcDbDimension` (base) | 鈥?| `dimBlockId`, `dimBlockPosition` (g12), `_dxfDefinitionPoint` (g10), `dimensionText`, `measurement`, `textPosition`, `textRotation`, `horizontalRotation`, `dimensionType` (g70), `attachmentPoint` (g71), `dimensionStyleName`, `normal` |
 
 ### Related tables / blocks
 
 | Item | Role |
 |------|------|
 | `DIMSTYLE` table record | Arrow, text height, ext-line suppress, dimscl, etc. |
-| Anonymous dimension block (`*D…`) | Geometry block referenced by `dimBlockId`; **read** for display; prefer typed definition points for rebuild |
+| Anonymous dimension block (`*D鈥) | Geometry block referenced by `dimBlockId`; **read** for display; prefer typed definition points for rebuild |
 | Layer `DEFPOINTS` | Definition points layer convention (do not treat as ordinary geometry) |
 
 ### DXF group codes to preserve (non-exhaustive)
@@ -130,7 +130,7 @@ to recreate the dimension without guessing geometry.
 
 ### Acceptance
 
-1. Round-trip: DXF with each subtype → `dxfIn` → dump exposes definition points → `dxfOut` keeps codes 10/13/14/…  
+1. Round-trip: DXF with each subtype 鈫?`dxfIn` 鈫?dump exposes definition points 鈫?`dxfOut` keeps codes 10/13/14/鈥? 
 2. Unit tests per subtype with a **minimal** fixture (no product drawings).  
 3. Anonymous `*D` blocks remain readable; rebuild APIs must not require exploding them.
 
@@ -141,7 +141,7 @@ to recreate the dimension without guessing geometry.
 
 ---
 
-## 5. Track C — HATCH boundary loops
+## 5. Track C 鈥?HATCH boundary loops
 
 ### Problem
 
@@ -177,7 +177,7 @@ type HatchBoundaryLoop = {
   edges?: Array<
     | { type: 'line'; start: number[]; end: number[] }
     | { type: 'arc'; center: number[]; radius: number; startAngle: number; endAngle: number }
-    | { type: 'ellipse' | 'spline'; /* … */ }
+    | { type: 'ellipse' | 'spline'; /* 鈥?*/ }
   >
   isClosed: boolean
 }
@@ -188,7 +188,7 @@ type HatchBoundaryLoop = {
 | Item | Role |
 |------|------|
 | Boundary path entities | LINE / ARC / CIRCLE / ELLIPSE / SPLINE / LWPOLYLINE referenced when associative |
-| Pattern definition | `acad.pat` predefined names (`ANSI31`, `SOLID`, …) |
+| Pattern definition | `acad.pat` predefined names (`ANSI31`, `SOLID`, 鈥? |
 | Block references | Only if hatch is inside a block; loops still in hatch OCS |
 
 ### Acceptance
@@ -220,8 +220,8 @@ type HatchBoundaryLoop = {
 | Name / pattern | Treatment in this fork |
 |----------------|------------------------|
 | `*Model_Space` / `*Paper_Space` | Must remain valid `BLOCK_RECORD`s in `dxfOut` |
-| Anonymous dimension `*D…` | Read-only geometry for display; rebuild via definition points |
-| Anonymous hatch/other `*U…` / `*X…` | Do not orphan-explode as ordinary named blocks |
+| Anonymous dimension `*D鈥 | Read-only geometry for display; rebuild via definition points |
+| Anonymous hatch/other `*U鈥 / `*X鈥 | Do not orphan-explode as ordinary named blocks |
 | `DEFPOINTS` layer | Keep; do not promote to plot geometry |
 | Layer / Linetype / Text style / Dim style tables | Preserve handles and name refs used by entities above |
 
@@ -256,11 +256,13 @@ on this fork for reproducible consumer builds.
 
 Tracking issues on this fork:
 
-- Track A — ODA-readable `dxfOut` / `$HANDSEED`
-- Track B — DIMENSION definition points
-- Track C — HATCH boundary loops
+- Track A 鈥?ODA-readable `dxfOut` / `$HANDSEED`
+- Track B 鈥?DIMENSION definition points
+- Track C 鈥?HATCH boundary loops
 
-(See GitHub Issues; link them here when filed.)
+- Track A: https://github.com/OuroborosNo2/realdwg-web/issues/2
+- Track B: https://github.com/OuroborosNo2/realdwg-web/issues/3
+- Track C: https://github.com/OuroborosNo2/realdwg-web/issues/4
 
 ---
 
