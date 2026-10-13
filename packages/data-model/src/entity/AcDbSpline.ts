@@ -230,7 +230,13 @@ export class AcDbSpline extends AcDbCurve {
     const closed = !!(spline.flag & 0x01)
     const knotParam = resolveSplineKnotParameterization(spline.flag)
 
-    if (spline.numberOfControlPoints > 0 && spline.numberOfKnots > 0) {
+    const controlPointCount =
+      spline.numberOfControlPoints || spline.controlPoints?.length || 0
+    const knotCount = spline.numberOfKnots || spline.knots?.length || 0
+    const fitPointCount =
+      spline.numberOfFitPoints || spline.fitPoints?.length || 0
+
+    if (controlPointCount > 0 && knotCount > 0) {
       const fromControlPoints = AcDbSpline.fromControlPoints(
         spline.controlPoints,
         spline.knots,
@@ -243,7 +249,10 @@ export class AcDbSpline extends AcDbCurve {
       }
     }
 
-    if (spline.numberOfFitPoints > 0) {
+    // LibreDWG / some DWG writers emit fit points without group 74
+    // (`numberOfFitPoints`). Branching on the declared count alone drops the
+    // spline into an empty path (cad-viewer#724).
+    if (fitPointCount > 0) {
       return AcDbSpline.fromFitPoints(
         spline.fitPoints,
         knotParam,

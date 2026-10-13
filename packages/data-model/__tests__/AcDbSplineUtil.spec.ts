@@ -122,4 +122,25 @@ describe('AcDbSpline factory methods', () => {
 
     expect(spline).not.toBeNull()
   })
+
+  it('builds from fit points when the declared fit-point count is omitted (#724)', () => {
+    const spline = AcDbSpline.fromDwgSpline({
+      flag: 0,
+      degree: 3,
+      numberOfControlPoints: 0,
+      numberOfKnots: 0,
+      numberOfFitPoints: 0,
+      controlPoints: [],
+      knots: [],
+      fitPoints: [
+        { x: 0, y: 0, z: 0 },
+        { x: 1, y: 1, z: 0 },
+        { x: 2, y: 0, z: 0 },
+        { x: 3, y: 1, z: 0 }
+      ]
+    })
+
+    expect(spline).not.toBeNull()
+    expect(spline!.geometricExtents.max.x).toBeGreaterThan(0)
+  })
 })

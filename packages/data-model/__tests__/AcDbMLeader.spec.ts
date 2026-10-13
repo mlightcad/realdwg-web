@@ -812,4 +812,90 @@ describe('AcDbMLeader dxfInFields CONTEXT_DATA', () => {
     expect(mtextArg.text).toBe('yellow non-standard line')
     expect(mtextArg.height).toBe(4)
   })
+
+  it('passes width 0 for auto-sized MLeader text so CJK labels do not soft-wrap', () => {
+    // Handle 1549: textWidth=0 with fullwidth "（配焊）". A fabricated wrap
+    // column of length×height was narrower than TrueType advances and broke
+    // the closing parenthesis onto the next line.
+    const db = createWorkingDb()
+    const mleader = createSimpleLeader(db)
+    mleader.contentType = AcDbMLeaderContentType.MTextContent
+    mleader.hasMText = true
+    mleader.textHeight = 15.75
+    mleader.textWidth = 0
+    mleader.mtextContent = {
+      text: '（配焊）',
+      anchorPoint: new AcGePoint3d(1342, 623, 0)
+    }
+
+    const renderer = createRenderer()
+    mleader.subWorldDraw(renderer as any, false)
+
+    expect(renderer.mtext).toHaveBeenCalled()
+    const mtextArg = (renderer.mtext as jest.Mock).mock.calls[0][0]
+    expect(mtextArg.text).toBe('（配焊）')
+    expect(mtextArg.width).toBe(0)
+    expect(mtextArg.height).toBe(15.75)
+  })
+
+  it('extends dogleg landing to contentBasePosition even when doglegLength is undersized', () => {
+    // Handle 1549: doglegLength≈2.7 but contentBase is ~70 units away under
+    // "（配焊）". GstarCAD draws the full underline; length alone was too short.
+    const db = createWorkingDb()
+    const mleader = new AcDbMLeader()
+    mleader.doglegEnabled = true
+    mleader.doglegLength = 2.705
+    mleader.contentBasePosition = new AcGePoint3d(1275.419, 602.118, 0)
+    const leaderIndex = mleader.addLeader({
+      lastLeaderLinePoint: new AcGePoint3d(1345.537, 602.118, 0),
+      lastLeaderLinePointSet: true,
+      doglegVector: new AcGeVector3d(-1, 0, 0),
+      doglegVectorSet: true,
+      doglegLength: 2.705
+    })
+    mleader.addLeaderLine(leaderIndex, [
+      new AcGePoint3d(1406.346, 663.239, 0)
+    ])
+    db.tables.blockTable.modelSpace.appendEntity(mleader)
+
+    const renderer = createRenderer()
+    const landingSegments: Array<{ x: number; y: number }[]> = []
+    renderer.lines.mockImplementation((points: unknown[]) => {
+      const pts = points as Array<{ x: number; y: number }>
+      if (
+        pts.length === 2 &&
+        Math.abs(pts[0].y - pts[1].y) < 1e-6 &&
+        Math.abs(pts[0].x - pts[1].x) > 10
+      ) {
+        landingSegments.push(pts)
+      }
+      return { kind: 'lines', points }
+    })
+
+    mleader.subWorldDraw(renderer as any, false)
+
+    expect(landingSegments.length).toBeGreaterThanOrEqual(1)
+    const landing = landingSegments[0]
+    const span = Math.abs(landing[0].x - landing[1].x)
+    expect(span).toBeCloseTo(70.118, 2)
+  })
+
+  it('keeps an explicit positive MLeader textWidth as the MTEXT wrap column', () => {
+    const db = createWorkingDb()
+    const mleader = createSimpleLeader(db)
+    mleader.contentType = AcDbMLeaderContentType.MTextContent
+    mleader.hasMText = true
+    mleader.textHeight = 4
+    mleader.textWidth = 40
+    mleader.mtextContent = {
+      text: 'wrapped label',
+      anchorPoint: new AcGePoint3d(0, 0, 0)
+    }
+
+    const renderer = createRenderer()
+    mleader.subWorldDraw(renderer as any, false)
+
+    const mtextArg = (renderer.mtext as jest.Mock).mock.calls[0][0]
+    expect(mtextArg.width).toBe(40)
+  })
 })
