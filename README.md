@@ -1,3 +1,14 @@
+﻿
+# Fork notice
+
+This repository is a **public fork** of [mlightcad/realdwg-web](https://github.com/mlightcad/realdwg-web) maintained for CAD fidelity work (DXF round-trip, DIMENSION definition points, HATCH loops).
+
+- **Extension roadmap (entities, parameters, blocks)**: see [EXTENSIONS.md](EXTENSIONS.md) (English, upstream-PR oriented).
+- Upstream npm package remains `@mlightcad/data-model`; this fork may be consumed via git tags / `pnpm` `link:` overrides until a published build is cut.
+- Contributions that improve generic CAD fidelity are welcome as focused PRs (one concern per PR).
+
+---
+
 # RealDWG-Web
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -8,8 +19,8 @@ AutoCAD RealDWG is a software development toolkit (SDK) provided by Autodesk tha
 
 The target of this project is to create one web-version of AutoCAD RealDWG by providing the similar API. For now, it supports reading DWG and DXF file only. In the future, it will support write DWG and DXF too.
 
-- [**🌐 Live Demo**](https://mlightcad.com/realdwg-web-example/)
-- **🌐 API Docs**: [Read the Docs](https://realdwg-web.readthedocs.io/en/latest/) (versioned) · [GitHub Pages](https://mlightcad.github.io/realdwg-web/) (latest/dev)
+- [**馃寪 Live Demo**](https://mlightcad.com/realdwg-web-example/)
+- **馃寪 API Docs**: [Read the Docs](https://realdwg-web.readthedocs.io/en/latest/) (versioned) 路 [GitHub Pages](https://mlightcad.github.io/realdwg-web/) (latest/dev)
 
 ## App Based on Realdwg-Web
 
@@ -26,7 +37,7 @@ To support reading both DXF and DWG files (and potentially other formats in the 
 - **DXF is registered by default.** `AcDbDatabaseConverterManager` registers the built-in MIT `AcDbNativeDxfConverter` when the singleton is created. You only need to register a DXF converter if you want to replace that default.
 - **DWG is not registered by default.** Register a DWG converter (typically `@mlightcad/libredwg-converter`) before calling `AcDbDatabase.read()` on DWG files.
 
-`@mlightcad/libredwg-converter` runs its LibreDWG parser in a Web Worker. That is a deliberate licensing choice: the upstream parser is copyleft (GPL), so keeping it in a separate worker bundle helps isolate that code from the main application. The built-in `AcDbNativeDxfConverter` does **not** need a worker — it is MIT-licensed and runs on the main thread.
+`@mlightcad/libredwg-converter` runs its LibreDWG parser in a Web Worker. That is a deliberate licensing choice: the upstream parser is copyleft (GPL), so keeping it in a separate worker bundle helps isolate that code from the main application. The built-in `AcDbNativeDxfConverter` does **not** need a worker 鈥?it is MIT-licensed and runs on the main thread.
 
 Deprecated GPL converters (`@mlightcad/dxf-json-converter`, `@mlightcad/libdxfrw-converter`) have moved to the separate [dwg-dxf-converter](https://github.com/mlightcad/dwg-dxf-converter) repository and are no longer documented here.
 
@@ -202,11 +213,11 @@ pnpm --filter @mlightcad/dwg-converter build
 
 Override the clone URL with `DWG_CONVERTER_REPO_URL` if needed. The directory
 `packages/dwg-converter` is gitignored so it cannot be committed here. Local
-`pnpm install` may temporarily add that package to `pnpm-lock.yaml` — **do not
+`pnpm install` may temporarily add that package to `pnpm-lock.yaml` 鈥?**do not
 commit** those lockfile changes; public CI must keep a lockfile without it.
 
 **Customers** install the same package from GitHub Packages (not public npm). Do
-not point the whole `@mlightcad` scope at GitHub Packages—only authenticate, then
+not point the whole `@mlightcad` scope at GitHub Packages鈥攐nly authenticate, then
 install with an explicit registry:
 
 ```ini
@@ -236,9 +247,9 @@ Deprecated GPL converters (`@mlightcad/dxf-json-converter`, `@mlightcad/libdxfrw
 
 For DXF files, use the built-in **`AcDbNativeDxfConverter`** in `@mlightcad/data-model`:
 
-- **No GPL license issues for DXF** — it is MIT-licensed and part of the core SDK.
-- **Faster and simpler** — streams DXF into the database on the main thread with no Web Worker and no extra parser assets.
-- **Registered by default** — accessing `AcDbDatabaseConverterManager` is enough to call `AcDbDatabase.read(..., AcDbFileType.DXF)`.
+- **No GPL license issues for DXF** 鈥?it is MIT-licensed and part of the core SDK.
+- **Faster and simpler** 鈥?streams DXF into the database on the main thread with no Web Worker and no extra parser assets.
+- **Registered by default** 鈥?accessing `AcDbDatabaseConverterManager` is enough to call `AcDbDatabase.read(..., AcDbFileType.DXF)`.
 
 For DWG, register a separate converter package (prefer `@mlightcad/libredwg-converter` with worker mode).
 
@@ -246,7 +257,7 @@ For DWG, register a separate converter package (prefer `@mlightcad/libredwg-conv
 
 The MIT-licensed core (`@mlightcad/data-model`, `@mlightcad/geometry-engine`, `@mlightcad/graphic-interface`, `@mlightcad/common`) does **not** depend on any GPL parser. Reading DXF through `AcDbNativeDxfConverter` stays entirely under MIT.
 
-GPL copyleft therefore does **not** automatically apply to your application merely because you use the RealDWG-Web SDK—**provided that any GPL parser code you do use runs only inside separate Web Worker bundles**.
+GPL copyleft therefore does **not** automatically apply to your application merely because you use the RealDWG-Web SDK鈥?*provided that any GPL parser code you do use runs only inside separate Web Worker bundles**.
 
 For DWG via `@mlightcad/libredwg-converter`, the recommended integration is:
 
@@ -263,14 +274,14 @@ Deploy `libredwg-parser-worker.js` and its sibling `libredwg-web.wasm` from `@ml
 
 | Component | License | Worker isolation |
 | --- | --- | --- |
-| Core SDK (`data-model`, including `AcDbNativeDxfConverter`) | MIT | N/A — no GPL dependency |
+| Core SDK (`data-model`, including `AcDbNativeDxfConverter`) | MIT | N/A 鈥?no GPL dependency |
 | `libredwg-converter` (main bundle) | GPL | Orchestrates parsing; GPL parser execution stays in worker |
 | `libredwg-parser-worker.js` + `libredwg-web.wasm` | GPL | Separate worker + wasm assets; loaded at runtime; communicates via `postMessage` |
 
 When `useWorker: true` is configured and the worker script is deployed separately:
 
 1. GPL parser code is bundled only into the worker script, not into your main application bundle.
-2. The worker and main thread exchange data through `postMessage` (file bytes in, parsed JSON model out)—a runtime boundary rather than static linking of GPL code into the MIT core.
+2. The worker and main thread exchange data through `postMessage` (file bytes in, parsed JSON model out)鈥攁 runtime boundary rather than static linking of GPL code into the MIT core.
 3. Your MIT-licensed application code can stay under MIT, while the GPL worker bundle remains a separate distributable component that must comply with GPL on its own (source availability, license notice, etc.).
 
 **Important caveats**
