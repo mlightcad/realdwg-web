@@ -2976,7 +2976,13 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
-   * Computes the dogleg segment points for a leader branch.
+   * Computes the dogleg / landing segment points for a leader branch.
+   *
+   * When {@link contentBasePosition} is present it is the far end of the
+   * horizontal landing stored in CONTEXT_DATA (including underline-style
+   * attachments under MText). Prefer that endpoint over `doglegLength`: some
+   * DWG exports keep an undersized length while `contentBasePosition` still
+   * spans the full landing (handle 1549: underline under `（配焊）`).
    *
    * @param leader Leader branch to evaluate.
    * @returns Dogleg segment points, or `undefined` if not applicable.
@@ -2985,9 +2991,16 @@ export class AcDbMLeader extends AcDbEntity {
     if (!this.getResolvedDoglegEnabled()) return undefined
     const start =
       leader.lastLeaderLinePoint ?? leader.landingPoint ?? this._landingPoint
+    if (!start) return undefined
+
+    const contentBase = this.contentBasePosition
+    if (contentBase && !contentBase.equals(start)) {
+      return [start, contentBase.clone()]
+    }
+
     const vector = leader.doglegVector ?? this._doglegVector
     const length = leader.doglegLength ?? this.getResolvedDoglegLength()
-    if (!start || length == null || length === 0 || vector.lengthSq() === 0) {
+    if (length == null || length === 0 || vector.lengthSq() === 0) {
       return undefined
     }
 
@@ -3290,23 +3303,18 @@ export class AcDbMLeader extends AcDbEntity {
   /**
    * Computes render width for current MText content.
    *
-   * @param text Source MText content string.
-   * @param textHeight Effective text height used for fallback estimation.
-   * @returns Explicit width or an estimated width based on plain text length.
+   * AutoCAD/GstarCAD treat MLeader `textWidth` of `0` as an auto-sized box
+   * (no soft wrap). Inventing a `length × height` wrap column here made CJK
+   * labels such as `（配焊）` break mid-token when TrueType advances exceed the
+   * estimate (handle 1549). Keep width `0` so the MTEXT renderer lays out a
+   * single unwrapped line; only a positive declared width is a wrap column.
+   *
+   * @param _text Source MText content string (unused when width is auto).
+   * @param _textHeight Effective text height (unused when width is auto).
+   * @returns Explicit wrap width, or `0` for AutoCAD-style auto width.
    */
-  private getMTextRenderWidth(text: string, textHeight: number) {
-    if (this._textWidth > 0) return this._textWidth
-    if (!text) return this._textWidth
-
-    const plainText = text
-      .replace(/\\[PpNn]/g, '\n')
-      .replace(/\\[A-Za-z][^;]*;/g, '')
-      .replace(/[{}]/g, '')
-    const longestLineLength = Math.max(
-      ...plainText.split(/\r\n|\r|\n/g).map(line => line.length),
-      1
-    )
-    return Math.max(textHeight, longestLineLength * textHeight)
+  private getMTextRenderWidth(_text: string, _textHeight: number) {
+    return this._textWidth > 0 ? this._textWidth : 0
   }
 
   /**
