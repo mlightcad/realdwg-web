@@ -84,7 +84,7 @@ ODA File Converter with errors such as:
 
 ---
 
-## 4. Track B 鈥?DIMENSION definition points
+## 4. Track B — DIMENSION definition points
 
 ### Problem
 
@@ -141,7 +141,7 @@ to recreate the dimension without guessing geometry.
 
 ---
 
-## 5. Track C 鈥?HATCH boundary loops
+## 5. Track C — HATCH boundary loops
 
 ### Problem
 
@@ -256,9 +256,9 @@ on this fork for reproducible consumer builds.
 
 Tracking issues on this fork:
 
-- Track A 鈥?ODA-readable `dxfOut` / `$HANDSEED`
-- Track B 鈥?DIMENSION definition points
-- Track C 鈥?HATCH boundary loops
+- Track A — ODA-readable `dxfOut` / `$HANDSEED`
+- Track B — DIMENSION definition points
+- Track C — HATCH boundary loops
 
 - Track A: https://github.com/OuroborosNo2/realdwg-web/issues/2
 - Track B: https://github.com/OuroborosNo2/realdwg-web/issues/3
