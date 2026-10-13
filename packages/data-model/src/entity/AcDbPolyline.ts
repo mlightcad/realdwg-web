@@ -667,15 +667,31 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
-   * Thin centerline → `lineStrip`; any renderable width → solid `area`.
+   * Thin centerline → `lineStrip`; a single open-band `area()` → `area`.
+   * Closed / nearly-closed (`offsetRing`) and multi-subpath groups stay
+   * unbatched — `'area'` means one `area()` call, not a `group` of areas.
    *
    * @internal
    */
   override get directBatchPrimitive() {
     if (!this.hasRenderableWidth()) return 'lineStrip' as const
-    // Closed wide polylines prefer offsetRing when both loops align; leave them
-    // unbatched so capture does not assume a single area() call.
+    // Closed wide polylines prefer offsetRing; leave them unbatched so capture
+    // does not assume a single area() call.
     if (this.closed) return null
+
+    const widthProfile = this.createWidthProfile()
+    if (widthProfile == null) return 'lineStrip' as const
+
+    // Nearly-closed open paths take offsetRing (#250), not area batching.
+    if (isNearlyClosedWidePolyline(normalizeCenterline(widthProfile, false))) {
+      return null
+    }
+
+    // Retraced paths split into multiple areas + group (#730).
+    const areas = createWidePolylineArea(widthProfile, false)
+    if (areas == null || areas.length !== 1) {
+      return null
+    }
     return 'area' as const
   }
 
