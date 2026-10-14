@@ -2393,15 +2393,16 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Reads drawing data from a string or ArrayBuffer.
+   * Reads drawing data from a string, ArrayBuffer, or typed-array view.
    *
    * This method parses the provided data and populates the database with
    * the resulting entities, tables, and objects. The method supports
    * both DXF and DWG file formats.
    *
-   * @param data - The drawing data as a string or ArrayBuffer
-   *   - For DXF files: Pass a string containing the DXF content
-   *   - For DWG files: Pass an ArrayBuffer instance containing the binary DWG data
+   * @param data - The drawing data as a string, ArrayBuffer, or ArrayBufferView
+   *   - For DXF files: Pass a string containing the DXF content, or bytes as
+   *     an ArrayBuffer / Uint8Array (e.g. from `fetch` / `File` / `fs.readFile`)
+   *   - For DWG files: Pass an ArrayBuffer or Uint8Array of the binary DWG data
    * @param options - Options for reading the database
    * @param fileType - The type of file being read (defaults to DXF)
    *
@@ -2411,13 +2412,19 @@ export class AcDbDatabase extends AcDbObject {
    * const database = new AcDbDatabase();
    * await database.read(dxfString, { readOnly: true }, AcDbFileType.DXF);
    *
+   * // Reading a DXF file (Uint8Array / ArrayBuffer)
+   * await database.read(
+   *   new TextEncoder().encode(dxfString),
+   *   { readOnly: true },
+   *   AcDbFileType.DXF
+   * );
+   *
    * // Reading a DWG file (ArrayBuffer)
-   * const database = new AcDbDatabase();
    * await database.read(dwgArrayBuffer, { readOnly: true }, AcDbFileType.DWG);
    * ```
    */
   async read(
-    data: ArrayBuffer,
+    data: string | ArrayBuffer | ArrayBufferView,
     options: AcDbOpenDatabaseOptions,
     fileType: AcDbConverterType = AcDbFileType.DXF
   ) {
@@ -2426,6 +2433,32 @@ export class AcDbDatabase extends AcDbObject {
       throw new Error(
         `Database converter for file type '${fileType}' isn't registered and can can't read this file!`
       )
+
+    let buffer: ArrayBuffer
+    if (typeof data === 'string') {
+      const encoded = new TextEncoder().encode(data)
+      buffer = encoded.buffer.slice(
+        encoded.byteOffset,
+        encoded.byteOffset + encoded.byteLength
+      ) as ArrayBuffer
+    } else if (data instanceof ArrayBuffer) {
+      buffer = data
+    } else if (ArrayBuffer.isView(data)) {
+      // Copy the exact view range — Node Buffer / sliced Uint8Array may share
+      // a larger underlying ArrayBuffer.
+      buffer = data.buffer.slice(
+        data.byteOffset,
+        data.byteOffset + data.byteLength
+      ) as ArrayBuffer
+    } else {
+      const openError = new AcDbOpenDatabaseError(
+        'AcDbDatabase.read expects a string, ArrayBuffer, or ArrayBufferView',
+        'unknown'
+      )
+      this._lastOpenError = openError
+      this.events.openFailed.dispatch({ database: this, error: openError })
+      throw openError
+    }
 
     this.clear()
     this._lastOpenError = null
@@ -2442,7 +2475,7 @@ export class AcDbDatabase extends AcDbObject {
     acdbAssignWorkingDatabase(this)
 
     try {
-      await converter.read(data, this, {
+      await converter.read(buffer, this, {
         minimumChunkSize: (options && options.minimumChunkSize) || 10,
         progress: this.createConversionProgressHandler(),
         timeout: options?.timeout,

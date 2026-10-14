@@ -983,7 +983,10 @@ export class AcDbBlockReference extends AcDbEntity {
           undefined,
           thisInsertionMat
         )
-        candidates.push(...localSnapPoints)
+        // Avoid push(...array): large blocks exceed V8's apply argument limit.
+        for (let i = 0; i < localSnapPoints.length; i++) {
+          candidates.push(localSnapPoints[i])
+        }
         continue
       }
 
@@ -1010,7 +1013,10 @@ export class AcDbBlockReference extends AcDbEntity {
       const nearest = acdbPickNearestOsnapPoint(pickPoint, candidates)
       if (nearest) snapPoints.push(nearest)
     } else {
-      snapPoints.push(...candidates)
+      // Avoid push(...array): large blocks exceed V8's apply argument limit.
+      for (let i = 0; i < candidates.length; i++) {
+        snapPoints.push(candidates[i])
+      }
     }
   }
 
