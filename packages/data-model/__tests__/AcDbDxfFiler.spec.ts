@@ -28,8 +28,10 @@ describe('AcDbDxfFiler', () => {
 
     expect(filer.registerHandle('abc')).toBe('ABC')
     expect(filer.resolveHandle('abc')).toBe('ABC')
-    expect(filer.registerHandle('custom-id')).toBe('1')
-    expect(filer.nextHandle).toBe(2)
+    // Hex keys advance the seed past 0xABC so later allocations cannot collide.
+    expect(filer.nextHandle).toBe(0xabd)
+    expect(filer.registerHandle('custom-id')).toBe('ABD')
+    expect(filer.nextHandle).toBe(0xabe)
     expect(filer.resolveHandle()).toBeUndefined()
 
     filer
@@ -92,6 +94,32 @@ describe('AcDbDxfFiler', () => {
     expect(filer.database).toBeUndefined()
     filer.database = undefined
     expect(filer.database).toBeUndefined()
+  })
+
+  it('finalizes $HANDSEED after handles are registered', () => {
+    const filer = new AcDbDxfFiler({ version: 'AC1015' })
+    filer.seedNextHandle(10)
+    filer.startSection('HEADER')
+    filer.writeHandseed()
+    filer.endSection()
+
+    filer.writeHandle(5, '1A')
+    filer.writeHandle(5, '2B')
+    filer.finalizeHandseed()
+
+    const out = filer.toString()
+    expect(out).toContain('9\n$HANDSEED\n5\n2C\n')
+    expect(filer.nextHandle).toBe(0x2c)
+  })
+
+  it('allocates non-hex keys above preserved hex handles (no collisions)', () => {
+    const filer = new AcDbDxfFiler()
+    expect(filer.registerHandle('2')).toBe('2')
+    // Seed advances past the highest seen handle (AutoCAD-style; gaps unused).
+    expect(filer.nextHandle).toBe(3)
+    expect(filer.registerHandle('temp-a')).toBe('3')
+    expect(filer.registerHandle('temp-b')).toBe('4')
+    expect(filer.nextHandle).toBe(5)
   })
 
   it('writes transparency with the default group code and skips invalid values', () => {

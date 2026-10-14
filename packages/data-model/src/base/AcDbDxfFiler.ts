@@ -98,7 +98,14 @@ export class AcDbDxfFiler {
   private readonly _binaryChunks: Uint8Array[]
   private _binaryLength = 0
   private readonly _handleMap: Map<string, string>
+  /** Uppercase hex handles already emitted or reserved in this write. */
+  private readonly _usedHandles: Set<string>
   private _nextHandle: number
+  /**
+   * Index of the `$HANDSEED` value line in {@link _lines} (ASCII write mode).
+   * Updated by {@link finalizeHandseed} after all objects are written.
+   */
+  private _handseedValueLineIndex?: number
 
   private _reader?: AcDbDxfPairReader
   /**
@@ -124,6 +131,7 @@ export class AcDbDxfFiler {
     this._lines = []
     this._binaryChunks = []
     this._handleMap = new Map()
+    this._usedHandles = new Set()
     this._nextHandle = 1
     this._mode = options.reader ? 'read' : 'write'
     this._reader = options.reader
@@ -188,6 +196,59 @@ export class AcDbDxfFiler {
     return this._nextHandle
   }
 
+  /**
+   * Seeds the filer's next-handle counter (e.g. from the database max handle).
+   * Only raises the counter; never lowers it.
+   *
+   * @param nextHandle - Next unused handle as an integer (typically max+1)
+   */
+  seedNextHandle(nextHandle: number) {
+    if (
+      Number.isFinite(nextHandle) &&
+      nextHandle > this._nextHandle &&
+      nextHandle <= Number.MAX_SAFE_INTEGER
+    ) {
+      this._nextHandle = Math.trunc(nextHandle)
+    }
+    return this
+  }
+
+  /**
+   * Writes `$HANDSEED` with a provisional value and records the value-line
+   * index so {@link finalizeHandseed} can store the true next unused handle
+   * after the rest of the drawing is written (HEADER precedes ENTITIES).
+   */
+  writeHandseed() {
+    this.assertWriteMode()
+    this.writeString(9, '$HANDSEED')
+    if (this._outputFormat === 'binary') {
+      // Binary chunks are not patched in place; emit the current seed and
+      // rely on callers to seed high enough / finalize via ASCII path.
+      return this.writeString(5, this._nextHandle.toString(16).toUpperCase())
+    }
+    this._lines.push('5')
+    this._handseedValueLineIndex = this._lines.length
+    this._lines.push(this._nextHandle.toString(16).toUpperCase())
+    return this
+  }
+
+  /**
+   * Rewrites the HEADER `$HANDSEED` value to the next unused handle after all
+   * objects have been filed. No-op when {@link writeHandseed} was not used.
+   */
+  finalizeHandseed() {
+    this.assertWriteMode()
+    if (
+      this._outputFormat === 'ascii' &&
+      this._handseedValueLineIndex != null
+    ) {
+      this._lines[this._handseedValueLineIndex] = this._nextHandle
+        .toString(16)
+        .toUpperCase()
+    }
+    return this
+  }
+
   get filerStatus() {
     return this._status
   }
@@ -238,21 +299,49 @@ export class AcDbDxfFiler {
   }
 
   registerHandle(key: string) {
-    if (!this._handleMap.has(key)) {
-      // If key is already a valid hex handle, preserve it
-      if (/^[0-9A-F]+$/i.test(key)) {
-        this._handleMap.set(key, key.toUpperCase())
-      } else {
-        this._handleMap.set(key, this._nextHandle.toString(16).toUpperCase())
-        this._nextHandle += 1
-      }
+    const existing = this._handleMap.get(key)
+    if (existing) return existing
+
+    // If key is already a valid hex handle, preserve it and advance the
+    // seed past it so later allocations and `$HANDSEED` cannot collide.
+    if (/^[0-9A-F]+$/i.test(key)) {
+      const handle = key.toUpperCase()
+      this._handleMap.set(key, handle)
+      this.noteHandleUsed(handle)
+      return handle
     }
-    return this._handleMap.get(key)!
+
+    const handle = this.allocateNextHandle()
+    this._handleMap.set(key, handle)
+    this.noteHandleUsed(handle)
+    return handle
   }
 
   resolveHandle(key?: string) {
     if (!key) return undefined
     return this.registerHandle(key)
+  }
+
+  /** Marks a handle as used and raises {@link nextHandle} past it. */
+  private noteHandleUsed(handle: string) {
+    this._usedHandles.add(handle)
+    const value = Number.parseInt(handle, 16)
+    if (!Number.isFinite(value) || value < 0) return
+    if (value >= this._nextHandle && value < Number.MAX_SAFE_INTEGER) {
+      this._nextHandle = value + 1
+    }
+  }
+
+  /** Allocates the next handle not already present in {@link _usedHandles}. */
+  private allocateNextHandle(): string {
+    while (
+      this._usedHandles.has(this._nextHandle.toString(16).toUpperCase())
+    ) {
+      this._nextHandle += 1
+    }
+    const handle = this._nextHandle.toString(16).toUpperCase()
+    this._nextHandle += 1
+    return handle
   }
 
   // ---------------------------------------------------------------------------

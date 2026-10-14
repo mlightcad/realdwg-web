@@ -1068,6 +1068,58 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Returns the next handle value {@link generateHandle} would assign, without
+   * consuming it. Used to seed the DXF filer before `dxfOut`.
+   *
+   * @internal
+   */
+  peekNextHandleValue(): number {
+    if (this._maxHandleBig != null) {
+      const next = this._maxHandleBig + BigInt(1)
+      if (next <= BigInt(Number.MAX_SAFE_INTEGER)) {
+        return Number(next)
+      }
+      // Filer tracks handles with Number; clamp to max safe so seedNextHandle
+      // still raises the counter. Exact BigInt HANDSEED is out of filer scope.
+      return Number.MAX_SAFE_INTEGER
+    }
+    if (this._maxHandle >= Number.MAX_SAFE_INTEGER) {
+      return Number.MAX_SAFE_INTEGER
+    }
+    return this._maxHandle + 1
+  }
+
+  /**
+   * Conservative count of handles minted during `dxfOut` beyond existing
+   * object ids (BLOCK begin/end, SEQEND/VERTEX, layer-filter helpers).
+   * Used only for binary DXF where `$HANDSEED` cannot be rewritten in place.
+   */
+  private estimateDxfOutHandleReserve(): number {
+    let reserve = 64
+    for (const btr of this.tables.blockTable.newIterator()) {
+      // AcDbBlockBegin + AcDbBlockEnd each call generateHandle().
+      reserve += 2
+      for (const entity of btr.newIterator()) {
+        const type = entity.dxfTypeName
+        if (
+          type === 'POLYLINE' ||
+          type === 'AcDb2dPolyline' ||
+          type === 'AcDb3dPolyline' ||
+          type === 'AcDbPolygonMesh' ||
+          type === 'AcDbPolyFaceMesh'
+        ) {
+          // Vertex handles + SEQEND; over-estimate is safe for `$HANDSEED`.
+          reserve += 512
+        }
+      }
+    }
+    if (this._layerFilters.root.getNestedFilters().length > 0) {
+      reserve += 32
+    }
+    return reserve
+  }
+
+  /**
    * Generates a handle that is not already registered in this database.
    *
    * @internal
@@ -2632,6 +2684,16 @@ export class AcDbDatabase extends AcDbObject {
       version: outVersion,
       outputFormat: options.format
     })
+    // Align filer seed with database so new handles / `$HANDSEED` stay above
+    // every handle already assigned in the drawing.
+    filer.seedNextHandle(this.peekNextHandleValue())
+    if (options.format === 'binary') {
+      // Binary `$HANDSEED` cannot be patched after the HEADER is emitted.
+      // Reserve room for BLOCK begin/end and other handles minted during write.
+      filer.seedNextHandle(
+        filer.nextHandle + this.estimateDxfOutHandleReserve()
+      )
+    }
 
     this.writeDxfHeaderSection(filer)
     this.writeDxfClassesSection(filer)
@@ -2640,6 +2702,9 @@ export class AcDbDatabase extends AcDbObject {
     this.writeDxfEntitiesSection(filer)
     this.writeDxfObjectsSection(filer)
     this.writeDxfThumbnailImageSection(filer, options.saveThumbnailImage)
+    // HEADER is written first; rewrite `$HANDSEED` now that BLOCK begin/end
+    // and other dynamically minted handles have advanced the filer seed.
+    filer.finalizeHandseed()
     filer.writeStart('EOF')
     return options.format === 'binary' ? filer.toBinary() : filer.toString()
   }
@@ -2950,8 +3015,9 @@ export class AcDbDatabase extends AcDbObject {
     filer.startSection('HEADER')
     filer.writeString(9, '$ACADVER')
     filer.writeString(1, filer.version?.name ?? this.version.name)
-    filer.writeString(9, '$HANDSEED')
-    filer.writeString(5, filer.nextHandle.toString(16).toUpperCase())
+    // Provisional value; {@link AcDbDxfFiler.finalizeHandseed} rewrites it
+    // after all sections so the seed is strictly above every used handle.
+    filer.writeHandseed()
     filer.writeString(9, '$DWGCODEPAGE')
     if (filer.capabilities.supportsUtf8CodePage) {
       filer.writeString(3, 'UTF-8')
