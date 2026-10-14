@@ -690,12 +690,16 @@ export class AcDbEntityConverter {
             }
           }
         })
+        // One DWG boundary path is one closed cycle. buildFromEdges can
+        // fragment it when spline endpoints drift past the default
+        // connection tolerance (logo hatches often show 0.01–0.1 gaps).
+        // Prefer the rebuilt single loop when greedy matching succeeds;
+        // otherwise keep AutoCAD's edge order instead of partial loops.
         const loops = AcGeLoop2d.buildFromEdges(edges)
-        if (loops.length == 0 && edges.length > 0) {
-          // Fallback: keep original order if we failed to build any loop.
+        if (loops.length === 1) {
+          dbEntity.add(loops[0])
+        } else if (edges.length > 0) {
           dbEntity.add(new AcGeLoop2d(edges))
-        } else {
-          loops.forEach(loop => dbEntity.add(loop))
         }
       }
     })
