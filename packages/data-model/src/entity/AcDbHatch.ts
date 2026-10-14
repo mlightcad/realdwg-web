@@ -968,6 +968,115 @@ export class AcDbHatch extends AcDbEntity {
     this.invalidateAreasFromLoopsCache()
   }
 
+  /**
+   * Ordered boundary loops (index 0 = outer, then islands). Coordinates are OCS
+   * XY on the hatch plane; use {@link elevation} / {@link normal} for WCS.
+   */
+  get loops(): ReadonlyArray<AcGeLoop2dType> {
+    return this._geo.loops
+  }
+
+  /**
+   * Stable dump of hatch boundary loops for extract / rebuild APIs.
+   *
+   * Points are **OCS** (hatch plane XY). Elevation is the plane Z; convert to
+   * WCS with {@link normal} when needed. Does not require associative boundary
+   * entities.
+   */
+  dumpBoundaryLoops(): {
+    coordinateSpace: 'OCS'
+    elevation: number
+    normal: { x: number; y: number; z: number }
+    loops: Array<{
+      index: number
+      isClosed: boolean
+      polyline?: { bulge?: number; point: [number, number, number?] }[]
+      edges?: Array<
+        | {
+            type: 'line'
+            start: [number, number]
+            end: [number, number]
+          }
+        | {
+            type: 'arc'
+            center: [number, number]
+            radius: number
+            startAngle: number
+            endAngle: number
+            clockwise: boolean
+          }
+        | {
+            type: 'ellipse' | 'spline'
+            detail: string
+          }
+      >
+    }>
+  } {
+    const elevation = this.elevation
+    const loops = this._geo.loops.map((loop, index) => {
+      if (loop instanceof AcGePolyline2d) {
+        const polyline = loop.vertices.map(v => {
+          const entry: { bulge?: number; point: [number, number, number?] } = {
+            point: [v.x, v.y, elevation]
+          }
+          if ((v.bulge ?? 0) !== 0) entry.bulge = v.bulge
+          return entry
+        })
+        return {
+          index,
+          isClosed: loop.closed,
+          polyline
+        }
+      }
+
+      if (loop instanceof AcGeLoop2d) {
+        const edges: NonNullable<
+          ReturnType<AcDbHatch['dumpBoundaryLoops']>['loops'][number]['edges']
+        > = []
+        for (const curve of loop.curves) {
+          if (curve instanceof AcGeLine2d) {
+            edges.push({
+              type: 'line',
+              start: [curve.startPoint.x, curve.startPoint.y],
+              end: [curve.endPoint.x, curve.endPoint.y]
+            })
+          } else if (curve instanceof AcGeCircArc2d) {
+            edges.push({
+              type: 'arc',
+              center: [curve.center.x, curve.center.y],
+              radius: curve.radius,
+              startAngle: curve.startAngle,
+              endAngle: curve.endAngle,
+              clockwise: curve.clockwise
+            })
+          } else if (curve instanceof AcGeEllipseArc2d) {
+            edges.push({ type: 'ellipse', detail: 'AcGeEllipseArc2d' })
+          } else if (curve instanceof AcGeSpline3d) {
+            edges.push({ type: 'spline', detail: 'AcGeSpline3d' })
+          }
+        }
+        return {
+          index,
+          isClosed: true,
+          edges
+        }
+      }
+
+      return { index, isClosed: false }
+    })
+
+    return {
+      coordinateSpace: 'OCS',
+      elevation,
+      normal: {
+        x: this.normal.x,
+        y: this.normal.y,
+        z: this.normal.z
+      },
+      loops
+    }
+  }
+
   private invalidateAreasFromLoopsCache() {
     this._areasFromLoopsCache = null
   }
@@ -1946,6 +2055,9 @@ export class AcDbHatch extends AcDbEntity {
     super.dxfInFields(filer)
     filer.atSubclassData('AcDbHatch')
 
+    // Rebuild boundaries from DXF; drop any pre-existing loops.
+    this._geo.clear()
+    this.invalidateAreasFromLoopsCache()
     this.definitionLines.length = 0
 
     type PendingVertex = { x: number; y: number; bulge?: number }

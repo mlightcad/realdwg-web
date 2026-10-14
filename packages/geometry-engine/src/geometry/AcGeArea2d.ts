@@ -38,6 +38,15 @@ export class AcGeArea2d extends AcGeShape2d {
   }
 
   /**
+   * Removes all loops (e.g. before `dxfIn` rebuilds the boundary).
+   */
+  clear() {
+    this._loops.length = 0
+    this._boundingBoxNeedsUpdate = true
+    return this
+  }
+
+  /**
    * The loops of this area
    */
   get loops() {
