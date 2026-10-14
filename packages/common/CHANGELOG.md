@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.8
+
+### Patch Changes
+
+- fix: keeps hatch boundary paths intact when edge endpoints drift, gives each wide-polyline subpath its own area so multi-area wide polylines stay off direct batching, and resolves large-block osnap plus loglevel side effects and read() input handling
+
 ## 1.15.7
 
 ### Patch Changes

@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.8
+
+### Patch Changes
+
+- fix: keeps hatch boundary paths intact when edge endpoints drift, gives each wide-polyline subpath its own area so multi-area wide polylines stay off direct batching, and resolves large-block osnap plus loglevel side effects and read() input handling
+- Updated dependencies
+  - @mlightcad/common@1.15.8
+  - @mlightcad/emf-converter@1.15.8
+  - @mlightcad/geometry-engine@3.15.8
+  - @mlightcad/graphic-interface@3.15.8
+
 ## 1.15.7
 
 ### Patch Changes
