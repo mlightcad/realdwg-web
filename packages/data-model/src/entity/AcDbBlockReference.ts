@@ -551,13 +551,18 @@ export class AcDbBlockReference extends AcDbEntity {
     if (AcDbOsnapMode.Insertion === osnapMode) {
       snapPoints.push(this.getInsertionPoint(parentInsertionMat))
     } else if (gsMark) {
+      const { canonicalId, occurrence } =
+        AcDbBlockReference.parseGsMarkOccurrence(gsMark)
       this.subEntityGetOsnapPoints(
         osnapMode,
         pickPoint,
         lastPoint,
         snapPoints,
-        gsMark,
-        parentInsertionMat
+        canonicalId,
+        parentInsertionMat,
+        new Set<AcDbObjectId>(),
+        { count: 0 },
+        occurrence
       )
     } else {
       this.collectBlockOsnapPoints(
@@ -1021,6 +1026,26 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Splits a `gsMark` produced by {@link uniquifySpatialItemIds} (cad-viewer)
+   * into the plain object id and the zero-based occurrence index encoded by
+   * its `#n` suffix (no suffix means occurrence 0, the first).
+   *
+   * The same object id appears once per instance when a block contains the
+   * same nested block more than once; without the occurrence index,
+   * `subEntityGetOsnapPoints` cannot tell which instance the caller meant and
+   * always resolves to the first one in iteration order (#745).
+   */
+  private static parseGsMarkOccurrence(gsMark: AcDbObjectId): {
+    canonicalId: AcDbObjectId
+    occurrence: number
+  } {
+    if (typeof gsMark !== 'string') return { canonicalId: gsMark, occurrence: 0 }
+    const match = /^(.*)#(\d+)$/.exec(gsMark)
+    if (!match) return { canonicalId: gsMark, occurrence: 0 }
+    return { canonicalId: match[1], occurrence: Number(match[2]) }
+  }
+
+  /**
    * Recursively resolves object snap points from nested block references.
    *
    * This helper traverses child entities under the current block reference to
@@ -1031,13 +1056,22 @@ export class AcDbBlockReference extends AcDbEntity {
    * The method tracks visited block references to prevent infinite recursion in
    * cyclic block graphs.
    *
+   * Several nested occurrences of the same block definition share the same
+   * leaf entity object id. `occurrenceCounter` counts matches as the walk
+   * proceeds, depth-first, in the same order `newIterator()` is expected to
+   * flatten in; only the match at `targetOccurrence` is treated as found, the
+   * others are skipped so the walk continues into the right instance (#745).
+   *
    * @param osnapMode - Requested osnap mode.
    * @param pickPoint - User pick point in caller space.
    * @param lastPoint - Previous point in caller space.
    * @param snapPoints - Output collection to append resolved snap points into.
-   * @param gsMark - Object id of the target sub-entity.
+   * @param gsMark - Object id of the target sub-entity (already split from
+   *   its occurrence suffix by the caller).
    * @param parentInsertionMat - Cumulative transform from ancestor INSERTs.
    * @param visitedRefs - Internal recursion guard set.
+   * @param occurrenceCounter - Shared match counter threaded through the walk.
+   * @param targetOccurrence - Zero-based occurrence of `gsMark` to resolve.
    * @returns `true` when the target sub-entity is found and processed, else `false`.
    */
   private subEntityGetOsnapPoints(
@@ -1047,7 +1081,9 @@ export class AcDbBlockReference extends AcDbEntity {
     snapPoints: AcGePoint3dLike[],
     gsMark: AcDbObjectId,
     parentInsertionMat: AcGeMatrix3d,
-    visitedRefs = new Set<AcDbObjectId>()
+    visitedRefs = new Set<AcDbObjectId>(),
+    occurrenceCounter: { count: number } = { count: 0 },
+    targetOccurrence = 0
   ) {
     // Avoid an infinite loop
     if (gsMark === this.objectId || visitedRefs.has(this.objectId)) return false
@@ -1065,36 +1101,40 @@ export class AcDbBlockReference extends AcDbEntity {
 
       for (const entity of blockTableRecord.newIterator()) {
         if (entity.objectId === gsMark) {
-          const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
-            thisInsertionMat.clone().invert()
-          )
-          const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
-            thisInsertionMat.clone().invert()
-          )
-          const localSnapPoints: AcGePoint3d[] = []
-
-          entity.subGetOsnapPoints(
-            osnapMode,
-            localPickPoint,
-            localLastPoint,
-            localSnapPoints,
-            gsMark,
-            thisInsertionMat
-          )
-
-          if (entity instanceof AcDbBlockReference) {
-            localSnapPoints.forEach(point => {
-              snapPoints.push(point.clone())
-            })
+          if (occurrenceCounter.count !== targetOccurrence) {
+            occurrenceCounter.count++
           } else {
-            localSnapPoints.forEach(point => {
-              snapPoints.push(
-                new AcGePoint3d(point).applyMatrix4(thisInsertionMat)
-              )
-            })
-          }
+            const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
+              thisInsertionMat.clone().invert()
+            )
+            const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
+              thisInsertionMat.clone().invert()
+            )
+            const localSnapPoints: AcGePoint3d[] = []
 
-          return true
+            entity.subGetOsnapPoints(
+              osnapMode,
+              localPickPoint,
+              localLastPoint,
+              localSnapPoints,
+              gsMark,
+              thisInsertionMat
+            )
+
+            if (entity instanceof AcDbBlockReference) {
+              localSnapPoints.forEach(point => {
+                snapPoints.push(point.clone())
+              })
+            } else {
+              localSnapPoints.forEach(point => {
+                snapPoints.push(
+                  new AcGePoint3d(point).applyMatrix4(thisInsertionMat)
+                )
+              })
+            }
+
+            return true
+          }
         }
 
         if (entity instanceof AcDbBlockReference) {
@@ -1105,7 +1145,9 @@ export class AcDbBlockReference extends AcDbEntity {
             snapPoints,
             gsMark,
             thisInsertionMat,
-            visitedRefs
+            visitedRefs,
+            occurrenceCounter,
+            targetOccurrence
           )
           if (found) return true
         }

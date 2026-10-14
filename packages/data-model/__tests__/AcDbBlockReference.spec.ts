@@ -343,6 +343,53 @@ describe('AcDbBlockReference', () => {
     expect(nestedSnaps[1].y).toBeCloseTo(12)
   })
 
+  it('resolves the occurrence-suffixed gsMark to the matching instance, not the first (#745)', () => {
+    const db = createDb()
+    const cell = createNamedBlock(db, 'CELL_745')
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
+    cell.appendEntity(line)
+
+    const row = createNamedBlock(db, 'ROW_745')
+    const firstCell = new AcDbBlockReference('CELL_745')
+    firstCell.position = new AcGePoint3d(0, 0, 0)
+    row.appendEntity(firstCell)
+    const secondCell = new AcDbBlockReference('CELL_745')
+    secondCell.position = new AcGePoint3d(100, 0, 0)
+    row.appendEntity(secondCell)
+
+    const rowRef = new AcDbBlockReference('ROW_745')
+    db.tables.blockTable.modelSpace.appendEntity(rowRef)
+
+    // No occurrence suffix: the first instance, as before.
+    const firstInstanceSnaps: AcGePoint3d[] = []
+    rowRef.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(100.9, 0, 0),
+      new AcGePoint3d(100.9, 0, 0),
+      firstInstanceSnaps,
+      line.objectId
+    )
+    expect(firstInstanceSnaps).toHaveLength(2)
+    expect(firstInstanceSnaps.map(p => p.x).sort()).toEqual([0, 1])
+
+    // `#1` (zero-based occurrence 1): the second instance, offset by 100 --
+    // without this, the cursor over the second CELL still resolved to the
+    // first CELL's line, as the issue reports.
+    const secondInstanceSnaps: AcGePoint3d[] = []
+    rowRef.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(100.9, 0, 0),
+      new AcGePoint3d(100.9, 0, 0),
+      secondInstanceSnaps,
+      `${line.objectId}#1`
+    )
+    expect(secondInstanceSnaps).toHaveLength(2)
+    expect(secondInstanceSnaps.map(p => p.x).sort()).toEqual([100, 101])
+  })
+
   it('transforms insertion, scale, rotation, normal and attribute geometry', () => {
     const db = createDb()
     createNamedBlock(db, 'TEST_BLOCK')
