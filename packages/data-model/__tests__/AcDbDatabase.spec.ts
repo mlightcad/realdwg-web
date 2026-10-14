@@ -152,6 +152,96 @@ describe('AcDbDatabase', () => {
     expect(db.tables.textStyleTable.getIdAt(textStyle.objectId)).toBe(textStyle)
   })
 
+  it('accepts DXF content as string/bytes and rejects unsupported input types', async () => {
+    const fileType = 'test-read-string-input'
+    const manager = AcDbDatabaseConverterManager.instance
+    const converter = {
+      read: jest.fn(async (data: ArrayBuffer, db: AcDbDatabase) => {
+        const text = new TextDecoder().decode(data)
+        expect(text).toContain('LINE')
+        const line = new AcDbLine(
+          new AcGePoint3d(0, 0, 0),
+          new AcGePoint3d(10, 0, 0)
+        )
+        db.tables.blockTable.modelSpace.appendEntity(line)
+      })
+    }
+    manager.register(fileType, converter as never)
+
+    try {
+      const dxf = [
+        '0',
+        'SECTION',
+        '2',
+        'ENTITIES',
+        '0',
+        'LINE',
+        '8',
+        '0',
+        '10',
+        '0',
+        '20',
+        '0',
+        '30',
+        '0',
+        '11',
+        '10',
+        '21',
+        '0',
+        '31',
+        '0',
+        '0',
+        'ENDSEC',
+        '0',
+        'EOF',
+        ''
+      ].join('\n')
+      const dxfBytes = new TextEncoder().encode(dxf)
+
+      const fromString = new AcDbDatabase()
+      await fromString.read(dxf, { readOnly: true }, fileType)
+      expect([
+        ...fromString.tables.blockTable.modelSpace.newIterator()
+      ]).toHaveLength(1)
+      expect(fromString.lastOpenError).toBeNull()
+      expect(converter.read).toHaveBeenCalledWith(
+        expect.any(ArrayBuffer),
+        fromString,
+        expect.any(Object)
+      )
+
+      const fromBytes = new AcDbDatabase()
+      await fromBytes.read(dxfBytes, { readOnly: true }, fileType)
+      expect([
+        ...fromBytes.tables.blockTable.modelSpace.newIterator()
+      ]).toHaveLength(1)
+
+      // Sliced views must not include bytes outside the view range.
+      const padded = new Uint8Array(dxfBytes.length + 4)
+      padded.set(dxfBytes, 2)
+      const view = padded.subarray(2, 2 + dxfBytes.length)
+      const fromView = new AcDbDatabase()
+      await fromView.read(view, { readOnly: true }, fileType)
+      expect([
+        ...fromView.tables.blockTable.modelSpace.newIterator()
+      ]).toHaveLength(1)
+
+      const invalid = new AcDbDatabase()
+      const openFailed = jest.fn()
+      invalid.events.openFailed.addEventListener(openFailed)
+      await expect(
+        invalid.read(123 as never, { readOnly: true }, fileType)
+      ).rejects.toMatchObject({
+        code: 'unknown',
+        message: expect.stringContaining('string, ArrayBuffer, or ArrayBufferView')
+      })
+      expect(invalid.lastOpenError?.code).toBe('unknown')
+      expect(openFailed).toHaveBeenCalled()
+    } finally {
+      manager.unregister(fileType)
+    }
+  })
+
   it('exposes worker OOM failures via lastOpenError, openFailed, and openProgress', async () => {
     const db = new AcDbDatabase()
     const fileType = 'test-open-failure'

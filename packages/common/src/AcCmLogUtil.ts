@@ -12,15 +12,19 @@ import loglevel from 'loglevel'
 
 /**
  * Flag indicating whether debug mode is enabled.
- * When true, sets log level to 'debug'; otherwise sets to 'warn'.
+ * When true, sets the default log level to 'debug'; otherwise 'warn'.
+ *
+ * Kept for API compatibility. Prefer {@link setLogLevel} or building with a
+ * debug flag rather than relying on this constant at runtime.
  *
  * @constant {boolean}
  */
-export const DEBUG_MODE = true
+export const DEBUG_MODE = false
 
 /**
- * The main logging instance from the loglevel library.
- * Provides standard logging methods: trace, debug, info, warn, error.
+ * Named logger for mlightcad packages. Using a dedicated logger avoids
+ * overriding the app's default `loglevel` instance and does not persist
+ * levels into `localStorage` unless explicitly requested.
  *
  * @constant {loglevel.Logger}
  *
@@ -34,19 +38,18 @@ export const DEBUG_MODE = true
  * log.error('Error message')
  * ```
  */
-export const log = loglevel
+export const log = loglevel.getLogger('mlightcad')
 
-if (DEBUG_MODE) {
-  log.setLevel('debug')
-} else {
-  log.setLevel('warn')
-}
+// setDefaultLevel does not persist and does not override a level the caller
+// already chose on this named logger.
+log.setDefaultLevel(DEBUG_MODE ? 'debug' : 'warn')
 
 /**
- * Sets the log level for the logging system.
+ * Sets the log level for the mlightcad logging system.
  *
  * Valid log levels are: 'trace', 'debug', 'info', 'warn', 'error', 'silent'.
  * If an invalid level is provided, the level will default to 'error' and an error will be logged.
+ * Levels are not written to `localStorage`.
  *
  * @param {string} level - The log level to set.
  *
@@ -66,9 +69,9 @@ if (DEBUG_MODE) {
  */
 export const setLogLevel = (level: string) => {
   try {
-    log.setLevel(level as loglevel.LogLevelDesc)
+    log.setLevel(level as loglevel.LogLevelDesc, false)
   } catch (ex) {
-    log.setLevel('error')
+    log.setLevel('error', false)
     log.error(ex)
   }
 }

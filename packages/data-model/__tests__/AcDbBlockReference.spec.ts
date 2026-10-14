@@ -267,6 +267,46 @@ describe('AcDbBlockReference', () => {
     expect(nearestSnaps[0].z).toBeCloseTo(0)
   })
 
+  it('collects endpoint osnaps from a large block without spreading into push', () => {
+    const db = createDb()
+    const block = createNamedBlock(db, 'BIG_BLOCK')
+    const lineCount = 1500
+    block.appendEntity(
+      Array.from(
+        { length: lineCount },
+        (_, i) =>
+          new AcDbLine(new AcGePoint3d(i, 0, 0), new AcGePoint3d(i, 1, 0))
+      )
+    )
+
+    const blockRef = new AcDbBlockReference('BIG_BLOCK')
+    db.tables.blockTable.modelSpace.appendEntity(blockRef)
+
+    // Mimic V8's apply argument limit so push(...largeArray) fails in tests.
+    const originalPush = Array.prototype.push
+    Array.prototype.push = function (this: unknown[], ...args: unknown[]) {
+      if (args.length > 1000) {
+        throw new RangeError('Maximum call stack size exceeded')
+      }
+      return originalPush.apply(this, args as never[])
+    }
+
+    try {
+      const snapPoints: AcGePoint3d[] = []
+      expect(() =>
+        blockRef.subGetOsnapPoints(
+          AcDbOsnapMode.EndPoint,
+          new AcGePoint3d(1, 1, 0),
+          new AcGePoint3d(1, 1, 0),
+          snapPoints
+        )
+      ).not.toThrow()
+      expect(snapPoints).toHaveLength(lineCount * 2)
+    } finally {
+      Array.prototype.push = originalPush
+    }
+  })
+
   it('resolves osnap points through nested block references', () => {
     const db = createDb()
     const leafBlock = createNamedBlock(db, 'LEAF_BLOCK')
