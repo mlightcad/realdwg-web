@@ -2123,11 +2123,14 @@ export class AcDbHatch extends AcDbEntity {
           if (spline) geoEdges.push(spline)
         }
       }
+      // One hatch boundary path is one closed cycle. Prefer a single
+      // rebuilt loop; if greedy matching fragments the path (common with
+      // spline endpoint drift), keep the file edge order instead.
       const loops = AcGeLoop2d.buildFromEdges(geoEdges)
-      if (loops.length === 0 && geoEdges.length > 0) {
+      if (loops.length === 1) {
+        this.add(loops[0])
+      } else if (geoEdges.length > 0) {
         this.add(new AcGeLoop2d(geoEdges))
-      } else {
-        loops.forEach(loop => this.add(loop))
       }
       void built
       edges = []
