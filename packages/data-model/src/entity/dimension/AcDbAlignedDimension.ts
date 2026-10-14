@@ -105,6 +105,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
     this._oblique = 0
     this._rotation = 0
     this.calculateRotation()
+    // Group 70 low bits: 1 = aligned (rotated subclass overrides to 0).
+    this.dimensionType = 1
+    this.syncDxfDefinitionPointFromTypedPoints()
 
     if (dimText) {
       this.dimensionText = dimText
@@ -149,6 +152,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   set dimLinePoint(value: AcGePoint3dLike) {
     this._dimLinePoint.copy(value)
+    this.syncDxfDefinitionPointFromTypedPoints()
   }
 
   /**
@@ -506,6 +510,22 @@ export class AcDbAlignedDimension extends AcDbDimension {
     return 'AcDbAlignedDimension'
   }
 
+  /** AutoCAD: group 10 = dim-line point for aligned/rotated. */
+  protected override syncDxfDefinitionPointFromTypedPoints(): void {
+    this._dxfDefinitionPoint.copy(this._dimLinePoint)
+  }
+
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      xLine1Point: point(this.xLine1Point),
+      xLine2Point: point(this.xLine2Point),
+      dimLinePoint: point(this.dimLinePoint),
+      rotation: this.rotation,
+      oblique: this.oblique
+    }
+  }
+
   protected override getMeasurementPropertyValue() {
     return this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
   }
@@ -519,9 +539,10 @@ export class AcDbAlignedDimension extends AcDbDimension {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker(this.dxfSubclassMarker)
+    // Groups 13/14 = extension-line starts. Group 10 (base) is the dim-line
+    // point; do not emit a redundant group 15 (rare in AutoCAD DXF).
     filer.writePoint3d(13, this.xLine1Point)
     filer.writePoint3d(14, this.xLine2Point)
-    filer.writePoint3d(15, this.dimLinePoint)
     filer.writeAngle(50, this.rotation)
     filer.writeAngle(52, this.oblique)
     return this

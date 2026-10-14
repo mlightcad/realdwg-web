@@ -58,6 +58,9 @@ export class AcDbArcDimension extends AcDbDimension {
     this._xLine1Point = new AcGePoint3d().copy(xLine1Point)
     this._xLine2Point = new AcGePoint3d().copy(xLine2Point)
     this._centerPoint = new AcGePoint3d().copy(centerPoint)
+    // Group 70 low bits: 8 = arc length.
+    this.dimensionType = 8
+    this.syncDxfDefinitionPointFromTypedPoints()
 
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
@@ -78,6 +81,7 @@ export class AcDbArcDimension extends AcDbDimension {
   }
   set arcPoint(value: AcGePoint3d) {
     this._arcPoint.copy(value)
+    this.syncDxfDefinitionPointFromTypedPoints()
   }
 
   /**
@@ -197,6 +201,21 @@ export class AcDbArcDimension extends AcDbDimension {
    * @param filer - DXF output writer.
    * @returns The instance (for chaining).
    */
+  /** Group 10 mirrors the arc point for dump / AutoCAD-compatible writers. */
+  protected override syncDxfDefinitionPointFromTypedPoints(): void {
+    this._dxfDefinitionPoint.copy(this._arcPoint)
+  }
+
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      centerPoint: point(this.centerPoint),
+      xLine1Point: point(this.xLine1Point),
+      xLine2Point: point(this.xLine2Point),
+      arcPoint: point(this.arcPoint)
+    }
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbArcDimension')

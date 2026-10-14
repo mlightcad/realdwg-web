@@ -50,6 +50,8 @@ export class AcDbOrdinateDimension extends AcDbDimension {
     super()
     this._definingPoint = new AcGePoint3d().copy(definingPoint)
     this._leaderEndPoint = new AcGePoint3d().copy(leaderEndPoint)
+    // Group 70 low bits: 6 = ordinate. Group 10 is the UCS origin (defaults to 0).
+    this.dimensionType = 6
 
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
@@ -161,6 +163,18 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    * @param filer - DXF output writer.
    * @returns The instance (for chaining).
    */
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      /** Feature location (DXF group 13). */
+      definingPoint: point(this.definingPoint),
+      /** Leader end (DXF group 14). */
+      leaderEndPoint: point(this.leaderEndPoint),
+      /** Ordinate UCS origin is DXF group 10 (`dxfDefinitionPoint`). */
+      origin: point(this._dxfDefinitionPoint)
+    }
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbOrdinateDimension')

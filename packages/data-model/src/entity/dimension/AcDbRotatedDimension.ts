@@ -1,3 +1,5 @@
+import { AcGePointLike } from '@mlightcad/geometry-engine'
+
 import { AcDbAlignedDimension } from './AcDbAlignedDimension'
 
 /**
@@ -9,6 +11,18 @@ import { AcDbAlignedDimension } from './AcDbAlignedDimension'
 export class AcDbRotatedDimension extends AcDbAlignedDimension {
   /** The entity type name */
   static override typeName: string = 'RotatedDimension'
+
+  constructor(
+    xLine1Point: AcGePointLike,
+    xLine2Point: AcGePointLike,
+    dimLinePoint: AcGePointLike,
+    dimText: string | null = null,
+    dimStyle: string | null = null
+  ) {
+    super(xLine1Point, xLine2Point, dimLinePoint, dimText, dimStyle)
+    // Group 70 low bits: 0 = rotated.
+    this.dimensionType = 0
+  }
 
   /**
    * @inheritdoc

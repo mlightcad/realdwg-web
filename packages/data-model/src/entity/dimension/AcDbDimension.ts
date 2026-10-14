@@ -433,6 +433,67 @@ export abstract class AcDbDimension extends AcDbEntity {
     this._normal.copy(value).normalize()
   }
 
+  /**
+   * DXF group code 10 definition point in WCS.
+   *
+   * Subtype meaning varies (dim-line point, center, chord, arc point, ordinate
+   * origin). Prefer typed accessors on subclasses for rebuild; this exposes the
+   * raw DXF value for dump/extract without exploding anonymous `*D` blocks.
+   */
+  get dxfDefinitionPoint(): AcGePoint3d {
+    this.syncDxfDefinitionPointFromTypedPoints()
+    return this._dxfDefinitionPoint
+  }
+
+  /**
+   * Sets the DXF group code 10 definition point (WCS).
+   */
+  set dxfDefinitionPoint(value: AcGePoint3dLike) {
+    this._dxfDefinitionPoint.copy(value)
+  }
+
+  /**
+   * Stable dump of WCS definition points for extract / rebuild APIs.
+   *
+   * Does not require exploding anonymous dimension blocks (`*D*`). Subclasses
+   * override {@link collectDefinitionPointsDump} to add typed points.
+   */
+  dumpDefinitionPoints(): Record<string, unknown> {
+    this.syncDxfDefinitionPointFromTypedPoints()
+    const point = (p: AcGePoint3dLike) => ({
+      x: p.x,
+      y: p.y,
+      z: p.z ?? 0
+    })
+    return {
+      type: this.type,
+      dxfTypeName: this.dxfTypeName,
+      dimensionType: this.dimensionType,
+      dxfDefinitionPoint: point(this._dxfDefinitionPoint),
+      dimBlockPosition: point(this.dimBlockPosition),
+      textPosition: point(this.textPosition),
+      measurement: this.measurement ?? null,
+      dimensionText: this.dimensionText,
+      dimensionStyleName: this.dimensionStyleName,
+      dimBlockId: this.dimBlockId,
+      normal: point(this.normal),
+      ...this.collectDefinitionPointsDump()
+    }
+  }
+
+  /**
+   * Subclass hook: typed definition points included in {@link dumpDefinitionPoints}.
+   */
+  protected collectDefinitionPointsDump(): Record<string, unknown> {
+    return {}
+  }
+
+  /**
+   * Copies the subtype's primary DXF group-10 point into {@link _dxfDefinitionPoint}
+   * before `dxfOut` / dump. Subclasses override when group 10 maps to a typed field.
+   */
+  protected syncDxfDefinitionPointFromTypedPoints(): void {}
+
   override get properties(): AcDbEntityProperties {
     return this.getBaseProperties()
   }
@@ -1078,6 +1139,9 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
+    // Keep group 10 in sync with typed definition points so programmatic
+    // dimensions and post-edit grips round-trip without a stale (0,0,0).
+    this.syncDxfDefinitionPointFromTypedPoints()
     const dimStyle =
       this.dimensionStyleName != null
         ? this.database.tables.dimStyleTable.getAt(this.dimensionStyleName)

@@ -101,6 +101,9 @@ export class AcDbRadialDimension extends AcDbDimension {
     this._leaderLength = leaderLength
     this._extArcStartAngle = 0
     this._extArcEndAngle = 0
+    // Group 70 low bits: 4 = radius.
+    this.dimensionType = 4
+    this.syncDxfDefinitionPointFromTypedPoints()
 
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
@@ -136,6 +139,7 @@ export class AcDbRadialDimension extends AcDbDimension {
    */
   set center(value: AcGePoint3d) {
     this._center.copy(value)
+    this.syncDxfDefinitionPointFromTypedPoints()
   }
 
   /**
@@ -325,6 +329,20 @@ export class AcDbRadialDimension extends AcDbDimension {
     return this.measurement ?? this.center.distanceTo(this.chordPoint)
   }
 
+  /** AutoCAD: group 10 = center. */
+  protected override syncDxfDefinitionPointFromTypedPoints(): void {
+    this._dxfDefinitionPoint.copy(this._center)
+  }
+
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      center: point(this.center),
+      chordPoint: point(this.chordPoint),
+      leaderLength: this.leaderLength
+    }
+  }
+
   /**
    * @inheritdoc
    */
@@ -349,8 +367,8 @@ export class AcDbRadialDimension extends AcDbDimension {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbRadialDimension')
-    filer.writePoint3d(15, this.center)
-    filer.writePoint3d(13, this.chordPoint)
+    // AutoCAD DXF: group 10 (base) = center, group 15 = chord point.
+    filer.writePoint3d(15, this.chordPoint)
     filer.writeDouble(40, this.leaderLength)
     filer.writeAngle(52, this.extArcStartAngle)
     filer.writeAngle(53, this.extArcEndAngle)

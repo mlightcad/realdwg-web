@@ -56,6 +56,9 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
     this._xLine1Point = new AcGePoint3d().copy(xLine1Point)
     this._xLine2Point = new AcGePoint3d().copy(xLine2Point)
     this._arcPoint = new AcGePoint3d().copy(arcPoint)
+    // Group 70 low bits: 5 = three-point angular.
+    this.dimensionType = 5
+    this.syncDxfDefinitionPointFromTypedPoints()
 
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
@@ -76,6 +79,7 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
   }
   set arcPoint(value: AcGePoint3d) {
     this._arcPoint.copy(value)
+    this.syncDxfDefinitionPointFromTypedPoints()
   }
 
   /**
@@ -195,6 +199,21 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
    * @param filer - DXF output writer.
    * @returns The instance (for chaining).
    */
+  /** AutoCAD: group 10 = arc point when group 16 is omitted; keep both in sync. */
+  protected override syncDxfDefinitionPointFromTypedPoints(): void {
+    this._dxfDefinitionPoint.copy(this._arcPoint)
+  }
+
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      centerPoint: point(this.centerPoint),
+      xLine1Point: point(this.xLine1Point),
+      xLine2Point: point(this.xLine2Point),
+      arcPoint: point(this.arcPoint)
+    }
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDb3PointAngularDimension')

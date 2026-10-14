@@ -64,6 +64,9 @@ export class AcDbDiametricDimension extends AcDbDimension {
     this._extArcStartAngle = 0
     this._extArcEndAngle = 0
     this._leaderLength = leaderLength
+    // Group 70 low bits: 3 = diameter.
+    this.dimensionType = 3
+    this.syncDxfDefinitionPointFromTypedPoints()
 
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
@@ -84,6 +87,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
   }
   set chordPoint(value: AcGePoint3d) {
     this._chordPoint.copy(value)
+    this.syncDxfDefinitionPointFromTypedPoints()
   }
 
   /**
@@ -244,11 +248,25 @@ export class AcDbDiametricDimension extends AcDbDimension {
    * @param filer - DXF output writer.
    * @returns The instance (for chaining).
    */
+  /** AutoCAD: group 10 = chord point (near text). */
+  protected override syncDxfDefinitionPointFromTypedPoints(): void {
+    this._dxfDefinitionPoint.copy(this._chordPoint)
+  }
+
+  protected override collectDefinitionPointsDump(): Record<string, unknown> {
+    const point = (p: AcGePoint3d) => ({ x: p.x, y: p.y, z: p.z })
+    return {
+      chordPoint: point(this.chordPoint),
+      farChordPoint: point(this.farChordPoint),
+      leaderLength: this.leaderLength
+    }
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbDiametricDimension')
-    filer.writePoint3d(15, this.chordPoint)
-    filer.writePoint3d(16, this.farChordPoint)
+    // AutoCAD DXF: group 10 (base) = chord, group 15 = far chord.
+    filer.writePoint3d(15, this.farChordPoint)
     filer.writeDouble(40, this.leaderLength)
     filer.writeAngle(52, this.extArcStartAngle)
     filer.writeAngle(53, this.extArcEndAngle)
