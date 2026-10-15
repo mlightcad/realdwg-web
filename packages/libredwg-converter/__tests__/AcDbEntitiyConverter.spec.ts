@@ -467,7 +467,8 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(vertices[0].endWidth).toBeCloseTo(0.75)
     expect(vertices[1].startWidth).toBeCloseTo(0.25)
     expect(vertices[1].endWidth).toBeCloseTo(0.25)
-    expect(polyline.directBatchPrimitive).toBe('area')
+    // Wide polylines draw fill + centerline stroke, so they stay unbatched.
+    expect(polyline.directBatchPrimitive).toBeNull()
   })
 
   it('converts libredwg TOLERANCE entity to AcDbFcf', () => {

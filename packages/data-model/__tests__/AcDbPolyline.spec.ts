@@ -432,10 +432,13 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(0, new AcGePoint2d(0, 0), 0, 0, 0.75)
     polyline.addVertexAt(1, new AcGePoint2d(0.661766, 0), 0, 0.25, 0.25)
 
-    const giEntity = { id: 'valve-taper-wide-polyline-gi' }
+    const areaEntity = { id: 'valve-taper-wide-polyline-gi' }
+    const strokeEntity = { id: 'valve-taper-centerline' }
+    const groupEntity = { id: 'valve-taper-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -451,9 +454,10 @@ describe('AcDbPolyline', () => {
       loops: unknown[]
     }
 
-    expect(result).toBe(giEntity)
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
+    expect(renderer.group).toHaveBeenCalledWith([areaEntity, strokeEntity])
     expect(areaArg.loops.length).toBeGreaterThan(0)
     expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
   })
@@ -466,10 +470,14 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(0, new AcGePoint2d(-0.25, 0), 1, 0.5, 0.5)
     polyline.addVertexAt(1, new AcGePoint2d(0.25, 0), 1, 0.5, 0.5)
 
-    const giEntity = { id: 'blowoff-filled-disk-gi' }
+    const areaEntity = { id: 'blowoff-filled-disk-gi' }
+    const strokeEntity = { id: 'blowoff-centerline' }
+    const groupEntity = { id: 'blowoff-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
+      offsetRing: jest.fn(),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -485,11 +493,24 @@ describe('AcDbPolyline', () => {
       loops: unknown[]
     }
 
-    expect(result).toBe(giEntity)
+    // Offset ring declines a collapsed inner; area fill + centerline remain.
+    expect(renderer.offsetRing).not.toHaveBeenCalled()
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
+    expect(renderer.group).toHaveBeenCalledWith([areaEntity, strokeEntity])
     expect(areaArg.loops.length).toBe(1)
     expect(Math.abs(areaArg.area)).toBeGreaterThan(0.5)
+    // Closed fallthrough must close the hairline seam and not leave solid fill
+    // on traits when stroking the centerline.
+    expect(renderer.subEntityTraits.fillType.solidFill).toBe(false)
+    const strokeArg = (renderer.lines as jest.Mock).mock.calls[0]?.[0] as Array<{
+      x: number
+      y: number
+    }>
+    expect(strokeArg.length).toBeGreaterThanOrEqual(3)
+    expect(strokeArg[0].x).toBe(strokeArg[strokeArg.length - 1].x)
+    expect(strokeArg[0].y).toBe(strokeArg[strokeArg.length - 1].y)
   })
 
   it('renders variable-width polyline as filled area', () => {
@@ -499,10 +520,13 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(1, new AcGePoint2d(20, 0), 0, 6, 2)
     polyline.addVertexAt(2, new AcGePoint2d(25, 8), 0, 2, 2)
 
-    const giEntity = { id: 'variable-width-polyline-gi' }
+    const areaEntity = { id: 'variable-width-polyline-gi' }
+    const strokeEntity = { id: 'variable-width-centerline' }
+    const groupEntity = { id: 'variable-width-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -513,9 +537,10 @@ describe('AcDbPolyline', () => {
     }
 
     const result = polyline.subWorldDraw(renderer as never)
-    expect(result).toBe(giEntity)
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
+    expect(renderer.group).toHaveBeenCalledWith([areaEntity, strokeEntity])
     expect(
       (renderer.subEntityTraits.fillType as { isHatchFill?: boolean })
         .isHatchFill
@@ -531,13 +556,16 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(3, new AcGePoint2d(0, 400), 0, 40, 40)
     polyline.addVertexAt(4, new AcGePoint2d(0, 200), 0, 40, 40)
 
-    // Single open-band area() remains eligible for direct batching.
-    expect(polyline.directBatchPrimitive).toBe('area')
+    // Fill + centerline stroke cannot share one direct-batch payload.
+    expect(polyline.directBatchPrimitive).toBeNull()
 
-    const giEntity = { id: 'open-wide-polyline-gi' }
+    const areaEntity = { id: 'open-wide-polyline-gi' }
+    const strokeEntity = { id: 'open-wide-centerline' }
+    const groupEntity = { id: 'open-wide-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -553,9 +581,9 @@ describe('AcDbPolyline', () => {
       loops: unknown[]
     }
 
-    expect(result).toBe(giEntity)
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(areaArg.loops.length).toBeGreaterThan(1)
     expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
     expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
@@ -571,10 +599,13 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(4, new AcGePoint2d(0, 400), 0, 40, 40)
     polyline.addVertexAt(5, new AcGePoint2d(0, 200), 0, 40, 40)
 
-    const giEntity = { id: 'revisited-wide-polyline-gi' }
+    const areaEntity = { id: 'revisited-wide-polyline-gi' }
+    const strokeEntity = { id: 'revisited-wide-centerline' }
+    const groupEntity = { id: 'revisited-wide-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -590,9 +621,9 @@ describe('AcDbPolyline', () => {
       loops: unknown[]
     }
 
-    expect(result).toBe(giEntity)
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(areaArg.loops.length).toBeGreaterThan(0)
     expect(Math.abs(areaArg.area)).toBeGreaterThan(0)
     expect(Math.abs(areaArg.area)).toBeLessThan(200 * 400)
@@ -619,9 +650,10 @@ describe('AcDbPolyline', () => {
     expect(polyline.directBatchPrimitive).toBeNull()
 
     const areaEntities = [{ id: 'subpath-1' }, { id: 'subpath-2' }]
+    const strokeEntity = { id: 'retraced-centerline' }
     const groupEntity = { id: 'retraced-wide-polyline-group' }
     const renderer = {
-      lines: jest.fn(),
+      lines: jest.fn(() => strokeEntity),
       area: jest.fn(() => areaEntities.shift()),
       group: jest.fn(() => groupEntity),
       subEntityTraits: {
@@ -635,12 +667,13 @@ describe('AcDbPolyline', () => {
 
     const result = polyline.subWorldDraw(renderer as never)
 
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(renderer.area).toHaveBeenCalledTimes(2)
     expect(renderer.group).toHaveBeenCalledTimes(1)
     expect(renderer.group).toHaveBeenCalledWith([
       { id: 'subpath-1' },
-      { id: 'subpath-2' }
+      { id: 'subpath-2' },
+      strokeEntity
     ])
     expect(result).toBe(groupEntity)
 
@@ -741,10 +774,13 @@ describe('AcDbPolyline', () => {
     polyline.addVertexAt(4, new AcGePoint2d(0, -70), 0, 10, 10)
     polyline.addVertexAt(5, new AcGePoint2d(0, -60), 0, 10, 10)
 
-    const giEntity = { id: 'open-stadium-wide-polyline-gi' }
+    const areaEntity = { id: 'open-stadium-wide-polyline-gi' }
+    const strokeEntity = { id: 'open-stadium-centerline' }
+    const groupEntity = { id: 'open-stadium-group' }
     const renderer = {
-      lines: jest.fn(),
-      area: jest.fn(() => giEntity),
+      lines: jest.fn(() => strokeEntity),
+      area: jest.fn(() => areaEntity),
+      group: jest.fn(() => groupEntity),
       subEntityTraits: {
         fillType: {
           solidFill: false,
@@ -760,9 +796,9 @@ describe('AcDbPolyline', () => {
       area: number
     }
 
-    expect(result).toBe(giEntity)
+    expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
-    expect(renderer.lines).not.toHaveBeenCalled()
+    expect(renderer.lines).toHaveBeenCalledTimes(1)
     expect(areaArg.loops.length).toBeGreaterThan(2)
     expect(areaArg.area).toBeLessThan(70 * 200)
   })
