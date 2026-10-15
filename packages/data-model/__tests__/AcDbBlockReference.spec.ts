@@ -343,6 +343,53 @@ describe('AcDbBlockReference', () => {
     expect(nestedSnaps[1].y).toBeCloseTo(12)
   })
 
+  it('resolves the Nth nested INSERT instance via gsMark #n occurrence (#745)', () => {
+    const db = createDb()
+    const cell = createNamedBlock(db, 'CELL')
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
+    cell.appendEntity(line)
+
+    const row = createNamedBlock(db, 'ROW')
+    for (const x of [0, 100]) {
+      const nested = new AcDbBlockReference('CELL')
+      nested.position = new AcGePoint3d(x, 0, 0)
+      row.appendEntity(nested)
+    }
+
+    const ref = new AcDbBlockReference('ROW')
+    db.tables.blockTable.modelSpace.appendEntity(ref)
+
+    const first: AcGePoint3d[] = []
+    ref.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(0.5, 0, 0),
+      new AcGePoint3d(0.5, 0, 0),
+      first,
+      line.objectId
+    )
+    expect(first.map(p => [p.x, p.y])).toEqual([
+      [0, 0],
+      [1, 0]
+    ])
+
+    const second: AcGePoint3d[] = []
+    ref.subGetOsnapPoints(
+      AcDbOsnapMode.EndPoint,
+      new AcGePoint3d(100.9, 0, 0),
+      new AcGePoint3d(100.9, 0, 0),
+      second,
+      `${line.objectId}#1`
+    )
+    expect(second).toHaveLength(2)
+    expect(second[0].x).toBeCloseTo(100)
+    expect(second[0].y).toBeCloseTo(0)
+    expect(second[1].x).toBeCloseTo(101)
+    expect(second[1].y).toBeCloseTo(0)
+  })
+
   it('transforms insertion, scale, rotation, normal and attribute geometry', () => {
     const db = createDb()
     createNamedBlock(db, 'TEST_BLOCK')

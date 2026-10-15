@@ -6,7 +6,31 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
+import type { AcDbObjectId } from '../base/AcDbObject'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+
+/**
+ * Spatial-index child ids may get a `#n` suffix when the same definition
+ * entity appears under more than one nested INSERT (see uniquifySpatialItemIds
+ * in cad-simple-viewer). Parse that into the canonical object id and 0-based
+ * occurrence index matching depth-first leaf order.
+ */
+export function acdbParseGsMark(gsMark: AcDbObjectId): {
+  objectId: AcDbObjectId
+  occurrence: number
+} {
+  if (typeof gsMark !== 'string') {
+    return { objectId: gsMark, occurrence: 0 }
+  }
+  const match = /^(.*)#(\d+)$/.exec(gsMark)
+  if (!match) {
+    return { objectId: gsMark, occurrence: 0 }
+  }
+  return {
+    objectId: match[1] as AcDbObjectId,
+    occurrence: Number(match[2])
+  }
+}
 
 function distSq3d(a: AcGePoint3dLike, b: AcGePoint3dLike): number {
   const dx = a.x - b.x
