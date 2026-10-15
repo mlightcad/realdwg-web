@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.10
+
+### Patch Changes
+
+- feat: adds annotation scale support for annotative MTEXT by reading SCALE, DICTIONARYVAR, and context data from DXF and LibreDWG, honoring CANNOSCALE when drawing so extents, grips, and osnap stay aligned with the active scale. Also reuses the objectId already-stored guard when filling materialized DICTIONARY entries so mojibake ACAD_LAYOUT names do not create a second layout slot
+- Updated dependencies
+  - @mlightcad/common@1.15.10
+  - @mlightcad/emf-converter@1.15.10
+  - @mlightcad/geometry-engine@3.15.10
+  - @mlightcad/graphic-interface@3.15.10
+
 ## 1.15.9
 
 ### Patch Changes
