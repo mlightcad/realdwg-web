@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.9
+
+### Patch Changes
+
+- fix: resolve nested INSERT osnap targeting and keep open wide polylines visible. Fixes osnap on nested INSERT entities by correctly resolving the #n occurrence index via gsMark. Also ensures open wide polylines remain visible by drawing a centerline stroke regardless of fill-area success.
+- Updated dependencies
+  - @mlightcad/data-model@1.15.9
+  - @mlightcad/libredwg-converter@3.15.9
+
 ## 0.15.8
 
 ### Patch Changes
