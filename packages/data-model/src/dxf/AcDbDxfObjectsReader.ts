@@ -6,14 +6,18 @@ import {
   type AcDbLayerFilterPersistSource,
   type AcDbPersistDictionary,
   type AcDbPersistXRecord,
-  acdbReadLayerFilterTree} from '../ly/AcLyLayerFilterIO'
+  acdbReadLayerFilterTree
+} from '../ly/AcLyLayerFilterIO'
 import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar'
 import { AcDbGroup } from '../object/AcDbGroup'
 import { AcDbLayerFilter } from '../object/AcDbLayerFilter'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
+import { AcDbScale } from '../object/AcDbScale'
 import { AcDbSortentsTable } from '../object/AcDbSortentsTable'
 import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcDbLayout } from '../object/layout/AcDbLayout'
@@ -67,6 +71,8 @@ export class AcDbDxfObjectsReader {
     }
 
     this.finishNamedObjectDictionaries()
+    this.materializeBufferedDictionaries()
+    this.finishCannoscale()
     this.finishLayerFilterTree()
     this.linkLayoutsToBlockTableRecords()
     if (this._db.objects.layout.numEntries === 0) {
@@ -130,10 +136,38 @@ export class AcDbDxfObjectsReader {
         this._db.objects.sortentsTable.setAt(sortents.objectId, sortents)
         break
       }
-      case 'DICTIONARY': {
+      case 'DICTIONARY':
+      case 'ACDBDICTIONARYWDFLT': {
         const dict = this.readPersistDictionary(filer)
         if (dict.handle) {
           this._dictionaries.set(normalizeHandle(dict.handle), dict)
+        }
+        break
+      }
+      case 'SCALE': {
+        const scale = new AcDbScale()
+        scale.dxfIn(filer)
+        const key = scale.scaleName || normalizeHandle(scale.objectId)
+        if (key) {
+          this._db.objects.scale.setAt(key, scale)
+        }
+        break
+      }
+      case 'DICTIONARYVAR': {
+        const dictVar = new AcDbDictionaryVar()
+        dictVar.dxfIn(filer)
+        const handle = normalizeHandle(dictVar.objectId)
+        if (handle) {
+          this._db.objects.dictionaryVar.setAt(handle, dictVar)
+        }
+        break
+      }
+      case 'ACDB_MTEXTOBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbMTextObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
         }
         break
       }
@@ -196,6 +230,7 @@ export class AcDbDxfObjectsReader {
       ACAD_SORTENTS: this._db.objects.sortentsTable,
       ACAD_MLEADERSTYLE: this._db.objects.mleaderStyle,
       ACAD_MLINESTYLE: this._db.objects.mlineStyle,
+      ACAD_SCALELIST: this._db.objects.scale,
       ISM_RASTER_IMAGE_DICT: this._db.objects.imageDefinition,
       MLIGHT_XRECORD: this._db.objects.xrecord
     }
@@ -252,7 +287,122 @@ export class AcDbDxfObjectsReader {
     for (const [, o] of this._db.objects.layerFilter.entries()) add(o)
     for (const [, o] of this._db.objects.layerIndex.entries()) add(o)
     for (const [, o] of this._db.objects.xrecord.entries()) add(o)
+    for (const [, o] of this._db.objects.scale.entries()) add(o)
+    for (const [, o] of this._db.objects.dictionaryVar.entries()) add(o)
+    for (const [, o] of this._db.objects.objectContextData.entries()) add(o)
     return map
+  }
+
+  /**
+   * Materializes every buffered DICTIONARY into an {@link AcDbDictionary}
+   * registered in the database handle map so entity/viewport extension
+   * dictionaries and annotation-scale context chains resolve via
+   * {@link AcDbDatabase.getObjectById}.
+   */
+  private materializeBufferedDictionaries(): void {
+    if (this._dictionaries.size === 0) return
+
+    // Typed NOD children may have had objectId reassigned in
+    // finishNamedObjectDictionaries without refreshing the handle registry.
+    const typedByObjectId = new Map<string, AcDbDictionary>()
+    for (const dict of this._db.getRootDictionaries()) {
+      const id = normalizeHandle(dict.objectId)
+      if (id) {
+        typedByObjectId.set(id, dict)
+        this._db.registerObjectHandle(dict)
+      }
+    }
+
+    const materialized = new Map<string, AcDbDictionary>()
+    for (const [handle, persist] of this._dictionaries) {
+      // Skip dictionaries already represented by typed NOD children
+      // (layout/group/scale/…). Those keep their existing AcDbDictionary.
+      const existing =
+        this._db.getObjectById(handle) ?? typedByObjectId.get(handle)
+      if (existing instanceof AcDbDictionary) {
+        materialized.set(handle, existing)
+        continue
+      }
+
+      const dict = new AcDbDictionary(this._db)
+      // Replace the constructor-minted handle with the DXF handle.
+      this._db.releaseObjectHandle(dict)
+      dict.objectId = handle
+      dict.ownerId = persist.ownerObjectId || '0'
+      if (persist.extensionDictionaryId) {
+        dict.extensionDictionary = persist.extensionDictionaryId
+      }
+      this._db.registerObjectHandle(dict)
+      materialized.set(handle, dict)
+    }
+
+    const objectsByHandle = this.collectLoadedObjectsByHandle()
+    for (const [handle, dict] of materialized) {
+      objectsByHandle.set(handle, dict)
+    }
+
+    for (const [handle, persist] of this._dictionaries) {
+      const dict = materialized.get(handle)
+      if (!dict) continue
+      for (const [entryName, entryHandle] of Object.entries(persist.entries)) {
+        const obj = objectsByHandle.get(normalizeHandle(entryHandle))
+        if (!obj) continue
+        if (dict.getAt(entryName)) continue
+        // Same guard as finishNamedObjectDictionaries: LAYOUT (and similar)
+        // may already be keyed by a canonical name while the persist map uses
+        // a mojibake/alternate spelling for the same objectId.
+        const targetId = normalizeHandle(obj.objectId)
+        let alreadyStored = false
+        for (const [, existing] of dict.entries()) {
+          if (normalizeHandle(existing.objectId) === targetId) {
+            alreadyStored = true
+            break
+          }
+        }
+        if (alreadyStored) continue
+        try {
+          dict.setAt(entryName, obj)
+        } catch {
+          // Strict-mode / ownership conflicts — keep the handle registry entry.
+        }
+      }
+    }
+
+    // Attach non-typed root NOD children (e.g. AcDbVariableDictionary) so
+    // callers can resolve them by name from objects.dictionary.
+    let rootPersist: AcDbPersistDictionary | undefined
+    for (const dict of this._dictionaries.values()) {
+      if (!dict.ownerObjectId || dict.ownerObjectId === '0') {
+        rootPersist = dict
+        break
+      }
+    }
+    if (!rootPersist?.handle) return
+    const rootDict = this._db.objects.dictionary
+    for (const [key, childHandle] of Object.entries(rootPersist.entries)) {
+      if (rootDict.getAt(key)) continue
+      const child = objectsByHandle.get(normalizeHandle(childHandle))
+      if (child instanceof AcDbDictionary) {
+        try {
+          rootDict.setAt(key, child)
+        } catch {
+          // ignore ownership conflicts
+        }
+      }
+    }
+  }
+
+  /**
+   * Reads CANNOSCALE from AcDbVariableDictionary → DICTIONARYVAR.
+   */
+  private finishCannoscale(): void {
+    const root = this._db.objects.dictionary
+    const variableDict = root.getAt('AcDbVariableDictionary')
+    if (!(variableDict instanceof AcDbDictionary)) return
+    const cannoscaleVar = variableDict.getAt('CANNOSCALE')
+    if (cannoscaleVar instanceof AcDbDictionaryVar && cannoscaleVar.value) {
+      this._db.cannoscale = cannoscaleVar.value
+    }
   }
 
   private readPersistDictionary(filer: AcDbDxfFiler): AcDbPersistDictionary {

@@ -17,6 +17,13 @@ export class AcGiViewport {
   private _groupId: string
   private _frozenLayerIds: string[]
   private _frozenLayers: string[]
+  /** Annotation scale name for this viewport (e.g. `"1:50"`), when known. */
+  private _annotationScaleName: string
+  /**
+   * Annotation scale factor (`drawingUnits / paperUnits`) for this viewport.
+   * `0` means unset.
+   */
+  private _annotationScaleFactor: number
 
   constructor() {
     this._number = -1
@@ -31,6 +38,8 @@ export class AcGiViewport {
     this._viewHeight = 0
     this._frozenLayerIds = []
     this._frozenLayers = []
+    this._annotationScaleName = ''
+    this._annotationScaleFactor = 0
   }
 
   /**
@@ -84,6 +93,28 @@ export class AcGiViewport {
   }
   set frozenLayers(value: string[]) {
     this._frozenLayers = [...value]
+  }
+
+  /**
+   * Annotation scale name for this viewport (from
+   * `ASDK_XREC_ANNOTATION_SCALE_INFO`), e.g. `"1:50"`. Empty when unset.
+   */
+  get annotationScaleName() {
+    return this._annotationScaleName
+  }
+  set annotationScaleName(value: string) {
+    this._annotationScaleName = value ?? ''
+  }
+
+  /**
+   * Annotation scale factor (`drawingUnits / paperUnits`) for this viewport.
+   * `0` when unset.
+   */
+  get annotationScaleFactor() {
+    return this._annotationScaleFactor
+  }
+  set annotationScaleFactor(value: number) {
+    this._annotationScaleFactor = value > 0 ? value : 0
   }
 
   /**
@@ -248,6 +279,8 @@ export class AcGiViewport {
     viewport.viewHeight = this.viewHeight
     viewport.frozenLayerIds = this.frozenLayerIds
     viewport.frozenLayers = this.frozenLayers
+    viewport.annotationScaleName = this.annotationScaleName
+    viewport.annotationScaleFactor = this.annotationScaleFactor
     return viewport
   }
 
@@ -269,6 +302,8 @@ export class AcGiViewport {
     this.viewHeight = viewport.viewHeight
     this.frozenLayerIds = viewport.frozenLayerIds
     this.frozenLayers = viewport.frozenLayers
+    this.annotationScaleName = viewport.annotationScaleName
+    this.annotationScaleFactor = viewport.annotationScaleFactor
     return this
   }
 }

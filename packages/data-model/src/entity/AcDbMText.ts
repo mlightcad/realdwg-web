@@ -15,6 +15,16 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotationScaleContexts,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext
+} from '../misc/AcDbAnnotationScale'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
 import { AcDbEntity } from './AcDbEntity'
 import { AcDbEntityProperties } from './AcDbEntityProperties'
@@ -452,32 +462,96 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
+   * Resolves height / width / insertion / orientation for the active
+   * annotation scale (CANNOSCALE), matching {@link subWorldDraw}.
+   */
+  private resolveAnnotativePresentation(): {
+    height: number
+    width: number
+    extentsWidth: number
+    position: AcGePoint3d
+    direction: AcGeVector3d
+    attachmentPoint: AcGiMTextAttachmentPoint
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 || acdbIsAnnotativeObject(this)
+
+    let height = this.height
+    let position = this._location
+    let direction = this.direction
+    let attachmentPoint = this.attachmentPoint
+    let width = this.width
+    let extentsWidth = this.extentsWidth
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      const paperHeight = acdbAnnotativePaperHeight(this.height, contexts)
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      height = acdbAnnotativeModelHeight(
+        paperHeight,
+        preferred.scale.scaleFactor
+      )
+      const ctx = preferred.contextData
+      if (ctx) {
+        position = ctx.insertionPoint
+        direction = ctx.direction
+        attachmentPoint = ctx.attachmentPoint
+        if (ctx.definedWidth > 0) width = ctx.definedWidth
+        if (ctx.extentsWidth > 0) extentsWidth = ctx.extentsWidth
+      }
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+    }
+
+    return {
+      height,
+      width,
+      extentsWidth,
+      position,
+      direction,
+      attachmentPoint,
+      preferred,
+      annotationScale
+    }
+  }
+
+  /**
    * @inheritdoc
    */
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
+    const presentation = this.resolveAnnotativePresentation()
     const width =
-      this.extentsWidth > 0
-        ? this.extentsWidth
-        : this.width > 0
-          ? this.width
-          : acdbEstimatePlainTextWidth(this.contents, this.height)
+      presentation.extentsWidth > 0
+        ? presentation.extentsWidth
+        : presentation.width > 0
+          ? presentation.width
+          : acdbEstimatePlainTextWidth(this.contents, presentation.height)
     const lineCount = acdbCountMTextLines(this.contents)
     const height = acdbEstimateMTextHeight(
       lineCount,
-      this.height,
+      presentation.height,
       this.lineSpacingFactor,
       this.lineSpacingStyle
     )
 
     return acdbExpandBoxByOrientedTextRect(
       box,
-      this._location,
+      presentation.position,
       width,
       height,
-      this.attachmentPoint,
+      presentation.attachmentPoint,
       this.rotation,
-      this.direction
+      presentation.direction
     )
   }
 
@@ -487,11 +561,21 @@ export class AcDbMText extends AcDbEntity {
    * @returns Array containing the mtext location (insertion point).
    */
   subGetGripPoints() {
-    return [this._location]
+    return [this.resolveAnnotativePresentation().position]
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const { preferred } = this.resolveAnnotativePresentation()
+    const ctx = preferred?.contextData
+    if (ctx) {
+      acdbMovePrimaryGripPointAt(indices, offset, ctx.insertionPoint)
+      // Keep the entity record in sync when editing the default representation.
+      if (preferred?.isDefault) {
+        acdbMovePrimaryGripPointAt(indices, offset, this._location)
+      }
+      return this
+    }
     acdbMovePrimaryGripPointAt(indices, offset, this._location)
     return this
   }
@@ -515,7 +599,7 @@ export class AcDbMText extends AcDbEntity {
     snapPoints: AcGePoint3dLike[]
   ) {
     if (AcDbOsnapMode.Insertion === osnapMode) {
-      snapPoints.push(this._location)
+      snapPoints.push(this.resolveAnnotativePresentation().position)
     }
   }
 
@@ -785,19 +869,35 @@ export class AcDbMText extends AcDbEntity {
    * @returns The rendered entity, or undefined if drawing failed
    */
   subWorldDraw(renderer: AcGiRenderer, delay?: boolean) {
+    const {
+      height,
+      width,
+      position,
+      direction,
+      attachmentPoint,
+      annotationScale
+    } = this.resolveAnnotativePresentation()
+
     const mtextData: AcGiMTextData = {
       text: this.contents,
-      height: this.height,
-      width: this.width,
-      position: this.location,
+      height,
+      width,
+      position,
       rotation: this.rotation,
-      directionVector: this.direction,
-      attachmentPoint: this.attachmentPoint,
+      directionVector: direction,
+      attachmentPoint,
       drawingDirection: this.drawingDirection,
       lineSpaceFactor: this.lineSpacingFactor,
       lineSpaceStyle: this.lineSpacingStyle
     }
-    return renderer.mtext(mtextData, this.getTextStyle(), delay)
+    const drawable = renderer.mtext(mtextData, this.getTextStyle(), delay)
+    if (drawable && annotationScale) {
+      const userData = drawable.userData as {
+        annotationScale?: AcDbAnnotationScaleDrawInfo
+      }
+      userData.annotationScale = annotationScale
+    }
+    return drawable
   }
 
   private encodeMTextContentsForDxf(contents: string): string {

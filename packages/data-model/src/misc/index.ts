@@ -1,4 +1,20 @@
 export { AcDbAngleUnits } from './AcDbAngleUnits'
+export {
+  ACDB_ANNOTATIVE_XDATA_APP,
+  ACDB_VIEWPORT_ANNOTATION_SCALE_XREC,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbFindScale,
+  acdbGetAnnotationScaleContexts,
+  acdbGetViewportAnnotationScale,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext
+} from './AcDbAnnotationScale'
+export type {
+  AcDbAnnotationScaleContext,
+  AcDbAnnotationScaleDrawInfo
+} from './AcDbAnnotationScale'
 export { AcDbFormatter } from './AcDbFormatter'
 export type { AcDbFormatterOptions } from './AcDbFormatter'
 export { AcDbLinearUnits } from './AcDbLinearUnits'

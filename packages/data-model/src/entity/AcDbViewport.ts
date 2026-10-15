@@ -14,6 +14,7 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale'
 import { AcDbEntity } from './AcDbEntity'
 import { acdbForEachGripIndex } from './AcDbGripHelpers'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
@@ -760,6 +761,11 @@ export class AcDbViewport extends AcDbEntity {
       }
     }
     viewport.frozenLayers = frozenLayers
+    const annotationScale = acdbGetViewportAnnotationScale(this)
+    if (annotationScale) {
+      viewport.annotationScaleName = annotationScale.scaleName
+      viewport.annotationScaleFactor = annotationScale.scaleFactor
+    }
     return viewport
   }
 

@@ -391,9 +391,21 @@ export {
   ACDB_DYN_BLOCK_TRUE_NAME_APP,
   acdbIsAnonymousUserBlockName,
   acdbImportDynBlockMetadata,
-  acdbNormalizeExtensionDictionaryId
+  acdbNormalizeExtensionDictionaryId,
+  ACDB_ANNOTATIVE_XDATA_APP,
+  ACDB_VIEWPORT_ANNOTATION_SCALE_XREC,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbFindScale,
+  acdbGetAnnotationScaleContexts,
+  acdbGetViewportAnnotationScale,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext
 } from './misc'
 export type {
+  AcDbAnnotationScaleContext,
+  AcDbAnnotationScaleDrawInfo,
   AcDbFormatterOptions,
   AcDbMemoryEstimate,
   AcDbMemoryEstimateBucket,
@@ -413,6 +425,7 @@ export type {
 } from './misc'
 export {
   AcDbDictionary,
+  AcDbDictionaryVar,
   AcDbDuplicateRecordCloning,
   AcDbDynBlockReference,
   AcDbDynBlockTableRecord,
@@ -426,6 +439,7 @@ export {
   AcDbLayoutManager,
   AcDbMLeaderStyle,
   AcDbMlineStyle,
+  AcDbMTextObjectContextData,
   AcDbPlotPaperUnits,
   AcDbPlotRotation,
   AcDbPlotSettings,
@@ -434,6 +448,7 @@ export {
   AcDbPlotStdScaleType,
   AcDbPlotType,
   AcDbRasterImageDef,
+  AcDbScale,
   AcDbSortentsTable,
   AcDbXrecord
 } from './object'

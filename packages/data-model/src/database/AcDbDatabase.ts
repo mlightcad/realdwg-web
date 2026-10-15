@@ -54,12 +54,15 @@ import { AcDbFormatter } from '../misc/AcDbFormatter'
 import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
 import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar'
 import { AcDbGroup } from '../object/AcDbGroup'
 import { AcDbLayerFilter } from '../object/AcDbLayerFilter'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
+import { AcDbScale } from '../object/AcDbScale'
 import { AcDbSortentsTable } from '../object/AcDbSortentsTable'
 import { AcDbXrecord } from '../object/AcDbXrecord'
 import { AcLyLayerFilterTree } from '../ly/AcLyLayerFilterTree'
@@ -421,6 +424,7 @@ export class AcDbDatabase extends AcDbObject {
   /** Nongraphical objects in the database */
   private _objects: {
     readonly dictionary: AcDbDictionary<AcDbDictionary>
+    readonly dictionaryVar: AcDbDictionary<AcDbDictionaryVar>
     readonly group: AcDbDictionary<AcDbGroup>
     readonly imageDefinition: AcDbDictionary<AcDbRasterImageDef>
     readonly layerFilter: AcDbDictionary<AcDbLayerFilter>
@@ -428,9 +432,18 @@ export class AcDbDatabase extends AcDbObject {
     readonly layout: AcDbLayoutDictionary
     readonly mleaderStyle: AcDbDictionary<AcDbMLeaderStyle>
     readonly mlineStyle: AcDbDictionary<AcDbMlineStyle>
+    readonly objectContextData: AcDbDictionary<AcDbMTextObjectContextData>
+    readonly scale: AcDbDictionary<AcDbScale>
     readonly sortentsTable: AcDbDictionary<AcDbSortentsTable>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
   }
+  /** Current annotation scale name (CANNOSCALE), e.g. `"1:100"`. */
+  private _cannoscale: string
+  /**
+   * Whether annotative objects that do not support the current annotation
+   * scale are still displayed (ANNOALLVISIBLE). Defaults to AutoCAD's `1`.
+   */
+  private _annoallvisible: boolean
   /** Current space (model space or paper space) */
   private _currentSpace?: AcDbBlockTableRecord
   /** The maximum handle value in the database, used for generating unique object IDs */
@@ -546,6 +559,9 @@ export class AcDbDatabase extends AcDbObject {
     this._lwdisplay = false
     this._tilemode = true
     this._psltscale = true
+    this._cannoscale = '1:1'
+    // AutoCAD initial value of ANNOALLVISIBLE is 1 (show unsupported).
+    this._annoallvisible = true
     this._pdmode = 0
     this._pdsize = 0
     this._osmode = 0
@@ -568,6 +584,7 @@ export class AcDbDatabase extends AcDbObject {
     }
     this._objects = {
       dictionary: new AcDbDictionary(this),
+      dictionaryVar: new AcDbDictionary(this),
       group: new AcDbDictionary(this),
       imageDefinition: new AcDbDictionary(this),
       layerFilter: new AcDbDictionary(this),
@@ -575,6 +592,8 @@ export class AcDbDatabase extends AcDbObject {
       layout: new AcDbLayoutDictionary(this),
       mleaderStyle: new AcDbDictionary(this),
       mlineStyle: new AcDbDictionary(this),
+      objectContextData: new AcDbDictionary(this),
+      scale: new AcDbDictionary(this),
       sortentsTable: new AcDbDictionary(this),
       xrecord: new AcDbDictionary(this)
     }
@@ -799,6 +818,7 @@ export class AcDbDatabase extends AcDbObject {
   getRootDictionaries(): AcDbDictionary[] {
     return [
       this.objects.dictionary,
+      this.objects.dictionaryVar,
       this.objects.group,
       this.objects.imageDefinition,
       this.objects.layerFilter,
@@ -806,6 +826,8 @@ export class AcDbDatabase extends AcDbObject {
       this.objects.layout,
       this.objects.mleaderStyle,
       this.objects.mlineStyle,
+      this.objects.objectContextData,
+      this.objects.scale,
       this.objects.sortentsTable,
       this.objects.xrecord
     ]
@@ -1197,6 +1219,7 @@ export class AcDbDatabase extends AcDbObject {
     }
     for (const dictionary of [
       this._objects.dictionary,
+      this._objects.dictionaryVar,
       this._objects.group,
       this._objects.imageDefinition,
       this._objects.layerFilter,
@@ -1204,6 +1227,8 @@ export class AcDbDatabase extends AcDbObject {
       this._objects.layout,
       this._objects.mleaderStyle,
       this._objects.mlineStyle,
+      this._objects.objectContextData,
+      this._objects.scale,
       this._objects.sortentsTable,
       this._objects.xrecord
     ]) {
@@ -1697,6 +1722,28 @@ export class AcDbDatabase extends AcDbObject {
         this._ltscale = nextValue
       }
     )
+  }
+
+  /**
+   * Current annotation scale name (`CANNOSCALE`), e.g. `"1:100"`.
+   */
+  get cannoscale(): string {
+    return this._cannoscale
+  }
+  set cannoscale(value: string) {
+    this._cannoscale = value || '1:1'
+  }
+
+  /**
+   * When `true`, annotative objects that do not support the current annotation
+   * scale are still displayed (`ANNOALLVISIBLE`). Defaults to `true`, matching
+   * AutoCAD's initial value.
+   */
+  get annoallvisible(): boolean {
+    return this._annoallvisible
+  }
+  set annoallvisible(value: boolean) {
+    this._annoallvisible = value
   }
 
   /**
@@ -3620,8 +3667,13 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.layerIndex.removeAll()
     this._objects.mleaderStyle.removeAll()
     this._objects.mlineStyle.removeAll()
+    this._objects.objectContextData.removeAll()
+    this._objects.scale.removeAll()
+    this._objects.dictionaryVar.removeAll()
     this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
+    this._cannoscale = '1:1'
+    this._annoallvisible = true
     this._layerFilters = new AcLyLayerFilterTree()
     this._currentSpace = undefined
     this._extents.makeEmpty()

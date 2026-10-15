@@ -8,6 +8,8 @@ import {
   AcDbDatabase,
   AcDbDatabaseConverter,
   AcDbDatabaseConverterConfig,
+  AcDbDictionary,
+  AcDbDictionaryVar,
   AcDbDimStyleTableRecord,
   AcDbDimStyleTableRecordAttrs,
   AcDbDimTextHorizontal,
@@ -53,7 +55,12 @@ import {
 } from '@mlightcad/libredwg-web'
 
 import { AcDbEntityConverter } from './AcDbEntitiyConverter'
-import { AcDbObjectConverter } from './AcDbObjectConverter'
+import {
+  AcDbObjectConverter,
+  type LibreDwgDictionaryVarObject,
+  type LibreDwgMTextObjectContextDataObject,
+  type LibreDwgScaleObject
+} from './AcDbObjectConverter'
 
 const MODEL_SPACE = '*MODEL_SPACE'
 
@@ -571,6 +578,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   }
 
   protected processObjects(model: DwgDatabase, db: AcDbDatabase) {
+    // Annotation-scale objects must be registered before dictionary materialization
+    // so extension-dictionary chains (context data / viewport XRECORDs) resolve.
+    this.processScales(model, db)
+    this.processDictionaryVars(model, db)
+    this.processMTextObjectContextData(model, db)
+    this.processXRecords(model, db)
     this.processLayouts(model, db)
     this.processImageDefs(model, db)
     this.processLayerFilters(model, db)
@@ -578,6 +591,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.processLayerFilterTree(model, db)
     this.processMLeaderStyles(model, db)
     this.processDynBlockMetadata(model, db)
+    this.finishCannoscale(model, db)
   }
 
   /**
@@ -783,6 +797,119 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       const dbStyle = objectConverter.convertMLeaderStyle(style)
       mleaderStyleDict.setAt(dbStyle.objectId, dbStyle)
     })
+  }
+
+  private processScales(model: DwgDatabase, db: AcDbDatabase) {
+    const scales = this.optionalObjectArray<LibreDwgScaleObject>(
+      model,
+      'SCALE'
+    )
+    if (!scales?.length) return
+
+    const scaleDict = db.objects.scale
+    const objectConverter = new AcDbObjectConverter()
+    for (const scale of scales) {
+      const dbScale = objectConverter.convertScale(scale)
+      const key = dbScale.scaleName || dbScale.objectId
+      if (key) scaleDict.setAt(key, dbScale)
+    }
+  }
+
+  private processDictionaryVars(model: DwgDatabase, db: AcDbDatabase) {
+    const dictVars = this.optionalObjectArray<LibreDwgDictionaryVarObject>(
+      model,
+      'DICTIONARYVAR'
+    )
+    if (!dictVars?.length) return
+
+    const dictVarDict = db.objects.dictionaryVar
+    const objectConverter = new AcDbObjectConverter()
+    for (const dictVar of dictVars) {
+      const dbVar = objectConverter.convertDictionaryVar(dictVar)
+      if (dbVar.objectId) dictVarDict.setAt(dbVar.objectId, dbVar)
+    }
+  }
+
+  private processMTextObjectContextData(model: DwgDatabase, db: AcDbDatabase) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgMTextObjectContextDataObject>(
+        model,
+        'MTEXTOBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgMTextObjectContextDataObject>(
+        model,
+        'ACDB_MTEXTOBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertMTextObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processXRecords(model: DwgDatabase, db: AcDbDatabase) {
+    const xrecords = model.objects.XRECORD
+    if (!xrecords?.length) return
+
+    const xrecordDict = db.objects.xrecord
+    const objectConverter = new AcDbObjectConverter()
+    for (const xrecord of xrecords) {
+      const dbXrecord = objectConverter.convertXRecord(xrecord)
+      if (dbXrecord.objectId) xrecordDict.setAt(dbXrecord.objectId, dbXrecord)
+    }
+  }
+
+  /**
+   * Reads CANNOSCALE from AcDbVariableDictionary → DICTIONARYVAR after
+   * dictionaries have been materialized.
+   */
+  private finishCannoscale(model: DwgDatabase, db: AcDbDatabase) {
+    const tryRead = (variableDict: AcDbDictionary) => {
+      const cannoscaleVar = variableDict.getAt('CANNOSCALE')
+      if (cannoscaleVar instanceof AcDbDictionaryVar && cannoscaleVar.value) {
+        db.cannoscale = cannoscaleVar.value
+        return true
+      }
+      return false
+    }
+
+    const fromRoot = db.objects.dictionary.getAt('AcDbVariableDictionary')
+    if (fromRoot instanceof AcDbDictionary && tryRead(fromRoot)) return
+
+    const normalize = (handle?: string | number) =>
+      handle == null || handle === '' || handle === 0
+        ? ''
+        : String(handle).trim().toUpperCase()
+
+    for (const dict of model.objects.DICTIONARY ?? []) {
+      const entries = dict.entries ?? {}
+      const childHandle = entries['AcDbVariableDictionary']
+      if (!childHandle) continue
+      const variableDict = db.getObjectById(normalize(childHandle))
+      if (!(variableDict instanceof AcDbDictionary)) continue
+      if (!tryRead(variableDict)) continue
+      try {
+        if (!db.objects.dictionary.getAt('AcDbVariableDictionary')) {
+          db.objects.dictionary.setAt('AcDbVariableDictionary', variableDict)
+        }
+      } catch {
+        // Ownership conflicts — CANNOSCALE is already applied.
+      }
+      return
+    }
+  }
+
+  /** Reads optional object arrays that newer libredwg-web builds may expose. */
+  private optionalObjectArray<T>(
+    model: DwgDatabase,
+    key: string
+  ): T[] | undefined {
+    const objects = model.objects as Record<string, unknown>
+    const value = objects[key]
+    return Array.isArray(value) ? (value as T[]) : undefined
   }
 
   private processCommonObjectAttrs(

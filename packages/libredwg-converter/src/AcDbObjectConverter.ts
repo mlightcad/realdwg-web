@@ -1,15 +1,56 @@
 import {
   acdbDecodeMLeaderStyleRawColor,
+  AcDbDictionaryVar,
   AcDbLayerFilter,
   AcDbLayerIndex,
   AcDbMLeaderStyle,
-  AcDbObject} from '@mlightcad/data-model'
+  AcDbMTextObjectContextData,
+  AcDbObject,
+  AcDbResultBuffer,
+  AcDbScale,
+  AcDbXrecord,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/data-model'
 import {
   DwgCommonObject,
   DwgLayerFilterObject,
   DwgLayerIndexObject,
-  DwgMLeaderStyleObject
+  DwgMLeaderStyleObject,
+  DwgXRecordObject
 } from '@mlightcad/libredwg-web'
+
+/** LibreDWG SCALE object (when exposed by libredwg-web). */
+export interface LibreDwgScaleObject extends DwgCommonObject {
+  name?: string
+  paperUnits?: number
+  drawingUnits?: number
+  isUnitScale?: boolean
+  flag?: number
+}
+
+/** LibreDWG DICTIONARYVAR object (when exposed by libredwg-web). */
+export interface LibreDwgDictionaryVarObject extends DwgCommonObject {
+  schema?: number
+  value?: string
+  strvalue?: string
+}
+
+/** LibreDWG MTEXTOBJECTCONTEXTDATA object (when exposed by libredwg-web). */
+export interface LibreDwgMTextObjectContextDataObject extends DwgCommonObject {
+  classVersion?: number
+  isDefault?: boolean
+  scaleId?: string
+  scaleHandle?: string
+  attachment?: number
+  xAxisDir?: { x: number; y: number; z?: number }
+  insertionPoint?: { x: number; y: number; z?: number }
+  definedWidth?: number
+  definedHeight?: number
+  extentsWidth?: number
+  extentsHeight?: number
+  columnType?: number
+}
 
 /**
  * Converts libredwg object records to AcDbObject instances.
@@ -170,6 +211,75 @@ export class AcDbObjectConverter {
     }
     dbObject.isUptoDate = true
     this.processCommonAttrs(index, dbObject)
+    return dbObject
+  }
+
+  convertScale(scale: LibreDwgScaleObject) {
+    const dbObject = new AcDbScale()
+    if (scale.flag != null) dbObject.classVersion = scale.flag
+    dbObject.scaleName = scale.name ?? ''
+    dbObject.paperUnits = scale.paperUnits ?? 1
+    dbObject.drawingUnits = scale.drawingUnits ?? 1
+    dbObject.isUnitScale = !!scale.isUnitScale
+    this.processCommonAttrs(scale, dbObject)
+    return dbObject
+  }
+
+  convertDictionaryVar(dictVar: LibreDwgDictionaryVarObject) {
+    const dbObject = new AcDbDictionaryVar()
+    if (dictVar.schema != null) dbObject.schema = dictVar.schema
+    dbObject.value = dictVar.value ?? dictVar.strvalue ?? ''
+    this.processCommonAttrs(dictVar, dbObject)
+    return dbObject
+  }
+
+  convertMTextObjectContextData(
+    context: LibreDwgMTextObjectContextDataObject
+  ) {
+    const dbObject = new AcDbMTextObjectContextData()
+    if (context.classVersion != null) dbObject.classVersion = context.classVersion
+    dbObject.isDefault = !!context.isDefault
+    dbObject.scaleId = context.scaleId ?? context.scaleHandle ?? ''
+    if (context.attachment != null) dbObject.attachmentPoint = context.attachment
+    if (context.xAxisDir) {
+      dbObject.direction = new AcGeVector3d(
+        context.xAxisDir.x,
+        context.xAxisDir.y,
+        context.xAxisDir.z ?? 0
+      )
+    }
+    if (context.insertionPoint) {
+      dbObject.insertionPoint = new AcGePoint3d(
+        context.insertionPoint.x,
+        context.insertionPoint.y,
+        context.insertionPoint.z ?? 0
+      )
+    }
+    if (context.definedWidth != null) dbObject.definedWidth = context.definedWidth
+    if (context.definedHeight != null) {
+      dbObject.definedHeight = context.definedHeight
+    }
+    if (context.extentsWidth != null) dbObject.extentsWidth = context.extentsWidth
+    if (context.extentsHeight != null) {
+      dbObject.extentsHeight = context.extentsHeight
+    }
+    if (context.columnType != null) dbObject.columnType = context.columnType
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertXRecord(xrecord: DwgXRecordObject) {
+    const dbObject = new AcDbXrecord()
+    this.processCommonAttrs(xrecord, dbObject)
+    if (xrecord.extensionDictionary) {
+      dbObject.extensionDictionary = xrecord.extensionDictionary
+    }
+    dbObject.data = new AcDbResultBuffer(
+      (xrecord.data ?? []).map(group => ({
+        code: Number(group.code),
+        value: group.value
+      }))
+    )
     return dbObject
   }
 
