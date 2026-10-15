@@ -18,7 +18,16 @@ describe('AcCmLogUtil', () => {
 
   it('accepts valid and invalid log levels without throwing or persisting', () => {
     expect(() => logUtil.setLogLevel('warn')).not.toThrow()
+
+    // Invalid levels fall back to 'error' and call log.error. Spy console
+    // rather than log.error: setLevel rebuilds logger methods and would
+    // discard a spy on the logger itself.
+    const consoleError = jest
+      .spyOn(console, 'error')
+      .mockImplementation(() => undefined)
     expect(() => logUtil.setLogLevel('bad-level')).not.toThrow()
+    expect(consoleError).toHaveBeenCalled()
     expect(logUtil.log.getLevel()).toBe(loglevel.levels.ERROR)
+    consoleError.mockRestore()
   })
 })
