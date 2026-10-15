@@ -4,8 +4,12 @@ const config: Config = {
   verbose: true,
   preset: "ts-jest",
   testEnvironment: "node",
-  // Vitest suites live under packages/emf-converter; keep them out of root Jest.
-  testPathIgnorePatterns: ["/node_modules/", "/packages/emf-converter/"],
+  // Vitest / private local packages — keep them out of root Jest.
+  testPathIgnorePatterns: [
+    "/node_modules/",
+    "/packages/emf-converter/",
+    "/packages/dwg-converter/",
+  ],
   moduleNameMapper: {
     "^@mlightcad/common$": "<rootDir>/packages/common/src/index.ts",
     "^@mlightcad/geometry-engine$": "<rootDir>/packages/geometry-engine/src/index.ts",

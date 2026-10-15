@@ -347,12 +347,23 @@ export class AcDbDxfObjectsReader {
       for (const [entryName, entryHandle] of Object.entries(persist.entries)) {
         const obj = objectsByHandle.get(normalizeHandle(entryHandle))
         if (!obj) continue
-        if (!dict.getAt(entryName)) {
-          try {
-            dict.setAt(entryName, obj)
-          } catch {
-            // Strict-mode / ownership conflicts — keep the handle registry entry.
+        if (dict.getAt(entryName)) continue
+        // Same guard as finishNamedObjectDictionaries: LAYOUT (and similar)
+        // may already be keyed by a canonical name while the persist map uses
+        // a mojibake/alternate spelling for the same objectId.
+        const targetId = normalizeHandle(obj.objectId)
+        let alreadyStored = false
+        for (const [, existing] of dict.entries()) {
+          if (normalizeHandle(existing.objectId) === targetId) {
+            alreadyStored = true
+            break
           }
+        }
+        if (alreadyStored) continue
+        try {
+          dict.setAt(entryName, obj)
+        } catch {
+          // Strict-mode / ownership conflicts — keep the handle registry entry.
         }
       }
     }
