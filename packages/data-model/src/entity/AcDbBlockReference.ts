@@ -25,7 +25,10 @@ import {
 } from './AcDbEntityProperties'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
 import { acdbTransformIntersectPrimitives } from './AcDbIntersectHelpers'
-import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
+import {
+  acdbParseGsMark,
+  acdbPickNearestOsnapPoint
+} from './AcDbOsnapHelpers'
 
 /**
  * Represents a block reference entity in AutoCAD.
@@ -1028,6 +1031,12 @@ export class AcDbBlockReference extends AcDbEntity {
    * pick/last points into the target local space, asks that entity for snap
    * points, then maps results back to the caller space as needed.
    *
+   * When the same definition entity appears under more than one nested INSERT,
+   * spatial-index ids may carry a `#n` suffix. That suffix is treated as a
+   * 0-based occurrence index in depth-first leaf order (matching
+   * uniquifySpatialItemIds in cad-simple-viewer) so the instance under the
+   * cursor is selected instead of the first DFS match (#745).
+   *
    * The method tracks visited block references to prevent infinite recursion in
    * cyclic block graphs.
    *
@@ -1035,10 +1044,11 @@ export class AcDbBlockReference extends AcDbEntity {
    * @param pickPoint - User pick point in caller space.
    * @param lastPoint - Previous point in caller space.
    * @param snapPoints - Output collection to append resolved snap points into.
-   * @param gsMark - Object id of the target sub-entity.
+   * @param gsMark - Object id of the target sub-entity, optionally with `#n`.
    * @param parentInsertionMat - Cumulative transform from ancestor INSERTs.
    * @param visitedRefs - Internal recursion guard set.
-   * @returns `true` when the target sub-entity is found and processed, else `false`.
+   * @param remainingOccurrence - Internal: how many earlier matches to skip.
+   * @returns Remaining occurrence count after the search, or `-1` when found.
    */
   private subEntityGetOsnapPoints(
     osnapMode: AcDbOsnapMode,
@@ -1047,38 +1057,53 @@ export class AcDbBlockReference extends AcDbEntity {
     snapPoints: AcGePoint3dLike[],
     gsMark: AcDbObjectId,
     parentInsertionMat: AcGeMatrix3d,
-    visitedRefs = new Set<AcDbObjectId>()
-  ) {
-    // Avoid an infinite loop
-    if (gsMark === this.objectId || visitedRefs.has(this.objectId)) return false
+    visitedRefs = new Set<AcDbObjectId>(),
+    remainingOccurrence?: number
+  ): number {
+    const parsed = acdbParseGsMark(gsMark)
+    const targetId = parsed.objectId
+    let remaining =
+      remainingOccurrence === undefined
+        ? parsed.occurrence
+        : remainingOccurrence
+
+    // Avoid an infinite loop when a matched INSERT is asked for its own id.
+    if (targetId === this.objectId || visitedRefs.has(this.objectId)) {
+      return remaining
+    }
 
     visitedRefs.add(this.objectId)
 
     try {
       const blockTableRecord = this.drawableBlockTableRecord
-      if (blockTableRecord == null) return false
+      if (blockTableRecord == null) return remaining
 
       const thisInsertionMat = new AcGeMatrix3d().multiplyMatrices(
         parentInsertionMat,
         this.getFullInsertionTransform()
       )
+      const inverseInsertionMat = thisInsertionMat.clone().invert()
+      const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
+        inverseInsertionMat
+      )
+      const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
+        inverseInsertionMat
+      )
 
       for (const entity of blockTableRecord.newIterator()) {
-        if (entity.objectId === gsMark) {
-          const localPickPoint = new AcGePoint3d(pickPoint).applyMatrix4(
-            thisInsertionMat.clone().invert()
-          )
-          const localLastPoint = new AcGePoint3d(lastPoint).applyMatrix4(
-            thisInsertionMat.clone().invert()
-          )
-          const localSnapPoints: AcGePoint3d[] = []
+        if (entity.objectId === targetId) {
+          if (remaining > 0) {
+            remaining -= 1
+            continue
+          }
 
+          const localSnapPoints: AcGePoint3d[] = []
           entity.subGetOsnapPoints(
             osnapMode,
             localPickPoint,
             localLastPoint,
             localSnapPoints,
-            gsMark,
+            targetId,
             thisInsertionMat
           )
 
@@ -1094,24 +1119,26 @@ export class AcDbBlockReference extends AcDbEntity {
             })
           }
 
-          return true
+          return -1
         }
 
         if (entity instanceof AcDbBlockReference) {
-          const found = entity.subEntityGetOsnapPoints(
+          const nestedRemaining = entity.subEntityGetOsnapPoints(
             osnapMode,
             pickPoint,
             lastPoint,
             snapPoints,
             gsMark,
             thisInsertionMat,
-            visitedRefs
+            visitedRefs,
+            remaining
           )
-          if (found) return true
+          if (nestedRemaining < 0) return -1
+          remaining = nestedRemaining
         }
       }
 
-      return false
+      return remaining
     } finally {
       visitedRefs.delete(this.objectId)
     }
