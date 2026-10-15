@@ -667,32 +667,17 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
-   * Thin centerline → `lineStrip`; a single open-band `area()` → `area`.
-   * Closed / nearly-closed (`offsetRing`) and multi-subpath groups stay
-   * unbatched — `'area'` means one `area()` call, not a `group` of areas.
+   * Thin centerline → `lineStrip`. Any wide polyline (fill + visibility
+   * centerline stroke) stays unbatched — closed / nearly-closed use
+   * `offsetRing`, open bands use `area` + `lines` grouped together.
    *
    * @internal
    */
   override get directBatchPrimitive() {
     if (!this.hasRenderableWidth()) return 'lineStrip' as const
-    // Closed wide polylines prefer offsetRing; leave them unbatched so capture
-    // does not assume a single area() call.
-    if (this.closed) return null
-
-    const widthProfile = this.createWidthProfile()
-    if (widthProfile == null) return 'lineStrip' as const
-
-    // Nearly-closed open paths take offsetRing (#250), not area batching.
-    if (isNearlyClosedWidePolyline(normalizeCenterline(widthProfile, false))) {
-      return null
-    }
-
-    // Retraced paths split into multiple areas + group (#730).
-    const areas = createWidePolylineArea(widthProfile, false)
-    if (areas == null || areas.length !== 1) {
-      return null
-    }
-    return 'area' as const
+    // Wide polylines draw a fill plus a centerline hairline so sub-pixel
+    // world widths stay visible. That is never a single direct-batch payload.
+    return null
   }
 
   /**
@@ -735,6 +720,7 @@ export class AcDbPolyline extends AcDbCurve {
       const areas = createWidePolylineArea(widthProfile, this.closed)
       if (areas != null) {
         const traits = renderer.subEntityTraits
+        const previousFillType = traits.fillType
         traits.fillType = {
           solidFill: true,
           patternAngle: 0,
@@ -744,6 +730,21 @@ export class AcDbPolyline extends AcDbCurve {
           this.mapAreaLoopsToWcs(area)
           return renderer.area(area)
         })
+        // Restore before the hairline stroke — lines must not inherit solid fill.
+        traits.fillType = previousFillType
+        // Hairline centerline so open wide bands stay visible when their
+        // world-space width projects to ≪ 1 device pixel (title blocks).
+        // Closed rings already get a centerline from renderer.offsetRing.
+        const strokePoints = widthProfile.map(sample =>
+          this.ocsPointToWcs(sample.x, sample.y)
+        )
+        // createWidthProfile omits the seam for closed paths; close the stroke.
+        if (this.closed && strokePoints.length >= 2) {
+          strokePoints.push(strokePoints[0])
+        }
+        if (strokePoints.length >= 2) {
+          entities.push(renderer.lines(strokePoints))
+        }
         return entities.length === 1 ? entities[0] : renderer.group(entities)
       }
     }
