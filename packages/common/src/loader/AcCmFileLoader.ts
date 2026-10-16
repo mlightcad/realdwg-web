@@ -29,6 +29,52 @@ const loading: Record<
 > = {}
 
 /**
+ * Builds a progress event in browsers and in Node.
+ * `ProgressEvent` is not a Node global, so callers still receive
+ * `lengthComputable` / `loaded` / `total` when it is missing.
+ */
+function createProgressEvent(
+  loaded: number,
+  total: number,
+  lengthComputable: boolean
+): ProgressEvent {
+  const ProgressEventCtor = (
+    globalThis as { ProgressEvent?: typeof ProgressEvent }
+  ).ProgressEvent
+  if (typeof ProgressEventCtor === 'function') {
+    return new ProgressEventCtor('progress', {
+      lengthComputable,
+      loaded,
+      total
+    })
+  }
+
+  return {
+    type: 'progress',
+    lengthComputable,
+    loaded,
+    total
+  } as ProgressEvent
+}
+
+/**
+ * Parses an XML/HTML payload when this runtime provides `DOMParser`.
+ */
+function parseXmlDocument(
+  text: string,
+  mimeType: DOMParserSupportedType
+): Document {
+  const DOMParserCtor = (globalThis as { DOMParser?: typeof DOMParser })
+    .DOMParser
+  if (typeof DOMParserCtor !== 'function') {
+    throw new Error(
+      'responseType "document" requires DOMParser, which is not available in this runtime'
+    )
+  }
+  return new DOMParserCtor().parseFromString(text, mimeType)
+}
+
+/**
  * Custom error class for HTTP-related failures.
  *
  * @internal
@@ -208,11 +254,11 @@ export class AcCmFileLoader extends AcCmLoader {
                     } else {
                       loaded += value.byteLength
 
-                      const event = new ProgressEvent('progress', {
-                        lengthComputable,
+                      const event = createProgressEvent(
                         loaded,
-                        total
-                      })
+                        total,
+                        lengthComputable
+                      )
                       for (let i = 0, il = callbacks.length; i < il; i++) {
                         const callback = callbacks[i]
                         if (callback.onProgress) callback.onProgress(event)
@@ -248,8 +294,7 @@ export class AcCmFileLoader extends AcCmLoader {
 
           case 'document':
             return response.text().then(text => {
-              const parser = new DOMParser()
-              return parser.parseFromString(text, mimeType!)
+              return parseXmlDocument(text, mimeType!)
             })
 
           case 'json':

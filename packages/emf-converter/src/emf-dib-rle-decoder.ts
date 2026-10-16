@@ -4,6 +4,22 @@
 
 export type SetPixelFn = (x: number, y: number, r: number, g: number, b: number, a: number) => void;
 
+/**
+ * Builds an `ImageData` in browsers and a compatible object in Node,
+ * where the `ImageData` constructor is not a global.
+ */
+export function createImageData(
+	data: Uint8ClampedArray,
+	width: number,
+	height: number,
+): ImageData {
+	const ImageDataCtor = (globalThis as { ImageData?: typeof ImageData }).ImageData;
+	if (typeof ImageDataCtor === 'function') {
+		return new ImageDataCtor(data, width, height);
+	}
+	return { data, width, height, colorSpace: 'srgb' } as ImageData;
+}
+
 export function decodeRleBitmap(
 	view: DataView,
 	bitsOffset: number,
@@ -111,7 +127,7 @@ export function decodeRleBitmap(
 			}
 		}
 	}
-	return new ImageData(
+	return createImageData(
 		new Uint8ClampedArray(out.buffer as ArrayBuffer, out.byteOffset, out.byteLength),
 		width,
 		height,

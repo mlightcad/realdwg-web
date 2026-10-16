@@ -126,6 +126,38 @@ describe('AcCmFileLoader', () => {
     expect(managerOnError).not.toHaveBeenCalled()
   })
 
+  it('reports stream progress when ProgressEvent is unavailable', async () => {
+    delete (global as { ProgressEvent?: unknown }).ProgressEvent
+
+    const manager = new AcCmLoadingManager()
+    const loader = new AcCmFileLoader(manager)
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('abc'))
+        controller.close()
+      }
+    })
+
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response(stream, {
+        status: 200,
+        headers: { 'Content-Length': '3' }
+      })
+    )
+
+    const result = await loadOnce(loader, 'plain.txt')
+    const progressEvent = result.progress.mock.calls[0][0] as {
+      total: number
+      loaded: number
+      lengthComputable: boolean
+    }
+
+    expect(result.data).toBe('abc')
+    expect(progressEvent.total).toBe(3)
+    expect(progressEvent.loaded).toBe(3)
+    expect(progressEvent.lengthComputable).toBe(true)
+  })
+
   it('parses json/arraybuffer/blob/document/default text branches', async () => {
     const manager = new AcCmLoadingManager()
 
@@ -175,6 +207,22 @@ describe('AcCmFileLoader', () => {
     )
     const decoded = await loadOnce(loaderTextWithMime, 't')
     expect(decoded.data).toBe('hello')
+  })
+
+  it('fails document responses when DOMParser is unavailable', async () => {
+    ;(global as { DOMParser?: unknown }).DOMParser = undefined
+    const manager = new AcCmLoadingManager()
+    const loader = new AcCmFileLoader(manager)
+      .setResponseType('document')
+      .setMimeType('text/html')
+
+    ;(global.fetch as jest.Mock).mockResolvedValue(
+      new Response('<root></root>', { status: 200 })
+    )
+
+    const result = await loadOnce(loader, 'doc')
+    expect(result.error).toBeInstanceOf(Error)
+    expect((result.error as Error).message).toContain('DOMParser')
   })
 
   it('handles status 0 response fallback and undefined url input', async () => {

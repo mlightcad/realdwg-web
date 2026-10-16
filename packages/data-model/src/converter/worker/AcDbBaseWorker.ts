@@ -73,6 +73,23 @@ export interface AcDbWorkerResponse<TOutput = unknown> {
   errorCode?: AcDbWorkerErrorCode
 }
 
+interface AcDbWorkerMessagePort {
+  onmessage: ((event: MessageEvent<AcDbWorkerMessage<unknown>>) => void) | null
+  postMessage(message: unknown): void
+}
+
+/**
+ * Worker global used by both browser Dedicated Workers (`self`) and any
+ * runtime where `globalThis` is the message port. Main-thread Node has neither.
+ */
+function acdbWorkerMessagePort(): AcDbWorkerMessagePort {
+  const scope = globalThis as Partial<AcDbWorkerMessagePort>
+  if (typeof scope.postMessage !== 'function') {
+    throw new Error('Worker messaging is not available in this runtime')
+  }
+  return scope as AcDbWorkerMessagePort
+}
+
 /**
  * Base class for worker scripts
  * Handles all message passing - users only need to implement executeTask
@@ -86,15 +103,15 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
    * Set up message handler - called automatically
    */
   private setupMessageHandler(): void {
-    self.onmessage = async (event: MessageEvent<AcDbWorkerMessage<TInput>>) => {
-      const { id, input } = event.data
+    acdbWorkerMessagePort().onmessage = async event => {
+      const workerEvent = event as MessageEvent<AcDbWorkerMessage<TInput>>
+      const { id, input } = workerEvent.data
 
       try {
         const result = await this.executeTask(input)
         this.sendResponse(id, true, result)
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : String(error)
+        const message = error instanceof Error ? error.message : String(error)
         this.sendResponse(
           id,
           false,
@@ -125,11 +142,11 @@ export abstract class AcDbBaseWorker<TInput = unknown, TOutput = unknown> {
     }
 
     try {
-      self.postMessage(response)
+      acdbWorkerMessagePort().postMessage(response)
     } catch (postError) {
       const message =
         postError instanceof Error ? postError.message : String(postError)
-      self.postMessage({
+      acdbWorkerMessagePort().postMessage({
         id,
         success: false,
         error: message,

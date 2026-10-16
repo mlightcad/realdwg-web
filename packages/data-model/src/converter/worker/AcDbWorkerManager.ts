@@ -186,7 +186,7 @@ export class AcDbWorkerManager {
    * Detect if web workers are supported
    */
   detectWorkerSupport(): boolean {
-    return typeof Worker !== 'undefined'
+    return typeof (globalThis as { Worker?: unknown }).Worker === 'function'
   }
 
   /**
@@ -203,7 +203,11 @@ export class AcDbWorkerManager {
 
     // Create new worker if under limit
     if (this.workers.size < this.config.maxConcurrentWorkers) {
-      const worker = new Worker(workerUrl, { type: 'module' })
+      const WorkerCtor = (globalThis as { Worker?: typeof Worker }).Worker
+      if (typeof WorkerCtor !== 'function') {
+        throw new Error('Web Workers are not supported in this runtime')
+      }
+      const worker = new WorkerCtor(workerUrl, { type: 'module' })
       const id = this.generateWorkerId()
       const instance: AcDbWorkerInstance = {
         worker,

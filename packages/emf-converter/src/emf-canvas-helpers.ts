@@ -514,12 +514,14 @@ export function getStockObject(index: number): GdiObject | null {
 // ---------------------------------------------------------------------------
 
 export async function blobToDataUrl(blob: Blob): Promise<string> {
-	return new Promise((resolve, reject) => {
-		const reader = new FileReader();
-		reader.onload = () => resolve(reader.result as string);
-		reader.onerror = () => reject(reader.error);
-		reader.readAsDataURL(blob);
-	});
+	const bytes = new Uint8Array(await blob.arrayBuffer());
+	let binary = '';
+	const chunkSize = 0x8000;
+	for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+		binary += String.fromCharCode(...bytes.subarray(offset, offset + chunkSize));
+	}
+	const mime = blob.type || 'application/octet-stream';
+	return `data:${mime};base64,${btoa(binary)}`;
 }
 
 export async function exportCanvasToPngDataUrl(
