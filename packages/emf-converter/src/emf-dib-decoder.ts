@@ -5,7 +5,7 @@
  * BI_BITFIELDS compression modes.
  */
 
-import { decodeRleBitmap } from './emf-dib-rle-decoder';
+import { createImageData, decodeRleBitmap } from './emf-dib-rle-decoder';
 import { decodeUncompressedRows, parseBitfieldMasks } from './emf-dib-uncompressed';
 
 export function decodeDibToImageData(
@@ -140,5 +140,5 @@ export function decodeDibToImageData(
 		out,
 	);
 
-	return new ImageData(out, width, height);
+	return createImageData(out, width, height);
 }

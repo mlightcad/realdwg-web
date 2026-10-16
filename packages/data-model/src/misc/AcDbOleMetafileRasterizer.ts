@@ -10,7 +10,10 @@
  * the (small) `@mlightcad/emf-converter` implementation.
  */
 
-import { convertEmfToDataUrl, convertWmfToDataUrl } from '@mlightcad/emf-converter'
+import {
+  convertEmfToDataUrl,
+  convertWmfToDataUrl
+} from '@mlightcad/emf-converter'
 
 import {
   ACDB_OLE_METAFILE_EMF_MIME,
@@ -159,7 +162,9 @@ function dataUrlToPngBlob(dataUrl: string): Blob | undefined {
  * Draws a PNG data-URL onto an opaque white canvas and re-exports PNG.
  * Falls back to the original data-URL blob when no canvas API is available.
  */
-async function compositePngOntoWhite(dataUrl: string): Promise<Blob | undefined> {
+async function compositePngOntoWhite(
+  dataUrl: string
+): Promise<Blob | undefined> {
   const canvasApi = getCanvasFactory()
   if (!canvasApi) {
     return dataUrlToPngBlob(dataUrl)
@@ -181,8 +186,16 @@ async function compositePngOntoWhite(dataUrl: string): Promise<Blob | undefined>
     ctx.fillRect(0, 0, width, height)
     ctx.drawImage(image as CanvasImageSource, 0, 0)
 
-    if (canvas instanceof OffscreenCanvas) {
-      return await canvas.convertToBlob({ type: 'image/png' })
+    const OffscreenCanvasCtor = (
+      globalThis as { OffscreenCanvas?: typeof OffscreenCanvas }
+    ).OffscreenCanvas
+    if (
+      typeof OffscreenCanvasCtor === 'function' &&
+      canvas instanceof OffscreenCanvasCtor
+    ) {
+      return await (canvas as OffscreenCanvas).convertToBlob({
+        type: 'image/png'
+      })
     }
 
     const htmlCanvas = canvas as HTMLCanvasElement
@@ -224,7 +237,13 @@ function getCanvasFactory(): AcDbCanvasFactory | undefined {
       decodeImage: async dataUrl => {
         const response = await fetch(dataUrl)
         const blob = await response.blob()
-        return createImageBitmap(blob)
+        const decode = (
+          globalThis as { createImageBitmap?: typeof createImageBitmap }
+        ).createImageBitmap
+        if (typeof decode !== 'function') {
+          throw new Error('createImageBitmap is not available in this runtime')
+        }
+        return decode(blob)
       }
     }
   }
@@ -239,7 +258,12 @@ function getCanvasFactory(): AcDbCanvasFactory | undefined {
       },
       decodeImage: dataUrl =>
         new Promise((resolve, reject) => {
-          const image = new Image()
+          const ImageCtor = (globalThis as { Image?: typeof Image }).Image
+          if (typeof ImageCtor !== 'function') {
+            reject(new Error('Image is not available in this runtime'))
+            return
+          }
+          const image = new ImageCtor()
           image.onload = () => resolve(image)
           image.onerror = () => reject(new Error('Failed to decode PNG'))
           image.src = dataUrl

@@ -70,6 +70,15 @@ export interface EmfConvertOptions {
  */
 const MAX_METAFILE_RECURSION = 3;
 
+async function decodeImageBitmap(blob: Blob): Promise<ImageBitmap> {
+	const decode = (globalThis as { createImageBitmap?: typeof createImageBitmap })
+		.createImageBitmap;
+	if (typeof decode !== 'function') {
+		throw new Error('createImageBitmap is not available in this runtime');
+	}
+	return decode(blob);
+}
+
 async function processDeferredImages(
 	ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D,
 	deferredImages: DeferredImageDraw[],
@@ -135,7 +144,7 @@ async function processDeferredImages(
 					emfLog(
 						`  Deferred image [${idx}]: creating ImageBitmap from ${metaBlob.size} byte blob (${mime})...`,
 					);
-					const bitmap = await createImageBitmap(metaBlob);
+					const bitmap = await decodeImageBitmap(metaBlob);
 					emfLog(`  Deferred image [${idx}]: ImageBitmap created ${bitmap.width}×${bitmap.height}`);
 					ctx.drawImage(bitmap, img.dx, img.dy, img.dw, img.dh);
 					bitmap.close();
@@ -147,7 +156,7 @@ async function processDeferredImages(
 					`  Deferred image [${idx}]: creating ImageBitmap from ${plainBuffer.byteLength} byte blob...`,
 				);
 				const blob = new Blob([plainBuffer]);
-				const bitmap = await createImageBitmap(blob);
+				const bitmap = await decodeImageBitmap(blob);
 				emfLog(`  Deferred image [${idx}]: ImageBitmap created ${bitmap.width}×${bitmap.height}`);
 				ctx.drawImage(bitmap, img.dx, img.dy, img.dw, img.dh);
 				bitmap.close();
