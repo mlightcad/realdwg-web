@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.11
+
+### Patch Changes
+
+- fix: guards browser-only globals so public package entry points load in both browsers and Node. File loading, converter workers, OLE metafile rasterization, and EMF decoding no longer assume document, window, or Worker exist when a module is first imported. A dual-runtime test bundles each public package in both environments so import-time DOM or worker access fails in CI before it ships.
+
 ## 1.15.10
 
 ### Patch Changes
