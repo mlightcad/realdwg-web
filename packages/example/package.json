@@ -28,6 +28,7 @@
   "files": [
     "dist",
     "lib",
+    "LICENSE",
     "README.md",
     "package.json"
   ],
