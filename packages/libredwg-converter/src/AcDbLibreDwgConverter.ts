@@ -552,6 +552,8 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.celtype = header.CELTYPE ?? ByLayer
     db.celtscale = header.CELTSCALE ?? 1
     db.ltscale = header.LTSCALE ?? 1
+    // TILEMODE 0 = drawing saved with a paper-space layout active
+    db.tilemode = (header.TILEMODE ?? 1) !== 0
     if (header.EXTMAX!) db.extmax = header.EXTMAX
     if (header.EXTMIN) db.extmin = header.EXTMIN
     // Initial value of INSUNITS:	1 (imperial) or 4 (metric)

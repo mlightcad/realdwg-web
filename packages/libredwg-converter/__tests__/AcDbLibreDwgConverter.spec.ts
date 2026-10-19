@@ -29,6 +29,22 @@ describe('AcDbLibreDwgConverter', () => {
     expect(db.thumbnailImage).toEqual(bytes)
   })
 
+  it('maps TILEMODE from the DWG header', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    const paper = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { TILEMODE: 0 } }, paper)
+    expect(paper.tilemode).toBe(false)
+
+    const model = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { TILEMODE: 1 } }, model)
+    expect(model.tilemode).toBe(true)
+
+    const missing = new AcDbDatabase()
+    converter.processHeaderPublic({ header: {} }, missing)
+    expect(missing.tilemode).toBe(true)
+  })
+
   it('keeps CMC RGB for layers when libredwg leaves colorIndex at 256', () => {
     // libredwg-web convertLayer leaves colorIndex=256 for method 0xC2 and puts
     // the CMC RGB in `color`. Mapping 256 to ByLayer made legend fills white.
