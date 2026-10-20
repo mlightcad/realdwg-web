@@ -378,12 +378,11 @@ const renderLinetypePreviews = (database: AcDbDatabase | null) => {
 
     const preview = document.createElement('div')
     preview.innerHTML = record.toPreviewSvgString({
-      width: 150,
-      height: 10,
+      width: 220,
+      height: 24,
       padding: 8,
-      strokeWidth: 2,
-      stroke: '#202124',
-      repeats: 4
+      strokeWidth: 1.5,
+      stroke: '#202124'
     })
 
     row.appendChild(label)

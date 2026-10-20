@@ -37,11 +37,27 @@ export interface AcDbLinetypePreviewSvgOptions {
    */
   stroke?: string
   /**
+   * Fill color for embedded text. Defaults to {@link stroke}.
+   */
+  textFill?: string
+  /**
+   * Font family for embedded text.
+   * @default 'sans-serif'
+   */
+  fontFamily?: string
+  /**
    * How many pattern cycles to display in preview width.
    * @default 4
    */
   repeats?: number
 }
+
+/** DXF group 74 bit: absolute rotation (else relative to line tangent). */
+const COMPLEX_LTYPE_ABSOLUTE_ROTATION = 1
+/** DXF group 74 bit: embedded text. */
+const COMPLEX_LTYPE_TEXT = 2
+/** DXF group 74 bit: embedded shape. */
+const COMPLEX_LTYPE_SHAPE = 4
 
 /**
  * Interface defining the attributes for linetype table records.
@@ -182,6 +198,10 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
    * The preview is rendered as a horizontal line centered in the SVG viewport.
    * Positive pattern elements are drawn as visible strokes, negative elements
    * are treated as gaps, and zero-length elements are rendered as dots.
+   * Embedded TEXT elements (DXF group 74 bit 2) are drawn as SVG `<text>`
+   * glyphs centered in their pen-up slot (including adjacent simple gaps).
+   * Text slots are widened when needed so labels stay readable and do not
+   * collide with neighboring dashes.
    *
    * @param options - Preview rendering options
    * @returns SVG string for linetype preview
@@ -194,8 +214,14 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
       Math.floor(width / 2)
     )
     const strokeWidth = Math.max(options?.strokeWidth ?? 2, 0.5)
-    const stroke = this.escapeSvgAttribute(options?.stroke ?? 'currentColor')
-    const repeats = Math.max(options?.repeats ?? 4, 1)
+    const strokeRaw = options?.stroke ?? 'currentColor'
+    const stroke = this.escapeSvgAttribute(strokeRaw)
+    // Escape from the raw default so textFill is not double-escaped when it
+    // inherits a stroke value that already needed entity encoding.
+    const textFill = this.escapeSvgAttribute(options?.textFill ?? strokeRaw)
+    const fontFamily = this.escapeSvgAttribute(
+      options?.fontFamily ?? 'sans-serif'
+    )
     const y = height / 2
     const startX = padding
     const endX = Math.max(width - padding, startX + 1)
@@ -214,40 +240,83 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
         height,
         stroke,
         strokeWidth,
+        textFill,
+        fontFamily,
         lineSegments: [[startX, endX]],
         dots: [],
+        texts: [],
         y
       })
     }
 
-    const lineSegments: Array<[number, number]> = []
-    const dots: number[] = []
-    const unitToPx = previewWidth / (this.patternLength * repeats)
+    const hasText = pattern.some(
+      (item: AcGiLineTypePatternElement) =>
+        this.isComplexPatternElement(item) &&
+        (item.elementTypeFlag & COMPLEX_LTYPE_TEXT) !== 0
+    )
+    // Text linetypes need fewer cycles so labels stay legible in a narrow strip.
+    const repeats = Math.max(
+      options?.repeats ?? (hasText ? 2 : 4),
+      1
+    )
+    const fontSize = hasText
+      ? Math.min(Math.max(height * 0.55, Math.min(8, height * 0.85)), height * 0.8)
+      : 0
+    const textPadPx = Math.max(strokeWidth * 2, 4)
+    const segments = this.buildPreviewSegments(pattern, fontSize, textPadPx)
+    const baseUnitToPx = previewWidth / (this.patternLength * repeats)
     const minSegmentPx = 0.5
     const dotStep = Math.max(strokeWidth * 2, 2)
+
+    const rawLengths = segments.map(seg => {
+      if (seg.kind === 'dot') return dotStep
+      if (seg.kind === 'text') {
+        return Math.max(seg.units * baseUnitToPx, seg.minPx)
+      }
+      return Math.max(seg.units * baseUnitToPx, seg.kind === 'dash' ? minSegmentPx : 0)
+    })
+    const rawCyclePx = rawLengths.reduce((sum, len) => sum + len, 0)
+    const fit =
+      rawCyclePx > 0 ? previewWidth / (rawCyclePx * repeats) : 1
+    const segLengths = rawLengths.map(len => len * fit)
+
+    const lineSegments: Array<[number, number]> = []
+    const dots: number[] = []
+    const texts: Array<{
+      x: number
+      y: number
+      text: string
+      fontSize: number
+      rotationDeg: number
+    }> = []
     let currentX = startX
 
-    while (currentX < endX) {
-      for (const item of pattern) {
+    while (currentX < endX - 1e-6) {
+      for (let i = 0; i < segments.length; i++) {
         if (currentX >= endX) break
+        const seg = segments[i]
+        const segPx = segLengths[i]
+        const nextX = Math.min(currentX + segPx, endX)
 
-        const length = item.elementLength
-        if (length === 0) {
-          dots.push(currentX)
-          currentX = Math.min(currentX + dotStep, endX)
-          continue
-        }
-
-        const segmentLengthPx = Math.max(
-          Math.abs(length) * unitToPx,
-          minSegmentPx
-        )
-        const nextX = Math.min(currentX + segmentLengthPx, endX)
-        if (length > 0 && nextX > currentX) {
+        if (seg.kind === 'dash' && nextX > currentX) {
           lineSegments.push([currentX, nextX])
+        } else if (seg.kind === 'dot') {
+          dots.push(currentX)
+        } else if (seg.kind === 'text' && seg.label.trim().length > 0) {
+          const midX = (currentX + nextX) * 0.5
+          texts.push({
+            x: midX,
+            y,
+            text: seg.label,
+            fontSize: Math.min(seg.fontSize * fit, height * 0.8),
+            rotationDeg: seg.rotationDeg
+          })
         }
+
         currentX = nextX
       }
+      // Avoid a tight infinite loop on zero-length cycles.
+      if (rawCyclePx <= 0) break
     }
 
     return this.buildSvgString({
@@ -255,10 +324,219 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
       height,
       stroke,
       strokeWidth,
+      textFill,
+      fontFamily,
       lineSegments,
       dots,
+      texts,
       y
     })
+  }
+
+  /**
+   * Builds a flattened preview segment list. Adjacent simple gaps around an
+   * embedded TEXT element are merged into one text slot so the label sits in
+   * the full pen-up region between dashes (AutoCAD-style).
+   */
+  private buildPreviewSegments(
+    pattern: AcGiLineTypePatternElement[],
+    fontSize: number,
+    textPadPx: number
+  ): Array<
+    | { kind: 'dash'; units: number }
+    | { kind: 'gap'; units: number }
+    | { kind: 'dot' }
+    | {
+        kind: 'text'
+        units: number
+        minPx: number
+        label: string
+        fontSize: number
+        rotationDeg: number
+      }
+  > {
+    const segments: Array<
+      | { kind: 'dash'; units: number }
+      | { kind: 'gap'; units: number }
+      | { kind: 'dot' }
+      | {
+          kind: 'text'
+          units: number
+          minPx: number
+          label: string
+          fontSize: number
+          rotationDeg: number
+        }
+    > = []
+    const absorbed = new Set<number>()
+
+    for (let index = 0; index < pattern.length; index++) {
+      if (absorbed.has(index)) continue
+      const item = pattern[index]
+
+      if (this.isComplexPatternElement(item)) {
+        // Fold trailing simple gaps already emitted back into this text slot.
+        let beforeUnits = 0
+        while (segments.length > 0 && segments[segments.length - 1].kind === 'gap') {
+          const prev = segments.pop() as { kind: 'gap'; units: number }
+          beforeUnits += prev.units
+        }
+
+        let slotUnits = beforeUnits + Math.abs(item.elementLength)
+        for (let j = index + 1; j < pattern.length; j++) {
+          const next = pattern[j]
+          if (this.isComplexPatternElement(next)) break
+          if (next.elementLength >= 0) break
+          slotUnits += Math.abs(next.elementLength)
+          absorbed.add(j)
+        }
+
+        const isText =
+          (item.elementTypeFlag & COMPLEX_LTYPE_TEXT) !== 0
+        const label = isText ? this.resolveEmbeddedText(item.text) : ''
+        if (isText && label.trim().length > 0) {
+          const minPx =
+            this.estimateTextWidthPx(label, fontSize) + textPadPx
+          segments.push({
+            kind: 'text',
+            units: Math.max(slotUnits, 1e-6),
+            minPx,
+            label,
+            fontSize,
+            rotationDeg: this.previewTextRotationDeg(item)
+          })
+        } else if (slotUnits > 0) {
+          segments.push({ kind: 'gap', units: slotUnits })
+        }
+        continue
+      }
+
+      if (item.elementLength === 0) {
+        segments.push({ kind: 'dot' })
+      } else if (item.elementLength > 0) {
+        segments.push({ kind: 'dash', units: item.elementLength })
+      } else {
+        segments.push({ kind: 'gap', units: Math.abs(item.elementLength) })
+      }
+    }
+
+    return segments
+  }
+
+  /**
+   * Approximate advance width for preview layout (sans-serif metrics).
+   */
+  private estimateTextWidthPx(text: string, fontSize: number) {
+    let units = 0
+    for (const ch of text) {
+      // Digits / caps are wider; spaces and punctuation are narrower.
+      if (ch === ' ') units += 0.33
+      else if (/[iIlj1.'|]/.test(ch)) units += 0.35
+      else if (/[mwMW@%]/.test(ch)) units += 0.85
+      else units += 0.62
+    }
+    return Math.max(units * fontSize, fontSize * 0.5)
+  }
+
+  /**
+   * True when a pattern element is a real embedded TEXT or SHAPE (same rules
+   * as cad-viewer's {@code isComplexPatternElement}).
+   */
+  private isComplexPatternElement(element: AcGiLineTypePatternElement): boolean {
+    const flag = element.elementTypeFlag ?? 0
+    if ((flag & COMPLEX_LTYPE_TEXT) !== 0) {
+      return (element.text ?? '').length > 0
+    }
+    if ((flag & COMPLEX_LTYPE_SHAPE) !== 0) {
+      return element.shapeNumber != null && element.shapeNumber !== 0
+    }
+    return false
+  }
+
+  /**
+   * Resolves the label for an embedded TEXT dash. Non-blank {@code text} wins;
+   * otherwise falls back to the linetype description prefix (LibreDWG may store
+   * a single space when the real label lives in the description).
+   * AutoCAD `%%` escapes (e.g. `%%34` → `"`, `%%c`/`%%d`/`%%p`) are decoded.
+   */
+  private resolveEmbeddedText(elementText: string | undefined) {
+    const raw = elementText ?? ''
+    if (raw.trim().length > 0) {
+      return this.decodeAutoCadTextEscapes(raw)
+    }
+    const desc = (this.comments ?? '').trim()
+    if (!desc) {
+      return this.decodeAutoCadTextEscapes(raw)
+    }
+    // e.g. `6" VCP C700  - 6" VCP C700 - 6" V`
+    const first = desc.split(/\s+-\s+/)[0]?.trim()
+    if (first && first !== desc) {
+      return this.decodeAutoCadTextEscapes(first)
+    }
+    // e.g. `Gas line ----GAS----GAS----`
+    const fromDashes = desc.match(/-{2,}\s*([^-]+?)\s*-{2,}/)
+    if (fromDashes?.[1]?.trim()) {
+      return this.decodeAutoCadTextEscapes(fromDashes[1].trim())
+    }
+    // Prefer the short table name over a long free-form description.
+    const name = (this.name ?? '').trim()
+    if (name && desc.length > name.length + 2) {
+      return this.decodeAutoCadTextEscapes(name)
+    }
+    return this.decodeAutoCadTextEscapes(first || raw)
+  }
+
+  /**
+   * Decodes AutoCAD TEXT/MTEXT `%%` special-character codes used in complex
+   * linetype labels.
+   *
+   * - `%%c` / `%%C` → diameter Ø
+   * - `%%d` / `%%D` → degree °
+   * - `%%p` / `%%P` → plus/minus ±
+   * - `%%nnn` → Latin-1 / ASCII character with code `nnn` (e.g. `%%34` → `"`)
+   * - `%%%%` → literal `%`
+   */
+  private decodeAutoCadTextEscapes(value: string) {
+    return value.replace(/%%(\d{1,3}|[cCdDpP%])/g, (_match, code: string) => {
+      if (code === '%') return '%'
+      if (code === 'c' || code === 'C') return 'Ø'
+      if (code === 'd' || code === 'D') return '°'
+      if (code === 'p' || code === 'P') return '±'
+      const n = Number.parseInt(code, 10)
+      if (Number.isFinite(n) && n >= 0 && n <= 255) {
+        return String.fromCharCode(n)
+      }
+      return `%%${code}`
+    })
+  }
+
+  /**
+   * Rotation in degrees for a horizontal preview. Relative rotation uses
+   * upright (AutoCAD U) behaviour so labels stay readable.
+   */
+  private previewTextRotationDeg(element: AcGiLineTypePatternElement) {
+    const rotation = element.rotation ?? 0
+    const flag = element.elementTypeFlag ?? 0
+    const angle =
+      (flag & COMPLEX_LTYPE_ABSOLUTE_ROTATION) !== 0
+        ? rotation
+        : this.uprightLinetypeAngle(rotation)
+    return (angle * 180) / Math.PI
+  }
+
+  /**
+   * Keeps relative linetype text readable: flip 180° when it would be upside-down.
+   */
+  private uprightLinetypeAngle(angle: number) {
+    const twoPi = Math.PI * 2
+    let a = ((angle + Math.PI) % twoPi + twoPi) % twoPi - Math.PI
+    if (a > Math.PI / 2 || a < -Math.PI / 2) {
+      a += Math.PI
+      if (a > Math.PI) {
+        a -= twoPi
+      }
+    }
+    return a
   }
 
   private buildSvgString(input: {
@@ -266,11 +544,31 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
     height: number
     stroke: string
     strokeWidth: number
+    textFill: string
+    fontFamily: string
     lineSegments: Array<[number, number]>
     dots: number[]
+    texts: Array<{
+      x: number
+      y: number
+      text: string
+      fontSize: number
+      rotationDeg: number
+    }>
     y: number
   }) {
-    const { width, height, stroke, strokeWidth, lineSegments, dots, y } = input
+    const {
+      width,
+      height,
+      stroke,
+      strokeWidth,
+      textFill,
+      fontFamily,
+      lineSegments,
+      dots,
+      texts,
+      y
+    } = input
     const lines = lineSegments
       .map(
         ([x1, x2]) =>
@@ -289,8 +587,25 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
           )}" r="${(strokeWidth / 2).toFixed(2)}" fill="${stroke}" />`
       )
       .join('')
+    const textNodes = texts
+      .map(item => {
+        const transform =
+          Math.abs(item.rotationDeg) > 1e-6
+            ? ` transform="rotate(${item.rotationDeg.toFixed(2)} ${item.x.toFixed(
+                2
+              )} ${item.y.toFixed(2)})"`
+            : ''
+        return `<text x="${item.x.toFixed(2)}" y="${item.y.toFixed(
+          2
+        )}" fill="${textFill}" font-family="${fontFamily}" font-size="${item.fontSize.toFixed(
+          2
+        )}" text-anchor="middle" dominant-baseline="middle"${transform}>${this.escapeSvgText(
+          item.text
+        )}</text>`
+      })
+      .join('')
 
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this.escapeSvgAttribute(this.name)} linetype preview">${lines}${circles}</svg>`
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" role="img" aria-label="${this.escapeSvgAttribute(this.name)} linetype preview">${lines}${circles}${textNodes}</svg>`
   }
 
   private escapeSvgAttribute(value: string) {
@@ -300,6 +615,13 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/'/g, '&#39;')
+  }
+
+  private escapeSvgText(value: string) {
+    return value
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
   }
 
   /**
