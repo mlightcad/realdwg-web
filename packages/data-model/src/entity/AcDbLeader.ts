@@ -128,7 +128,8 @@ export class AcDbLeader extends AcDbCurve {
     super()
     this._isSplined = false
     this._updated = false
-    this._hasArrowHead = false
+    // DXF 组码 71 缺省时 AutoCAD/ezdxf 视为开启箭头；与写回 filer（71=1）一致
+    this._hasArrowHead = true
     this._vertices = []
     this._dimensionStyle = ''
     this._hasHookLine = false
