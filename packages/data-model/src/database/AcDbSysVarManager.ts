@@ -785,6 +785,21 @@ export class AcDbSysVarManager {
       defaultValue: DEFAULT_TEXT_STYLE
     })
     /**
+     * Controls model space vs paper space (**TILEMODE**).
+     * - `0`: Paper space (named layout) active
+     * - `1`: Model space active
+     *
+     * Integer, saved in the drawing header. AutoCAD initial value is `1`.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-02F55DD8-1EB1-493C-929D-A7CFDE55C348
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.TILEMODE,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 1
+    })
+    /**
      * Feet-inch / fractional delimiter style used with **LUNITS** (`0` report, `1` input).
      */
     this.registerVar({

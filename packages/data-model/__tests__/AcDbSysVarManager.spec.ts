@@ -84,6 +84,13 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.DYNPROMPT, 'false', db)
     expect(manager.getVar(AcDbSystemVariables.DYNPROMPT, db)).toBe(false)
 
+    expect(manager.getVar(AcDbSystemVariables.TILEMODE, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.TILEMODE, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.TILEMODE, db)).toBe(0)
+    expect(db.tilemode).toBe(0)
+    manager.setVar(AcDbSystemVariables.TILEMODE, '1', db)
+    expect(db.tilemode).toBe(1)
+
     expect(manager.getVar(AcDbSystemVariables.OPENPROF, db)).toBe(false)
     manager.setVar(AcDbSystemVariables.OPENPROF, true, db)
     expect(manager.getVar(AcDbSystemVariables.OPENPROF, db)).toBe(true)
@@ -249,6 +256,10 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.COMPARETEXT)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.COMPARETOLERANCE)).toBe(
       6
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.TILEMODE)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.TILEMODE)?.isDbVar).toBe(
+      true
     )
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(

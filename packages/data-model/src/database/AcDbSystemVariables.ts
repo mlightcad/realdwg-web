@@ -221,6 +221,14 @@ export const AcDbSystemVariables = {
   SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
   TEXTSTYLE: 'TEXTSTYLE',
+  /**
+   * Controls whether the Model tab or a paper-space layout is active.
+   * Integer: `1` = model space (AutoCAD default); `0` = paper space.
+   * Saved in the drawing header (`$TILEMODE`).
+   *
+   * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-02F55DD8-1EB1-493C-929D-A7CFDE55C348
+   */
+  TILEMODE: 'TILEMODE',
   /** Current dimension style name used when creating new dimension entities. */
   DIMSTYLE: 'DIMSTYLE',
   /**

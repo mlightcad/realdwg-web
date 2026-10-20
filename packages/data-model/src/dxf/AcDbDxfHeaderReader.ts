@@ -123,7 +123,7 @@ function applyHeaderVar(
       db.lwdisplay = (readHeaderNumber(filer) ?? 0) !== 0
       break
     case '$TILEMODE':
-      db.tilemode = (readHeaderNumber(filer) ?? 1) !== 0
+      db.tilemode = readHeaderNumber(filer) ?? 1
       break
     case '$PSLTSCALE':
       db.psltscale = (readHeaderNumber(filer) ?? 1) !== 0
