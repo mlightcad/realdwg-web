@@ -36,6 +36,18 @@ describe('AcDbSpline', () => {
     expect(spline.dxfTypeName).toBe('SPLINE')
   })
 
+  it('dumpControlPoints returns NURBS control vertices for Hub extract', () => {
+    const spline = new AcDbSpline(controlPoints, knots)
+    const dump = spline.dumpControlPoints()
+
+    expect(dump.controlPoints).toHaveLength(4)
+    expect(dump.controlPoints[0]).toEqual({ x: 0, y: 0, z: 0 })
+    expect(dump.controlPoints[3]).toEqual({ x: 3, y: 0, z: 0 })
+    expect(dump.degree).toBeGreaterThanOrEqual(1)
+    expect(Array.isArray(dump.knots)).toBe(true)
+    expect(dump.knots.length).toBeGreaterThan(0)
+  })
+
   it('supports control-point constructor with geometric extents and closed setter', () => {
     const spline = new AcDbSpline(controlPoints, knots)
     const extents = spline.geometricExtents
