@@ -517,7 +517,7 @@ export class AcDbLinetypeTableRecord extends AcDbSymbolTableRecord<AcDbLinetypeT
   private previewTextRotationDeg(element: AcGiLineTypePatternElement) {
     const rotation = element.rotation ?? 0
     const flag = element.elementTypeFlag ?? 0
-    let angle =
+    const angle =
       (flag & COMPLEX_LTYPE_ABSOLUTE_ROTATION) !== 0
         ? rotation
         : this.uprightLinetypeAngle(rotation)
