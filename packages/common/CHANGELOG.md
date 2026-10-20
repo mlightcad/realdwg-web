@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.12
+
+### Patch Changes
+
+- feat: registers TILEMODE as an AutoCAD-compatible integer system variable and reads it from the DWG header so drawings saved in paper space open with the correct tilemode instead of always reporting model space. Also upgrades libredwg-web to v0.8.1 and adds LICENSE files across packages
+
 ## 1.15.11
 
 ### Patch Changes

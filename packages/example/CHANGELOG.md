@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.12
+
+### Patch Changes
+
+- feat: registers TILEMODE as an AutoCAD-compatible integer system variable and reads it from the DWG header so drawings saved in paper space open with the correct tilemode instead of always reporting model space. Also upgrades libredwg-web to v0.8.1 and adds LICENSE files across packages
+- Updated dependencies
+  - @mlightcad/data-model@1.15.12
+  - @mlightcad/libredwg-converter@3.15.12
+
 ## 0.15.11
 
 ### Patch Changes
