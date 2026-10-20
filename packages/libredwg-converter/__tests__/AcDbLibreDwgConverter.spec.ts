@@ -34,15 +34,15 @@ describe('AcDbLibreDwgConverter', () => {
 
     const paper = new AcDbDatabase()
     converter.processHeaderPublic({ header: { TILEMODE: 0 } }, paper)
-    expect(paper.tilemode).toBe(false)
+    expect(paper.tilemode).toBe(0)
 
     const model = new AcDbDatabase()
     converter.processHeaderPublic({ header: { TILEMODE: 1 } }, model)
-    expect(model.tilemode).toBe(true)
+    expect(model.tilemode).toBe(1)
 
     const missing = new AcDbDatabase()
     converter.processHeaderPublic({ header: {} }, missing)
-    expect(missing.tilemode).toBe(true)
+    expect(missing.tilemode).toBe(1)
   })
 
   it('keeps CMC RGB for layers when libredwg leaves colorIndex at 256', () => {

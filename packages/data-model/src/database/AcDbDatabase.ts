@@ -397,8 +397,8 @@ export class AcDbDatabase extends AcDbObject {
   private _ltscale: number
   /** The flag whether to display line weight */
   private _lwdisplay: boolean
-  /** TILEMODE: true = model space active (1), false = paper space (0) */
-  private _tilemode: boolean
+  /** TILEMODE: 1 = model space active, 0 = paper space */
+  private _tilemode: number
   /** PSLTSCALE: paper space linetype scaling */
   private _psltscale: boolean
   /** Point display mode */
@@ -557,7 +557,7 @@ export class AcDbDatabase extends AcDbObject {
     this._measurement = 1
     this._ltscale = 1
     this._lwdisplay = false
-    this._tilemode = true
+    this._tilemode = 1
     this._psltscale = true
     this._cannoscale = '1:1'
     // AutoCAD initial value of ANNOALLVISIBLE is 1 (show unsupported).
@@ -1872,12 +1872,24 @@ export class AcDbDatabase extends AcDbObject {
     )
   }
 
-  /** TILEMODE: true = model space (1), false = paper space (0). */
-  get tilemode(): boolean {
+  /**
+   * TILEMODE: whether the Model tab or a paper-space layout is active.
+   *
+   * - `0`: Paper space (named layout) active
+   * - `1`: Model space active (AutoCAD default)
+   */
+  get tilemode(): number {
     return this._tilemode
   }
-  set tilemode(value: boolean) {
-    this._tilemode = value
+  set tilemode(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.TILEMODE,
+      this._tilemode,
+      value ?? 1,
+      nextValue => {
+        this._tilemode = nextValue
+      }
+    )
   }
 
   /** PSLTSCALE: paper space linetype scaling. */
@@ -3068,7 +3080,7 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(9, '$CECOLOR')
     filer.writeCmColor(this.cecolor)
     filer.writeString(9, '$TILEMODE')
-    filer.writeInt16(70, this.tilemode ? 1 : 0)
+    filer.writeInt16(70, this.tilemode)
     filer.writeString(9, '$PSLTSCALE')
     filer.writeInt16(70, this.psltscale ? 1 : 0)
     filer.writeString(9, '$CLAYER')
