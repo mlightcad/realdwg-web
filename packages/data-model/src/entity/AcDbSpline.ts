@@ -920,5 +920,42 @@ export class AcDbSpline extends AcDbCurve {
   private collectPath2d(offsetDist: number): AcGePoint2d[] {
     return this._geo.getOffsetSamplePath2d(offsetDist).points
   }
+
+  /**
+   * Stable dump of NURBS control / fit geometry for extract APIs (Hub bridge).
+   *
+   * Hub `mapEntity` historically called non-existent `numControlPoints` /
+   * `getControlPointAt`, leaving `control_points: []`. Prefer this dump over
+   * grip-point heuristics so redraw does not rely solely on ezdxf enrich.
+   */
+  dumpControlPoints(): {
+    degree: number
+    closed: boolean
+    controlPoints: Array<{ x: number; y: number; z: number }>
+    fitPoints: Array<{ x: number; y: number; z: number }>
+    knots: number[]
+    weights: number[]
+  } {
+    const geo = this._geo as unknown as {
+      degree: number
+      knots: number[]
+      weights: number[]
+      controlPoints: AcGePoint3dLike[]
+      fitPoints?: AcGePoint3dLike[]
+    }
+    const point = (p: AcGePoint3dLike) => ({
+      x: p.x,
+      y: p.y,
+      z: p.z ?? 0
+    })
+    return {
+      degree: Number(geo.degree) || 3,
+      closed: this.closed,
+      controlPoints: (geo.controlPoints || []).map(point),
+      fitPoints: (geo.fitPoints || []).map(point),
+      knots: Array.from(geo.knots || []),
+      weights: Array.from(geo.weights || [])
+    }
+  }
 }
 
