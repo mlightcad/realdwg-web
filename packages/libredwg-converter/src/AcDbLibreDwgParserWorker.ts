@@ -8,11 +8,11 @@ import { parseDwg } from './AcDbLibreDwgConverterUtil'
  * DWG parsing worker
  */
 class AcDbDwgParserWorker extends AcDbBaseWorker<
-  string,
+  ArrayBuffer,
   AcDbParsingTaskResult<DwgDatabase>
 > {
-  protected async executeTask(dxfString: string) {
-    const result = await parseDwg(dxfString)
+  protected async executeTask(data: ArrayBuffer) {
+    const result = await parseDwg(data)
     return {
       model: result.database,
       data: result.stats
