@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.13
+
+### Patch Changes
+
+- feat: adds a Node main-thread LibreDWG converter entry that parses without a Web Worker, and fills missing DWG preview images from classic previewAddress bytes. Linetype SVG previews now render embedded text shapes so complex linetypes display correctly in the UI
+- Updated dependencies
+  - @mlightcad/common@1.15.13
+  - @mlightcad/emf-converter@1.15.13
+  - @mlightcad/geometry-engine@3.15.13
+  - @mlightcad/graphic-interface@3.15.13
+
 ## 1.15.12
 
 ### Patch Changes
