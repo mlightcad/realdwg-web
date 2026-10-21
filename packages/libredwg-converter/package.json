@@ -31,9 +31,15 @@
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
-    "types": "./lib/index.d.ts",
-    "import": "./lib/index.js",
-    "require": "./dist/libredwg-converter.umd.cjs"
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./dist/libredwg-converter.umd.cjs"
+    },
+    "./node": {
+      "types": "./lib/node.d.ts",
+      "import": "./lib/node.js"
+    }
   },
   "scripts": {
     "analyze": "pnpm run analyze:lib && pnpm run analyze:worker",
