@@ -54,13 +54,13 @@ import {
   DwgEntity
 } from '@mlightcad/libredwg-web'
 
-import { AcDbEntityConverter } from './AcDbEntitiyConverter'
+import { AcDbEntityConverter } from './AcDbEntitiyConverter.js'
 import {
   AcDbObjectConverter,
   type LibreDwgDictionaryVarObject,
   type LibreDwgMTextObjectContextDataObject,
   type LibreDwgScaleObject
-} from './AcDbObjectConverter'
+} from './AcDbObjectConverter.js'
 
 const MODEL_SPACE = '*MODEL_SPACE'
 

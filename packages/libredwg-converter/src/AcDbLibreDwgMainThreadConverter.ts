@@ -4,8 +4,8 @@ import type {
 } from '@mlightcad/data-model'
 import type { DwgDatabase } from '@mlightcad/libredwg-web'
 
-import { AcDbLibreDwgConverter } from './AcDbLibreDwgConverter'
-import { parseDwg } from './AcDbLibreDwgConverterUtil'
+import { AcDbLibreDwgConverter } from './AcDbLibreDwgConverter.js'
+import { parseDwg } from './AcDbLibreDwgConverterUtil.js'
 
 /**
  * LibreDWG converter that parses on the current thread (no Web Worker).

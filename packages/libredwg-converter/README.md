@@ -50,6 +50,13 @@ Deploy both `libredwg-parser-worker.js` and its sibling `libredwg-web.wasm` from
 - **@mlightcad/data-model**: Drawing database and entity definitions
 - **@mlightcad/libredwg-web**: WASM wrapper for LibreDWG, loaded in the worker bundle by design for license isolation
 
+### Node ESM / `NodeNext`
+
+This package emits Node-native ESM under `lib/` (TypeScript `module` /
+`moduleResolution`: `NodeNext`, relative imports use `.js` extensions). It
+requires `@mlightcad/libredwg-web` **>= 0.8.2**, whose published `lib/**/*.d.ts`
+uses the same `.js` relative re-exports so NodeNext type resolution works.
+
 ## API Documentation
 
 For detailed API documentation, visit the [RealDWG-Web documentation](https://mlight-lee.github.io/realdwg-web/).

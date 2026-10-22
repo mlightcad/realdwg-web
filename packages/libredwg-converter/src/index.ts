@@ -1,1 +1,1 @@
-export { AcDbLibreDwgConverter } from './AcDbLibreDwgConverter'
+export { AcDbLibreDwgConverter } from './AcDbLibreDwgConverter.js'

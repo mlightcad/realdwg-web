@@ -1,6 +1,6 @@
 import { Dwg_File_Type, LibreDwg } from '@mlightcad/libredwg-web'
 
-import { acdbEnsureDwgThumbnailImage } from './extractDwgThumbnailImage'
+import { acdbEnsureDwgThumbnailImage } from './extractDwgThumbnailImage.js'
 
 export async function parseDwg(data: string | ArrayBuffer) {
   // LibreDwg.create() loads libredwg-web.wasm via the Emscripten glue's
