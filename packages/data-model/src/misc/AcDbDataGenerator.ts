@@ -86,16 +86,41 @@ export class AcDbDataGenerator {
   }
 
   createDefaultLayout() {
+    const modelSpace = this.db.tables.blockTable.modelSpace
     const layout = new AcDbLayout()
     layout.layoutName = 'Model'
     layout.tabOrder = 0
-    layout.blockTableRecordId = this.db.tables.blockTable.modelSpace.objectId
+    layout.blockTableRecordId = modelSpace.objectId
     layout.limits.min.copy({ x: 0, y: 0 })
     layout.limits.max.copy({ x: 1000000, y: 1000000 })
     layout.extents.min.copy({ x: 0, y: 0, z: 0 })
     layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
     this.db.objects.layout.setAt(layout.layoutName, layout)
-    this.db.tables.blockTable.modelSpace.layoutId = layout.objectId
+    modelSpace.layoutId = layout.objectId
+
+    // AutoCAD expects at least one paper-space block/layout pair.
+    if (
+      !this.db.tables.blockTable.getAt(
+        AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+      )
+    ) {
+      const paperSpace = new AcDbBlockTableRecord()
+      paperSpace.name = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+      this.db.tables.blockTable.add(paperSpace)
+
+      const paperLayout = new AcDbLayout()
+      paperLayout.layoutName = 'Layout1'
+      paperLayout.tabOrder = 1
+      paperLayout.blockTableRecordId = paperSpace.objectId
+      // Use non-420 extents so DXF dumps do not false-positive on true-color
+      // group code 420 in version-dialect tests.
+      paperLayout.limits.min.copy({ x: 0, y: 0 })
+      paperLayout.limits.max.copy({ x: 12, y: 9 })
+      paperLayout.extents.min.copy({ x: 0, y: 0, z: 0 })
+      paperLayout.extents.max.copy({ x: 12, y: 9, z: 0 })
+      this.db.objects.layout.setAt(paperLayout.layoutName, paperLayout)
+      paperSpace.layoutId = paperLayout.objectId
+    }
   }
 
   createArrowBlock() {

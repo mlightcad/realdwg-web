@@ -26,13 +26,13 @@ describe('AcDbText', () => {
     expect(AcDbText.typeName).toBe('Text')
     expect(text.dxfTypeName).toBe('TEXT')
     expect(text.textString).toBe('')
-    expect(text.thickness).toBe(1)
+    expect(text.thickness).toBe(0)
     expect(text.height).toBe(0)
     expect(text.position).toMatchObject({ x: 0, y: 0, z: 0 })
     expect(text.rotation).toBe(0)
     expect(text.oblique).toBe(0)
     expect(text.horizontalMode).toBe(AcDbTextHorizontalMode.LEFT)
-    expect(text.verticalMode).toBe(AcDbTextVerticalMode.MIDDLE)
+    expect(text.verticalMode).toBe(AcDbTextVerticalMode.BASELINE)
     expect(text.styleName).toBe('')
     expect(text.widthFactor).toBe(1)
   })
@@ -444,7 +444,10 @@ describe('AcDbText', () => {
     expect(dxf).toContain('51\n30\n')
     expect(dxf).toContain('7\nStandard\n')
     expect(dxf).toContain('72\n2\n')
-    expect(dxf).toContain('73\n3\n')
     expect(dxf).toContain('11\n7\n21\n8\n31\n9\n')
+    // Second AcDbText subclass marker precedes vertical justification (73).
+    expect(dxf).toMatch(
+      /100\nAcDbText\n39\n4[\s\S]*11\n7\n21\n8\n31\n9[\s\S]*100\nAcDbText\n73\n3\n/
+    )
   })
 })

@@ -33,6 +33,9 @@ describe('AcDbDwgVersion', () => {
         supportsTrueColor: boolean
         supportsTransparency: boolean
         supportsUtf8CodePage: boolean
+        supportsBlockRecordUnitsFlags: boolean
+        supportsMLeader: boolean
+        supportsHatchHeaderVars: boolean
       }
     }> = [
       {
@@ -47,7 +50,10 @@ describe('AcDbDwgVersion', () => {
           supportsLineWeight: false,
           supportsTrueColor: false,
           supportsTransparency: false,
-          supportsUtf8CodePage: false
+          supportsUtf8CodePage: false,
+          supportsBlockRecordUnitsFlags: false,
+          supportsMLeader: false,
+          supportsHatchHeaderVars: false
         }
       },
       {
@@ -62,7 +68,10 @@ describe('AcDbDwgVersion', () => {
           supportsLineWeight: true,
           supportsTrueColor: false,
           supportsTransparency: false,
-          supportsUtf8CodePage: false
+          supportsUtf8CodePage: false,
+          supportsBlockRecordUnitsFlags: false,
+          supportsMLeader: false,
+          supportsHatchHeaderVars: false
         }
       },
       {
@@ -77,7 +86,10 @@ describe('AcDbDwgVersion', () => {
           supportsLineWeight: true,
           supportsTrueColor: true,
           supportsTransparency: true,
-          supportsUtf8CodePage: false
+          supportsUtf8CodePage: false,
+          supportsBlockRecordUnitsFlags: false,
+          supportsMLeader: false,
+          supportsHatchHeaderVars: false
         }
       },
       {
@@ -92,7 +104,10 @@ describe('AcDbDwgVersion', () => {
           supportsLineWeight: true,
           supportsTrueColor: true,
           supportsTransparency: true,
-          supportsUtf8CodePage: true
+          supportsUtf8CodePage: true,
+          supportsBlockRecordUnitsFlags: true,
+          supportsMLeader: true,
+          supportsHatchHeaderVars: false
         }
       },
       {
@@ -107,7 +122,10 @@ describe('AcDbDwgVersion', () => {
           supportsLineWeight: true,
           supportsTrueColor: true,
           supportsTransparency: true,
-          supportsUtf8CodePage: true
+          supportsUtf8CodePage: true,
+          supportsBlockRecordUnitsFlags: true,
+          supportsMLeader: true,
+          supportsHatchHeaderVars: true
         }
       }
     ]

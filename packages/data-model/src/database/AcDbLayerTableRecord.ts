@@ -54,7 +54,7 @@ export function acdbCreateLayerTableRecordDefaultAttrs() {
     isOff: false,
     isPlottable: true,
     transparency: new AcCmTransparency(),
-    linetype: '',
+    linetype: 'Continuous',
     lineWeight: 1,
     materialId: -1
   } satisfies Omit<
@@ -404,7 +404,7 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
     filer.writeString(2, this.name)
     filer.writeInt16(70, this.standardFlags)
     filer.writeCmColor(this.color)
-    filer.writeString(6, this.linetype)
+    filer.writeString(6, this.linetype || 'Continuous')
     filer.writeInt16(290, this.isPlottable ? 1 : 0)
     filer.writeLineWeight(370, this.lineWeight)
     filer.writeTransparency(this.transparency)

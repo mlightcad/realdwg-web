@@ -146,8 +146,10 @@ describe('AcDbDynBlockReference', () => {
       ]
     })
 
-    expect(layoutDict.numEntries).toBe(1)
+    // createDefaultData now seeds Model + Layout1 (*Paper_Space).
+    expect(layoutDict.numEntries).toBe(2)
     expect(layoutDict.getAt('Model')).toBe(model)
+    expect(layoutDict.getAt('Layout1')).toBeDefined()
     expect(layoutDict.getAt('潍敤l')).toBeUndefined()
     expect(layoutDict.getAt('벲횾1')).toBeUndefined()
   })

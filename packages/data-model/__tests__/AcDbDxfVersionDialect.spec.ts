@@ -7,6 +7,7 @@ import { AcDbDxfFiler } from '../src/base/AcDbDxfFiler'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
+import { AcDbText } from '../src/entity/AcDbText'
 
 function createDbWithStyledLine() {
   const db = new AcDbDatabase()
@@ -33,6 +34,79 @@ describe('AcDbDxf version write dialect', () => {
     expect(dxf).toContain('$DWGCODEPAGE\n3\nANSI_1252')
     // AC1015 still has lineweight
     expect(dxf).toContain('\n370\n')
+  })
+
+  it('writes AutoCAD-2000-compatible AC1015 headers and structure (#270)', () => {
+    const db = new AcDbDatabase()
+    acdbHostApplicationServices().workingDatabase = db
+    db.createDefaultData()
+
+    const text = new AcDbText()
+    text.position = new AcGePoint3d(10, 20, 0)
+    text.textString = 'Hello'
+    text.height = 2.5
+    text.styleName = 'Standard'
+    db.tables.blockTable.modelSpace.appendEntity(text)
+
+    const dxf = db.dxfOut(undefined, 6, 'AC1015') as string
+
+    // $LWDISPLAY must use boolean group 290 (not 70) — AutoCAD 2007 Error 50.
+    expect(dxf).toContain('9\n$LWDISPLAY\n290\n')
+    expect(dxf).not.toMatch(/9\n\$LWDISPLAY\n70\n/)
+
+    // Post-R2000 header vars / objects must be omitted.
+    expect(dxf).not.toContain('$CMLEADERSTYLE')
+    expect(dxf).not.toContain('$HPCOLOR')
+    expect(dxf).not.toContain('$HPLAYER')
+    expect(dxf).not.toContain('0\nMLEADERSTYLE\n')
+
+    // BLOCK_RECORD units/explodability flags are R2007+.
+    const blockRecordIdx = dxf.indexOf('0\nBLOCK_RECORD\n')
+    expect(blockRecordIdx).toBeGreaterThanOrEqual(0)
+    const modelSpaceIdx = dxf.indexOf('2\n*Model_Space\n', blockRecordIdx)
+    const nextRecord = dxf.indexOf('\n0\n', modelSpaceIdx + 1)
+    const modelSpaceRecord = dxf.slice(blockRecordIdx, nextRecord)
+    expect(modelSpaceRecord).not.toMatch(/\n280\n/)
+    expect(modelSpaceRecord).not.toMatch(/\n281\n/)
+
+    // Required paper space + empty group dictionary.
+    expect(dxf).toContain('2\n*Paper_Space\n')
+    expect(dxf).toContain('1\nLayout1\n')
+    expect(dxf).toContain('3\nACAD_GROUP\n')
+
+    // $HANDSEED must be above every handle used in the file.
+    const handseedMatch = dxf.match(/9\n\$HANDSEED\n5\n([0-9A-Fa-f]+)\n/)
+    expect(handseedMatch).toBeTruthy()
+    const handseed = Number.parseInt(handseedMatch![1], 16)
+    // Only object/entity handles (0/TYPE/5/HANDLE), not other group-5 lookalikes.
+    const handles = [
+      ...dxf.matchAll(/\n0\n[A-Z][A-Z0-9_]*\n5\n([0-9A-Fa-f]+)\n/g)
+    ].map(m => Number.parseInt(m[1], 16))
+    expect(handles.length).toBeGreaterThan(0)
+    expect(handseed).toBeGreaterThan(Math.max(...handles))
+
+    // Extents are populated from geometry (not left as empty/0,0,0).
+    expect(dxf).toMatch(/9\n\$EXTMIN\n10\n/)
+    expect(dxf).not.toMatch(/9\n\$EXTMIN\n10\n0\n20\n0\n30\n0\n9\n\$EXTMAX\n10\n0\n/)
+
+    // TEXT: dual AcDbText markers, baseline default, no bogus thickness 1.
+    // Avoid `\n0\n` alone — layer name "0" (`8\n0\n`) is a false end marker.
+    const textMatch = dxf.match(
+      /0\nTEXT\n[\s\S]*?(?=\n0\n(?:ENDSEC|[A-Z_]+\n))/
+    )
+    expect(textMatch).toBeTruthy()
+    const textRecord = textMatch![0]
+    expect(textRecord).toMatch(/100\nAcDbText[\s\S]*100\nAcDbText\n73\n0/)
+    expect(textRecord).not.toContain('\n39\n1\n')
+    expect(textRecord).toContain('10\n10\n20\n20\n')
+
+    // Exporting AC1015 must not permanently strip MLEADERSTYLE from the live DB.
+    db.objects.dictionary.setAt('ACAD_MLEADERSTYLE', db.objects.mleaderStyle)
+    expect(db.objects.mleaderStyle.numEntries).toBeGreaterThan(0)
+    db.dxfOut(undefined, 6, 'AC1015')
+    expect(db.objects.dictionary.getAt('ACAD_MLEADERSTYLE')).toBe(
+      db.objects.mleaderStyle
+    )
   })
 
   it('emits true color / transparency for AC1018+', () => {

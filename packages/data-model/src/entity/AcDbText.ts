@@ -155,13 +155,16 @@ export class AcDbText extends AcDbEntity {
     super()
     this._textString = ''
     this._height = 0
-    this._thickness = 1
+    // DXF default thickness is 0 (group 39 is optional).
+    this._thickness = 0
     this._position = new AcGePoint3d()
     this._alignmentPoint = new AcGePoint3d()
     this._rotation = 0
     this._oblique = 0
     this._horizontalMode = AcDbTextHorizontalMode.LEFT
-    this._verticalModel = AcDbTextVerticalMode.MIDDLE
+    // Baseline + Left is the DXF default; Middle with an unset alignment
+    // point at the origin made other readers place every TEXT at (0,0).
+    this._verticalModel = AcDbTextVerticalMode.BASELINE
     this._styleName = ''
     this._widthFactor = 1
   }
@@ -1036,25 +1039,37 @@ export class AcDbText extends AcDbEntity {
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbText')
+    if (this.thickness !== 0) {
+      filer.writeDouble(39, this.thickness)
+    }
     filer.writePoint3d(10, this.position)
-    filer.writeDouble(39, this.thickness)
     filer.writeDouble(40, this.height)
     filer.writeString(1, this.textString)
     filer.writeAngle(50, this.rotation)
     filer.writeDouble(41, this.widthFactor)
     filer.writeAngle(51, this.oblique)
-    filer.writeString(7, this.styleName)
+    filer.writeString(7, this.styleName || 'Standard')
     if (this.generationFlag !== 0) {
       filer.writeInt16(71, this.generationFlag)
     }
     filer.writeInt16(72, this.horizontalMode)
-    filer.writeInt16(73, this.verticalMode)
-    // Group 11 holds the alignment point used when horizontal/vertical modes
-    // are non-default. For LEFT + BASELINE, AutoCAD writes the position again
-    // (or zero), so we mirror by emitting `alignmentPoint`, which defaults to
-    // a copy of `position` for entities created in code.
-    filer.writePoint3d(11, this.alignmentPoint)
+    // Group 11 is meaningful when horizontal/vertical modes are non-default.
+    // If the alignment point was never set, reuse the insertion point so
+    // readers that honor group 11 do not drop the text at the origin.
+    const needsAlignment =
+      this.horizontalMode !== AcDbTextHorizontalMode.LEFT ||
+      this.verticalMode !== AcDbTextVerticalMode.BASELINE
+    const alignment = this.hasAlignmentPoint
+      ? this.alignmentPoint
+      : needsAlignment
+        ? this.position
+        : this.alignmentPoint
+    filer.writePoint3d(11, alignment)
     filer.writeVector3d(210, this.normal)
+    // DXF TEXT requires a second AcDbText subclass marker immediately before
+    // vertical justification (group 73).
+    filer.writeSubclassMarker('AcDbText')
+    filer.writeInt16(73, this.verticalMode)
     return this
   }
 
