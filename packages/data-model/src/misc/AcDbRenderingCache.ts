@@ -6,8 +6,8 @@ import {
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbEntity } from '../entity/AcDbEntity'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
 
 /**
  * Optional timing counters for one cache-miss block build during

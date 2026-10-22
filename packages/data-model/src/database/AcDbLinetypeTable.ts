@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 
 /**
  * Symbol table for linetype table records.

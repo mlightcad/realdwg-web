@@ -1,4 +1,4 @@
-import { AcDbTypedValue } from './AcDbTypedValue'
+import { AcDbTypedValue } from './AcDbTypedValue.js'
 
 /**
  * Represents an ordered collection of typed values.

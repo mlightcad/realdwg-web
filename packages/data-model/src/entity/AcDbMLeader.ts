@@ -21,21 +21,21 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbTypedValue } from '../base/AcDbTypedValue'
-import { DEFAULT_MLEADER_STYLE } from '../misc/AcDbConstants'
-import { acdbDecodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
-import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
+import { DEFAULT_MLEADER_STYLE } from '../misc/AcDbConstants.js'
+import { acdbDecodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
+} from './AcDbOsnapHelpers.js'
 
 /**
  * Defines the type of leader line used by a multileader.

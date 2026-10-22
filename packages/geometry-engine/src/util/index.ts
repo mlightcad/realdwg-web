@@ -3,8 +3,8 @@ export {
   ORIGIN_POINT_2D,
   ORIGIN_POINT_3D,
   TAU
-} from './AcGeConstants'
-export { AcGeGeometryUtil } from './AcGeGeometryUtil'
+} from './AcGeConstants.js'
+export { AcGeGeometryUtil } from './AcGeGeometryUtil.js'
 export {
   AcGeMathUtil,
   DEG2RAD,
@@ -34,7 +34,7 @@ export {
   acgeSeededRandom,
   acgeSmootherstep,
   acgeSmoothstep
-} from './AcGeMathUtil'
+} from './AcGeMathUtil.js'
 export {
   acgeBasisFunction,
   acgeCalculateCurveLength,
@@ -48,7 +48,7 @@ export {
   acgeGenerateUniformKnots,
   acgeInterpolateControlPoints,
   acgeInterpolateNurbsCurve
-} from './AcGeNurbsUtil'
+} from './AcGeNurbsUtil.js'
 export {
   acgeGetOcsAngle,
   acgeGetOcsReferenceVector,
@@ -56,17 +56,17 @@ export {
   acgeTransformOcsPointToWcs,
   acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs
-} from './AcGeOcsUtil'
-export { AcGeTol, DEFAULT_TOL } from './AcGeTol'
+} from './AcGeOcsUtil.js'
+export { AcGeTol, DEFAULT_TOL } from './AcGeTol.js'
 export {
   acgeOffsetPointByDirectionInXY,
   acgeOffsetVertexPath
-} from './AcGeCurveOffsetUtil'
-export { acgeOffsetSmoothedSampledPath } from './AcGeSampledCurveOffsetUtil'
+} from './AcGeCurveOffsetUtil.js'
+export { acgeOffsetSmoothedSampledPath } from './AcGeSampledCurveOffsetUtil.js'
 export {
   acgeClosedPolygonArea2d,
   acgeClosedPolygonArea3d,
   acgePolygonArea2d,
   acgePolygonArea3d,
   acgeSignedPolygonArea2d
-} from './AcGePolygonAreaUtil'
+} from './AcGePolygonAreaUtil.js'

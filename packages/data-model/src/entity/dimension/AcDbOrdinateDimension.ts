@@ -4,9 +4,9 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../../base'
-import { AcDbEntityProperties } from '../AcDbEntityProperties'
-import { AcDbDimension } from './AcDbDimension'
+import { AcDbDxfFiler } from '../../base/index.js'
+import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents an ordinate dimension entity in AutoCAD.

@@ -10,11 +10,11 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 
 /** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
 const _dxfInPointA = /*@__PURE__*/ new AcGePoint3d()

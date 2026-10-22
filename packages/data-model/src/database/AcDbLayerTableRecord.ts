@@ -1,11 +1,11 @@
 import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
 import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Interface defining the attributes for layer table records.
@@ -59,7 +59,7 @@ export function acdbCreateLayerTableRecordDefaultAttrs() {
     materialId: -1
   } satisfies Omit<
     Partial<AcDbLayerTableRecordAttrs>,
-    keyof import('../base/AcDbObject').AcDbObjectAttrs | 'name'
+    keyof import('../base/AcDbObject.js').AcDbObjectAttrs | 'name'
   >
 }
 

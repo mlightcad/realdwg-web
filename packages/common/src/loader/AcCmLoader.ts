@@ -13,7 +13,7 @@ import {
   AcCmLoadingManager,
   AcCmOnErrorCallback,
   DefaultLoadingManager
-} from './AcCmLoadingManager'
+} from './AcCmLoadingManager.js'
 
 /**
  * Callback function for reporting loading progress.

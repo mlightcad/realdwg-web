@@ -1,6 +1,6 @@
-import { AcGePoint3d } from '../math/AcGePoint3d'
-import { acgeClamp, FLOAT_TOL } from '../util'
-import { AcGeShape3d } from './AcGeShape3d'
+import { AcGePoint3d } from '../math/AcGePoint3d.js'
+import { acgeClamp, FLOAT_TOL } from '../util/index.js'
+import { AcGeShape3d } from './AcGeShape3d.js'
 
 /**
  * Abstract base class for all 3d curves. Any class that is derived from this class represents

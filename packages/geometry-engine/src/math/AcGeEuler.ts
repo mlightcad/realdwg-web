@@ -1,7 +1,7 @@
-import { acgeClamp } from '../util/AcGeMathUtil'
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGeQuaternion } from './AcGeQuaternion'
-import { AcGeVector3d } from './AcGeVector3d'
+import { acgeClamp } from '../util/AcGeMathUtil.js'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGeQuaternion } from './AcGeQuaternion.js'
+import { AcGeVector3d } from './AcGeVector3d.js'
 
 const _matrix = /*@__PURE__*/ new AcGeMatrix3d()
 const _quaternion = /*@__PURE__*/ new AcGeQuaternion()

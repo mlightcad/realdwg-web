@@ -11,6 +11,8 @@ const config: Config = {
     "/packages/dwg-converter/",
   ],
   moduleNameMapper: {
+    // NodeNext sources use .js specifiers; map them back to .ts for ts-jest.
+    "^(\\.{1,2}/.*)\\.js$": "$1",
     "^@mlightcad/common$": "<rootDir>/packages/common/src/index.ts",
     "^@mlightcad/geometry-engine$": "<rootDir>/packages/geometry-engine/src/index.ts",
     "^@mlightcad/graphic-interface$": "<rootDir>/packages/graphic-interface/src/index.ts",

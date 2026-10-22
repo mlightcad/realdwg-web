@@ -1,4 +1,4 @@
-import { AcGeVector2d, AcGeVector2dLike } from './AcGeVector2d'
+import { AcGeVector2d, AcGeVector2dLike } from './AcGeVector2d.js'
 
 /**
  * The interface representing a point in 2-dimensional space.

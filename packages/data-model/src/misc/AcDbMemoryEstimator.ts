@@ -9,8 +9,8 @@
  * @module AcDbMemoryEstimator
  */
 
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbEntity } from '../entity/AcDbEntity'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
 
 /**
  * Accumulated byte and object counts for one breakdown key

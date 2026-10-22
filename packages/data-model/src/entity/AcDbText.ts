@@ -18,15 +18,15 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
   acdbEstimatePlainTextWidth,
   acdbExpandBoxByOrientedTextRect
-} from './AcDbTextExtentsHelpers'
+} from './AcDbTextExtentsHelpers.js'
 
 /**
  * Defines the horizontal alignment mode for text entities.

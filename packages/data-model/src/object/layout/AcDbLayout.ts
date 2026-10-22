@@ -6,8 +6,8 @@ import {
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../../base/AcDbDxfFiler'
-import { AcDbPlotSettings } from './AcDbPlotSettings'
+import { AcDbDxfFiler } from '../../base/AcDbDxfFiler.js'
+import { AcDbPlotSettings } from './AcDbPlotSettings.js'
 
 /**
  * Represents the stored characteristics of each paperspace layout.

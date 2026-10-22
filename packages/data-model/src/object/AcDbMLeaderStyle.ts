@@ -1,12 +1,12 @@
 import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
 import {
   acdbDecodeMLeaderStyleRawColor,
   acdbEncodeMLeaderStyleRawColor
-} from '../misc/AcDbMLeaderStyleColorCodec'
+} from '../misc/AcDbMLeaderStyleColorCodec.js'
 
 /**
  * Represents the nongraphical MLEADERSTYLE object.

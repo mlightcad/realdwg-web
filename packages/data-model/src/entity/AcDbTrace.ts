@@ -14,13 +14,13 @@ import {
   AcGeVector3dLike} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
-import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
 
 /**
  * Represents a trace entity in AutoCAD.

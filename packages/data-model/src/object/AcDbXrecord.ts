@@ -1,6 +1,6 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
-import { AcDbResultBuffer } from '../base/AcDbResultBuffer'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
+import { AcDbResultBuffer } from '../base/AcDbResultBuffer.js'
 
 /**
  * Defines how duplicate records are handled when objects

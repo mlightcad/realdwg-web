@@ -18,20 +18,20 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObjectId } from '../base/AcDbObject'
-import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
-import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
-import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObjectId } from '../base/AcDbObject.js'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
+import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
 import {
   acdbEscapePlainTextForMText,
   acdbEstimatePlainTextWidth
-} from './AcDbTextExtentsHelpers'
+} from './AcDbTextExtentsHelpers.js'
 
 /**
  * Defines the clip boundary type for raster images.

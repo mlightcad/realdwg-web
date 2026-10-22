@@ -3,7 +3,7 @@ import type {
   AcDbPatLine,
   AcDbPatParseIssue,
   AcDbPatPattern
-} from './AcDbPatDefinition'
+} from './AcDbPatDefinition.js'
 
 /**
  * Internal parse context for a pattern currently being accumulated.

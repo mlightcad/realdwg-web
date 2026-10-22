@@ -18,22 +18,22 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
-import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
-import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
+import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
-} from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers'
+} from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
+} from './AcDbOsnapHelpers.js'
 
 /** Reused across dxfIn to avoid per-vertex temporaries (parse is sequential). */
 const _dxfInVertex = /*@__PURE__*/ new AcGePoint2d()

@@ -1,8 +1,8 @@
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbMText } from './AcDbMText'
-import { AcDbText } from './AcDbText'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbMText } from './AcDbMText.js'
+import { AcDbText } from './AcDbText.js'
 /**
  * Attribute definition flags.
  *

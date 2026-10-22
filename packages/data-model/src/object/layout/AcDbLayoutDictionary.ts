@@ -1,6 +1,6 @@
-import { AcDbObjectId } from '../../base/AcDbObject'
-import { AcDbDictionary } from '../AcDbDictionary'
-import { AcDbLayout } from './AcDbLayout'
+import { AcDbObjectId } from '../../base/AcDbObject.js'
+import { AcDbDictionary } from '../AcDbDictionary.js'
+import { AcDbLayout } from './AcDbLayout.js'
 
 /**
  * Dictionary for storing and managing AcDbLayout objects.

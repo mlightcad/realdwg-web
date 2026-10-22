@@ -31,9 +31,11 @@
   "module": "./lib/index.js",
   "types": "./lib/index.d.ts",
   "exports": {
-    "types": "./lib/index.d.ts",
-    "import": "./lib/index.js",
-    "require": "./dist/data-model.cjs"
+    ".": {
+      "types": "./lib/index.d.ts",
+      "import": "./lib/index.js",
+      "require": "./dist/data-model.cjs"
+    }
   },
   "scripts": {
     "analyze": "pnpm run analyze:lib",

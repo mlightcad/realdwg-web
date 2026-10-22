@@ -2,7 +2,7 @@
  * Simple worker framework
  */
 
-import type { AcDbWorkerErrorCode } from './AcDbBaseWorker'
+import type { AcDbWorkerErrorCode } from './AcDbBaseWorker.js'
 
 export interface AcDbWorkerConfig {
   /** Worker script URL (required if useWorker is true) */
@@ -13,7 +13,7 @@ export interface AcDbWorkerConfig {
   maxConcurrentWorkers?: number
 }
 
-export type { AcDbWorkerErrorCode } from './AcDbBaseWorker'
+export type { AcDbWorkerErrorCode } from './AcDbBaseWorker.js'
 
 export interface AcDbWorkerResult<TOutput = unknown> {
   success: boolean

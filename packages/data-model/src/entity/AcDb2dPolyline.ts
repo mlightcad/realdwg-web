@@ -14,21 +14,21 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
-} from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers'
+} from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
-import { AcDbPolyline } from './AcDbPolyline'
+} from './AcDbOsnapHelpers.js'
+import { AcDbPolyline } from './AcDbPolyline.js'
 
 /**
  * Represents the curve/spline-fit type for one 2d polyline.

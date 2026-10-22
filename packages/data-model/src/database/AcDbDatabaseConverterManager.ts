@@ -1,7 +1,7 @@
 import { AcCmEventManager } from '@mlightcad/common'
 
-import { AcDbNativeDxfConverter } from '../dxf/AcDbNativeDxfConverter'
-import { AcDbDatabaseConverter } from './AcDbDatabaseConverter'
+import { AcDbNativeDxfConverter } from '../dxf/AcDbNativeDxfConverter.js'
+import { AcDbDatabaseConverter } from './AcDbDatabaseConverter.js'
 
 /**
  * Represents the supported drawing file types.

@@ -1,16 +1,16 @@
-import { AcDbObject } from '../../base'
-import { AcDbEntity } from '../../entity/AcDbEntity'
-import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase'
-import { AcDbSysVarManager, AcDbSysVarType } from '../AcDbSysVarManager'
+import { AcDbObject } from '../../base/index.js'
+import { AcDbEntity } from '../../entity/AcDbEntity.js'
+import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase.js'
+import { AcDbSysVarManager, AcDbSysVarType } from '../AcDbSysVarManager.js'
 import {
   AcDbChangeApplier,
   acdbCollectChangeEntities,
   acdbCollectDictionaryChanges,
   acdbCollectLayerModifications
-} from './AcDbChangeApplier'
-import { AcDbChangeContainer } from './AcDbDatabaseChange'
-import { AcDbDatabaseTransaction } from './AcDbDatabaseTransaction'
-import { AcDbUndoStack } from './AcDbUndoStack'
+} from './AcDbChangeApplier.js'
+import { AcDbChangeContainer } from './AcDbDatabaseChange.js'
+import { AcDbDatabaseTransaction } from './AcDbDatabaseTransaction.js'
+import { AcDbUndoStack } from './AcDbUndoStack.js'
 
 /**
  * Pending undo-record payload collected between {@link startUndoMark} and {@link endUndoMark}.
@@ -19,7 +19,7 @@ interface AcDbUndoMarkState {
   /** Optional label shown in undo UI */
   label?: string
   /** Changes committed while this undo mark was active */
-  pendingChanges: import('./AcDbDatabaseChange').AcDbDatabaseChange[]
+  pendingChanges: import('./AcDbDatabaseChange.js').AcDbDatabaseChange[]
 }
 
 /**
@@ -389,7 +389,7 @@ export class AcDbDatabaseTransactionManager {
    * @param changes - Finalized changes from the committed transaction
    */
   private enqueueUndoChanges(
-    changes: import('./AcDbDatabaseChange').AcDbDatabaseChange[]
+    changes: import('./AcDbDatabaseChange.js').AcDbDatabaseChange[]
   ): void {
     const activeMark = this.undoMarkStack[this.undoMarkStack.length - 1]
     if (!activeMark) {
@@ -407,7 +407,7 @@ export class AcDbDatabaseTransactionManager {
    * @param changes - Finalized changes from the committed outermost transaction
    */
   private dispatchCommitEvents(
-    changes: import('./AcDbDatabaseChange').AcDbDatabaseChange[]
+    changes: import('./AcDbDatabaseChange.js').AcDbDatabaseChange[]
   ): void {
     const { modified, appended, erased } = acdbCollectChangeEntities(
       this.database,
@@ -461,7 +461,7 @@ export class AcDbDatabaseTransactionManager {
    * @param inverse - True when undoing (inverse replay); false when redoing
    */
   private dispatchUndoRedoEvents(
-    changes: import('./AcDbDatabaseChange').AcDbDatabaseChange[],
+    changes: import('./AcDbDatabaseChange.js').AcDbDatabaseChange[],
     inverse: boolean
   ): void {
     const { modified, appended, erased } = acdbCollectChangeEntities(

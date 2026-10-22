@@ -1,4 +1,4 @@
-import { AcDbDatabaseChange } from './AcDbDatabaseChange'
+import { AcDbDatabaseChange } from './AcDbDatabaseChange.js'
 
 /**
  * An immutable group of changes that can be undone or redone as one unit.

@@ -1,7 +1,7 @@
 import { AcCmColor } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
 
 /**
  * One element definition in an MLINE style.

@@ -1,6 +1,6 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import type { AcDbFilter } from './AcDbFilter'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import type { AcDbFilter } from './AcDbFilter.js'
 
 /**
  * Opaque handle for filtered-block iteration results.

@@ -3,15 +3,15 @@ import { AcCmTaskError } from '@mlightcad/common'
 import {
   acdbIsWorkerOutOfMemoryMessage,
   type AcDbWorkerErrorCode
-} from '../converter/worker/AcDbBaseWorker'
+} from '../converter/worker/AcDbBaseWorker.js'
 import {
   ACDB_DWG_CONVERTER_LICENSE_ERROR_NAME,
   acdbClassifyDwgConverterLicenseMessage,
   acdbClassifyDwgConverterLicenseMessageOrInvalid,
   acdbIsDwgConverterLicenseCode
-} from '../converter/worker/AcDbDwgConverterLicense'
-import { AcDbWorkerResult } from '../converter/worker/AcDbWorkerManager'
-import { AcDbConversionStage } from './AcDbDatabaseConverter'
+} from '../converter/worker/AcDbDwgConverterLicense.js'
+import { AcDbWorkerResult } from '../converter/worker/AcDbWorkerManager.js'
+import { AcDbConversionStage } from './AcDbDatabaseConverter.js'
 
 /**
  * Machine-readable reason for a failed {@link AcDbDatabase.read} or {@link AcDbDatabase.openUri}.

@@ -1,4 +1,4 @@
-import { accmYieldToUi } from './AcCmYieldToUi'
+import { accmYieldToUi } from './AcCmYieldToUi.js'
 
 /**
  * @fileoverview Task scheduling and execution system for the AutoCAD Common library.

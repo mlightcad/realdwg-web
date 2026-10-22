@@ -1,4 +1,4 @@
-import { AcDbObject } from '../../base'
+import { AcDbObject } from '../../base/index.js'
 
 /**
  * Identifies the container that holds a database object for undo/redo recording.

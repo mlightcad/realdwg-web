@@ -11,30 +11,30 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbBlockTableRecord,
   AcDbDimStyleTableRecord,
   AcDbDimTextVertical
-} from '../database'
-import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { acdbMovePointArrayGripAt } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
-import { AcDbMText } from './AcDbMText'
+} from '../database/index.js'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
+import { AcDbMText } from './AcDbMText.js'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline'
+} from './AcDbOsnapHelpers.js'
+import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,
   acdbResolveMTextLayoutMetrics,
   acdbScorePointAgainstMTextLayout,
   acdbStripMTextControlCodes
-} from './AcDbTextExtentsHelpers'
+} from './AcDbTextExtentsHelpers.js'
 
 /**
  * Defines the annotation type for leader entities.

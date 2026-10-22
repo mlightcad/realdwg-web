@@ -14,11 +14,11 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { acdbDxfVersionCaps } from '../dxf/AcDbDxfVersionCaps'
-import { AcDbBlockReference } from './AcDbBlockReference'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { acdbDxfVersionCaps } from '../dxf/AcDbDxfVersionCaps.js'
+import { AcDbBlockReference } from './AcDbBlockReference.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 
 /**
  * Interface defining the properties of a table cell within an AcDbTable entity.

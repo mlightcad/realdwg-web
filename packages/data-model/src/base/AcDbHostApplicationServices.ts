@@ -1,6 +1,6 @@
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager'
-import { acdbSetHostApplicationServicesProvider } from './AcDbObject'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbLayoutManager } from '../object/layout/AcDbLayoutManager.js'
+import { acdbSetHostApplicationServicesProvider } from './AcDbObject.js'
 
 let layoutManagerFactory: (() => AcDbLayoutManager) | undefined
 

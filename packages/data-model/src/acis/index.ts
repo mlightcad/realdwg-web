@@ -10,8 +10,8 @@ export {
   acdbJoinAcisObjectChunks,
   acdbJoinAcisPayloadLines,
   acdbNormalizeAcisData
-} from './AcDbAcisDecrypt'
-export { acdbParseAcisSab, AcDbAcisSabTag } from './AcDbAcisSab'
+} from './AcDbAcisDecrypt.js'
+export { acdbParseAcisSab, AcDbAcisSabTag } from './AcDbAcisSab.js'
 export type {
   AcDbAcisSabData,
   AcDbAcisSabHeader,
@@ -19,21 +19,21 @@ export type {
   AcDbAcisSabToken,
   AcDbAcisSabTokenValue,
   AcDbAcisSabVector,
-} from './AcDbAcisSab'
-export { acdbBuildAcisModel } from './AcDbAcisEntities'
-export type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
+} from './AcDbAcisSab.js'
+export { acdbBuildAcisModel } from './AcDbAcisEntities.js'
+export type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities.js'
 export {
   acdbDecodeAcisModel,
   acdbFindAcisSabSignatureOffset,
   acdbIsAcisSabPayload,
-} from './AcDbAcisDecode'
+} from './AcDbAcisDecode.js'
 export {
   acdbAcisEdgeParamBounds,
   acdbAcisParseSurfaceParams,
   acdbExtractAcisGeometry,
   acdbSampleAcisEllipseArc,
   acdbSampleAcisSphereWireframe,
-} from './AcDbAcisGeometry'
+} from './AcDbAcisGeometry.js'
 export type {
   AcDbAcisBBox,
   AcDbAcisConeParams,
@@ -57,12 +57,12 @@ export type {
   AcDbAcisTriangleMesh,
   AcDbAcisVec3,
   AcDbAcisVertex,
-} from './AcDbAcisGeometry'
+} from './AcDbAcisGeometry.js'
 export {
   acdbAcisWireframeSegmentsFromGeometry,
   acdbAcisWireframeSegmentsFromSab,
-} from './AcDbAcisWireframe'
-export { acdbAcisWireframeSegmentsFromSatText } from './AcDbAcisSatWireframe'
+} from './AcDbAcisWireframe.js'
+export { acdbAcisWireframeSegmentsFromSatText } from './AcDbAcisSatWireframe.js'
 export {
   acdbAcisBuildNodeTransforms,
   acdbAcisIdentityTransform,
@@ -74,5 +74,5 @@ export {
   acdbAcisTransformPoint,
   acdbAcisTransformSegments,
   acdbAcisTransformsEqual,
-} from './AcDbAcisTransform'
-export type { AcDbAcisAffineTransform } from './AcDbAcisTransform'
+} from './AcDbAcisTransform.js'
+export type { AcDbAcisAffineTransform } from './AcDbAcisTransform.js'

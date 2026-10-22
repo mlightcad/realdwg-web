@@ -12,11 +12,11 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbPolyline } from './AcDbPolyline'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbPolyline } from './AcDbPolyline.js'
 
 function resolveSplineKnotParameterization(
   flag: number

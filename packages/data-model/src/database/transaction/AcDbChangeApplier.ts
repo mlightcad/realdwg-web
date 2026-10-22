@@ -1,18 +1,18 @@
 import { isEqual } from '@mlightcad/common'
 
-import { AcDbObject } from '../../base'
-import { AcDbEntity } from '../../entity/AcDbEntity'
-import { AcDbDictionary } from '../../object/AcDbDictionary'
-import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase'
+import { AcDbObject } from '../../base/index.js'
+import { AcDbEntity } from '../../entity/AcDbEntity.js'
+import { AcDbDictionary } from '../../object/AcDbDictionary.js'
+import { AcDbDatabase, AcDbLayerModifiedEventArgs } from '../AcDbDatabase.js'
 import {
   AcDbLayerTableRecord,
   AcDbLayerTableRecordAttrs,
   LAYER_TABLE_RECORD_DIFF_ATTR_KEYS
-} from '../AcDbLayerTableRecord'
-import { AcDbSymbolTable } from '../AcDbSymbolTable'
-import { AcDbSymbolTableRecord } from '../AcDbSymbolTableRecord'
-import { AcDbSysVarManager } from '../AcDbSysVarManager'
-import { AcDbChangeContainer, AcDbDatabaseChange } from './AcDbDatabaseChange'
+} from '../AcDbLayerTableRecord.js'
+import { AcDbSymbolTable } from '../AcDbSymbolTable.js'
+import { AcDbSymbolTableRecord } from '../AcDbSymbolTableRecord.js'
+import { AcDbSysVarManager } from '../AcDbSysVarManager.js'
+import { AcDbChangeContainer, AcDbDatabaseChange } from './AcDbDatabaseChange.js'
 
 /**
  * Applies forward or inverse database changes for undo/redo operations.

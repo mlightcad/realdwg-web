@@ -8,20 +8,20 @@ import {
   AcGePoint3dLike,
   AcGePointLike,
   AcGeVector3dLike
-} from '../math'
-import { FLOAT_TOL } from '../util'
-import { AcGeGeometryUtil } from '../util/AcGeGeometryUtil'
-import { acgeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { AcGeCurve3d } from './AcGeCurve3d'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
-import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve'
+} from '../math/index.js'
+import { AcGeGeometryUtil } from '../util/AcGeGeometryUtil.js'
+import { acgeClosedPolygonArea3d } from '../util/AcGePolygonAreaUtil.js'
+import { FLOAT_TOL } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { AcGeCurve3d } from './AcGeCurve3d.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
+import { AcGeKnotParameterizationType, AcGeNurbsCurve } from './AcGeNurbsCurve.js'
 import {
   acgeIsNonZeroDirection,
   acgeNormalizeSplineWeights,
   acgeResolveControlPointSplineDegree,
   acgeResolveFitPointSplineDegree
-} from './AcGeSplineUtil'
+} from './AcGeSplineUtil.js'
 
 export class AcGeSpline3d extends AcGeCurve3d {
   private _nurbsCurve: AcGeNurbsCurve

@@ -3,8 +3,8 @@ import type {
   AcDbAcisSabHeader,
   AcDbAcisSabRecord,
   AcDbAcisSabVector,
-} from './AcDbAcisSab'
-import { AcDbAcisSabTag } from './AcDbAcisSab'
+} from './AcDbAcisSab.js'
+import { AcDbAcisSabTag } from './AcDbAcisSab.js'
 
 /**
  * One node in the resolved ACIS B-rep entity DAG.

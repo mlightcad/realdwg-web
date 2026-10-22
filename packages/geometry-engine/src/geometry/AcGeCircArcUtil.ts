@@ -4,8 +4,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d
-} from '../math'
-import { AcGeTol, FLOAT_TOL } from '../util'
+} from '../math/index.js'
+import { AcGeTol, FLOAT_TOL } from '../util/index.js'
 
 /**
  * Circumcircle of three points in the XY plane.

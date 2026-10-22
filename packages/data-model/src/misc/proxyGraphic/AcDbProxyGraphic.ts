@@ -25,18 +25,18 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import type { AcDbDatabase } from '../../database/AcDbDatabase'
-import { ByBlock, ByLayer, DEFAULT_TEXT_STYLE } from '../AcDbConstants'
+import type { AcDbDatabase } from '../../database/AcDbDatabase.js'
+import { ByBlock, ByLayer, DEFAULT_TEXT_STYLE } from '../AcDbConstants.js'
 import {
   RAW_COLOR_TYPE_ACI,
   RAW_COLOR_TYPE_BY_BLOCK,
   RAW_COLOR_TYPE_BY_LAYER,
   RAW_COLOR_TYPE_RGB
-} from '../AcDbMLeaderStyleColorCodec'
+} from '../AcDbMLeaderStyleColorCodec.js'
 import {
   acdbCombineDxfBinaryChunks,
   AcDbProxyGraphicBitStream,
-  AcDbProxyGraphicByteStream} from './AcDbProxyGraphicBinaryStream'
+  AcDbProxyGraphicByteStream} from './AcDbProxyGraphicBinaryStream.js'
 
 /**
  * Maximum number of bytes written to each DXF group code **310** chunk when

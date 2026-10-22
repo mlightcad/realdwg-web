@@ -1,8 +1,8 @@
 import { AcCmErrors } from '@mlightcad/common'
 
-import { AcGeMathUtil } from '../util/AcGeMathUtil'
-import { AcGeMatrix2d } from './AcGeMatrix2d'
-import { AcGePoint2dLike } from './AcGePoint2d'
+import { AcGeMathUtil } from '../util/AcGeMathUtil.js'
+import { AcGeMatrix2d } from './AcGeMatrix2d.js'
+import { AcGePoint2dLike } from './AcGePoint2d.js'
 
 /**
  * The interface representing a 2d vector.

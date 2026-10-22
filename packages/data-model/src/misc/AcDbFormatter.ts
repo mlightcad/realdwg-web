@@ -4,13 +4,13 @@ import {
   AcGePoint3d
 } from '@mlightcad/geometry-engine'
 
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbAngleUnits } from './AcDbAngleUnits'
-import { AcDbLinearUnits } from './AcDbLinearUnits'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbAngleUnits } from './AcDbAngleUnits.js'
+import { AcDbLinearUnits } from './AcDbLinearUnits.js'
 import {
   acdbIsImperialUnits,
   acdbIsMetricUnits,
-  AcDbUnitsValue} from './AcDbUnitsValue'
+  AcDbUnitsValue} from './AcDbUnitsValue.js'
 
 /**
  * Per-call options for {@link AcDbFormatter} methods.

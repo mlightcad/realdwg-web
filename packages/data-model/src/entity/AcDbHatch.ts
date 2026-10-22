@@ -30,29 +30,29 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
-import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
+import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import {
   acdbIsSolidHatchPatternName,
   DEFAULT_GRADIENT_HATCH_NAME,
   HATCH_PATTERN_SOLID,
   HATCH_PATTERN_USER
-} from '../misc/AcDbConstants'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+} from '../misc/AcDbConstants.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
-} from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers'
+} from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
+} from './AcDbOsnapHelpers.js'
 
 /**
  * Defines the type of hatch pattern.

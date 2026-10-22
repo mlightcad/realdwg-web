@@ -1,9 +1,9 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbSystemVariables } from '../database/AcDbSystemVariables'
-import { AcDbSysVarManager } from '../database/AcDbSysVarManager'
+import type { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
+import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import {
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
@@ -18,7 +18,7 @@ import {
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE
-} from '../misc/AcDbConstants'
+} from '../misc/AcDbConstants.js'
 
 /**
  * Stream HEADER section variables into {@link AcDbDatabase}.

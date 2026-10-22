@@ -6,17 +6,17 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   acdbBytesToHexString,
   acdbLoadProxyGraphicFromDxf,
   AcDbProxyGraphic
-} from '../misc/proxyGraphic'
-import { AcDbEntity } from './AcDbEntity'
+} from '../misc/proxyGraphic/index.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
-} from './AcDbGripHelpers'
+} from './AcDbGripHelpers.js'
 
 /**
  * Represents a proxy entity for custom objects not natively supported by the

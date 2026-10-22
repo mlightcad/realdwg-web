@@ -1,10 +1,10 @@
-export { AcDbLayout } from './AcDbLayout'
-export { AcDbLayoutDictionary } from './AcDbLayoutDictionary'
-export { AcDbLayoutManager } from './AcDbLayoutManager'
+export { AcDbLayout } from './AcDbLayout.js'
+export { AcDbLayoutDictionary } from './AcDbLayoutDictionary.js'
+export { AcDbLayoutManager } from './AcDbLayoutManager.js'
 export type {
   AcDbLayoutEventArgs,
   AcDbLayoutRenamedEventArgs
-} from './AcDbLayoutManager'
+} from './AcDbLayoutManager.js'
 export {
   AcDbPlotPaperUnits,
   AcDbPlotRotation,
@@ -13,5 +13,5 @@ export {
   AcDbPlotShadePlotType,
   AcDbPlotStdScaleType,
   AcDbPlotType
-} from './AcDbPlotSettings'
-export type { AcDbPlotPaperMargins, AcDbPlotScale } from './AcDbPlotSettings'
+} from './AcDbPlotSettings.js'
+export type { AcDbPlotPaperMargins, AcDbPlotScale } from './AcDbPlotSettings.js'

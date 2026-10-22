@@ -1,7 +1,7 @@
 import { AcCmStringKey, defaults } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, AcDbObjectAttrs } from '../base/AcDbObject.js'
 
 /**
  * Interface defining the attributes for symbol table records.

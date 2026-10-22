@@ -1,16 +1,16 @@
 import { defaults } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
-import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
-import { acdbHexStringsToBytes } from '../misc/proxyGraphic/AcDbProxyGraphicBinaryStream'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
+import { acdbHexStringsToBytes } from '../misc/proxyGraphic/AcDbProxyGraphicBinaryStream.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Block table record that serves as a container for entities within drawing databases.

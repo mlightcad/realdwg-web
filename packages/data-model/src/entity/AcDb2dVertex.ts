@@ -7,10 +7,10 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbEntity } from './AcDbEntity'
-import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 
 export enum AcDb2dVertexType {
   /**

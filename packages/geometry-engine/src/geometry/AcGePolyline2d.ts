@@ -1,10 +1,10 @@
-import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math'
-import { FLOAT_TOL } from '../util'
-import { acgeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { AcGeCurve2d } from './AcGeCurve2d'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
-import { acgeOffsetPolyline2d } from './AcGePolyline2dOffset'
+import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math/index.js'
+import { acgeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil.js'
+import { FLOAT_TOL } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { AcGeCurve2d } from './AcGeCurve2d.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
+import { acgeOffsetPolyline2d } from './AcGePolyline2dOffset.js'
 
 /**
  * The class represents one vertex of the polyline geometry.

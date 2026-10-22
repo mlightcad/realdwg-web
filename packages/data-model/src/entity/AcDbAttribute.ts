@@ -1,11 +1,11 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbAttributeFlags,
   AcDbAttributeMTextFlag
-} from './AcDbAttributeDefinition'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbMText } from './AcDbMText'
-import { AcDbText } from './AcDbText'
+} from './AcDbAttributeDefinition.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbMText } from './AcDbMText.js'
+import { AcDbText } from './AcDbText.js'
 
 function isBlockReferenceOwner(
   owner: unknown

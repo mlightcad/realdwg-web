@@ -1,4 +1,4 @@
-import { AcDbAlignedDimension } from './AcDbAlignedDimension'
+import { AcDbAlignedDimension } from './AcDbAlignedDimension.js'
 
 /**
  * Represents a rotated linear dimension entity in AutoCAD.

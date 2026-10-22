@@ -10,7 +10,7 @@ import {
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 const createDefaultView = (): AcGiView => ({
   center: new AcGePoint2d(),

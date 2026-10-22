@@ -12,9 +12,9 @@ import {
   acdbAcisWireframeSegmentsFromSatText,
   acdbAppendAcisPayloadFragment,
   acdbJoinAcisPayloadLines
-} from '../acis'
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbEntity } from './AcDbEntity'
+} from '../acis/index.js'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbEntity } from './AcDbEntity.js'
 
 /**
  * Construction options for {@link AcDb3dSolid} when geometry is supplied as

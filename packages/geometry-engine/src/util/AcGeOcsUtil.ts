@@ -1,7 +1,7 @@
-import { AcGeMatrix3d } from '../math/AcGeMatrix3d'
-import { AcGePoint3d, AcGePoint3dLike } from '../math/AcGePoint3d'
-import { AcGeVector3d, AcGeVector3dLike } from '../math/AcGeVector3d'
-import { AcGeMathUtil } from './AcGeMathUtil'
+import { AcGeMatrix3d } from '../math/AcGeMatrix3d.js'
+import { AcGePoint3d, AcGePoint3dLike } from '../math/AcGePoint3d.js'
+import { AcGeVector3d, AcGeVector3dLike } from '../math/AcGeVector3d.js'
+import { AcGeMathUtil } from './AcGeMathUtil.js'
 
 const _ocsMatrix = /*@__PURE__*/ new AcGeMatrix3d()
 const _ocsXAxis = /*@__PURE__*/ new AcGeVector3d()

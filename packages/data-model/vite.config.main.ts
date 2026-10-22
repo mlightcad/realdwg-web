@@ -23,6 +23,7 @@ export default defineConfig(({ mode }) => {
       outDir: 'dist',
       lib: {
         entry: 'src/index.ts',
+        // CJS for require(). ESM consumers use lib/ (NodeNext + .js specifiers).
         fileName: 'data-model',
         formats: ['cjs']
       },

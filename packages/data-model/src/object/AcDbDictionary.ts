@@ -1,7 +1,7 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
 
 /**
  * A database-resident object dictionary that maintains a map between text strings and database objects.

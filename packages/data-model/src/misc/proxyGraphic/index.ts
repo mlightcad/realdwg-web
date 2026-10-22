@@ -9,7 +9,7 @@ export {
   AcDbProxyGraphicType,
   ACDB_PROXY_GRAPHIC_CHUNK_SIZE,
   acdbLoadProxyGraphicFromDxf
-} from './AcDbProxyGraphic'
+} from './AcDbProxyGraphic.js'
 export {
   AcDbProxyGraphicBitStream,
   AcDbProxyGraphicByteStream,
@@ -17,4 +17,4 @@ export {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
-} from './AcDbProxyGraphicBinaryStream'
+} from './AcDbProxyGraphicBinaryStream.js'

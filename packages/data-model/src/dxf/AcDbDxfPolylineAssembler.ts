@@ -1,16 +1,16 @@
 import type { AcGePoint3dLike } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbDxfPair } from '../base/AcDbDxfPair'
-import { AcDb2dPolyline, AcDbPoly2dType } from '../entity/AcDb2dPolyline'
-import { AcDb3dPolyline, AcDbPoly3dType } from '../entity/AcDb3dPolyline'
-import type { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbPolyFaceMesh } from '../entity/AcDbPolyFaceMesh'
-import { AcDbPolygonMesh } from '../entity/AcDbPolygonMesh'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbDxfPair } from '../base/AcDbDxfPair.js'
+import { AcDb2dPolyline, AcDbPoly2dType } from '../entity/AcDb2dPolyline.js'
+import { AcDb3dPolyline, AcDbPoly3dType } from '../entity/AcDb3dPolyline.js'
+import type { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbPolyFaceMesh } from '../entity/AcDbPolyFaceMesh.js'
+import { AcDbPolygonMesh } from '../entity/AcDbPolygonMesh.js'
 import {
   AcDbDxfPairArrayReader,
   acdbTypedValueToDxfPair
-} from './AcDbDxfPairArrayReader'
+} from './AcDbDxfPairArrayReader.js'
 
 /** DXF VERTEX flag: spline frame control point (skip when assembling path). */
 const VERTEX_SPLINE_CONTROL_POINT = 16

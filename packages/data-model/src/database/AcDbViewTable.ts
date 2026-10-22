@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
-import { AcDbViewTableRecord } from './AcDbViewTableRecord'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
+import { AcDbViewTableRecord } from './AcDbViewTableRecord.js'
 
 /**
  * Symbol table for view table records.

@@ -1,8 +1,8 @@
-import { AcDbResultBuffer } from '../base/AcDbResultBuffer'
-import type { AcDbTypedValue } from '../base/AcDbTypedValue'
-import { AcLyLayerFilter } from './AcLyLayerFilter'
-import { AcLyLayerFilterTree } from './AcLyLayerFilterTree'
-import { AcLyLayerGroup } from './AcLyLayerGroup'
+import { AcDbResultBuffer } from '../base/AcDbResultBuffer.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
+import { AcLyLayerFilter } from './AcLyLayerFilter.js'
+import { AcLyLayerFilterTree } from './AcLyLayerFilterTree.js'
+import { AcLyLayerGroup } from './AcLyLayerGroup.js'
 
 /**
  * Dictionary name for the legacy (pre-2005) layer-filter store.

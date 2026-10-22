@@ -3,8 +3,8 @@ import {
   AcGePoint3dLike,
   AcGeVector2d,
   AcGeVector3d
-} from '../math'
-import { FLOAT_TOL } from './AcGeConstants'
+} from '../math/index.js'
+import { FLOAT_TOL } from './AcGeConstants.js'
 
 /**
  * The class used to store some tolerance values.

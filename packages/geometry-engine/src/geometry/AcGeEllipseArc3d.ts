@@ -9,13 +9,13 @@ import {
   AcGePointLike,
   AcGeVector3d,
   AcGeVector3dLike
-} from '../math'
-import { AcGeMathUtil, FLOAT_TOL, ORIGIN_POINT_3D, TAU } from '../util'
-import { AcGeTol } from '../util/AcGeTol'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { AcGeCircArc3d } from './AcGeCircArc3d'
-import { AcGeCurve3d } from './AcGeCurve3d'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
+} from '../math/index.js'
+import { AcGeTol } from '../util/AcGeTol.js'
+import { AcGeMathUtil, FLOAT_TOL, ORIGIN_POINT_3D, TAU } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { AcGeCircArc3d } from './AcGeCircArc3d.js'
+import { AcGeCurve3d } from './AcGeCurve3d.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
 
 /**
  * Class representing a 3d ellipse arc defined by center, normal, majorAxis, majorAxisRadius,

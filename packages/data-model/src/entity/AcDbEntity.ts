@@ -17,15 +17,15 @@ import {
   AcGiStyleType
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
-import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants'
-import { AcDbIntersect } from '../misc/AcDbIntersect'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
+import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants.js'
+import { AcDbIntersect } from '../misc/AcDbIntersect.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup
-} from './AcDbEntityProperties'
+} from './AcDbEntityProperties.js'
 
 /**
  * Abstract base class for all drawing entities.

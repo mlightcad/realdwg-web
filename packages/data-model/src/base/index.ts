@@ -1,22 +1,22 @@
-export { AcDbDxfCode } from './AcDbDxfCode'
+export { AcDbDxfCode } from './AcDbDxfCode.js'
 export {
   AcDbDxfFiler,
   AcDbDxfFilerStatus
-} from './AcDbDxfFiler'
+} from './AcDbDxfFiler.js'
 export type {
   AcDbDxfFilerMode,
   AcDbDxfFilerOptions,
   AcDbDxfOutputFormat
-} from './AcDbDxfFiler'
+} from './AcDbDxfFiler.js'
 export {
   acdbDxfIsInt32Code,
   acdbDxfValueType
-} from './AcDbDxfGroupCodeTypes'
+} from './AcDbDxfGroupCodeTypes.js'
 export type {
   AcDbDxfValueType,
   AcDbDxfValueTypeOrComment
-} from './AcDbDxfGroupCodeTypes'
-export type { AcDbDxfPair } from './AcDbDxfPair'
+} from './AcDbDxfGroupCodeTypes.js'
+export type { AcDbDxfPair } from './AcDbDxfPair.js'
 export {
   acdbCreateDxfPairReader,
   acdbIsBinaryDxf,
@@ -24,12 +24,12 @@ export {
   acdbMakeBinaryDxfPairReader,
   acdbMakeUtf8AsciiDxfPairReader,
   acdbPeekDxfHeaderInfo
-} from './AcDbDxfPairReader'
+} from './AcDbDxfPairReader.js'
 export type {
   AcDbCreateDxfPairReaderOptions,
   AcDbDxfHeaderInfo,
   AcDbDxfPairReader
-} from './AcDbDxfPairReader'
+} from './AcDbDxfPairReader.js'
 export {
   ACDB_DXF_MTEXT_CHUNK_CHARS,
   ACDB_DXF_XDATA_BINARY_MAX_BYTES,
@@ -40,21 +40,21 @@ export {
   acdbChunkUtf8ByMaxBytes,
   acdbEncodeDxfUnicodeEscapes,
   acdbExpandDxfUnicodeEscapes
-} from './AcDbDxfStringChunks'
-export type { AcDbDxfMTextContentChunk } from './AcDbDxfStringChunks'
+} from './AcDbDxfStringChunks.js'
+export type { AcDbDxfMTextContentChunk } from './AcDbDxfStringChunks.js'
 export {
   AcDbHostApplicationServices,
   acdbHostApplicationServices,
   acdbSetLayoutManagerFactory
-} from './AcDbHostApplicationServices'
+} from './AcDbHostApplicationServices.js'
 export {
   AcDbObject,
   TEMP_OBJECT_ID_PREFIX,
   acdbAssignWorkingDatabase,
   acdbGetWorkingDatabase,
   acdbSetHostApplicationServicesProvider
-} from './AcDbObject'
-export type { AcDbObjectAttrs, AcDbObjectId } from './AcDbObject'
-export { AcDbOpenMode } from './AcDbOpenMode'
-export { AcDbResultBuffer } from './AcDbResultBuffer'
-export type { AcDbTypedValue } from './AcDbTypedValue'
+} from './AcDbObject.js'
+export type { AcDbObjectAttrs, AcDbObjectId } from './AcDbObject.js'
+export { AcDbOpenMode } from './AcDbOpenMode.js'
+export { AcDbResultBuffer } from './AcDbResultBuffer.js'
+export type { AcDbTypedValue } from './AcDbTypedValue.js'

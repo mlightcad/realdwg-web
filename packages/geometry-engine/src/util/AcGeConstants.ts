@@ -1,4 +1,4 @@
-import { AcGePoint2dLike, AcGePoint3dLike } from '../math'
+import { AcGePoint2dLike, AcGePoint3dLike } from '../math/index.js'
 
 /**
  * Floating point comparison tolerance.

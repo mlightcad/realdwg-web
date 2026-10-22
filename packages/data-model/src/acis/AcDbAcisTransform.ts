@@ -7,9 +7,9 @@
  * (common when ACIS points stay in a pre-block coordinate frame).
  */
 
-import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
-import type { AcDbAcisSabVector } from './AcDbAcisSab'
-import { AcDbAcisSabTag } from './AcDbAcisSab'
+import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities.js'
+import type { AcDbAcisSabVector } from './AcDbAcisSab.js'
+import { AcDbAcisSabTag } from './AcDbAcisSab.js'
 
 /** Affine transform carried by an ACIS `transform` entity. */
 export interface AcDbAcisAffineTransform {

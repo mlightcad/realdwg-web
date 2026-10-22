@@ -4,8 +4,8 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d
-} from '../math'
-import { AcGeCurve3d } from './AcGeCurve3d'
+} from '../math/index.js'
+import { AcGeCurve3d } from './AcGeCurve3d.js'
 
 /**
  * Centripetal CatmullRom Curve - which is useful for avoiding

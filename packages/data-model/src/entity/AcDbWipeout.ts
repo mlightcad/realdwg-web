@@ -1,8 +1,8 @@
 import { AcGeArea2d, AcGePolyline2d } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbRasterImage } from './AcDbRasterImage'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbRasterImage } from './AcDbRasterImage.js'
 
 /**
  * Entity that creates a blank area in the drawing.

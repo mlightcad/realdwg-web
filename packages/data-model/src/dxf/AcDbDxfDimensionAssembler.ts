@@ -1,21 +1,21 @@
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbDxfPair } from '../base/AcDbDxfPair'
-import type { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDb3PointAngularDimension } from '../entity/dimension/AcDb3PointAngularDimension'
-import { AcDbAlignedDimension } from '../entity/dimension/AcDbAlignedDimension'
-import { AcDbArcDimension } from '../entity/dimension/AcDbArcDimension'
-import { AcDbDiametricDimension } from '../entity/dimension/AcDbDiametricDimension'
-import type { AcDbDimension } from '../entity/dimension/AcDbDimension'
-import { AcDbOrdinateDimension } from '../entity/dimension/AcDbOrdinateDimension'
-import { AcDbRadialDimension } from '../entity/dimension/AcDbRadialDimension'
-import { AcDbRotatedDimension } from '../entity/dimension/AcDbRotatedDimension'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbDxfPair } from '../base/AcDbDxfPair.js'
+import type { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDb3PointAngularDimension } from '../entity/dimension/AcDb3PointAngularDimension.js'
+import { AcDbAlignedDimension } from '../entity/dimension/AcDbAlignedDimension.js'
+import { AcDbArcDimension } from '../entity/dimension/AcDbArcDimension.js'
+import { AcDbDiametricDimension } from '../entity/dimension/AcDbDiametricDimension.js'
+import type { AcDbDimension } from '../entity/dimension/AcDbDimension.js'
+import { AcDbOrdinateDimension } from '../entity/dimension/AcDbOrdinateDimension.js'
+import { AcDbRadialDimension } from '../entity/dimension/AcDbRadialDimension.js'
+import { AcDbRotatedDimension } from '../entity/dimension/AcDbRotatedDimension.js'
 import {
   acdbDrainDxfObjectPairs,
   AcDbDxfPairArrayReader,
   acdbTypedValueToDxfPair
-} from './AcDbDxfPairArrayReader'
+} from './AcDbDxfPairArrayReader.js'
 
 const DIMENSION_SUBCLASS_MARKERS = new Set([
   'AcDbAlignedDimension',

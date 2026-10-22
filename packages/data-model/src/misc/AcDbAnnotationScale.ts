@@ -1,9 +1,9 @@
-import type { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDictionary } from '../object/AcDbDictionary'
-import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData'
-import { AcDbScale } from '../object/AcDbScale'
-import { AcDbXrecord } from '../object/AcDbXrecord'
+import type { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbDictionary } from '../object/AcDbDictionary.js'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
+import { AcDbScale } from '../object/AcDbScale.js'
+import { AcDbXrecord } from '../object/AcDbXrecord.js'
 
 const normalizeHandle = (handle?: string) =>
   handle ? handle.trim().toUpperCase() : ''

@@ -1,15 +1,15 @@
-import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
+import { AcDbDwgVersion } from '../database/AcDbDwgVersion.js'
 import {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
   acdbNormalizeTextEncoding
-} from '../misc/AcDbCodePage'
+} from '../misc/AcDbCodePage.js'
 import {
   acdbDxfIsInt32Code,
   acdbDxfValueType
-} from './AcDbDxfGroupCodeTypes'
-import type { AcDbDxfPair } from './AcDbDxfPair'
-import { acdbExpandDxfUnicodeEscapes } from './AcDbDxfStringChunks'
+} from './AcDbDxfGroupCodeTypes.js'
+import type { AcDbDxfPair } from './AcDbDxfPair.js'
+import { acdbExpandDxfUnicodeEscapes } from './AcDbDxfStringChunks.js'
 
 /** Magic prefix for AutoCAD Binary DXF files (22 bytes). */
 const BINARY_DXF_MAGIC = (() => {

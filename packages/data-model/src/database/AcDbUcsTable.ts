@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
-import { AcDbUcsTableRecord } from './AcDbUcsTableRecord'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
+import { AcDbUcsTableRecord } from './AcDbUcsTableRecord.js'
 
 /**
  * Symbol table for named User Coordinate Systems (DXF UCS table).

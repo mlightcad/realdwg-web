@@ -9,12 +9,12 @@ import {
   AcGePointLike,
   AcGeVector3d,
   AcGeVector3dLike
-} from '../math'
-import { AcGeMathUtil, AcGeTol, ORIGIN_POINT_3D, TAU } from '../util'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { acgeComputeCircumcircle3d } from './AcGeCircArcUtil'
-import { AcGeCurve3d } from './AcGeCurve3d'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
+} from '../math/index.js'
+import { AcGeMathUtil, AcGeTol, ORIGIN_POINT_3D, TAU } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { acgeComputeCircumcircle3d } from './AcGeCircArcUtil.js'
+import { AcGeCurve3d } from './AcGeCurve3d.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
 
 /**
  * The class represeting both full circles and circular arcs in 3d space. The ellipse arc is

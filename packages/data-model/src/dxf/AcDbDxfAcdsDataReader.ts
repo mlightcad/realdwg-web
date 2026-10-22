@@ -1,5 +1,5 @@
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic'
+import type { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic/index.js'
 
 const ASM_DATA_TYPE = 'ASM_Data'
 

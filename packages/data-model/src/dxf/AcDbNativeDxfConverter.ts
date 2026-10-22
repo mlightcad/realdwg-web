@@ -4,15 +4,15 @@ import {
   accmYieldForPaint
 } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
 import {
   type AcDbConversionProgressCallback,
   AcDbDatabaseConverter,
   type AcDbDatabaseConverterConfig,
   type AcDbDatabaseConverterReadOptions
-} from '../database/AcDbDatabaseConverter'
-import { AcDbDxfDocumentReader } from './AcDbDxfDocumentReader'
+} from '../database/AcDbDatabaseConverter.js'
+import { AcDbDxfDocumentReader } from './AcDbDxfDocumentReader.js'
 
 /**
  * Progress weights mirror typical open cost: a small PARSE slice, then most of

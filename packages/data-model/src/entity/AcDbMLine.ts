@@ -12,26 +12,26 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   ByBlock,
   ByLayer,
   DEFAULT_LINE_TYPE,
   DEFAULT_MLINE_STYLE
-} from '../misc/AcDbConstants'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+} from '../misc/AcDbConstants.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
-} from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
+} from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
+} from './AcDbOsnapHelpers.js'
 
 /**
  * Defines MLINE justification relative to the style element offsets.

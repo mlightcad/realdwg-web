@@ -1,17 +1,17 @@
-import { AcDbDxfCode } from '../base/AcDbDxfCode'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbBlockReference } from '../entity/AcDbBlockReference'
+import { AcDbDxfCode } from '../base/AcDbDxfCode.js'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbBlockReference } from '../entity/AcDbBlockReference.js'
 import {
   ACDB_DYN_BLOCK_ENHANCED_BLOCK,
   ACDB_DYN_BLOCK_REP_BTAG_APP,
   ACDB_DYN_BLOCK_REP_DATA,
   ACDB_DYN_BLOCK_REPRESENTATION_DICT,
   acdbIsAnonymousUserBlockName
-} from '../misc/AcDbDynBlockConstants'
-import { AcDbBlockRepresentationData } from './AcDbBlockRepresentationData'
-import { AcDbDictionary } from './AcDbDictionary'
+} from '../misc/AcDbDynBlockConstants.js'
+import { AcDbBlockRepresentationData } from './AcDbBlockRepresentationData.js'
+import { AcDbDictionary } from './AcDbDictionary.js'
 
 /**
  * ObjectARX-style helper for working with dynamic block references.

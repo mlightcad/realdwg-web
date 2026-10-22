@@ -4,14 +4,14 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d
-} from '../math'
-import { AcGeMathUtil, FLOAT_TOL, TAU } from '../util'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { AcGeCurve2d } from './AcGeCurve2d'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
-import { AcGeEllipseArc2d } from './AcGeEllipseArc2d'
-import { AcGeLine2d } from './AcGeLine2d'
-import { AcGeSpline3d } from './AcGeSpline3d'
+} from '../math/index.js'
+import { AcGeMathUtil, FLOAT_TOL, TAU } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { AcGeCurve2d } from './AcGeCurve2d.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
+import { AcGeEllipseArc2d } from './AcGeEllipseArc2d.js'
+import { AcGeLine2d } from './AcGeLine2d.js'
+import { AcGeSpline3d } from './AcGeSpline3d.js'
 
 export type AcGeBoundaryEdgeType =
   | AcGeLine2d

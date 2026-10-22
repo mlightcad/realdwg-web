@@ -6,8 +6,8 @@ import {
   AcCmTaskScheduler
 } from '@mlightcad/common'
 
-import type { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSysVarManager } from './AcDbSysVarManager'
+import type { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSysVarManager } from './AcDbSysVarManager.js'
 
 /**
  * Represents the different stages of DXF/DWG file conversion.

@@ -1,16 +1,16 @@
 import { AcGeBox3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks
-} from '../misc/proxyGraphic'
+} from '../misc/proxyGraphic/index.js'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup
-} from './AcDbEntityProperties'
-import { AcDbFrame } from './AcDbFrame'
+} from './AcDbEntityProperties.js'
+import { AcDbFrame } from './AcDbFrame.js'
 
 /**
  * Represents a legacy OLE 1 frame entity in AutoCAD.

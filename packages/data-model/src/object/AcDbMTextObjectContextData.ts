@@ -1,7 +1,7 @@
 import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject.js'
 
 /**
  * Per-annotation-scale representation for an annotative MTEXT

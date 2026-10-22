@@ -9,8 +9,8 @@
  * @version 1.0.0
  */
 
-import { AcCmEventManager } from './AcCmEventManager'
-import { clone, defaults, has, isEmpty, isEqual } from './AcCmLodashUtils'
+import { AcCmEventManager } from './AcCmEventManager.js'
+import { clone, defaults, has, isEmpty, isEqual } from './AcCmLodashUtils.js'
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export type AcCmAttributes = Record<string, any>

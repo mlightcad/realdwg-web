@@ -1,4 +1,4 @@
-import type { AcDbPatDocument } from './AcDbPatDefinition'
+import type { AcDbPatDocument } from './AcDbPatDefinition.js'
 
 /**
  * Predefined hatch patterns from the classic `acad.pat` library.

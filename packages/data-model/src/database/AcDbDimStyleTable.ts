@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 
 /**
  * Symbol table for dimension style table records.

@@ -1,10 +1,10 @@
 import { defaults } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbAbstractViewTableRecord,
   AcDbAbstractViewTableRecordAttrs
-} from './AcDbAbstractViewTableRecord'
+} from './AcDbAbstractViewTableRecord.js'
 
 /**
  * Interface defining the attributes for view table records.

@@ -9,12 +9,12 @@
  * @version 1.0.0
  */
 
-import { AcCmLoader, AcCmLoaderProgressCallback } from './AcCmLoader'
+import { AcCmLoader, AcCmLoaderProgressCallback } from './AcCmLoader.js'
 import {
   AcCmLoadingManager,
   AcCmOnErrorCallback,
   AcCmOnLoadCallback
-} from './AcCmLoadingManager'
+} from './AcCmLoadingManager.js'
 
 /**
  * @internal
@@ -123,7 +123,7 @@ type AcCmResponseType =
  *
  * @example
  * ```typescript
- * import { AcCmFileLoader } from './AcCmFileLoader'
+ * import { AcCmFileLoader } from './AcCmFileLoader.js'
  *
  * const loader = new AcCmFileLoader()
  *

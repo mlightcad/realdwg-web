@@ -1,7 +1,7 @@
 import {
   AcDbDwgVersion,
   type AcDbDxfVersionCapabilities
-} from '../database/AcDbDwgVersion'
+} from '../database/AcDbDwgVersion.js'
 
 export type { AcDbDxfVersionCapabilities }
 

@@ -1,6 +1,6 @@
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGeVector2d } from './AcGeVector2d'
-import { AcGeVector3d } from './AcGeVector3d'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGeVector2d } from './AcGeVector2d.js'
+import { AcGeVector3d } from './AcGeVector3d.js'
 
 /**
  * The class representing a 3x3 matrix.

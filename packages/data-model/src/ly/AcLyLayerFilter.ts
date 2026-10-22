@@ -1,6 +1,6 @@
-import type { AcDbObjectId } from '../base/AcDbObject'
-import type { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
-import { AcLyBoolExpr } from './AcLyBoolExpr'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
+import type { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord.js'
+import { AcLyBoolExpr } from './AcLyBoolExpr.js'
 
 /**
  * Result returned by {@link AcLyLayerFilter.showEditor}.

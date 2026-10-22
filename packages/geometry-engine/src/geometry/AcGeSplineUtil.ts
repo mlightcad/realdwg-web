@@ -1,4 +1,4 @@
-import { AcGePoint3dLike } from '../math'
+import { AcGePoint3dLike } from '../math/index.js'
 
 export function acgeIsNonZeroDirection(vector?: AcGePoint3dLike | null): boolean {
   if (!vector) return false

@@ -4,7 +4,9 @@
     "rootDir": "./src",
     "outDir": "./lib",
     "baseUrl": "./src",
-    "composite": true
+    "composite": true,
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "references": [
     {

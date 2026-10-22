@@ -5,34 +5,34 @@ import {
 } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbObjectId } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
 import {
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag
-} from '../database/AcDbBlockTableRecord'
-import type { AcDbClass } from '../database/AcDbClass'
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord'
-import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
-import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord'
-import { AcDbRegAppTableRecord } from '../database/AcDbRegAppTableRecord'
-import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord'
-import { AcDbUcsTableRecord } from '../database/AcDbUcsTableRecord'
-import { AcDbViewportTableRecord } from '../database/AcDbViewportTableRecord'
-import { AcDbViewTableRecord } from '../database/AcDbViewTableRecord'
-import { AcDb3dSolid } from '../entity/AcDb3dSolid'
-import { AcDbAttribute } from '../entity/AcDbAttribute'
-import { AcDbBlockReference } from '../entity/AcDbBlockReference'
-import type { AcDbEntity } from '../entity/AcDbEntity'
-import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic'
+} from '../database/AcDbBlockTableRecord.js'
+import type { AcDbClass } from '../database/AcDbClass.js'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord.js'
+import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord.js'
+import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord.js'
+import { AcDbRegAppTableRecord } from '../database/AcDbRegAppTableRecord.js'
+import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord.js'
+import { AcDbUcsTableRecord } from '../database/AcDbUcsTableRecord.js'
+import { AcDbViewportTableRecord } from '../database/AcDbViewportTableRecord.js'
+import { AcDbViewTableRecord } from '../database/AcDbViewTableRecord.js'
+import { AcDb3dSolid } from '../entity/AcDb3dSolid.js'
+import { AcDbAttribute } from '../entity/AcDbAttribute.js'
+import { AcDbBlockReference } from '../entity/AcDbBlockReference.js'
+import type { AcDbEntity } from '../entity/AcDbEntity.js'
+import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic/index.js'
 import {
   acdbDxfInAcdsData,
   acdbNormalizeDxfHandle
-} from './AcDbDxfAcdsDataReader'
-import { acdbDxfInEntity } from './AcDbDxfEntityFactory'
-import { acdbDxfInHeader } from './AcDbDxfHeaderReader'
-import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader'
+} from './AcDbDxfAcdsDataReader.js'
+import { acdbDxfInEntity } from './AcDbDxfEntityFactory.js'
+import { acdbDxfInHeader } from './AcDbDxfHeaderReader.js'
+import { AcDbDxfObjectsReader } from './AcDbDxfObjectsReader.js'
 
 export interface AcDbDxfDocumentReaderOptions {
   /**

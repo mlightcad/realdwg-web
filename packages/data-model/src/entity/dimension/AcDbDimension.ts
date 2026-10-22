@@ -17,21 +17,21 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
-import { AcDbObjectId } from '../../base'
-import { AcDbDxfFiler } from '../../base'
-import { AcDbDimStyleTableRecord } from '../../database'
-import { AcDbRenderingCache } from '../../misc'
-import { AcDbOsnapMode } from '../../misc'
-import { AcDbBlockReference } from '../AcDbBlockReference'
-import { AcDbEntity } from '../AcDbEntity'
+import { AcDbObjectId } from '../../base/index.js'
+import { AcDbDxfFiler } from '../../base/index.js'
+import { AcDbDimStyleTableRecord } from '../../database/index.js'
+import { AcDbRenderingCache } from '../../misc/index.js'
+import { AcDbOsnapMode } from '../../misc/index.js'
+import { AcDbBlockReference } from '../AcDbBlockReference.js'
+import { AcDbEntity } from '../AcDbEntity.js'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup,
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
-} from '../AcDbEntityProperties'
-import { acdbForEachGripIndex } from '../AcDbGripHelpers'
-import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers'
+} from '../AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from '../AcDbGripHelpers.js'
+import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers.js'
 
 /**
  * Defines the line spacing style for dimension text.

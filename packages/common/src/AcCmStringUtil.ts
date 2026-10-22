@@ -30,7 +30,7 @@ export class AcTrStringUtil {
    *
    * @example
    * ```typescript
-   * import { AcTrStringUtil } from './AcCmStringUtil'
+   * import { AcTrStringUtil } from './AcCmStringUtil.js'
    *
    * // Format different byte sizes
    * AcTrStringUtil.formatBytes(0)          // "0 B"

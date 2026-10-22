@@ -30,7 +30,7 @@ export const DEBUG_MODE = false
  *
  * @example
  * ```typescript
- * import { log } from './AcCmLogUtil'
+ * import { log } from './AcCmLogUtil.js'
  *
  * log.debug('Debug message')
  * log.info('Info message')
@@ -55,7 +55,7 @@ log.setDefaultLevel(DEBUG_MODE ? 'debug' : 'warn')
  *
  * @example
  * ```typescript
- * import { setLogLevel } from './AcCmLogUtil'
+ * import { setLogLevel } from './AcCmLogUtil.js'
  *
  * // Set to debug level for development
  * setLogLevel('debug')

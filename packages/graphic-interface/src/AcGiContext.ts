@@ -1,4 +1,4 @@
-import { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
+import { AcGiSubEntityTraits } from './AcGiSubEntityTraits.js'
 
 export interface AcGiContextOptions {
   /**

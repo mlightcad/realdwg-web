@@ -6,13 +6,13 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
-import { AcGiContext } from './AcGiContext'
-import { AcGiEntity } from './AcGiEntity'
-import { AcGiImageStyle } from './AcGiImageStyle'
-import { AcGiPointStyle } from './AcGiPointStyle'
-import { AcGiShapeData } from './AcGiShapeData'
-import { AcGiSubEntityTraits } from './AcGiSubEntityTraits'
-import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle'
+import { AcGiContext } from './AcGiContext.js'
+import { AcGiEntity } from './AcGiEntity.js'
+import { AcGiImageStyle } from './AcGiImageStyle.js'
+import { AcGiPointStyle } from './AcGiPointStyle.js'
+import { AcGiShapeData } from './AcGiShapeData.js'
+import { AcGiSubEntityTraits } from './AcGiSubEntityTraits.js'
+import { AcGiMTextData, AcGiTextStyle } from './AcGiTextStyle.js'
 
 /**
  * Font mappings.
