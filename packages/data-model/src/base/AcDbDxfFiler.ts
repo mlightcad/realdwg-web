@@ -99,6 +99,8 @@ export class AcDbDxfFiler {
   private _binaryLength = 0
   private readonly _handleMap: Map<string, string>
   private _nextHandle: number
+  /** Index of the `$HANDSEED` value line in ASCII output; patched on finalize. */
+  private _handseedValueLine = -1
 
   private _reader?: AcDbDxfPairReader
   /**
@@ -239,7 +241,8 @@ export class AcDbDxfFiler {
 
   registerHandle(key: string) {
     if (!this._handleMap.has(key)) {
-      // If key is already a valid hex handle, preserve it
+      // If key is already a valid hex handle, preserve it. `$HANDSEED` is
+      // computed later from the max mapped value (see {@link finalizeHandseed}).
       if (/^[0-9A-F]+$/i.test(key)) {
         this._handleMap.set(key, key.toUpperCase())
       } else {
@@ -248,6 +251,52 @@ export class AcDbDxfFiler {
       }
     }
     return this._handleMap.get(key)!
+  }
+
+  /**
+   * Next unused handle based on every value registered in {@link _handleMap}
+   * and the sequential allocator.
+   */
+  private computeHandseed(): string {
+    let max = this._nextHandle - 1
+    for (const hex of this._handleMap.values()) {
+      const value = Number.parseInt(hex, 16)
+      if (Number.isFinite(value) && value > max) {
+        max = value
+      }
+    }
+    return (max + 1).toString(16).toUpperCase()
+  }
+
+  /**
+   * Writes `$HANDSEED` as a placeholder and remembers its value line so
+   * {@link finalizeHandseed} can patch it after all handles are assigned.
+   */
+  writeHandseedPlaceholder() {
+    this.writeString(9, '$HANDSEED')
+    if (this._outputFormat === 'binary') {
+      // Binary DXF cannot easily patch mid-stream; emit the best-known seed now.
+      // Prefer database max if available via already-registered handles.
+      this.writeString(5, this.computeHandseed())
+      return this
+    }
+    this.writeGroup(5, this.computeHandseed())
+    this._handseedValueLine = this._lines.length - 1
+    return this
+  }
+
+  /**
+   * Patches the ASCII `$HANDSEED` value to the next unused handle after the
+   * full drawing has been written.
+   */
+  finalizeHandseed() {
+    if (
+      this._handseedValueLine >= 0 &&
+      this._handseedValueLine < this._lines.length
+    ) {
+      this._lines[this._handseedValueLine] = this.computeHandseed()
+    }
+    return this
   }
 
   resolveHandle(key?: string) {
@@ -515,8 +564,10 @@ export class AcDbDxfFiler {
     }
     this._lines.push(String(Math.trunc(code)))
     const text = this.formatValue(value)
-    // Never emit an empty value line — it breaks DXF pairing (e.g. "70\n\n4") and
-    // strict readers like AutoCAD report a corrupted file.
+    // Numeric formatting can trim to "" (e.g. 1e-12 at low precision). Empty
+    // numeric values must not become a blank line — that breaks DXF pairing
+    // when readers skip blanks. Intentional empty strings are omitted by
+    // {@link writeString} instead of being coerced to "0".
     this._lines.push(text === '' ? '0' : text)
     return this
   }
@@ -539,7 +590,9 @@ export class AcDbDxfFiler {
   }
 
   writeString(code: number, value?: string) {
-    if (!value && value !== '') return this
+    // Omit undefined/null and empty strings. Coercing "" to "0" made empty
+    // LTYPE/STYLE/layer-linetype names come out as the literal name "0".
+    if (value == null || value === '') return this
     return this.writeGroup(code, value)
   }
 
@@ -799,7 +852,7 @@ export class AcDbDxfFiler {
           typeof value === 'string'
             ? this.encodeStringForWrite(value)
             : this.formatValue(value)
-        const encoded = new TextEncoder().encode(text === '' ? '0' : text)
+        const encoded = new TextEncoder().encode(text)
         const withNul = new Uint8Array(encoded.length + 1)
         withNul.set(encoded)
         withNul[encoded.length] = 0

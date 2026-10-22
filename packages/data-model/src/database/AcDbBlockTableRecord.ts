@@ -638,9 +638,13 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbBlockTableRecord')
     filer.writeString(2, this.name)
-    filer.writeInt16(70, this.blockInsertUnits)
-    filer.writeInt16(280, this.explodability)
-    filer.writeInt16(281, this.blockScaling)
+    // Groups 70/280/281 are AutoCAD 2007+ (AC1021). Writing them into an
+    // AC1015 file is rejected or repaired by AutoCAD 2000/2007.
+    if (filer.capabilities.supportsBlockRecordUnitsFlags) {
+      filer.writeInt16(70, this.blockInsertUnits)
+      filer.writeInt16(280, this.explodability)
+      filer.writeInt16(281, this.blockScaling)
+    }
     // TODO: Output PreviewIcon (group 310) with the correct DIB/hex format
     // if (this.previewIcon?.length) { ... }
     if (this.isModelSapce || this.isPaperSapce) {

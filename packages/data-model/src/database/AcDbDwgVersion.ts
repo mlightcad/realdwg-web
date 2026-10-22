@@ -102,7 +102,9 @@ const dwgVersions: AcDbDwgVersionEntry[] = [
  *   BLOCK_RECORD, LWPOLYLINE
  * - 2000 (AC1015, value 23): lineweight (370)
  * - 2004 (AC1018, value 25): true color (420), transparency (440)
- * - 2007 (AC1021, value 27): UTF-8 `$DWGCODEPAGE`
+ * - 2007/2008 (AC1021, value 27): UTF-8 `$DWGCODEPAGE`, BLOCK_RECORD
+ *   units/explodability flags (70/280/281), MLEADER / `$CMLEADERSTYLE`
+ * - 2010/2011 (AC1024, value 29): hatch header vars (`$HPCOLOR`, `$HPLAYER`, …)
  */
 export interface AcDbDxfVersionCapabilities {
   /** R13+: entity/object handles (group 5 / 105) and soft/hard pointers. */
@@ -125,6 +127,18 @@ export interface AcDbDxfVersionCapabilities {
   supportsTransparency: boolean
   /** AutoCAD 2007+: emit `$DWGCODEPAGE` as UTF-8. */
   supportsUtf8CodePage: boolean
+  /**
+   * AutoCAD 2007+: BLOCK_RECORD insertion units (70), explodability (280),
+   * and scalability (281).
+   */
+  supportsBlockRecordUnitsFlags: boolean
+  /** AutoCAD 2008+: MLEADERSTYLE objects and `$CMLEADERSTYLE` header var. */
+  supportsMLeader: boolean
+  /**
+   * AutoCAD 2011+: hatch-related header vars (`$HPCOLOR`, `$HPBACKGROUNDCOLOR`,
+   * `$HPLAYER`, `$HPTRANSPARENCY`).
+   */
+  supportsHatchHeaderVars: boolean
 }
 
 export class AcDbDwgVersion {
@@ -193,7 +207,10 @@ export class AcDbDwgVersion {
       supportsLineWeight: value >= 23,
       supportsTrueColor: value >= 25,
       supportsTransparency: value >= 25,
-      supportsUtf8CodePage: value >= 27
+      supportsUtf8CodePage: value >= 27,
+      supportsBlockRecordUnitsFlags: value >= 27,
+      supportsMLeader: value >= 27,
+      supportsHatchHeaderVars: value >= 29
     }
   }
 }

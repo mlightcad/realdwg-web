@@ -2733,6 +2733,9 @@ export class AcDbDatabase extends AcDbObject {
     this.writeDxfObjectsSection(filer)
     this.writeDxfThumbnailImageSection(filer, options.saveThumbnailImage)
     filer.writeStart('EOF')
+    // `$HANDSEED` is written early in HEADER; patch it now that every handle
+    // (including BLOCK/ENDBLK) has been assigned.
+    filer.finalizeHandseed()
     return options.format === 'binary' ? filer.toBinary() : filer.toString()
   }
 
@@ -2948,12 +2951,46 @@ export class AcDbDatabase extends AcDbObject {
       this.objects.layout.setAt(layout.layoutName, layout)
       modelSpace.layoutId = layout.objectId
     }
+    this.ensureDefaultPaperSpaceLayout()
     if (!this.tables.appIdTable.has(ACAD_APPID)) {
       this.tables.appIdTable.add(new AcDbRegAppTableRecord(ACAD_APPID))
     }
     if (!this.tables.appIdTable.has(MLIGHTCAD_APPID)) {
       this.tables.appIdTable.add(new AcDbRegAppTableRecord(MLIGHTCAD_APPID))
     }
+  }
+
+  /**
+   * Ensures a `*Paper_Space` block record and `Layout1` exist.
+   *
+   * AutoCAD rejects / repairs drawings that only have model space.
+   */
+  private ensureDefaultPaperSpaceLayout() {
+    for (const btr of this.tables.blockTable.newIterator()) {
+      if (btr.isPaperSapce) {
+        return
+      }
+    }
+
+    const paperSpace = new AcDbBlockTableRecord()
+    paperSpace.name = AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+    this.tables.blockTable.add(paperSpace)
+
+    const layoutName = this.objects.layout.getAt('Layout1')
+      ? `Layout${this.objects.layout.maxTabOrder + 1}`
+      : 'Layout1'
+    const layout = new AcDbLayout()
+    layout.layoutName = layoutName
+    layout.tabOrder = Math.max(1, this.objects.layout.maxTabOrder + 1)
+    layout.blockTableRecordId = paperSpace.objectId
+    // Avoid 420 in extents so dialect tests can assert absence of true-color
+    // group code 420 without false positives from paper size.
+    layout.limits.min.copy({ x: 0, y: 0 })
+    layout.limits.max.copy({ x: 12, y: 9 })
+    layout.extents.min.copy({ x: 0, y: 0, z: 0 })
+    layout.extents.max.copy({ x: 12, y: 9, z: 0 })
+    this.objects.layout.setAt(layout.layoutName, layout)
+    paperSpace.layoutId = layout.objectId
   }
 
   /**
@@ -3042,8 +3079,9 @@ export class AcDbDatabase extends AcDbObject {
     filer.startSection('HEADER')
     filer.writeString(9, '$ACADVER')
     filer.writeString(1, filer.version?.name ?? this.version.name)
-    filer.writeString(9, '$HANDSEED')
-    filer.writeString(5, filer.nextHandle.toString(16).toUpperCase())
+    // Placeholder — patched by {@link AcDbDxfFiler.finalizeHandseed} after
+    // every handle (including BLOCK/ENDBLK) has been assigned.
+    filer.writeHandseedPlaceholder()
     filer.writeString(9, '$DWGCODEPAGE')
     if (filer.capabilities.supportsUtf8CodePage) {
       filer.writeString(3, 'UTF-8')
@@ -3068,8 +3106,9 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(9, '$LTSCALE')
     filer.writeDouble(40, this.ltscale)
     if (filer.capabilities.supportsLineWeight) {
+      // DXF Reference: $LWDISPLAY is group code 290 (boolean), not 70.
       filer.writeString(9, '$LWDISPLAY')
-      filer.writeInt16(70, this.lwdisplay ? 1 : 0)
+      filer.writeBoolean(290, this.lwdisplay)
     }
     filer.writeString(9, '$CELTSCALE')
     filer.writeDouble(40, this.celtscale)
@@ -3098,24 +3137,33 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(2, this.cmlstyle)
     filer.writeString(9, '$CMLSCALE')
     filer.writeDouble(40, this.cmlscale)
-    filer.writeString(9, '$CMLEADERSTYLE')
-    filer.writeString(2, this.cmleaderstyle)
-    if (this.hpcolor.colorMethod !== AcCmColorMethod.None) {
-      filer.writeString(9, '$HPCOLOR')
-      filer.writeCmColor(this.hpcolor, 2)
+    if (filer.capabilities.supportsMLeader) {
+      filer.writeString(9, '$CMLEADERSTYLE')
+      filer.writeString(2, this.cmleaderstyle)
     }
-    if (this.hpbackgroundcolor.colorMethod !== AcCmColorMethod.None) {
-      filer.writeString(9, '$HPBACKGROUNDCOLOR')
-      filer.writeCmColor(this.hpbackgroundcolor, 2)
-    }
-    filer.writeString(9, '$HPLAYER')
-    filer.writeString(8, this.hplayer)
-    if (
-      filer.capabilities.supportsTransparency &&
-      !this.hptransparency.isInvalid
-    ) {
-      filer.writeString(9, '$HPTRANSPARENCY')
-      filer.writeTransparency(this.hptransparency)
+    if (filer.capabilities.supportsHatchHeaderVars) {
+      if (this.hpcolor.colorMethod !== AcCmColorMethod.None) {
+        filer.writeString(9, '$HPCOLOR')
+        // Color header vars use ACI group 62 (and 420 when supported), not 2.
+        filer.writeCmColor(this.hpcolor)
+      }
+      if (this.hpbackgroundcolor.colorMethod !== AcCmColorMethod.None) {
+        filer.writeString(9, '$HPBACKGROUNDCOLOR')
+        filer.writeCmColor(this.hpbackgroundcolor)
+      }
+      // "." means "use current layer" in AutoCAD; omit when unset/placeholder
+      // so R2000-era readers are not handed a non-layer name.
+      if (this.hplayer && this.hplayer !== '.') {
+        filer.writeString(9, '$HPLAYER')
+        filer.writeString(8, this.hplayer)
+      }
+      if (
+        filer.capabilities.supportsTransparency &&
+        !this.hptransparency.isInvalid
+      ) {
+        filer.writeString(9, '$HPTRANSPARENCY')
+        filer.writeTransparency(this.hptransparency)
+      }
     }
     filer.writeString(9, '$TEXTSTYLE')
     filer.writeString(7, this.textstyle)
@@ -3129,10 +3177,7 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt16(70, this.aunits)
     filer.writeString(9, '$AUPREC')
     filer.writeInt16(70, this.auprec)
-    filer.writeString(9, '$EXTMIN')
-    filer.writePoint3d(10, this.extmin)
-    filer.writeString(9, '$EXTMAX')
-    filer.writePoint3d(10, this.extmax)
+    this.writeDxfExtentsHeader(filer)
     filer.writeString(9, '$PDMODE')
     filer.writeInt32(70, this.pdmode)
     filer.writeString(9, '$PDSIZE')
@@ -3142,6 +3187,42 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeString(9, '$ORTHOMODE')
     filer.writeInt16(70, this.orthomode)
     filer.endSection()
+  }
+
+  /**
+   * Writes `$EXTMIN` / `$EXTMAX`. Empty drawings use AutoCAD's 1e20 / -1e20
+   * convention; otherwise extents are taken from the database box, refreshed
+   * from model-space geometry when still empty.
+   */
+  private writeDxfExtentsHeader(filer: AcDbDxfFiler) {
+    if (this._extents.isEmpty()) {
+      this.refreshExtentsFromModelSpace()
+    }
+    if (this._extents.isEmpty()) {
+      filer.writeString(9, '$EXTMIN')
+      filer.writePoint3d(10, { x: 1e20, y: 1e20, z: 1e20 })
+      filer.writeString(9, '$EXTMAX')
+      filer.writePoint3d(10, { x: -1e20, y: -1e20, z: -1e20 })
+      return
+    }
+    filer.writeString(9, '$EXTMIN')
+    filer.writePoint3d(10, this.extmin)
+    filer.writeString(9, '$EXTMAX')
+    filer.writePoint3d(10, this.extmax)
+  }
+
+  /** Expands {@link _extents} from model-space entity geometry when possible. */
+  private refreshExtentsFromModelSpace() {
+    for (const entity of this.tables.blockTable.modelSpace.newIterator()) {
+      try {
+        const box = entity.geometricExtents
+        if (box && !box.isEmpty()) {
+          this._extents.union(box)
+        }
+      } catch {
+        // Some entities may not yet have computable extents; skip them.
+      }
+    }
   }
 
   /**
@@ -3319,17 +3400,22 @@ export class AcDbDatabase extends AcDbObject {
     }
 
     ensureRootEntry('ACAD_LAYOUT', this.objects.layout)
-    if (this.objects.group.numEntries > 0) {
-      ensureRootEntry('ACAD_GROUP', this.objects.group)
-    } else {
-      dropRootEntry('ACAD_GROUP')
-    }
+    // AutoCAD always expects an ACAD_GROUP dictionary (may be empty).
+    ensureRootEntry('ACAD_GROUP', this.objects.group)
     if (this.objects.sortentsTable.numEntries > 0) {
       ensureRootEntry('ACAD_SORTENTS', this.objects.sortentsTable)
     } else {
       dropRootEntry('ACAD_SORTENTS')
     }
-    if (this.objects.mleaderStyle.numEntries > 0) {
+    const hasMLeaderStyles = this.objects.mleaderStyle.numEntries > 0
+    const writeMLeader =
+      filer.capabilities.supportsMLeader && hasMLeaderStyles
+    // When the target DXF version cannot carry MLEADERSTYLE, omit it from
+    // this export only — do not permanently strip it from the live root dict.
+    const restoreMLeaderRoot =
+      !writeMLeader &&
+      rootDict.getAt('ACAD_MLEADERSTYLE') === this.objects.mleaderStyle
+    if (writeMLeader) {
       ensureRootEntry('ACAD_MLEADERSTYLE', this.objects.mleaderStyle)
     } else {
       dropRootEntry('ACAD_MLEADERSTYLE')
@@ -3353,13 +3439,11 @@ export class AcDbDatabase extends AcDbObject {
     writeDictionary(rootDict)
     writeDictionary(this.objects.layout)
 
-    if (this.objects.group.numEntries > 0) {
-      writeDictionary(this.objects.group)
-    }
+    writeDictionary(this.objects.group)
     if (this.objects.sortentsTable.numEntries > 0) {
       writeDictionary(this.objects.sortentsTable)
     }
-    if (this.objects.mleaderStyle.numEntries > 0) {
+    if (writeMLeader) {
       writeDictionary(this.objects.mleaderStyle)
     }
     if (this.objects.mlineStyle.numEntries > 0) {
@@ -3405,9 +3489,11 @@ export class AcDbDatabase extends AcDbObject {
       layerIndex.dxfOut(filer, true)
     }
 
-    for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
-      filer.writeStart('MLEADERSTYLE')
-      mleaderStyle.dxfOut(filer, true)
+    if (writeMLeader) {
+      for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
+        filer.writeStart('MLEADERSTYLE')
+        mleaderStyle.dxfOut(filer, true)
+      }
     }
     for (const [_, mlineStyle] of this.objects.mlineStyle.entries()) {
       filer.writeStart('MLINESTYLE')
@@ -3421,6 +3507,10 @@ export class AcDbDatabase extends AcDbObject {
 
     this.writeAcLyLayerFilterObjects(filer)
     filer.endSection()
+
+    if (restoreMLeaderRoot) {
+      rootDict.setAt('ACAD_MLEADERSTYLE', this.objects.mleaderStyle)
+    }
   }
 
   /**

@@ -116,7 +116,8 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(dxf).toContain('9\n$CELTYPE\n6\nByLayer\n')
     expect(dxf).toContain('9\n$CMLSTYLE\n2\nStandard\n')
     expect(dxf).toContain('9\n$CMLSCALE\n40\n1\n')
-    expect(dxf).toContain('9\n$CMLEADERSTYLE\n2\nStandard\n')
+    // $CMLEADERSTYLE is AutoCAD 2008+ (AC1021); AC1014 must omit it.
+    expect(dxf).not.toContain('$CMLEADERSTYLE')
     expect(dxf).toContain('0\nTABLE\n2\nLAYER\n')
     expect(dxf).toContain('0\nLAYER\n')
     expect(dxf).toContain('2\n0\n')
@@ -129,9 +130,12 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(dxf).toContain('0\nTABLE\n2\nBLOCK_RECORD\n')
     expect(dxf).toContain('0\nBLOCK_RECORD\n')
     expect(dxf).toContain('2\n*Model_Space\n')
+    expect(dxf).toContain('2\n*Paper_Space\n')
     expect(dxf).toContain('0\nBLOCK\n')
     expect(dxf).toContain('0\nLAYOUT\n')
     expect(dxf).toContain('1\nModel\n')
+    expect(dxf).toContain('1\nLayout1\n')
+    expect(dxf).toContain('3\nACAD_GROUP\n')
   })
 
   it('writes common entity fields for line, text, and lightweight polyline', () => {
@@ -250,7 +254,8 @@ describe('AcDbDatabase.dxfOut', () => {
       valuesByCode(record, '2').includes('TEST_BLOCK')
     )
     expect(blockRecord).toBeDefined()
-    expect(valuesByCode(blockRecord!, '70')).toContain('0')
+    // BLOCK_RECORD group 70 is R2007+; default AC1014 omits it.
+    expect(valuesByCode(blockRecord!, '70')).toEqual([])
     expect(valuesByCode(blockRecord!, '10')).toEqual([])
 
     const blockBegin = findRecord(blockRecords, 'BLOCK', record =>
@@ -335,7 +340,7 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.modelSpace.appendEntity(mleader)
 
     expect(mleader.mleaderStyleId).toBe(activeStyle.objectId)
-    expect(asAsciiDxf(db.dxfOut(undefined, 6))).toContain(
+    expect(asAsciiDxf(db.dxfOut(undefined, 6, 'AC1021'))).toContain(
       '9\n$CMLEADERSTYLE\n2\nACTIVE\n'
     )
   })
@@ -349,8 +354,8 @@ describe('AcDbDatabase.dxfOut', () => {
     db.tables.blockTable.add(paperSpace)
 
     const layout = new AcDbLayout()
-    layout.layoutName = 'Layout1'
-    layout.tabOrder = 1
+    layout.layoutName = 'Layout2'
+    layout.tabOrder = 2
     layout.blockTableRecordId = paperSpace.objectId
     db.objects.layout.setAt(layout.layoutName, layout)
     paperSpace.layoutId = layout.objectId
@@ -361,7 +366,7 @@ describe('AcDbDatabase.dxfOut', () => {
     )
     paperSpace.appendEntity(paperLine)
 
-    const dxf = db.dxfOut(undefined, 6)
+    const dxf = db.dxfOut(undefined, 6, 'AC1021')
     const tableRecords = parseRecords(getSection(dxf, 'TABLES'))
     const blockRecords = parseRecords(getSection(dxf, 'BLOCKS'))
     const entityRecords = parseRecords(getSection(dxf, 'ENTITIES'))
@@ -387,10 +392,10 @@ describe('AcDbDatabase.dxfOut', () => {
     expect(paperEndblk).toBeDefined()
 
     const paperLayout = findRecord(objectRecords, 'LAYOUT', record =>
-      valuesByCode(record, '1').includes('Layout1')
+      valuesByCode(record, '1').includes('Layout2')
     )
     expect(paperLayout).toBeDefined()
-    expect(valuesByCode(paperLayout!, '71')).toContain('1')
+    expect(valuesByCode(paperLayout!, '71')).toContain('2')
     expect(valuesByCode(paperLayout!, '330')).toContain(
       valuesByCode(paperBlockRecord!, '5')[0]
     )
