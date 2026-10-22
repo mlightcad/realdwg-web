@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.14
+
+### Patch Changes
+
+- fix: published lib/ packages now load as native ESM in Node via NodeNext-relative .js import specifiers, and LibreDwg converter emits matching Node-native ESM under lib/. AC1015 DXF export is fixed so R2000 drawings open correctly in AutoCAD 2000 and 2007
+
 ## 1.15.13
 
 ### Patch Changes
