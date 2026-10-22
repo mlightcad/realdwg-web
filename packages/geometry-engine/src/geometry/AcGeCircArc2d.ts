@@ -6,8 +6,8 @@ import {
   AcGePoint2d,
   AcGePoint2dLike,
   AcGeVector2d
-} from '../math'
-import { acgeClamp, AcGeMathUtil, FLOAT_TOL, TAU } from '../util'
+} from '../math/index.js'
+import { acgeClamp, AcGeMathUtil, FLOAT_TOL, TAU } from '../util/index.js'
 import {
   acgeTryCreateArcByCenterStartChord,
   acgeTryCreateArcByCenterStartEnd,
@@ -21,7 +21,7 @@ import {
   acgeTryCreateCircleByDiameter,
   acgeTryCreateCircleByThreePoints,
   acgeTryCreateShorterArc
-} from './AcGeCircArc2dFactory'
+} from './AcGeCircArc2dFactory.js'
 import {
   type AcGeCircumcircle2d,
   acgeComputeCircumcircle2d,
@@ -29,12 +29,12 @@ import {
   acgePointLiesOnCircle2d,
   acgeProjectPointOntoCircle2d,
   acgeSameCircle2d
-} from './AcGeCircArcUtil'
-import { AcGeCurve2d } from './AcGeCurve2d'
+} from './AcGeCircArcUtil.js'
+import { AcGeCurve2d } from './AcGeCurve2d.js'
 import type {
   AcGeResolvedTessellateOptions,
   AcGeTessellateOptions
-} from './AcGeCurveTessellate'
+} from './AcGeCurveTessellate.js'
 
 /**
  * Represent a circular arc.

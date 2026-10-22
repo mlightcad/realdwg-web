@@ -12,12 +12,12 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 
 /** Quadrant grip angles in radians: 0?, 90?, 180?, 270?. */
 const ELLIPSE_QUADRANT_GRIP_ANGLES = [

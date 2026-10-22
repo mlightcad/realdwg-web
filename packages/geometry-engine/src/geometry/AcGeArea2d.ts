@@ -1,10 +1,10 @@
-import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math'
-import { AcGeGeometryUtil } from '../util'
-import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil'
-import type { AcGeTessellateOptions } from './AcGeCurveTessellate'
-import { AcGeLoop2d } from './AcGeLoop2d'
-import { AcGePolyline2d } from './AcGePolyline2d'
-import { AcGeShape2d } from './AcGeShape2d'
+import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math/index.js'
+import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil.js'
+import { AcGeGeometryUtil } from '../util/index.js'
+import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
+import { AcGeLoop2d } from './AcGeLoop2d.js'
+import { AcGePolyline2d } from './AcGePolyline2d.js'
+import { AcGeShape2d } from './AcGeShape2d.js'
 
 export interface AcGeIndexNode {
   index: number

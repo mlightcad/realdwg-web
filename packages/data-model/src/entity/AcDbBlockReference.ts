@@ -11,24 +11,24 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbRenderingCache } from '../misc/AcDbRenderingCache'
-import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference'
-import { AcDbAttribute } from './AcDbAttribute'
-import { AcDbEntity } from './AcDbEntity'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference.js'
+import { AcDbAttribute } from './AcDbAttribute.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyGroup
-} from './AcDbEntityProperties'
-import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
-import { acdbTransformIntersectPrimitives } from './AcDbIntersectHelpers'
+} from './AcDbEntityProperties.js'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import { acdbTransformIntersectPrimitives } from './AcDbIntersectHelpers.js'
 import {
   acdbParseGsMark,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
+} from './AcDbOsnapHelpers.js'
 
 /**
  * Represents a block reference entity in AutoCAD.

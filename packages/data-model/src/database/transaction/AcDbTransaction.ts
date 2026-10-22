@@ -1,5 +1,5 @@
-import { AcDbObject, AcDbObjectId, AcDbOpenMode } from '../../base'
-import { AcDbChangeRecorder } from './AcDbChangeRecorder'
+import { AcDbObject, AcDbObjectId, AcDbOpenMode } from '../../base/index.js'
+import { AcDbChangeRecorder } from './AcDbChangeRecorder.js'
 
 /**
  * Represents a single database transaction.

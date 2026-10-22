@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbLayerTableRecord } from './AcDbLayerTableRecord'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbLayerTableRecord } from './AcDbLayerTableRecord.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 
 /**
  * Symbol table for layer table records.

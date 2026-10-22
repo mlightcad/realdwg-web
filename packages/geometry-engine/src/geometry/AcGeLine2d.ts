@@ -1,5 +1,5 @@
-import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math'
-import { AcGeCurve2d } from './AcGeCurve2d'
+import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math/index.js'
+import { AcGeCurve2d } from './AcGeCurve2d.js'
 
 /**
  * The class represents one 3d line geometry specified by its start point and end point.

@@ -9,7 +9,7 @@
  * @version 1.0.0
  */
 
-import { AcCmLoader } from './AcCmLoader'
+import { AcCmLoader } from './AcCmLoader.js'
 
 /**
  * Callback function that is called when loading starts.
@@ -72,7 +72,7 @@ export type AcCmUrlModifier = (url: string) => string
  *
  * @example
  * ```typescript
- * import { AcCmLoadingManager } from './AcCmLoadingManager'
+ * import { AcCmLoadingManager } from './AcCmLoadingManager.js'
  *
  * // Create a custom loading manager
  * const manager = new AcCmLoadingManager()

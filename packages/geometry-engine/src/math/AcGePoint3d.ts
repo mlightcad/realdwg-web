@@ -1,4 +1,4 @@
-import { AcGeVector3d, AcGeVector3dLike } from '../math/AcGeVector3d'
+import { AcGeVector3d, AcGeVector3dLike } from '../math/AcGeVector3d.js'
 
 /**
  * The interface representing a point in 3-dimensional space.

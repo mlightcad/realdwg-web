@@ -1,8 +1,8 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import { AcDbObjectIterator } from '../misc/AcDbObjectIterator'
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord.js'
 
 /**
  * Base class for all symbol tables in AutoCAD.

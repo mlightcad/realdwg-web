@@ -1,6 +1,6 @@
-import type { AcDbObjectId } from '../base/AcDbObject'
-import type { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
-import { AcLyLayerFilter } from './AcLyLayerFilter'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
+import type { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord.js'
+import { AcLyLayerFilter } from './AcLyLayerFilter.js'
 
 /**
  * Layer group filter (ID filter) used by the Layer Properties Manager.

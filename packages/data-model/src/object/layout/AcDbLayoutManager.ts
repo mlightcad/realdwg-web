@@ -1,9 +1,9 @@
 import { AcCmEventManager } from '@mlightcad/common'
 
-import { acdbGetWorkingDatabase, AcDbObjectId } from '../../base/AcDbObject'
-import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../../database/AcDbDatabase'
-import { AcDbLayout } from './AcDbLayout'
+import { acdbGetWorkingDatabase, AcDbObjectId } from '../../base/AcDbObject.js'
+import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../../database/AcDbDatabase.js'
+import { AcDbLayout } from './AcDbLayout.js'
 
 /**
  * Event arguments for layout-related events.

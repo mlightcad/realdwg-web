@@ -1,6 +1,6 @@
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 
 /**
  * Symbol table the symbol table for AcDbRegAppTableRecords, which represent registered application

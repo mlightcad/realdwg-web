@@ -1,12 +1,12 @@
-import { AcGePoint2dLike } from '../math'
-import { AcGeMathUtil, AcGeTol, FLOAT_TOL, TAU } from '../util'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
+import { AcGePoint2dLike } from '../math/index.js'
+import { AcGeMathUtil, AcGeTol, FLOAT_TOL, TAU } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
 import {
   acgeAngleAtCenter2d,
   acgeComputeCircumcircle2d,
   acgeDistance2d,
   acgeProjectPointOntoCircle2d
-} from './AcGeCircArcUtil'
+} from './AcGeCircArcUtil.js'
 
 /**
  * Create the unique circular arc from `start` through `through` to `end`.

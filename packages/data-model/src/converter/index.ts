@@ -1,11 +1,11 @@
-export { AcDbBatchProcessing } from './AcDbBatchProcessing'
-export { AcDbRegenerator } from './AcDbRegenerator'
+export { AcDbBatchProcessing } from './AcDbBatchProcessing.js'
+export { AcDbRegenerator } from './AcDbRegenerator.js'
 export {
   AcDbBaseWorker,
   AcDbWorkerApi,
   AcDbWorkerManager,
   acdbCreateWorkerApi
-} from './worker'
+} from './worker/index.js'
 export type {
   AcDbWorkerConfig,
   AcDbWorkerInstance,
@@ -13,4 +13,4 @@ export type {
   AcDbWorkerResponse,
   AcDbWorkerResult,
   AcDbWorkerErrorCode
-} from './worker'
+} from './worker/index.js'

@@ -1,11 +1,11 @@
 import { defaults } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Controls the horizontal positioning of dimension text relative to the dimension line.

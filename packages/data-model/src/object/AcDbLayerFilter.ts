@@ -1,5 +1,5 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbFilter } from './AcDbFilter'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbFilter } from './AcDbFilter.js'
 
 /**
  * Layer filter object used with the AutoCAD **index/filter** scheme

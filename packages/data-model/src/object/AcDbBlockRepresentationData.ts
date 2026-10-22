@@ -1,5 +1,5 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
 
 /**
  * DWG/DXF-resident object (`ACDB_BLOCKREPRESENTATION_DATA`) that stores a soft

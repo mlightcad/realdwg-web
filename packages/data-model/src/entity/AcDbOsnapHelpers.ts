@@ -6,8 +6,8 @@ import {
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
 
-import type { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 
 /**
  * Spatial-index child ids may get a `#n` suffix when the same definition

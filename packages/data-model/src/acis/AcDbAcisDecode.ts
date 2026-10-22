@@ -1,6 +1,6 @@
-import type { AcDbAcisModel } from './AcDbAcisEntities'
-import { acdbBuildAcisModel } from './AcDbAcisEntities'
-import { acdbParseAcisSab } from './AcDbAcisSab'
+import type { AcDbAcisModel } from './AcDbAcisEntities.js'
+import { acdbBuildAcisModel } from './AcDbAcisEntities.js'
+import { acdbParseAcisSab } from './AcDbAcisSab.js'
 
 /** Known ACIS/ASM binary file signature strings searched in raw byte payloads. */
 const SAB_SIGNATURES = ['ACIS BinaryFile', 'ASM BinaryFile', 'ASM BinaryFile4'] as const

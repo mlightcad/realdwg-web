@@ -1,15 +1,15 @@
 import { AcCmColor } from '@mlightcad/common'
 import { AcGeLine2d, AcGeLoop2d } from '@mlightcad/geometry-engine'
 
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord'
-import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord'
-import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord'
-import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord'
-import { AcDbHatch } from '../entity/AcDbHatch'
-import { AcDbLayout } from '../object/layout/AcDbLayout'
-import { DEFAULT_TEXT_STYLE, HATCH_PATTERN_SOLID } from './AcDbConstants'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbDimStyleTableRecord } from '../database/AcDbDimStyleTableRecord.js'
+import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord.js'
+import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord.js'
+import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord.js'
+import { AcDbHatch } from '../entity/AcDbHatch.js'
+import { AcDbLayout } from '../object/layout/AcDbLayout.js'
+import { DEFAULT_TEXT_STYLE, HATCH_PATTERN_SOLID } from './AcDbConstants.js'
 
 export class AcDbDataGenerator {
   readonly db: AcDbDatabase

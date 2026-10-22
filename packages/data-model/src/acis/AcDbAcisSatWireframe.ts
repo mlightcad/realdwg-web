@@ -7,13 +7,13 @@ import {
   type AcDbAcisEllipseCurveParams,
   type AcDbAcisVec3,
   acdbSampleAcisEllipseArc,
-} from './AcDbAcisGeometry'
+} from './AcDbAcisGeometry.js'
 import {
   type AcDbAcisAffineTransform,
   acdbAcisIdentityTransform,
   acdbAcisTransformSegments,
   acdbAcisTransformsEqual,
-} from './AcDbAcisTransform'
+} from './AcDbAcisTransform.js'
 
 const DEFAULT_ELLIPSE_SAMPLES = 16
 

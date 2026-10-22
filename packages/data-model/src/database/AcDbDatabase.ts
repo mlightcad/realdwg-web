@@ -7,22 +7,22 @@ import {
   AcCmTransparency
 } from '@mlightcad/common'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbObject,
   AcDbObjectId,
   TEMP_OBJECT_ID_PREFIX,
   acdbAssignWorkingDatabase
-} from '../base/AcDbObject'
-import { AcDbOpenMode } from '../base/AcDbOpenMode'
-import { AcDbRegenerator } from '../converter/AcDbRegenerator'
+} from '../base/AcDbObject.js'
+import { AcDbOpenMode } from '../base/AcDbOpenMode.js'
+import { AcDbRegenerator } from '../converter/AcDbRegenerator.js'
 import {
   AcDbConverterType,
   AcDbDatabaseConverterManager,
   AcDbFileType
-} from './AcDbDatabaseConverterManager'
-import { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbPolyline } from '../entity/AcDbPolyline'
+} from './AcDbDatabaseConverterManager.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbPolyline } from '../entity/AcDbPolyline.js'
 import {
   ACAD_APPID,
   ACDB_COMPAREHATCH_DEFAULT,
@@ -46,71 +46,71 @@ import {
   DEFAULT_LINE_TYPE,
   DEFAULT_TEXT_STYLE,
   MLIGHTCAD_APPID
-} from '../misc/AcDbConstants'
-import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
-import { AcDbDataGenerator } from '../misc/AcDbDataGenerator'
-import { ACDB_DRAW_CIRCLE_SIDES_DRAFT } from '../misc/AcDbDrawTessellate'
-import { AcDbFormatter } from '../misc/AcDbFormatter'
-import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
-import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
-import { AcDbDictionary } from '../object/AcDbDictionary'
-import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar'
-import { AcDbGroup } from '../object/AcDbGroup'
-import { AcDbLayerFilter } from '../object/AcDbLayerFilter'
-import { AcDbLayerIndex } from '../object/AcDbLayerIndex'
-import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle'
-import { AcDbMlineStyle } from '../object/AcDbMlineStyle'
-import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData'
-import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef'
-import { AcDbScale } from '../object/AcDbScale'
-import { AcDbSortentsTable } from '../object/AcDbSortentsTable'
-import { AcDbXrecord } from '../object/AcDbXrecord'
-import { AcLyLayerFilterTree } from '../ly/AcLyLayerFilterTree'
+} from '../misc/AcDbConstants.js'
+import { AcDbAngleUnits } from '../misc/AcDbAngleUnits.js'
+import { AcDbDataGenerator } from '../misc/AcDbDataGenerator.js'
+import { ACDB_DRAW_CIRCLE_SIDES_DRAFT } from '../misc/AcDbDrawTessellate.js'
+import { AcDbFormatter } from '../misc/AcDbFormatter.js'
+import { AcDbLinearUnits } from '../misc/AcDbLinearUnits.js'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
+import { AcDbDictionary } from '../object/AcDbDictionary.js'
+import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar.js'
+import { AcDbGroup } from '../object/AcDbGroup.js'
+import { AcDbLayerFilter } from '../object/AcDbLayerFilter.js'
+import { AcDbLayerIndex } from '../object/AcDbLayerIndex.js'
+import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
+import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
+import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef.js'
+import { AcDbScale } from '../object/AcDbScale.js'
+import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
+import { AcDbXrecord } from '../object/AcDbXrecord.js'
+import { AcLyLayerFilterTree } from '../ly/AcLyLayerFilterTree.js'
 import {
   ACAD_LAYERFILTERS_NAME,
   ACLY_DICTIONARY_NAME,
   acdbLayerGroupsToResultBuffer,
   acdbSerializeLayerFilterTree,
   type AcDbSerializedFilterNode
-} from '../ly/AcLyLayerFilterIO'
-import { acdbBytesToHexString } from '../misc/proxyGraphic'
-import { AcDbBlockTable } from './AcDbBlockTable'
-import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
-import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter'
-import type { AcDbConversionProgressCallback } from './AcDbDatabaseConverter'
-import { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError'
-import { AcDbDimStyleTable } from './AcDbDimStyleTable'
-import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord'
-import { AcDbLayerTable } from './AcDbLayerTable'
+} from '../ly/AcLyLayerFilterIO.js'
+import { acdbBytesToHexString } from '../misc/proxyGraphic/index.js'
+import { AcDbBlockTable } from './AcDbBlockTable.js'
+import { AcDbBlockTableRecord } from './AcDbBlockTableRecord.js'
+import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter.js'
+import type { AcDbConversionProgressCallback } from './AcDbDatabaseConverter.js'
+import { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError.js'
+import { AcDbDimStyleTable } from './AcDbDimStyleTable.js'
+import { AcDbDimStyleTableRecord } from './AcDbDimStyleTableRecord.js'
+import { AcDbLayerTable } from './AcDbLayerTable.js'
 import {
   AcDbLayerTableRecord,
   AcDbLayerTableRecordAttrs
-} from './AcDbLayerTableRecord'
-import { AcDbLinetypeTable } from './AcDbLinetypeTable'
-import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
-import { AcDbTextStyleTable } from './AcDbTextStyleTable'
-import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
-import { AcDbUcsTable } from './AcDbUcsTable'
-import { AcDbViewTable } from './AcDbViewTable'
-import { AcDbViewportTable } from './AcDbViewportTable'
-import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
+} from './AcDbLayerTableRecord.js'
+import { AcDbLinetypeTable } from './AcDbLinetypeTable.js'
+import { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord.js'
+import { AcDbTextStyleTable } from './AcDbTextStyleTable.js'
+import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord.js'
+import { AcDbUcsTable } from './AcDbUcsTable.js'
+import { AcDbViewTable } from './AcDbViewTable.js'
+import { AcDbViewportTable } from './AcDbViewportTable.js'
+import { AcDbViewportTableRecord } from './AcDbViewportTableRecord.js'
 import {
   AcGeBox3d,
   AcGeCircArc2d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
-import { AcDbDwgVersion } from './AcDbDwgVersion'
-import type { AcDbClass } from './AcDbClass'
+import { AcDbDwgVersion } from './AcDbDwgVersion.js'
+import type { AcDbClass } from './AcDbClass.js'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
-import { AcDbRegAppTable } from './AcDbRegAppTable'
-import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
-import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager'
-import { AcDbSystemVariables } from './AcDbSystemVariables'
-import { AcDbLayout } from '../object/layout/AcDbLayout'
-import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
-import { AcDbDatabaseTransactionManager } from './transaction/AcDbDatabaseTransactionManager'
+import { AcDbRegAppTable } from './AcDbRegAppTable.js'
+import { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord.js'
+import { AcDbSysVarManager, AcDbSysVarType } from './AcDbSysVarManager.js'
+import { AcDbSystemVariables } from './AcDbSystemVariables.js'
+import { AcDbLayout } from '../object/layout/AcDbLayout.js'
+import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
+import { AcDbDatabaseTransactionManager } from './transaction/AcDbDatabaseTransactionManager.js'
 
 /**
  * Event arguments for object events in the dictionary.

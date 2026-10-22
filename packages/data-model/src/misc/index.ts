@@ -1,4 +1,4 @@
-export { AcDbAngleUnits } from './AcDbAngleUnits'
+export { AcDbAngleUnits } from './AcDbAngleUnits.js'
 export {
   ACDB_ANNOTATIVE_XDATA_APP,
   ACDB_VIEWPORT_ANNOTATION_SCALE_XREC,
@@ -10,21 +10,21 @@ export {
   acdbGetViewportAnnotationScale,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext
-} from './AcDbAnnotationScale'
+} from './AcDbAnnotationScale.js'
 export type {
   AcDbAnnotationScaleContext,
   AcDbAnnotationScaleDrawInfo
-} from './AcDbAnnotationScale'
-export { AcDbFormatter } from './AcDbFormatter'
-export type { AcDbFormatterOptions } from './AcDbFormatter'
-export { AcDbLinearUnits } from './AcDbLinearUnits'
-export { AcDbRenderingCache } from './AcDbRenderingCache'
-export type { AcDbRenderingCacheProfileStats } from './AcDbRenderingCache'
+} from './AcDbAnnotationScale.js'
+export { AcDbFormatter } from './AcDbFormatter.js'
+export type { AcDbFormatterOptions } from './AcDbFormatter.js'
+export { AcDbLinearUnits } from './AcDbLinearUnits.js'
+export { AcDbRenderingCache } from './AcDbRenderingCache.js'
+export type { AcDbRenderingCacheProfileStats } from './AcDbRenderingCache.js'
 export {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
   acdbNormalizeTextEncoding
-} from './AcDbCodePage'
+} from './AcDbCodePage.js'
 export {
   ACAD_APPID,
   acdbCoerceIntegerSysVar,
@@ -83,9 +83,9 @@ export {
   VPORT_FALLBACK_URC,
   VPORT_FALLBACK_VIEW_DIR,
   VPORT_FALLBACK_VIEW_TARGET
-} from './AcDbConstants'
-export { AcDbDataGenerator } from './AcDbDataGenerator'
-export { AcDbDimArrowType } from './AcDbDimArrowType'
+} from './AcDbConstants.js'
+export { AcDbDataGenerator } from './AcDbDataGenerator.js'
+export { AcDbDimArrowType } from './AcDbDimArrowType.js'
 export {
   RAW_COLOR_TYPE_ACI,
   RAW_COLOR_TYPE_BY_BLOCK,
@@ -93,7 +93,7 @@ export {
   RAW_COLOR_TYPE_RGB,
   RAW_COLOR_TYPE_WINDOW_BG,
   acdbDecodeMLeaderStyleRawColor
-} from './AcDbMLeaderStyleColorCodec'
+} from './AcDbMLeaderStyleColorCodec.js'
 export {
   ACDB_DRAW_CIRCLE_SIDES_DRAFT,
   ACDB_DRAW_CIRCLE_SIDES_HIGH,
@@ -101,24 +101,24 @@ export {
   acdbDrawCircleSides,
   acdbDrawTessellateOptions,
   acdbResolveCircleSides
-} from './AcDbDrawTessellate'
+} from './AcDbDrawTessellate.js'
 export {
   acdbEstimateDatabaseMemory,
   acdbFormatMemoryEstimate
-} from './AcDbMemoryEstimator'
+} from './AcDbMemoryEstimator.js'
 export type {
   AcDbMemoryEstimate,
   AcDbMemoryEstimateBucket,
   AcDbMemoryEstimateOptions
-} from './AcDbMemoryEstimator'
-export { AcDbObjectIterator } from './AcDbObjectIterator'
-export { AcDbIntersect } from './AcDbIntersect'
+} from './AcDbMemoryEstimator.js'
+export { AcDbObjectIterator } from './AcDbObjectIterator.js'
+export { AcDbIntersect } from './AcDbIntersect.js'
 export {
   ACDB_OLE2FRAME_GEOMETRY_HEADER_SIZE,
   acdbParseOle2FrameGeometryHeader
-} from './AcDbOle2FrameGeometry'
-export type { AcDbOle2FrameGeometryHeader } from './AcDbOle2FrameGeometry'
-export { acdbExtractOleImageBlob } from './AcDbOleImageExtractor'
+} from './AcDbOle2FrameGeometry.js'
+export type { AcDbOle2FrameGeometryHeader } from './AcDbOle2FrameGeometry.js'
+export { acdbExtractOleImageBlob } from './AcDbOleImageExtractor.js'
 export {
   ACDB_OLE_METAFILE_EMF_MIME,
   ACDB_OLE_METAFILE_WMF_MIME,
@@ -126,31 +126,31 @@ export {
   acdbLooksLikeEmf,
   acdbLooksLikeWmf,
   acdbReassembleEmfFromWmfEscapes
-} from './AcDbOleMetafileDetect'
+} from './AcDbOleMetafileDetect.js'
 export {
   acdbOleBlobNeedsMetafileRasterization,
   acdbRasterizeOleMetafile
-} from './AcDbOleMetafileRasterizer'
-export type { AcDbOleMetafileRasterizeOptions } from './AcDbOleMetafileRasterizer'
+} from './AcDbOleMetafileRasterizer.js'
+export type { AcDbOleMetafileRasterizeOptions } from './AcDbOleMetafileRasterizer.js'
 export {
   AcDbOsnapMode,
   acdbHasOsnapMode,
   acdbMaskToOsnapModes,
   acdbOsnapModesToMask,
   acdbToggleOsnapMode
-} from './AcDbOsnapMode'
-export { AcDbUnitsValue } from './AcDbUnitsValue'
+} from './AcDbOsnapMode.js'
+export { AcDbUnitsValue } from './AcDbUnitsValue.js'
 export {
   AcDbPatParser,
   AcDbPatSvgRenderer,
   AcDbPredefinedAcadIsoPat,
   AcDbPredefinedAcadPat
-} from './pat'
+} from './pat/index.js'
 export {
   AcDbProxyGraphic,
   AcDbProxyGraphicType,
   ACDB_PROXY_GRAPHIC_CHUNK_SIZE
-} from './proxyGraphic'
+} from './proxyGraphic/index.js'
 export {
   AcDbProxyGraphicBitStream,
   AcDbProxyGraphicByteStream,
@@ -158,8 +158,8 @@ export {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
-} from './proxyGraphic'
-export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon'
+} from './proxyGraphic/index.js'
+export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon.js'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,
@@ -168,7 +168,7 @@ export type {
   AcDbPatParseIssue,
   AcDbPatPattern,
   AcDbPatPreviewOptions
-} from './pat'
+} from './pat/index.js'
 export {
   ACDB_DYN_BLOCK_ENHANCED_BLOCK,
   ACDB_DYN_BLOCK_GUID_APP,
@@ -178,13 +178,13 @@ export {
   ACDB_DYN_BLOCK_REPRESENTATION_DICT,
   ACDB_DYN_BLOCK_TRUE_NAME_APP,
   acdbIsAnonymousUserBlockName
-} from './AcDbDynBlockConstants'
+} from './AcDbDynBlockConstants.js'
 export {
   acdbImportDynBlockMetadata,
   acdbNormalizeExtensionDictionaryId
-} from './AcDbImportDynBlockMetadata'
+} from './AcDbImportDynBlockMetadata.js'
 export type {
   AcDbDynBlockDictionarySource,
   AcDbDynBlockRepresentationSource,
   AcDbImportDynBlockMetadataOptions
-} from './AcDbImportDynBlockMetadata'
+} from './AcDbImportDynBlockMetadata.js'

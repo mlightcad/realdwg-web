@@ -3,8 +3,8 @@ import {
   AcGePoint2dLike,
   AcGePoint3dLike,
   AcGeVector3dLike
-} from '../math'
-import { DEFAULT_TOL } from './AcGeTol'
+} from '../math/index.js'
+import { DEFAULT_TOL } from './AcGeTol.js'
 
 /**
  * Converts a 2D point to a 3D point, preserving an optional `z` when present.

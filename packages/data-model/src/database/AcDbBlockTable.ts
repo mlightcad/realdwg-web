@@ -1,8 +1,8 @@
-import { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbBlockTableRecord } from './AcDbBlockTableRecord'
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
+import { AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbBlockTableRecord } from './AcDbBlockTableRecord.js'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 
 /**
  * Symbol table for block table records.

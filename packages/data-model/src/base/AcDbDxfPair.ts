@@ -1,4 +1,4 @@
-import type { AcDbDxfValueType } from './AcDbDxfGroupCodeTypes'
+import type { AcDbDxfValueType } from './AcDbDxfGroupCodeTypes.js'
 
 /**
  * One typed (group code, value) pair from a DXF tag stream.

@@ -14,7 +14,7 @@ import {
   AcGiMTextFlowDirection
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   type AcDbAnnotationScaleContext,
   type AcDbAnnotationScaleDrawInfo,
@@ -24,17 +24,17 @@ import {
   acdbGetAnnotationScaleContexts,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext
-} from '../misc/AcDbAnnotationScale'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers'
+} from '../misc/AcDbAnnotationScale.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
   acdbCountMTextLines,
   acdbEstimateMTextHeight,
   acdbEstimatePlainTextWidth,
   acdbExpandBoxByOrientedTextRect
-} from './AcDbTextExtentsHelpers'
+} from './AcDbTextExtentsHelpers.js'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.

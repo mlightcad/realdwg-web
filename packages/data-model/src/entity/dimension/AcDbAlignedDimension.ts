@@ -9,13 +9,13 @@ import {
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../../base'
-import { AcDbBlockTableRecord } from '../../database'
-import { AcDbBlockReference } from '../AcDbBlockReference'
-import { AcDbEntityProperties } from '../AcDbEntityProperties'
-import { AcDbLine } from '../AcDbLine'
-import { AcDbMText } from '../AcDbMText'
-import { AcDbDimension } from './AcDbDimension'
+import { AcDbDxfFiler } from '../../base/index.js'
+import { AcDbBlockTableRecord } from '../../database/index.js'
+import { AcDbBlockReference } from '../AcDbBlockReference.js'
+import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import { AcDbLine } from '../AcDbLine.js'
+import { AcDbMText } from '../AcDbMText.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents an aligned dimension entity in AutoCAD.

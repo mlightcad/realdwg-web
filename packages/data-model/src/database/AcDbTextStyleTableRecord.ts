@@ -1,11 +1,11 @@
 import { defaults } from '@mlightcad/common'
 import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Interface defining the attributes for text style table records.

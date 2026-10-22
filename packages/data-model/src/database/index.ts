@@ -1,5 +1,5 @@
-export { AcDbDatabase } from './AcDbDatabase'
-export type { AcDbClass } from './AcDbClass'
+export { AcDbDatabase } from './AcDbDatabase.js'
+export type { AcDbClass } from './AcDbClass.js'
 export type {
   AcDbCreateDefaultDataOptions,
   AcDbDictObjectEventArgs,
@@ -11,17 +11,17 @@ export type {
   AcDbOpenFileStage,
   AcDbProgressdEventArgs,
   AcDbTables
-} from './AcDbDatabase'
-export { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError'
-export type { AcDbOpenDatabaseErrorCode } from './AcDbOpenDatabaseError'
-export { AcDbBlockTable } from './AcDbBlockTable'
+} from './AcDbDatabase.js'
+export { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError.js'
+export type { AcDbOpenDatabaseErrorCode } from './AcDbOpenDatabaseError.js'
+export { AcDbBlockTable } from './AcDbBlockTable.js'
 export {
   AcDbBlockScaling,
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag
-} from './AcDbBlockTableRecord'
-export type { AcDbBlockTableRecordAttrs } from './AcDbBlockTableRecord'
-export { AcDbDatabaseConverter } from './AcDbDatabaseConverter'
+} from './AcDbBlockTableRecord.js'
+export type { AcDbBlockTableRecordAttrs } from './AcDbBlockTableRecord.js'
+export { AcDbDatabaseConverter } from './AcDbDatabaseConverter.js'
 export type {
   AcDbConversionProgressCallback,
   AcDbConversionStage,
@@ -31,16 +31,16 @@ export type {
   AcDbParsingTaskResult,
   AcDbParsingTaskStats,
   AcDbStageStatus
-} from './AcDbDatabaseConverter'
+} from './AcDbDatabaseConverter.js'
 export {
   AcDbDatabaseConverterManager,
   AcDbFileType
-} from './AcDbDatabaseConverterManager'
+} from './AcDbDatabaseConverterManager.js'
 export type {
   AcDbConverterType,
   AcDbDatabaseConverterManagerEventArgs
-} from './AcDbDatabaseConverterManager'
-export { AcDbDimStyleTable } from './AcDbDimStyleTable'
+} from './AcDbDatabaseConverterManager.js'
+export { AcDbDimStyleTable } from './AcDbDimStyleTable.js'
 export {
   AcDbDimStyleTableRecord,
   AcDbDimTextHorizontal,
@@ -48,45 +48,45 @@ export {
   AcDbDimVerticalJustification,
   AcDbDimZeroSuppression,
   AcDbDimZeroSuppressionAngular
-} from './AcDbDimStyleTableRecord'
-export type { AcDbDimStyleTableRecordAttrs } from './AcDbDimStyleTableRecord'
-export { AcDbDwgVersion } from './AcDbDwgVersion'
+} from './AcDbDimStyleTableRecord.js'
+export type { AcDbDimStyleTableRecordAttrs } from './AcDbDimStyleTableRecord.js'
+export { AcDbDwgVersion } from './AcDbDwgVersion.js'
 export type {
   AcDbDwgVersionEntry,
   AcDbDxfVersionCapabilities
-} from './AcDbDwgVersion'
-export { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord'
-export type { AcDbAbstractViewTableRecordAttrs } from './AcDbAbstractViewTableRecord'
-export { AcDbLayerTable } from './AcDbLayerTable'
-export { AcDbLayerTableRecord } from './AcDbLayerTableRecord'
-export type { AcDbLayerTableRecordAttrs } from './AcDbLayerTableRecord'
-export { AcDbLinetypeTable } from './AcDbLinetypeTable'
-export { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord'
+} from './AcDbDwgVersion.js'
+export { AcDbAbstractViewTableRecord } from './AcDbAbstractViewTableRecord.js'
+export type { AcDbAbstractViewTableRecordAttrs } from './AcDbAbstractViewTableRecord.js'
+export { AcDbLayerTable } from './AcDbLayerTable.js'
+export { AcDbLayerTableRecord } from './AcDbLayerTableRecord.js'
+export type { AcDbLayerTableRecordAttrs } from './AcDbLayerTableRecord.js'
+export { AcDbLinetypeTable } from './AcDbLinetypeTable.js'
+export { AcDbLinetypeTableRecord } from './AcDbLinetypeTableRecord.js'
 export type {
   AcDbLinetypePreviewSvgOptions,
   AcDbLinetypeTableRecordAttrs
-} from './AcDbLinetypeTableRecord'
-export { AcDbRegAppTable } from './AcDbRegAppTable'
-export { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord'
-export type { AcDbRegAppTableRecordAttrs } from './AcDbRegAppTableRecord'
-export { AcDbSymbolTable } from './AcDbSymbolTable'
-export { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord'
-export type { AcDbSymbolTableRecordAttrs } from './AcDbSymbolTableRecord'
+} from './AcDbLinetypeTableRecord.js'
+export { AcDbRegAppTable } from './AcDbRegAppTable.js'
+export { AcDbRegAppTableRecord } from './AcDbRegAppTableRecord.js'
+export type { AcDbRegAppTableRecordAttrs } from './AcDbRegAppTableRecord.js'
+export { AcDbSymbolTable } from './AcDbSymbolTable.js'
+export { AcDbSymbolTableRecord } from './AcDbSymbolTableRecord.js'
+export type { AcDbSymbolTableRecordAttrs } from './AcDbSymbolTableRecord.js'
 export {
   AC_DB_SYSTEM_VARIABLE_NAMES,
   AcDbSystemVariables
-} from './AcDbSystemVariables'
+} from './AcDbSystemVariables.js'
 export type {
   AcDbColorTheme,
   AcDbSystemVariableName
-} from './AcDbSystemVariables'
-export { AcDbSysVarManager } from './AcDbSysVarManager'
+} from './AcDbSystemVariables.js'
+export { AcDbSysVarManager } from './AcDbSysVarManager.js'
 export type {
   AcDbSysVarDescriptor,
   AcDbSysVarEventArgs,
   AcDbSysVarType,
   AcDbSysVarTypeName
-} from './AcDbSysVarManager'
+} from './AcDbSysVarManager.js'
 export {
   AcDbChangeApplier,
   AcDbChangeRecorder,
@@ -98,22 +98,22 @@ export {
   acdbAreChangeContainersEqual,
   acdbCollectChangeEntities,
   acdbCollectDictionaryChanges
-} from './transaction'
+} from './transaction/index.js'
 export type {
   AcDbChangeContainer,
   AcDbDatabaseChange,
   AcDbDictionaryChangeEntry,
   AcDbUndoRecord
-} from './transaction'
-export { AcDbTextStyleTable } from './AcDbTextStyleTable'
-export { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
-export type { AcDbTextStyleTableRecordAttrs } from './AcDbTextStyleTableRecord'
-export { AcDbUcsTable } from './AcDbUcsTable'
-export { AcDbUcsTableRecord } from './AcDbUcsTableRecord'
-export type { AcDbUcsTableRecordAttrs } from './AcDbUcsTableRecord'
-export { AcDbViewTable } from './AcDbViewTable'
-export { AcDbViewTableRecord } from './AcDbViewTableRecord'
-export type { AcDbViewTableRecordAttrs } from './AcDbViewTableRecord'
-export { AcDbViewportTable } from './AcDbViewportTable'
-export { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
-export type { AcDbViewportTableRecordAttrs } from './AcDbViewportTableRecord'
+} from './transaction/index.js'
+export { AcDbTextStyleTable } from './AcDbTextStyleTable.js'
+export { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord.js'
+export type { AcDbTextStyleTableRecordAttrs } from './AcDbTextStyleTableRecord.js'
+export { AcDbUcsTable } from './AcDbUcsTable.js'
+export { AcDbUcsTableRecord } from './AcDbUcsTableRecord.js'
+export type { AcDbUcsTableRecordAttrs } from './AcDbUcsTableRecord.js'
+export { AcDbViewTable } from './AcDbViewTable.js'
+export { AcDbViewTableRecord } from './AcDbViewTableRecord.js'
+export type { AcDbViewTableRecordAttrs } from './AcDbViewTableRecord.js'
+export { AcDbViewportTable } from './AcDbViewportTable.js'
+export { AcDbViewportTableRecord } from './AcDbViewportTableRecord.js'
+export type { AcDbViewportTableRecordAttrs } from './AcDbViewportTableRecord.js'

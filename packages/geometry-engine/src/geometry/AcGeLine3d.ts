@@ -4,9 +4,9 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d
-} from '../math'
-import { AcGeMathUtil } from '../util'
-import { AcGeCurve3d } from './AcGeCurve3d'
+} from '../math/index.js'
+import { AcGeMathUtil } from '../util/index.js'
+import { AcGeCurve3d } from './AcGeCurve3d.js'
 
 /**
  * The class represents one 3d line geometry specified by its start point and end point.

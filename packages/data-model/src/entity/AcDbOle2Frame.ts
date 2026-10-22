@@ -9,24 +9,24 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame'
-import { acdbParseOle2FrameGeometryHeader } from '../misc/AcDbOle2FrameGeometry'
-import { acdbExtractOleImageBlob } from '../misc/AcDbOleImageExtractor'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame.js'
+import { acdbParseOle2FrameGeometryHeader } from '../misc/AcDbOle2FrameGeometry.js'
+import { acdbExtractOleImageBlob } from '../misc/AcDbOleImageExtractor.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import {
   acdbBytesToHexString,
   acdbCombineDxfBinaryChunks
-} from '../misc/proxyGraphic'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
+} from '../misc/proxyGraphic/index.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
-} from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
-import { AcDbOleFrame } from './AcDbOleFrame'
-import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers'
+} from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
+import { AcDbOleFrame } from './AcDbOleFrame.js'
+import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
 
 /**
  * OLE object type stored with an {@link AcDbOle2Frame} (DXF group code 71).

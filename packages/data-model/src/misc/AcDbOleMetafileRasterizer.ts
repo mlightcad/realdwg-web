@@ -21,7 +21,7 @@ import {
   acdbIsOleMetafileMimeType,
   acdbLooksLikeEmf,
   acdbLooksLikeWmf
-} from './AcDbOleMetafileDetect'
+} from './AcDbOleMetafileDetect.js'
 
 /**
  * Default Windows face-name → CSS font-family map for OLE metafile text.

@@ -10,7 +10,7 @@ import {
   acdbClassifyDwgConverterLicenseMessage,
   acdbClassifyDwgConverterLicenseMessageOrInvalid,
   acdbIsDwgConverterLicenseCode
-} from './AcDbDwgConverterLicense'
+} from './AcDbDwgConverterLicense.js'
 
 /** Message sent from the main thread to a worker task. */
 export interface AcDbWorkerMessage<TInput = unknown> {

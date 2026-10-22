@@ -1,4 +1,4 @@
-import { AcLyLayerFilter } from './AcLyLayerFilter'
+import { AcLyLayerFilter } from './AcLyLayerFilter.js'
 
 /**
  * In-memory tree of Layer Manager filters for a drawing database.

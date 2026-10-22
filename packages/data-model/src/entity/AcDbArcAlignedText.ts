@@ -16,11 +16,11 @@ import {
   AcGiTextStyle
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
-import { AcDbEntity } from './AcDbEntity'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbEstimatePlainTextWidth } from './AcDbTextExtentsHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbEstimatePlainTextWidth } from './AcDbTextExtentsHelpers.js'
 
 /**
  * How characters are distributed between the arc's left and right offsets.

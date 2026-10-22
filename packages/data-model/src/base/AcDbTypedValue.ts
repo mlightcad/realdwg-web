@@ -1,4 +1,4 @@
-import { AcDbDxfCode } from './AcDbDxfCode'
+import { AcDbDxfCode } from './AcDbDxfCode.js'
 
 /**
  * Represents a single typed value stored in an

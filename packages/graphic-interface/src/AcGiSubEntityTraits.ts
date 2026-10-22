@@ -1,8 +1,8 @@
 import { AcCmColor, AcCmTransparency } from '@mlightcad/common'
 
-import { AcGiHatchStyle } from './AcGiHatchStyle'
-import { AcGiLineStyle } from './AcGiLineStyle'
-import { AcGiLineWeight } from './AcGiLineWeight'
+import { AcGiHatchStyle } from './AcGiHatchStyle.js'
+import { AcGiLineStyle } from './AcGiLineStyle.js'
+import { AcGiLineWeight } from './AcGiLineWeight.js'
 
 /**
  * Trait settings for a sub‑entity in AutoCAD graphics (corresponding to AcGiSubEntityTraits).

@@ -1,15 +1,15 @@
-import { AcDbDxfCode } from '../base/AcDbDxfCode'
-import { AcDbObjectId } from '../base/AcDbObject'
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbBlockReference } from '../entity/AcDbBlockReference'
+import { AcDbDxfCode } from '../base/AcDbDxfCode.js'
+import { AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbBlockReference } from '../entity/AcDbBlockReference.js'
 import {
   ACDB_DYN_BLOCK_ENHANCED_BLOCK,
   ACDB_DYN_BLOCK_REP_BTAG_APP,
   acdbIsAnonymousUserBlockName
-} from '../misc/AcDbDynBlockConstants'
-import { AcDbDictionary } from './AcDbDictionary'
-import { AcDbDynBlockReference } from './AcDbDynBlockReference'
+} from '../misc/AcDbDynBlockConstants.js'
+import { AcDbDictionary } from './AcDbDictionary.js'
+import { AcDbDynBlockReference } from './AcDbDynBlockReference.js'
 
 /**
  * ObjectARX-style helper for a dynamic block table record (definition).

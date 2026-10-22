@@ -1,8 +1,8 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Interface defining the attributes for registered application table records.

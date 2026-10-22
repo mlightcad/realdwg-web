@@ -25,7 +25,7 @@ export {
   acdbChunkBinaryByMaxBytes,
   acdbChunkDxfMTextContents,
   acdbChunkUtf8ByMaxBytes
-} from './base/'
+} from './base/index.js'
 export type {
   AcDbDxfFilerMode,
   AcDbDxfFilerOptions,
@@ -38,7 +38,7 @@ export type {
   AcDbObjectAttrs,
   AcDbObjectId,
   AcDbTypedValue
-} from './base/'
+} from './base/index.js'
 export {
   AcDbDxfDocumentReader,
   AcDbDxfObjectsReader,
@@ -46,7 +46,7 @@ export {
   acdbCreateEntityForDxfIn,
   acdbDxfInEntity,
   acdbDxfInHeader
-} from './dxf'
+} from './dxf/index.js'
 export {
   AcDbBaseWorker,
   AcDbBatchProcessing,
@@ -54,7 +54,7 @@ export {
   AcDbWorkerApi,
   AcDbWorkerManager,
   acdbCreateWorkerApi
-} from './converter'
+} from './converter/index.js'
 export type {
   AcDbWorkerConfig,
   AcDbWorkerInstance,
@@ -62,7 +62,7 @@ export type {
   AcDbWorkerResponse,
   AcDbWorkerResult,
   AcDbWorkerErrorCode
-} from './converter'
+} from './converter/index.js'
 export {
   AC_DB_SYSTEM_VARIABLE_NAMES,
   AcDbAbstractViewTableRecord,
@@ -109,7 +109,7 @@ export {
   AcDbViewTableRecord,
   AcDbViewportTable,
   AcDbViewportTableRecord
-} from './database'
+} from './database/index.js'
 export type {
   AcDbAbstractViewTableRecordAttrs,
   AcDbBlockTableRecordAttrs,
@@ -155,7 +155,7 @@ export type {
   AcDbChangeContainer,
   AcDbDatabaseChange,
   AcDbUndoRecord
-} from './database'
+} from './database/index.js'
 export {
   AcDb2dPolyline,
   AcDb2dVertex,
@@ -237,7 +237,7 @@ export {
   AcDbViewport,
   AcDbWipeout,
   AcDbXline
-} from './entity'
+} from './entity/index.js'
 export type {
   AcDbEntityArrayItemSchema,
   AcDbEntityProperties,
@@ -268,7 +268,7 @@ export type {
   AcDbTableBorderColors,
   AcDbTableCell,
   AcDbTableCellTypeOverride
-} from './entity'
+} from './entity/index.js'
 export {
   ACAD_APPID,
   ACDB_COMPAREHATCH_DEFAULT,
@@ -402,7 +402,7 @@ export {
   acdbGetViewportAnnotationScale,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext
-} from './misc'
+} from './misc/index.js'
 export type {
   AcDbAnnotationScaleContext,
   AcDbAnnotationScaleDrawInfo,
@@ -422,7 +422,7 @@ export type {
   AcDbDynBlockDictionarySource,
   AcDbDynBlockRepresentationSource,
   AcDbImportDynBlockMetadataOptions
-} from './misc'
+} from './misc/index.js'
 export {
   AcDbDictionary,
   AcDbDictionaryVar,
@@ -451,7 +451,7 @@ export {
   AcDbScale,
   AcDbSortentsTable,
   AcDbXrecord
-} from './object'
+} from './object/index.js'
 export type {
   AcDbBlockChangeIterator,
   AcDbFilteredBlockIterator,
@@ -462,7 +462,7 @@ export type {
   AcDbMlineStyleElement,
   AcDbPlotPaperMargins,
   AcDbPlotScale
-} from './object'
+} from './object/index.js'
 export {
   AcLyBoolExpr,
   ACAD_LAYERFILTERS_NAME,
@@ -477,7 +477,7 @@ export {
   acdbResultBufferToLayerGroups,
   acdbSerializeLayerFilterTree,
   acdbWriteFilterXRecordData
-} from './ly'
+} from './ly/index.js'
 export type {
   AcDbLayerFilterGroup,
   AcDbLayerFilterPersistSource,
@@ -487,7 +487,7 @@ export type {
   AcDbSerializedFilterNode,
   AcDbSerializedFilterTree,
   AcLyLayerId
-} from './ly'
+} from './ly/index.js'
 export {
   AcCmColor,
   AcCmColorMethod,

@@ -19,7 +19,7 @@ export {
   acgeCloneIntersectPrimitive,
   acgeIntersectCurves,
   acgeTransformIntersectPrimitive
-} from './geometry'
+} from './geometry/index.js'
 export type {
   AcGeBoundaryEdgeType,
   AcGeCircumcircle2d,
@@ -33,7 +33,7 @@ export type {
   AcGeResolvedTessellateOptions,
   AcGeTessellateOptions,
   CatmullRomCurveType
-} from './geometry'
+} from './geometry/index.js'
 export {
   AcGeBox2d,
   AcGeBox3d,
@@ -46,7 +46,7 @@ export {
   AcGeQuaternion,
   AcGeVector2d,
   AcGeVector3d
-} from './math'
+} from './math/index.js'
 export type {
   AcGePoint,
   AcGePoint2dLike,
@@ -56,7 +56,7 @@ export type {
   AcGeVector2dLike,
   AcGeVector3dLike,
   AcGeVectorLike
-} from './math'
+} from './math/index.js'
 export {
   AcGeGeometryUtil,
   AcGeMathUtil,
@@ -119,4 +119,4 @@ export {
   acgePolygonArea2d,
   acgePolygonArea3d,
   acgeSignedPolygonArea2d
-} from './util'
+} from './util/index.js'

@@ -11,17 +11,17 @@ import {
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbOsnapMode } from '../misc/AcDbOsnapMode'
-import { AcDbCurve } from './AcDbCurve'
-import { AcDbEntityProperties } from './AcDbEntityProperties'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
-} from './AcDbOsnapHelpers'
-import { AcDbPolyline } from './AcDbPolyline'
+} from './AcDbOsnapHelpers.js'
+import { AcDbPolyline } from './AcDbPolyline.js'
 
 /**
  * Represents the spline-fit type for this 3D polyline.

@@ -1,12 +1,12 @@
 import { AcGeMathUtil } from '@mlightcad/geometry-engine'
 
-import type { AcDbGradientName } from '../../entity/AcDbHatch'
-import { acdbIsSolidHatchPatternName } from '../AcDbConstants'
+import type { AcDbGradientName } from '../../entity/AcDbHatch.js'
+import { acdbIsSolidHatchPatternName } from '../AcDbConstants.js'
 import type {
   AcDbPatLine,
   AcDbPatPattern,
   AcDbPatPreviewOptions
-} from './AcDbPatDefinition'
+} from './AcDbPatDefinition.js'
 
 /**
  * A concrete drawable segment used as an intermediate representation before

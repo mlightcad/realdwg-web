@@ -1,4 +1,4 @@
-import { AcDbTransaction } from './AcDbTransaction'
+import { AcDbTransaction } from './AcDbTransaction.js'
 
 /**
  * Manages database transactions.

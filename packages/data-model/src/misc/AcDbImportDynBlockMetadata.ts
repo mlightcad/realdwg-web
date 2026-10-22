@@ -1,12 +1,12 @@
-import { AcDbObject, AcDbObjectId } from '../base/AcDbObject'
-import { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbBlockRepresentationData } from '../object/AcDbBlockRepresentationData'
-import { AcDbDictionary } from '../object/AcDbDictionary'
+import { AcDbObject, AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbBlockRepresentationData } from '../object/AcDbBlockRepresentationData.js'
+import { AcDbDictionary } from '../object/AcDbDictionary.js'
 import {
   ACDB_DYN_BLOCK_ENHANCED_BLOCK,
   ACDB_DYN_BLOCK_REP_DATA,
   ACDB_DYN_BLOCK_REPRESENTATION_DICT
-} from './AcDbDynBlockConstants'
+} from './AcDbDynBlockConstants.js'
 
 /**
  * Normalized dictionary descriptor shared by DWG converters when importing

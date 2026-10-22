@@ -1,7 +1,7 @@
 import { AcGePoint2d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
 
 /**
  * The AcDbRasterImageDef object (or "image definition object") works with the AcDbRasterImage entity

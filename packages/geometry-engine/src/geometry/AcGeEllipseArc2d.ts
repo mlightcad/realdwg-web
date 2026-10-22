@@ -6,9 +6,9 @@ import {
   AcGePoint2d,
   AcGePoint3d,
   AcGePointLike
-} from '../math'
-import { AcGeMathUtil, TAU } from '../util'
-import { AcGeCurve2d } from './AcGeCurve2d'
+} from '../math/index.js'
+import { AcGeMathUtil, TAU } from '../util/index.js'
+import { AcGeCurve2d } from './AcGeCurve2d.js'
 
 /**
  * Class representing a 3d ellipse arc defined by center, normal, majorAxis, majorAxisRadius,

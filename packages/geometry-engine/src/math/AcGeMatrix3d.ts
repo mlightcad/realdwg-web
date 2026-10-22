@@ -1,7 +1,7 @@
-import { DEFAULT_TOL } from '../util/AcGeTol'
-import { AcGeMatrix2d } from './AcGeMatrix2d'
-import { AcGeQuaternion } from './AcGeQuaternion'
-import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d'
+import { DEFAULT_TOL } from '../util/AcGeTol.js'
+import { AcGeMatrix2d } from './AcGeMatrix2d.js'
+import { AcGeQuaternion } from './AcGeQuaternion.js'
+import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d.js'
 
 /**
  * The class representing a 4x4 matrix.

@@ -1,5 +1,5 @@
-import { AcGePoint2d } from '../math/AcGePoint2d'
-import { AcGeShape2d } from './AcGeShape2d'
+import { AcGePoint2d } from '../math/AcGePoint2d.js'
+import { AcGeShape2d } from './AcGeShape2d.js'
 
 /**
  * Abstract base class for all 2d curves. Any class that is derived from this class represents

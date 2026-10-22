@@ -1,7 +1,7 @@
-import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants'
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
-import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord'
+import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
+import { AcDbTextStyleTableRecord } from './AcDbTextStyleTableRecord.js'
 
 /**
  * Symbol table for text style table records.

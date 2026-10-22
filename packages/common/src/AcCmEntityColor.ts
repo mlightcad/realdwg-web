@@ -1,4 +1,4 @@
-import { AcCmColorMethod } from './AcCmColorMethod'
+import { AcCmColorMethod } from './AcCmColorMethod.js'
 
 /**
  * Represents an AutoCAD-like entity color object.

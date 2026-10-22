@@ -16,7 +16,7 @@
  *
  * @example
  * ```typescript
- * import { AcCmErrors } from './AcCmErrors'
+ * import { AcCmErrors } from './AcCmErrors.js'
  *
  * // Throw standard errors
  * throw AcCmErrors.ILLEGAL_PARAMETERS

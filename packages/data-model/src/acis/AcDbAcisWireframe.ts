@@ -1,5 +1,5 @@
-import { acdbDecodeAcisModel } from './AcDbAcisDecode'
-import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
+import { acdbDecodeAcisModel } from './AcDbAcisDecode.js'
+import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities.js'
 import {
   acdbAcisEdgeParamBounds,
   type AcDbAcisGeometry,
@@ -8,13 +8,13 @@ import {
   acdbExtractAcisGeometry,
   acdbSampleAcisEllipseArc,
   acdbSampleAcisSphereWireframe,
-} from './AcDbAcisGeometry'
+} from './AcDbAcisGeometry.js'
 import {
   acdbAcisBuildNodeTransforms,
   acdbAcisIdentityTransform,
   acdbAcisTransformIsIdentity,
   acdbAcisTransformPoint,
-} from './AcDbAcisTransform'
+} from './AcDbAcisTransform.js'
 
 /** Default number of samples when tessellating ellipse edges for wireframe output. */
 const DEFAULT_ELLIPSE_SAMPLES = 16

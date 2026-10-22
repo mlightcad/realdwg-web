@@ -1,14 +1,14 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import type { AcDbObjectId } from '../base/AcDbObject'
-import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import type { AcDbLayerTable } from '../database/AcDbLayerTable'
-import type { AcDbFilter } from './AcDbFilter'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
+import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import type { AcDbLayerTable } from '../database/AcDbLayerTable.js'
+import type { AcDbFilter } from './AcDbFilter.js'
 import {
   AcDbBlockChangeIterator,
   AcDbFilteredBlockIterator,
   AcDbIndex,
   AcDbIndexUpdateData
-} from './AcDbIndex'
+} from './AcDbIndex.js'
 
 /**
  * Describes one layer entry stored in an {@link AcDbLayerIndex}.

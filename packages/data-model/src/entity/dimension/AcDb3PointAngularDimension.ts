@@ -4,9 +4,9 @@ import {
   AcGePointLike
 } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../../base'
-import { AcDbEntityProperties } from '../AcDbEntityProperties'
-import { AcDbDimension } from './AcDbDimension'
+import { AcDbDxfFiler } from '../../base/index.js'
+import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents a three-point angular dimension entity in AutoCAD.

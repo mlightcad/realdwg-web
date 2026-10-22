@@ -1,6 +1,6 @@
-import { AcDbObject, AcDbObjectId } from '../../base'
-import { AcDbDatabase } from '../AcDbDatabase'
-import { AcDbTransaction } from './AcDbTransaction'
+import { AcDbObject, AcDbObjectId } from '../../base/index.js'
+import { AcDbDatabase } from '../AcDbDatabase.js'
+import { AcDbTransaction } from './AcDbTransaction.js'
 
 /**
  * Database-bound transaction with object lookup through {@link AcDbDatabase}.

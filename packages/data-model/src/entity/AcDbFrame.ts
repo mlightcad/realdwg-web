@@ -1,4 +1,4 @@
-import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntity } from './AcDbEntity.js'
 
 /**
  * Abstract base class for OLE container entities.

@@ -1,4 +1,4 @@
-import { AcCmTransparencyMethod } from './AcCmTransparencyMethod'
+import { AcCmTransparencyMethod } from './AcCmTransparencyMethod.js'
 
 /**
  * Class representing transparency similar to AutoCAD’s `AcCmTransparency`.

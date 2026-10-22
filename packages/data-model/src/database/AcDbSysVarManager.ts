@@ -7,7 +7,7 @@ import {
 import { AcGePointLike } from '@mlightcad/geometry-engine'
 import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
-import { AcDbAngleUnits } from '../misc/AcDbAngleUnits'
+import { AcDbAngleUnits } from '../misc/AcDbAngleUnits.js'
 import {
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
@@ -39,11 +39,11 @@ import {
   DEFAULT_MLEADER_STYLE,
   DEFAULT_MLINE_STYLE,
   DEFAULT_TEXT_STYLE
-} from '../misc/AcDbConstants'
-import { AcDbLinearUnits } from '../misc/AcDbLinearUnits'
-import { AcDbUnitsValue } from '../misc/AcDbUnitsValue'
-import type { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSystemVariables } from './AcDbSystemVariables'
+} from '../misc/AcDbConstants.js'
+import { AcDbLinearUnits } from '../misc/AcDbLinearUnits.js'
+import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
+import type { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSystemVariables } from './AcDbSystemVariables.js'
 
 /**
  * Best-effort default for {@link AcDbSystemVariables.LOGINNAME}.

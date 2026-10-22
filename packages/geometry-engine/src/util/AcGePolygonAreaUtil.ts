@@ -1,5 +1,5 @@
-import { AcGePoint2dLike } from '../math/AcGePoint2d'
-import { AcGePoint3dLike } from '../math/AcGePoint3d'
+import { AcGePoint2dLike } from '../math/AcGePoint2d.js'
+import { AcGePoint3dLike } from '../math/AcGePoint3d.js'
 
 /**
  * Computes the signed area of a 2D polygon using the shoelace formula.

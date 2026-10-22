@@ -1,5 +1,5 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject.js'
 
 /**
  * Nongraphical GROUP object (DXF GROUP).

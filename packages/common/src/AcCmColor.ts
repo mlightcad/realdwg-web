@@ -1,5 +1,5 @@
-import { AcCmColorMethod } from './AcCmColorMethod'
-import { AcCmColorUtil } from './AcCmColorUtil'
+import { AcCmColorMethod } from './AcCmColorMethod.js'
+import { AcCmColorUtil } from './AcCmColorUtil.js'
 
 /**
  * Represents an AutoCAD color. This class supports color methods:

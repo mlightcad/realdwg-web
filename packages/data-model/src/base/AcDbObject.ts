@@ -1,11 +1,11 @@
 import { AcCmAttributes, AcCmObject, AcCmStringKey } from '@mlightcad/common'
 import { uid } from 'uid'
 
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDxfCode } from './AcDbDxfCode'
-import { AcDbDxfFiler } from './AcDbDxfFiler'
-import { AcDbResultBuffer } from './AcDbResultBuffer'
-import type { AcDbTypedValue } from './AcDbTypedValue'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbDxfCode } from './AcDbDxfCode.js'
+import { AcDbDxfFiler } from './AcDbDxfFiler.js'
+import { AcDbResultBuffer } from './AcDbResultBuffer.js'
+import type { AcDbTypedValue } from './AcDbTypedValue.js'
 
 /** Type alias for object ID as string */
 export type AcDbObjectId = string

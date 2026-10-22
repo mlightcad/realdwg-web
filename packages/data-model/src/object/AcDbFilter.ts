@@ -1,7 +1,7 @@
 import { AcGePoint2d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
 
 /**
  * Abstract base class for filter objects used with the AutoCAD index/filter

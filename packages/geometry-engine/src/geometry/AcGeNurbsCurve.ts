@@ -1,4 +1,4 @@
-import { AcGePoint3d, AcGePoint3dLike } from '../math'
+import { AcGePoint3d, AcGePoint3dLike } from '../math/index.js'
 
 /**
  * Squared distance from a geometry point to a numeric `[x, y, z]` tuple.
@@ -13,14 +13,14 @@ function distSq3d(a: AcGePoint3dLike, b: number[]): number {
   const dz = (a.z ?? 0) - (b[2] ?? 0)
   return dx * dx + dy * dy + dz * dz
 }
-import { AcGePoint2d } from '../math/AcGePoint2d'
+import { AcGePoint2d } from '../math/AcGePoint2d.js'
 import {
   acgeCalculateCurveLength,
   acgeEvaluateNurbsDerivatives,
   acgeInterpolateNurbsCurve,
   acgeSignedPlanarCurvature
-} from '../util'
-import { AcGeCatmullRomCurve3d } from './AcGeCatmullRomCurve3d'
+} from '../util/index.js'
+import { AcGeCatmullRomCurve3d } from './AcGeCatmullRomCurve3d.js'
 
 /**
  * Type for NURBS knot parameterization

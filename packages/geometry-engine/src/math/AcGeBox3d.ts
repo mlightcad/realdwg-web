@@ -1,6 +1,6 @@
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGePlane } from './AcGePlane'
-import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGePlane } from './AcGePlane.js'
+import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d.js'
 
 /**
  * The class representing an axis-aligned bounding box (AABB) in 3d space.

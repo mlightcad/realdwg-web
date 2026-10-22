@@ -4,14 +4,14 @@ export type {
   AcDbPatParseIssue,
   AcDbPatPattern,
   AcDbPatPreviewOptions
-} from './AcDbPatDefinition'
-export { AcDbPatParser } from './AcDbPatParser'
+} from './AcDbPatDefinition.js'
+export { AcDbPatParser } from './AcDbPatParser.js'
 export {
   AcDbPredefinedAcadIsoPat,
   AcDbPredefinedAcadPat
-} from './AcDbPatPredefined'
-export { AcDbPatSvgRenderer } from './AcDbPatSvgRenderer'
+} from './AcDbPatPredefined.js'
+export { AcDbPatSvgRenderer } from './AcDbPatSvgRenderer.js'
 export type {
   AcDbPatGradientColor,
   AcDbPatGradientPreviewOptions
-} from './AcDbPatSvgRenderer'
+} from './AcDbPatSvgRenderer.js'

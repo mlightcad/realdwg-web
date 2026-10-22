@@ -1,6 +1,6 @@
-import { AcGePolyline2d } from '../geometry/AcGePolyline2d'
-import { AcGePoint2d } from '../math/AcGePoint2d'
-import { AcGeTol, DEFAULT_TOL } from './AcGeTol'
+import { AcGePolyline2d } from '../geometry/AcGePolyline2d.js'
+import { AcGePoint2d } from '../math/AcGePoint2d.js'
+import { AcGeTol, DEFAULT_TOL } from './AcGeTol.js'
 
 /** Intersection of two non-adjacent polyline segments during loop trimming. */
 type SegmentIntersection = {

@@ -1,11 +1,11 @@
 import { defaults } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
-} from './AcDbSymbolTableRecord'
+} from './AcDbSymbolTableRecord.js'
 
 /**
  * Attributes for a UCS table record.

@@ -12,15 +12,15 @@ import {
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
-import type { AcDbDatabase } from '../database/AcDbDatabase'
-import { AcDbDwgVersion } from '../database/AcDbDwgVersion'
-import { acdbDxfIsInt32Code, acdbDxfValueType } from './AcDbDxfGroupCodeTypes'
-import type { AcDbDxfPair } from './AcDbDxfPair'
+import type { AcDbDatabase } from '../database/AcDbDatabase.js'
+import { AcDbDwgVersion } from '../database/AcDbDwgVersion.js'
+import { acdbDxfIsInt32Code, acdbDxfValueType } from './AcDbDxfGroupCodeTypes.js'
+import type { AcDbDxfPair } from './AcDbDxfPair.js'
 import {
   acdbCreateDxfPairReader,
   type AcDbDxfPairReader,
   acdbMakeAsciiDxfPairReader
-} from './AcDbDxfPairReader'
+} from './AcDbDxfPairReader.js'
 import {
   ACDB_DXF_XDATA_BINARY_MAX_BYTES,
   ACDB_DXF_XDATA_STRING_MAX_BYTES,
@@ -29,9 +29,9 @@ import {
   acdbChunkDxfMTextContents,
   acdbChunkUtf8ByMaxBytes,
   acdbEncodeDxfUnicodeEscapes
-} from './AcDbDxfStringChunks'
-import { AcDbResultBuffer } from './AcDbResultBuffer'
-import type { AcDbTypedValue } from './AcDbTypedValue'
+} from './AcDbDxfStringChunks.js'
+import { AcDbResultBuffer } from './AcDbResultBuffer.js'
+import type { AcDbTypedValue } from './AcDbTypedValue.js'
 
 /** Filer direction, mirroring ObjectARX usage of AcDbDxfFiler for in vs out. */
 export type AcDbDxfFilerMode = 'read' | 'write'

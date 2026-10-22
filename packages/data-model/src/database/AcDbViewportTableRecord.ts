@@ -6,12 +6,12 @@ import {
   AcGiRenderMode
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants.js'
 import {
   AcDbAbstractViewTableRecord,
   AcDbAbstractViewTableRecordAttrs
-} from './AcDbAbstractViewTableRecord'
+} from './AcDbAbstractViewTableRecord.js'
 /** Reject saved views zoomed out more than this factor vs drawing EXTMIN/EXTMAX. */
 const MAX_VIEW_TO_EXTENT_RATIO = 2
 

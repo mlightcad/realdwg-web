@@ -1,11 +1,11 @@
-import { AcGePolyline2d } from '../geometry/AcGePolyline2d'
+import { AcGePolyline2d } from '../geometry/AcGePolyline2d.js'
 import {
   acgeOffsetPolyline2d,
   acgePreparePolylineForOffset
-} from '../geometry/AcGePolyline2dOffset'
-import { AcGePoint3d, AcGePoint3dLike, AcGeVector3dLike } from '../math'
-import { AcGePoint2d } from '../math/AcGePoint2d'
-import { AcGeTol } from './AcGeTol'
+} from '../geometry/AcGePolyline2dOffset.js'
+import { AcGePoint2d } from '../math/AcGePoint2d.js'
+import { AcGePoint3d, AcGePoint3dLike, AcGeVector3dLike } from '../math/index.js'
+import { AcGeTol } from './AcGeTol.js'
 
 /**
  * Offsets a point perpendicular to the XY projection of a direction vector.

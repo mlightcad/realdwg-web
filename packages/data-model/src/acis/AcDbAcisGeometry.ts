@@ -15,9 +15,9 @@
 //     and empirically cross-checked vs corpus records + an annotated .sat. There
 //     is no automated runtime oracle (ezdxf has no Ellipse/Cone/Torus types).
 
-import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities'
-import type { AcDbAcisSabToken, AcDbAcisSabVector } from './AcDbAcisSab'
-import { AcDbAcisSabTag } from './AcDbAcisSab'
+import type { AcDbAcisModel, AcDbAcisNode } from './AcDbAcisEntities.js'
+import type { AcDbAcisSabToken, AcDbAcisSabVector } from './AcDbAcisSab.js'
+import { AcDbAcisSabTag } from './AcDbAcisSab.js'
 import {
   type AcDbAcisAffineTransform,
   acdbAcisBuildNodeTransforms,
@@ -25,7 +25,7 @@ import {
   acdbAcisTransformDirection,
   acdbAcisTransformIsIdentity,
   acdbAcisTransformPoint,
-} from './AcDbAcisTransform'
+} from './AcDbAcisTransform.js'
 
 /** 3D position or direction vector `[x, y, z]`. */
 export type AcDbAcisVec3 = AcDbAcisSabVector

@@ -1,5 +1,5 @@
-import { AcGeBox2d, AcGeMatrix2d, AcGeVector2dLike } from '../math'
-import { AcGeShape } from './AcGeShape'
+import { AcGeBox2d, AcGeMatrix2d, AcGeVector2dLike } from '../math/index.js'
+import { AcGeShape } from './AcGeShape.js'
 
 /**
  * Abstract base class for all kinds of 2d shapes.

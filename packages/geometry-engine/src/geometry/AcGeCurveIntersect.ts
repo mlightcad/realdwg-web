@@ -4,12 +4,12 @@ import {
   AcGePlane,
   AcGePoint3d,
   AcGeVector3d
-} from '../math'
-import { AcGeMathUtil, AcGeTol, DEFAULT_TOL, FLOAT_TOL, TAU } from '../util'
-import { AcGeCircArc3d } from './AcGeCircArc3d'
-import { AcGeEllipseArc3d } from './AcGeEllipseArc3d'
-import { AcGeLine3d } from './AcGeLine3d'
-import { AcGeSpline3d } from './AcGeSpline3d'
+} from '../math/index.js'
+import { AcGeMathUtil, AcGeTol, DEFAULT_TOL, FLOAT_TOL, TAU } from '../util/index.js'
+import { AcGeCircArc3d } from './AcGeCircArc3d.js'
+import { AcGeEllipseArc3d } from './AcGeEllipseArc3d.js'
+import { AcGeLine3d } from './AcGeLine3d.js'
+import { AcGeSpline3d } from './AcGeSpline3d.js'
 
 /** Natural parameter interval of a linear primitive. */
 export type AcGeCurveExtent = 'bounded' | 'ray' | 'unbounded'

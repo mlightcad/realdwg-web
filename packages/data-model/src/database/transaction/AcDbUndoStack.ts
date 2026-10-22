@@ -1,4 +1,4 @@
-import { AcDbUndoRecord } from './AcDbUndoRecord'
+import { AcDbUndoRecord } from './AcDbUndoRecord.js'
 
 /**
  * Manages undo and redo history for database changes.

@@ -1,10 +1,10 @@
 import { AcCmErrors } from '@mlightcad/common'
 
-import { AcGeEuler } from './AcGeEuler'
-import { AcGeMatrix2d } from './AcGeMatrix2d'
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGeQuaternion } from './AcGeQuaternion'
-import { AcGeVectorLike } from './AcGeVector'
+import { AcGeEuler } from './AcGeEuler.js'
+import { AcGeMatrix2d } from './AcGeMatrix2d.js'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGeQuaternion } from './AcGeQuaternion.js'
+import { AcGeVectorLike } from './AcGeVector.js'
 
 /**
  * The interface representing a vector in 3-dimensional space.

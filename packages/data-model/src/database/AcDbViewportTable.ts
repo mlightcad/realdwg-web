@@ -1,9 +1,9 @@
 import { AcGeBox2d } from '@mlightcad/geometry-engine'
 
-import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants'
-import { AcDbDatabase } from './AcDbDatabase'
-import { AcDbSymbolTable } from './AcDbSymbolTable'
-import { AcDbViewportTableRecord } from './AcDbViewportTableRecord'
+import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants.js'
+import { AcDbDatabase } from './AcDbDatabase.js'
+import { AcDbSymbolTable } from './AcDbSymbolTable.js'
+import { AcDbViewportTableRecord } from './AcDbViewportTableRecord.js'
 
 /**
  * Symbol table for viewport table records.

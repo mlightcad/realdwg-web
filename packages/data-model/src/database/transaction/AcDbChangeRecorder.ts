@@ -1,10 +1,10 @@
-import { AcDbObject } from '../../base'
-import { AcDbDatabase } from '../AcDbDatabase'
-import { AcDbSysVarManager } from '../AcDbSysVarManager'
+import { AcDbObject } from '../../base/index.js'
+import { AcDbDatabase } from '../AcDbDatabase.js'
+import { AcDbSysVarManager } from '../AcDbSysVarManager.js'
 import {
   acdbAreChangeContainersEqual,
   AcDbChangeContainer,
-  AcDbDatabaseChange} from './AcDbDatabaseChange'
+  AcDbDatabaseChange} from './AcDbDatabaseChange.js'
 
 /**
  * Accumulates structured database changes during an active transaction.

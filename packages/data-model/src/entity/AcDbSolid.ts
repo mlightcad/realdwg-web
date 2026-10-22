@@ -1,4 +1,4 @@
-import { AcDbTrace } from './AcDbTrace'
+import { AcDbTrace } from './AcDbTrace.js'
 
 /**
  * Represents a solid entity in AutoCAD.

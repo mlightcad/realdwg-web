@@ -1,8 +1,8 @@
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbDxfValueType } from '../base/AcDbDxfGroupCodeTypes'
-import type { AcDbDxfPair } from '../base/AcDbDxfPair'
-import type { AcDbDxfPairReader } from '../base/AcDbDxfPairReader'
-import type { AcDbTypedValue } from '../base/AcDbTypedValue'
+import type { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbDxfValueType } from '../base/AcDbDxfGroupCodeTypes.js'
+import type { AcDbDxfPair } from '../base/AcDbDxfPair.js'
+import type { AcDbDxfPairReader } from '../base/AcDbDxfPairReader.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 
 /**
  * In-memory pair reader used to replay one object's tags (e.g. DIMENSION

@@ -33,7 +33,7 @@ import {
   acdbReassembleEmfFromWmfEscapes,
   findEmfHeaderOffset,
   isEmfHeaderAt
-} from './AcDbOleMetafileDetect'
+} from './AcDbOleMetafileDetect.js'
 
 const CFB_SIGNATURE = [0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1] as const
 

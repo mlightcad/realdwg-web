@@ -1,5 +1,5 @@
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { AcDbObject } from '../base/AcDbObject'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbObject } from '../base/AcDbObject.js'
 
 /**
  * Nongraphical `DICTIONARYVAR` object (`AcDbDictionaryVar`).

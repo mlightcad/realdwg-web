@@ -1,4 +1,4 @@
-import { AcGeVector2d, AcGeVector2dLike } from './AcGeVector2d'
+import { AcGeVector2d, AcGeVector2dLike } from './AcGeVector2d.js'
 
 const _vector = /*@__PURE__*/ new AcGeVector2d()
 

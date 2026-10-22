@@ -1,9 +1,9 @@
-export { AcLyBoolExpr } from './AcLyBoolExpr'
+export { AcLyBoolExpr } from './AcLyBoolExpr.js'
 export {
   AcLyLayerFilter,
   AcLyLayerFilterDialogResult
-} from './AcLyLayerFilter'
-export type { AcLyLayerId } from './AcLyLayerFilter'
+} from './AcLyLayerFilter.js'
+export type { AcLyLayerId } from './AcLyLayerFilter.js'
 export {
   ACAD_LAYERFILTERS_NAME,
   ACLY_DICTIONARY_NAME,
@@ -13,7 +13,7 @@ export {
   acdbResultBufferToLayerGroups,
   acdbSerializeLayerFilterTree,
   acdbWriteFilterXRecordData
-} from './AcLyLayerFilterIO'
+} from './AcLyLayerFilterIO.js'
 export type {
   AcDbLayerFilterGroup,
   AcDbLayerFilterPersistSource,
@@ -22,6 +22,6 @@ export type {
   AcDbPersistXRecord,
   AcDbSerializedFilterNode,
   AcDbSerializedFilterTree
-} from './AcLyLayerFilterIO'
-export { AcLyLayerFilterTree } from './AcLyLayerFilterTree'
-export { AcLyLayerGroup } from './AcLyLayerGroup'
+} from './AcLyLayerFilterIO.js'
+export { AcLyLayerFilterTree } from './AcLyLayerFilterTree.js'
+export { AcLyLayerGroup } from './AcLyLayerGroup.js'

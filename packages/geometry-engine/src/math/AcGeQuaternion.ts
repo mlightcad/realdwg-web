@@ -1,7 +1,7 @@
-import { acgeClamp } from '../util/AcGeMathUtil'
-import { AcGeEuler } from './AcGeEuler'
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d'
+import { acgeClamp } from '../util/AcGeMathUtil.js'
+import { AcGeEuler } from './AcGeEuler.js'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d.js'
 
 export class AcGeQuaternion {
   private _x: number

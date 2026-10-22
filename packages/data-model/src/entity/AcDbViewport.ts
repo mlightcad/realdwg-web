@@ -13,11 +13,11 @@ import {
   AcGiViewport
 } from '@mlightcad/graphic-interface'
 
-import { AcDbDxfFiler } from '../base/AcDbDxfFiler'
-import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale'
-import { AcDbEntity } from './AcDbEntity'
-import { acdbForEachGripIndex } from './AcDbGripHelpers'
-import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale.js'
+import { AcDbEntity } from './AcDbEntity.js'
+import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 
 /**
  * Represents a viewport entity in AutoCAD drawings.

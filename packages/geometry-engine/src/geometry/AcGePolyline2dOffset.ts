@@ -1,7 +1,7 @@
-import { AcGePoint2d } from '../math/AcGePoint2d'
-import { AcGeMathUtil, AcGeTol, TAU } from '../util'
-import { AcGeCircArc2d } from './AcGeCircArc2d'
-import { AcGePolyline2d } from './AcGePolyline2d'
+import { AcGePoint2d } from '../math/AcGePoint2d.js'
+import { AcGeMathUtil, AcGeTol, TAU } from '../util/index.js'
+import { AcGeCircArc2d } from './AcGeCircArc2d.js'
+import { AcGePolyline2d } from './AcGePolyline2d.js'
 
 /** Epsilon for circle–circle intersection and tangency tests during arc joins. */
 const ROUND_JOIN_POINT_EPSILON = 1e-6

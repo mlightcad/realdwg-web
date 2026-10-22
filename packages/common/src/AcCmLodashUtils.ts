@@ -26,7 +26,7 @@
  *
  * @example
  * ```typescript
- * import { clone } from './AcCmLodashUtils'
+ * import { clone } from './AcCmLodashUtils.js'
  *
  * const original = { a: 1, b: 2 }
  * const cloned = clone(original)
@@ -99,7 +99,7 @@ export function deepClone<T>(value: T): T {
  *
  * @example
  * ```typescript
- * import { defaults } from './AcCmLodashUtils'
+ * import { defaults } from './AcCmLodashUtils.js'
  *
  * const object = { a: 1 }
  * const result = defaults(object, { b: 2 }, { a: 3, c: 3 })
@@ -142,7 +142,7 @@ export function defaults(
  *
  * @example
  * ```typescript
- * import { has } from './AcCmLodashUtils'
+ * import { has } from './AcCmLodashUtils.js'
  *
  * const object = { a: 1, b: 2 }
  * has(object, 'a')        // true
@@ -168,7 +168,7 @@ export function has(obj: Record<string, unknown>, path: string): boolean {
  *
  * @example
  * ```typescript
- * import { isEmpty } from './AcCmLodashUtils'
+ * import { isEmpty } from './AcCmLodashUtils.js'
  *
  * isEmpty(null)           // true
  * isEmpty(undefined)      // true
@@ -215,7 +215,7 @@ export function isEmpty(value: unknown): boolean {
  *
  * @example
  * ```typescript
- * import { isEqual } from './AcCmLodashUtils'
+ * import { isEqual } from './AcCmLodashUtils.js'
  *
  * isEqual(1, 1)                    // true
  * isEqual('hello', 'hello')        // true

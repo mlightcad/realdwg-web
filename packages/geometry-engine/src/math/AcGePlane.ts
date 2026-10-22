@@ -1,7 +1,7 @@
-import { AcGeBox3d } from './AcGeBox3d'
-import { AcGeMatrix2d } from './AcGeMatrix2d'
-import { AcGeMatrix3d } from './AcGeMatrix3d'
-import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d'
+import { AcGeBox3d } from './AcGeBox3d.js'
+import { AcGeMatrix2d } from './AcGeMatrix2d.js'
+import { AcGeMatrix3d } from './AcGeMatrix3d.js'
+import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d.js'
 
 const _vector1 = /*@__PURE__*/ new AcGeVector3d()
 const _vector2 = /*@__PURE__*/ new AcGeVector3d()

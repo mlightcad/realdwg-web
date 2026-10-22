@@ -1,6 +1,6 @@
 import { AcGePoint3dLike } from '@mlightcad/geometry-engine'
 
-import { AcDbEntity } from './AcDbEntity'
+import { AcDbEntity } from './AcDbEntity.js'
 
 /**
  * Abstract base class for all curve entities.

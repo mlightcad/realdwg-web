@@ -1,11 +1,11 @@
-import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord'
-import { AcDbDatabase } from '../database/AcDbDatabase'
+import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../database/AcDbDatabase.js'
 import {
   AcDbConversionProgressCallback,
   AcDbDatabaseConverter
-} from '../database/AcDbDatabaseConverter'
-import { AcDbEntity } from '../entity/AcDbEntity'
-import { AcDbBatchProcessing } from './AcDbBatchProcessing'
+} from '../database/AcDbDatabaseConverter.js'
+import { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbBatchProcessing } from './AcDbBatchProcessing.js'
 
 /**
  * Database regenerator.
