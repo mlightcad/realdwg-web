@@ -3,7 +3,11 @@
   "compilerOptions": {
     "rootDir": "./src",
     "outDir": "./lib",
-    "baseUrl": "./src"
+    "baseUrl": "./src",
+    // Node-native ESM lib/ (relative .js specifiers). Requires
+    // @mlightcad/libredwg-web >= 0.8.2 (types use .js relative re-exports).
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext"
   },
   "include": [
     "src"

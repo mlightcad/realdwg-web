@@ -3,7 +3,7 @@
 import { AcDbBaseWorker, AcDbParsingTaskResult } from '@mlightcad/data-model'
 import { DwgDatabase } from '@mlightcad/libredwg-web'
 
-import { parseDwg } from './AcDbLibreDwgConverterUtil'
+import { parseDwg } from './AcDbLibreDwgConverterUtil.js'
 /**
  * DWG parsing worker
  */

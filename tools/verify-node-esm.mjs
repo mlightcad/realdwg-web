@@ -9,6 +9,7 @@ for (const name of [
   'geometry-engine',
   'graphic-interface',
   'data-model',
+  'libredwg-converter',
 ]) {
   const entry = join(root, 'packages', name, 'lib', 'index.js')
   const mod = await import(pathToFileURL(entry).href)

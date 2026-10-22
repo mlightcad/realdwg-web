@@ -1,1 +1,1 @@
-export { AcDbLibreDwgMainThreadConverter } from './AcDbLibreDwgMainThreadConverter'
+export { AcDbLibreDwgMainThreadConverter } from './AcDbLibreDwgMainThreadConverter.js'
