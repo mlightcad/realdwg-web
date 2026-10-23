@@ -598,10 +598,15 @@ export class AcDbText extends AcDbEntity {
   /**
    * Gets the grip points for this text entity.
    *
-   * @returns Array containing the text insertion point.
+   * Uses the same WCS anchor as drawing / extents ({@link resolveTextAnchor}):
+   * group 10 for LEFT+BASELINE, otherwise group 11 (`alignmentPoint`) when set.
+   * Returning only group 10 made Middle/Center TEXT show the grip inside the
+   * glyph run (near the DXF second point) instead of at the visible attachment.
+   *
+   * @returns Array containing the text placement anchor.
    */
   subGetGripPoints() {
-    return [this.pointToWcs(this._position)]
+    return [this.resolveTextAnchor().anchor]
   }
 
   /** @inheritdoc */
@@ -610,7 +615,7 @@ export class AcDbText extends AcDbEntity {
     const ocsOffset = acgeTransformWcsPointToOcs(offset, this._normal)
     acdbMovePrimaryGripPointAt(indices, ocsOffset, this._position)
     // Non-default alignments render from group 11 (`alignmentPoint`), so a grip
-    // drag on group 10 must translate both anchors together.
+    // drag must translate both anchors together (preserves their OCS offset).
     this._alignmentPoint.add(ocsOffset)
     return this
   }
@@ -634,7 +639,8 @@ export class AcDbText extends AcDbEntity {
     snapPoints: AcGePoint3dLike[]
   ) {
     if (AcDbOsnapMode.Insertion === osnapMode) {
-      snapPoints.push(this.pointToWcs(this._position))
+      // Match drawing / grips: INS is the effective placement anchor.
+      snapPoints.push(this.resolveTextAnchor().anchor)
     }
   }
 

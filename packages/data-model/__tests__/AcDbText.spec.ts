@@ -193,7 +193,7 @@ describe('AcDbText', () => {
     expect(snapPoints[0]).toMatchObject({ x: 3, y: 4, z: 5 })
   })
 
-  it('returns insertion point as grip point', () => {
+  it('returns insertion point as grip point for default LEFT+BASELINE', () => {
     const text = new AcDbText()
     text.position = new AcGePoint3d(3, 4, 5)
     const grips = text.subGetGripPoints()
@@ -203,6 +203,27 @@ describe('AcDbText', () => {
       y: text.position.y,
       z: text.position.z
     })
+  })
+
+  it('returns alignment point as grip/osnap for MiddleCenter TEXT', () => {
+    const text = new AcDbText()
+    text.horizontalMode = AcDbTextHorizontalMode.MIDDLE
+    text.verticalMode = AcDbTextVerticalMode.BASELINE
+    text.position = new AcGePoint3d(100, 200, 0)
+    text.alignmentPoint = new AcGePoint3d(150, 220, 0)
+
+    const grips = text.subGetGripPoints()
+    expect(grips).toHaveLength(1)
+    expect(grips[0]).toMatchObject({ x: 150, y: 220, z: 0 })
+
+    const snapPoints: AcGePoint3d[] = []
+    text.subGetOsnapPoints(
+      AcDbOsnapMode.Insertion,
+      new AcGePoint3d(),
+      new AcGePoint3d(),
+      snapPoints
+    )
+    expect(snapPoints[0]).toMatchObject({ x: 150, y: 220, z: 0 })
   })
 
   it('places TEXT with extrusion (0,0,-1) at mirrored WCS X', () => {
