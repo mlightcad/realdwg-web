@@ -1,0 +1,45 @@
+---
+description: Package type and exported function naming prefixes (AcCm/AcDb/AcGe/AcGi)
+globs: packages/common/**/*.{ts,tsx},packages/data-model/**/*.{ts,tsx},packages/geometry-engine/**/*.{ts,tsx},packages/graphic-interface/**/*.{ts,tsx}
+alwaysApply: false
+---
+
+# Package Naming Prefixes
+
+When adding or renaming types and exported global functions in these packages, use the package-specific prefixes below.
+
+| Package | Type prefix | Exported global function prefix |
+|---|---|---|
+| `common` | `AcCm` | `accm` |
+| `data-model` | `AcDb` | `acdb` |
+| `geometry-engine` | `AcGe` | `acge` |
+| `graphic-interface` | `AcGi` | `acgi` |
+
+## Examples
+
+```typescript
+// ✅ common
+export class AcCmColor { /* ... */ }
+export function accmClamp(value: number, min: number, max: number): number { /* ... */ }
+
+// ✅ data-model
+export class AcDbLine { /* ... */ }
+export function acdbOpenObject(id: string) { /* ... */ }
+
+// ✅ geometry-engine
+export class AcGePoint3d { /* ... */ }
+export function acgeDistance(a: AcGePoint3d, b: AcGePoint3d): number { /* ... */ }
+
+// ✅ graphic-interface
+export interface AcGiRenderer { /* ... */ }
+export function acgiCreateEntity() { /* ... */ }
+```
+
+```typescript
+// ❌ Wrong package prefix
+export class AcGeColor {} // in common — should be AcCmColor
+export function acdbClamp() {} // in common — should be accmClamp
+```
+
+- Types include classes, interfaces, enums, and type aliases.
+- Only **exported** top-level/global functions need the lowercase package prefix; private/local helpers do not.

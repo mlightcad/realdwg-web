@@ -20,6 +20,7 @@ import {
   AcDbEntity,
   acdbHexStringsToBytes,
   acdbImportDynBlockMetadata,
+  acdbNormalizeDimStyleColorNumber,
   AcDbLayerFilterPersistSource,
   AcDbLayerTableRecord,
   AcDbLayout,
@@ -179,9 +180,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimsah: item.DIMSAH,
         dimtix: item.DIMTIX,
         dimsoxd: item.DIMSOXD,
-        dimclrd: item.DIMCLRD,
-        dimclre: item.DIMCLRE,
-        dimclrt: item.DIMCLRT,
+        // LibreDWG returns CMC objects / packed ints for these — normalize to
+        // plain ACI (0/1..255/256) or packed RGB so dim block builders never
+        // see NaN colorIndex when constructing MTEXT.
+        dimclrd: acdbNormalizeDimStyleColorNumber(item.DIMCLRD),
+        dimclre: acdbNormalizeDimStyleColorNumber(item.DIMCLRE),
+        dimclrt: acdbNormalizeDimStyleColorNumber(item.DIMCLRT),
         dimadec: item.DIMADEC || 0,
         dimunit: item.DIMUNIT || 2,
         dimdec: item.DIMDEC,
@@ -561,6 +565,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.pdmode = header.PDMODE ?? 0
     db.pdsize = header.PDSIZE ?? 0.0
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
+    // Match DXF header reader: new dimensions must inherit $DIMSTYLE.
+    // Without this, DWG loads leave db.dimstyle as the constructor default
+    // ("Standard"), so dims pick imperial 0.18 text/arrow while the drawing's
+    // active style (e.g. metric "2-1" with dimtxt/dimasz=3) is ignored.
+    db.dimstyle =
+      this.normalizeHeaderStringValue(header.DIMSTYLE) ?? DEFAULT_TEXT_STYLE
     const cmleaderStyle =
       this.normalizeHeaderStringValue(
         (header as { CMLEADERSTYLE?: string }).CMLEADERSTYLE

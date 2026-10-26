@@ -124,5 +124,11 @@ export {
   AcDbLineSpacingStyle,
   AcDbOrdinateDimension,
   AcDbRadialDimension,
-  AcDbRotatedDimension
+  AcDbRotatedDimension,
+  CLOSED_FILLED_ARROW_BLOCK,
+  acdbEnsureDimArrowBlocks,
+  acdbFormatAngularMeasurement,
+  acdbFormatLinearMeasurement,
+  acdbResolveArrowBlockName,
+  acdbResolveDimensionAnnotation
 } from './dimension/index.js'

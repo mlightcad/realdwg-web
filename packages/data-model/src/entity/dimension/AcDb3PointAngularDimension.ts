@@ -7,6 +7,20 @@ import {
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
 import { AcDbDimension } from './AcDbDimension.js'
+import {
+  acdbAngleOfPoints,
+  acdbArrowScaleFromStyle,
+  acdbBuildAnnotationText,
+  acdbCreateDimArcEntity,
+  acdbCreateDimArrowInsert,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbEnsureDimArrowBlocks,
+  acdbPointAt,
+  acdbResolveAngularSweep,
+  acdbResolveArrowBlockName
+} from './AcDbDimBlockBuilder.js'
 
 /**
  * Represents a three-point angular dimension entity in AutoCAD.
@@ -187,6 +201,116 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       this.centerPoint,
       this.arcPoint
     ])
+  }
+
+  protected override getMeasurementPropertyValue() {
+    if (this.measurement != null) return this.measurement
+    return acdbResolveAngularSweep({
+      center: this.centerPoint,
+      xLine1: this.xLine1Point,
+      xLine2: this.xLine2Point,
+      arcPoint: this.arcPoint
+    }).sweep
+  }
+
+  createDimBlock(blockName: string) {
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
+    const a1 = acdbAngleOfPoints(this.centerPoint, this.xLine1Point)
+    const a2 = acdbAngleOfPoints(this.centerPoint, this.xLine2Point)
+    const radius = this.centerPoint.distanceTo(this.arcPoint)
+    const { start, end, sweep } = acdbResolveAngularSweep({
+      center: this.centerPoint,
+      xLine1: this.xLine1Point,
+      xLine2: this.xLine2Point,
+      arcPoint: this.arcPoint
+    })
+
+    if (style.dimse1 === 0) {
+      const extEnd = acdbPointAt(this.centerPoint, a1, radius)
+      block.appendEntity(
+        acdbCreateDimLineEntity(this.xLine1Point, extEnd, style, 'extension')
+      )
+    }
+    if (style.dimse2 === 0) {
+      const extEnd = acdbPointAt(this.centerPoint, a2, radius)
+      block.appendEntity(
+        acdbCreateDimLineEntity(this.xLine2Point, extEnd, style, 'extension')
+      )
+    }
+
+    const midAngle = start + sweep / 2
+    if (style.dimsd1 === 0 && style.dimsd2 === 0) {
+      block.appendEntity(
+        acdbCreateDimArcEntity(this.centerPoint, radius, start, end, style)
+      )
+    } else if (style.dimsd1 === 0 || style.dimsd2 === 0) {
+      // Mirror aligned: suppress one half of the dimension arc when a single
+      // dimsd flag is set.
+      if (style.dimsd1 === 0) {
+        block.appendEntity(
+          acdbCreateDimArcEntity(
+            this.centerPoint,
+            radius,
+            start,
+            midAngle,
+            style
+          )
+        )
+      }
+      if (style.dimsd2 === 0) {
+        block.appendEntity(
+          acdbCreateDimArcEntity(this.centerPoint, radius, midAngle, end, style)
+        )
+      }
+    }
+
+    const scale = acdbArrowScaleFromStyle(style)
+    const arrow1 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk1
+    )
+    const arrow2 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+    const pStart = acdbPointAt(this.centerPoint, start, radius)
+    const pEnd = acdbPointAt(this.centerPoint, end, radius)
+    // Arrow rotation tangent to the arc
+    const aStart = acdbCreateDimArrowInsert(
+      pStart,
+      start - Math.PI / 2,
+      scale,
+      arrow1
+    )
+    const aEnd = acdbCreateDimArrowInsert(pEnd, end + Math.PI / 2, scale, arrow2)
+    if (aStart) block.appendEntity(aStart)
+    if (aEnd) block.appendEntity(aEnd)
+
+    const textPos = acdbPointAt(
+      this.centerPoint,
+      midAngle,
+      radius +
+        style.dimgap * (style.dimscale > 0 ? style.dimscale : 1) +
+        style.dimtxt * (style.dimscale > 0 ? style.dimscale : 1)
+    )
+    this.textPosition = textPos
+    const measured = this.getMeasurementPropertyValue() ?? sweep
+    const contents = acdbBuildAnnotationText(
+      measured,
+      this.dimensionText,
+      style,
+      'angular'
+    )
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: textPos,
+      rotation: midAngle - Math.PI / 2,
+      style
+    })
+    if (mtext) block.appendEntity(mtext)
+
+    return block
   }
 
   /**

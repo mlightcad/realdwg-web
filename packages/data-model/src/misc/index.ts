@@ -94,7 +94,10 @@ export {
   RAW_COLOR_TYPE_BY_LAYER,
   RAW_COLOR_TYPE_RGB,
   RAW_COLOR_TYPE_WINDOW_BG,
-  acdbDecodeMLeaderStyleRawColor
+  acdbDecodeDimStyleColor,
+  acdbDecodeMLeaderStyleRawColor,
+  acdbNormalizeDimStyleColorNumber,
+  type AcDbDwgColorLike
 } from './AcDbMLeaderStyleColorCodec.js'
 export {
   ACDB_DRAW_CIRCLE_SIDES_DRAFT,

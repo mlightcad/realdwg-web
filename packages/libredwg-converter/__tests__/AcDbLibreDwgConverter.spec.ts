@@ -45,6 +45,22 @@ describe('AcDbLibreDwgConverter', () => {
     expect(missing.tilemode).toBe(1)
   })
 
+  it('maps $DIMSTYLE from the DWG header onto db.dimstyle', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    const withStyle = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { DIMSTYLE: '1-1' } }, withStyle)
+    expect(withStyle.dimstyle).toBe('1-1')
+
+    const blank = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { DIMSTYLE: '  ' } }, blank)
+    expect(blank.dimstyle).toBe('Standard')
+
+    const missing = new AcDbDatabase()
+    converter.processHeaderPublic({ header: {} }, missing)
+    expect(missing.dimstyle).toBe('Standard')
+  })
+
   it('keeps CMC RGB for layers when libredwg leaves colorIndex at 256', () => {
     // libredwg-web convertLayer leaves colorIndex=256 for method 0xC2 and puts
     // the CMC RGB in `color`. Mapping 256 to ByLayer made legend fills white.
