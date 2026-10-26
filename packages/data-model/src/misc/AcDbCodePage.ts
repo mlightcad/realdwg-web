@@ -100,6 +100,82 @@ export const acdbDwgCodePageToEncoding = (codepage: AcDbCodePage) => {
 }
 
 /**
+ * Normalize a `$DWGCODEPAGE` / encoding name for lookup: case-insensitive,
+ * with `_` and `-` ignored so `ANSI_1251`, `ansi-1251`, and `ISO8859_5` /
+ * `ISO_8859_5` collapse to the same key.
+ */
+const acdbNormalizeDwgCodePageKey = (value: string): string =>
+  value.toLowerCase().replace(/[_-]/g, '')
+
+/**
+ * LibreDWG-style enum member names keyed by {@link acdbNormalizeDwgCodePageKey}.
+ * Built once so `$DWGCODEPAGE` resolution is O(1) and case-insensitive.
+ */
+const enumByNormalizedName: Record<string, AcDbCodePage> = (() => {
+  const map: Record<string, AcDbCodePage> = {}
+  for (const name of Object.keys(AcDbCodePage)) {
+    // Skip reverse numeric mappings (`"27"` → `"CP866"`).
+    if (/^\d+$/.test(name)) continue
+    const value = AcDbCodePage[name as keyof typeof AcDbCodePage]
+    if (typeof value !== 'number') continue
+    map[acdbNormalizeDwgCodePageKey(name)] = value
+  }
+  return map
+})()
+
+/**
+ * ODA / BricsCAD `$DWGCODEPAGE` spellings that differ from LibreDWG enum
+ * names (`DOS866` vs `CP866`, `KSC5601` vs `CP949`, …). Keys are
+ * {@link acdbNormalizeDwgCodePageKey} results.
+ */
+const dwgCodePageNameAliases: Record<string, AcDbCodePage> = {
+  ascii: AcDbCodePage.US_ASCII,
+  dos437: AcDbCodePage.CP437,
+  dos850: AcDbCodePage.CP850,
+  dos852: AcDbCodePage.CP852,
+  dos855: AcDbCodePage.CP855,
+  dos857: AcDbCodePage.CP857,
+  dos860: AcDbCodePage.CP860,
+  dos861: AcDbCodePage.CP861,
+  dos863: AcDbCodePage.CP863,
+  dos864: AcDbCodePage.CP864,
+  dos865: AcDbCodePage.CP865,
+  dos866: AcDbCodePage.CP866,
+  dos869: AcDbCodePage.CP869,
+  dos932: AcDbCodePage.CP932,
+  ksc5601: AcDbCodePage.CP949,
+  macroman: AcDbCodePage.MACINTOSH
+}
+
+/**
+ * Resolve a `$DWGCODEPAGE` header value to an {@link AcDbCodePage}.
+ *
+ * Matches LibreDWG enum names and common ODA/BricsCAD aliases
+ * case-insensitively (e.g. `DOS866` → {@link AcDbCodePage.CP866},
+ * `ansi_1251` → {@link AcDbCodePage.ANSI_1251}, `ISO8859_5` →
+ * {@link AcDbCodePage.ISO_8859_5}). Unknown names yield `null`.
+ */
+export const acdbResolveDwgCodePage = (
+  value: string | null | undefined
+): AcDbCodePage | null => {
+  if (!value) return null
+  const key = acdbNormalizeDwgCodePageKey(value)
+  return enumByNormalizedName[key] ?? dwgCodePageNameAliases[key] ?? null
+}
+
+/**
+ * Resolve a `$DWGCODEPAGE` header value to a `TextDecoder` label.
+ * Unknown names yield `null` so callers keep their UTF-8 fallback.
+ */
+export const acdbResolveDwgCodePageEncoding = (
+  value: string | null | undefined
+): string | null => {
+  const codePage = acdbResolveDwgCodePage(value)
+  if (codePage === null) return null
+  return acdbDwgCodePageToEncoding(codePage) ?? null
+}
+
+/**
  * Common Korean/Chinese code page names that `TextDecoder` rejects but map
  * onto supported WHATWG encodings.
  *

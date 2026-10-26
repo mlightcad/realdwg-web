@@ -1,8 +1,7 @@
 import { AcDbDwgVersion } from '../database/AcDbDwgVersion.js'
 import {
-  AcDbCodePage,
-  acdbDwgCodePageToEncoding,
-  acdbNormalizeTextEncoding
+  acdbNormalizeTextEncoding,
+  acdbResolveDwgCodePageEncoding
 } from '../misc/AcDbCodePage.js'
 import {
   acdbDxfIsInt32Code,
@@ -659,19 +658,6 @@ function acdbMakeByteAsciiDxfPairReader(
 
 function acdbMakeUtf8DxfPairReader(bytes: Uint8Array): AcDbDxfPairReader {
   return acdbMakeByteAsciiDxfPairReader(bytes, 'utf-8')
-}
-
-/**
- * Resolve a `$DWGCODEPAGE` header value to a `TextDecoder` label.
- * Unknown names yield `null` so callers keep their UTF-8 fallback.
- */
-function acdbResolveDwgCodePageEncoding(
-  value: string | null | undefined
-): string | null {
-  if (!value) return null
-  const codePage = AcDbCodePage[value as keyof typeof AcDbCodePage]
-  if (codePage === undefined) return null
-  return acdbDwgCodePageToEncoding(codePage) ?? null
 }
 
 /**
