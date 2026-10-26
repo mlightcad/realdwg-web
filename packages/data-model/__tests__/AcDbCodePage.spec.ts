@@ -1,14 +1,28 @@
-import { acdbCreateDxfPairReader, acdbHostApplicationServices } from '../src/base'
+import {
+  acdbCreateDxfPairReader,
+  acdbHostApplicationServices,
+  acdbPeekDxfHeaderInfo
+} from '../src/base'
 import {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
-  acdbNormalizeTextEncoding
+  acdbNormalizeTextEncoding,
+  acdbResolveDwgCodePage,
+  acdbResolveDwgCodePageEncoding
 } from '../src/misc'
 import { AcDbDatabase } from '../src/database'
 import { AcDbNativeDxfConverter } from '../src/dxf'
 
 /** '한글' encoded in CP949 / EUC-KR (KS X 1001): 0xC7 0xD1 0xB1 0xDB. */
 const HANGUL_CP949 = Uint8Array.from([0xc7, 0xd1, 0xb1, 0xdb])
+/** 'Пример' in IBM866 / DOS866. */
+const CYRILLIC_CP866 = Uint8Array.from([0x8f, 0xe0, 0xa8, 0xac, 0xa5, 0xe0])
+/** 'サンプル' in Shift_JIS / DOS932. */
+const JAPANESE_CP932 = Uint8Array.from([
+  0x83, 0x54, 0x83, 0x93, 0x83, 0x76, 0x83, 0x8b
+])
+/** '예시' in EUC-KR / KSC5601. */
+const KOREAN_KSC5601 = Uint8Array.from([0xbf, 0xb9, 0xbd, 0xc3])
 
 /**
  * Builds DXF bytes whose lines are ASCII except the entries listed in
@@ -43,10 +57,13 @@ function buildDxfBytes(lines: (string | Uint8Array)[]): ArrayBuffer {
 }
 
 /**
- * Minimal pre-R2007 DXF with a Korean layer name and Korean TEXT string,
- * both encoded in CP949.
+ * Minimal pre-R2007 DXF with a layer name and TEXT string in a legacy
+ * code page (bytes must match `$DWGCODEPAGE`).
  */
-function buildKoreanDxf(codePageValue: string | null): ArrayBuffer {
+function buildLegacyTextDxf(
+  codePageValue: string | null,
+  textBytes: Uint8Array
+): ArrayBuffer {
   const lines: (string | Uint8Array)[] = [
     '0', 'SECTION',
     '2', 'HEADER',
@@ -66,7 +83,7 @@ function buildKoreanDxf(codePageValue: string | null): ArrayBuffer {
     '100', 'AcDbLayerTableRecord',
     '2'
   ]
-  lines.push(HANGUL_CP949) // layer name (group 2)
+  lines.push(textBytes) // layer name (group 2)
   lines.push('70', '0', '62', '7', '6', 'Continuous', '0', 'ENDTAB', '0', 'ENDSEC')
   lines.push(
     '0', 'SECTION',
@@ -76,11 +93,15 @@ function buildKoreanDxf(codePageValue: string | null): ArrayBuffer {
     '100', 'AcDbEntity',
     '8'
   )
-  lines.push(HANGUL_CP949) // layer name (group 8)
+  lines.push(textBytes) // layer name (group 8)
   lines.push('100', 'AcDbText', '10', '0', '20', '0', '30', '0', '40', '2.5', '1')
-  lines.push(HANGUL_CP949) // text string (group 1)
+  lines.push(textBytes) // text string (group 1)
   lines.push('0', 'ENDSEC', '0', 'EOF')
   return buildDxfBytes(lines)
+}
+
+function buildKoreanDxf(codePageValue: string | null): ArrayBuffer {
+  return buildLegacyTextDxf(codePageValue, HANGUL_CP949)
 }
 
 function readStringPairs(
@@ -114,6 +135,45 @@ describe('AcDbCodePage', () => {
     expect(acdbNormalizeTextEncoding('windows-1252')).toBe('windows-1252')
     expect(acdbNormalizeTextEncoding('utf-8')).toBe('utf-8')
   })
+
+  it('resolves ODA/BricsCAD $DWGCODEPAGE aliases case-insensitively', () => {
+    expect(acdbResolveDwgCodePage('DOS866')).toBe(AcDbCodePage.CP866)
+    expect(acdbResolveDwgCodePage('dos866')).toBe(AcDbCodePage.CP866)
+    expect(acdbResolveDwgCodePage('DOS932')).toBe(AcDbCodePage.CP932)
+    expect(acdbResolveDwgCodePage('KSC5601')).toBe(AcDbCodePage.CP949)
+    expect(acdbResolveDwgCodePage('ksc5601')).toBe(AcDbCodePage.CP949)
+    expect(acdbResolveDwgCodePage('ASCII')).toBe(AcDbCodePage.US_ASCII)
+    expect(acdbResolveDwgCodePage('MAC-ROMAN')).toBe(AcDbCodePage.MACINTOSH)
+    expect(acdbResolveDwgCodePage('ISO8859_5')).toBe(AcDbCodePage.ISO_8859_5)
+    expect(acdbResolveDwgCodePage('iso8859_5')).toBe(AcDbCodePage.ISO_8859_5)
+    expect(acdbResolveDwgCodePage('ansi_1251')).toBe(AcDbCodePage.ANSI_1251)
+    expect(acdbResolveDwgCodePage('UTF-8')).toBe(AcDbCodePage.UTF8)
+    expect(acdbResolveDwgCodePage('not-a-codepage')).toBeNull()
+
+    expect(acdbResolveDwgCodePageEncoding('DOS866')).toBe('ibm866')
+    expect(acdbResolveDwgCodePageEncoding('DOS932')).toBe('shift-jis')
+    expect(acdbResolveDwgCodePageEncoding('KSC5601')).toBe('euc-kr')
+    expect(acdbResolveDwgCodePageEncoding('ANSI_1251')).toBe('windows-1251')
+  })
+})
+
+describe('DXF ODA/BricsCAD $DWGCODEPAGE aliases', () => {
+  it.each([
+    ['DOS866', CYRILLIC_CP866, 'Пример', 'ibm866'],
+    ['DOS932', JAPANESE_CP932, 'サンプル', 'shift-jis'],
+    ['KSC5601', KOREAN_KSC5601, '예시', 'euc-kr'],
+    ['dos866', CYRILLIC_CP866, 'Пример', 'ibm866'],
+    ['ksc5601', KOREAN_KSC5601, '예시', 'euc-kr']
+  ] as const)(
+    'decodes %s text via $DWGCODEPAGE',
+    (codePage, bytes, expected, encodingLabel) => {
+      const buffer = buildLegacyTextDxf(codePage, bytes)
+      expect(acdbPeekDxfHeaderInfo(buffer).encoding).toBe(encodingLabel)
+      const values = readStringPairs(acdbCreateDxfPairReader(buffer))
+      expect(values[1]).toBe(expected)
+      expect(values[8]).toBe(expected)
+    }
+  )
 })
 
 describe('DXF Korean (CP949) text decoding', () => {

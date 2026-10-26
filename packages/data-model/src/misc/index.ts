@@ -23,7 +23,9 @@ export type { AcDbRenderingCacheProfileStats } from './AcDbRenderingCache.js'
 export {
   AcDbCodePage,
   acdbDwgCodePageToEncoding,
-  acdbNormalizeTextEncoding
+  acdbNormalizeTextEncoding,
+  acdbResolveDwgCodePage,
+  acdbResolveDwgCodePageEncoding
 } from './AcDbCodePage.js'
 export {
   ACAD_APPID,
