@@ -15,6 +15,7 @@ import {
   acdbCreateDimLineEntity,
   acdbCreateDimMText,
   acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
   acdbOffsetTextAlongNormal,
   acdbPointAt,
@@ -361,7 +362,7 @@ export class AcDbRadialDimension extends AcDbDimension {
     if (leaderLen > 0) {
       // Horizontal dogleg toward text
       const doglegLen =
-        style.dimasz * (style.dimscale > 0 ? style.dimscale : 1) * 2
+        style.dimasz * acdbDimFeatureScale(style) * 2
       const doglegEnd = new AcGePoint3d(
         outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
         outer.y,

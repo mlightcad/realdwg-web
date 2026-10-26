@@ -14,6 +14,7 @@ import {
   acdbCreateDimLineEntity,
   acdbCreateDimMText,
   acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
   acdbMidPoint,
   acdbOffsetTextAlongNormal,
@@ -269,7 +270,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
     let textRotation = angle
     if (leaderLen > 0) {
       const doglegLen =
-        style.dimasz * (style.dimscale > 0 ? style.dimscale : 1) * 2
+        style.dimasz * acdbDimFeatureScale(style) * 2
       const doglegEnd = new AcGePoint3d(
         outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
         outer.y,

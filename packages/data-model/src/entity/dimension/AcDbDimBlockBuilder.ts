@@ -22,7 +22,10 @@ import { AcDbArc } from '../AcDbArc.js'
 import { AcDbBlockReference } from '../AcDbBlockReference.js'
 import { AcDbLine } from '../AcDbLine.js'
 import { AcDbMText } from '../AcDbMText.js'
+import { acdbDimFeatureScale } from './AcDbDimFeatureScale.js'
 import { acdbResolveDimensionAnnotation } from './AcDbDimMeasurementFormat.js'
+
+export { acdbDimFeatureScale }
 
 /** Closed filled uses empty dimblk in AutoCAD; we store geometry under this BTR name. */
 export const CLOSED_FILLED_ARROW_BLOCK = '_CLOSEDFILLED'
@@ -99,7 +102,7 @@ export function acdbCreateDimArrowInsert(
 }
 
 export function acdbArrowScaleFromStyle(style: AcDbDimStyleTableRecord): number {
-  const scale = style.dimscale > 0 ? style.dimscale : 1
+  const scale = acdbDimFeatureScale(style)
   if (style.dimtsz > 0) {
     return style.dimtsz * scale
   }
@@ -107,8 +110,7 @@ export function acdbArrowScaleFromStyle(style: AcDbDimStyleTableRecord): number 
 }
 
 export function acdbTextHeightFromStyle(style: AcDbDimStyleTableRecord): number {
-  const scale = style.dimscale > 0 ? style.dimscale : 1
-  return style.dimtxt * scale
+  return style.dimtxt * acdbDimFeatureScale(style)
 }
 
 export function acdbCreateDimMText(options: {
@@ -157,9 +159,7 @@ export function acdbOffsetTextAlongNormal(
   rotation: number,
   style: AcDbDimStyleTableRecord
 ): AcGePoint3d {
-  const gap =
-    (style.dimgap >= 0 ? style.dimgap : 0) *
-    (style.dimscale > 0 ? style.dimscale : 1)
+  const gap = (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style)
   const height = acdbTextHeightFromStyle(style)
   let offset = 0
   if (style.dimtad === AcDbDimTextVertical.Above) {
@@ -179,8 +179,7 @@ export function acdbAppendCenterMark(
   center: AcGePoint3dLike,
   style: AcDbDimStyleTableRecord
 ) {
-  const scale = style.dimscale > 0 ? style.dimscale : 1
-  const size = style.dimcen * scale
+  const size = style.dimcen * acdbDimFeatureScale(style)
   if (size === 0) return
   const abs = Math.abs(size)
   const c = new AcGePoint3d().copy(center)
@@ -339,7 +338,7 @@ export function acdbExtendLineByDimDle(
   line: AcGeLine3d,
   style: AcDbDimStyleTableRecord
 ) {
-  const dle = style.dimdle * (style.dimscale > 0 ? style.dimscale : 1)
+  const dle = style.dimdle * acdbDimFeatureScale(style)
   if (dle !== 0) {
     line.extend(dle)
     line.extend(dle, true)

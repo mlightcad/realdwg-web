@@ -80,6 +80,32 @@ describe('AcDbDimBlockBuilder / createDimBlock', () => {
     expect(texts[0].contents).toMatch(/100/)
   })
 
+  it('annotative style scale replaces dimscale for text height', () => {
+    const db = createDb()
+    const style = new AcDbDimStyleTableRecord({
+      name: '1-1',
+      dimtxt: 3,
+      dimscale: 1,
+      dimasz: 3,
+      dimdec: 0
+    })
+    db.tables.dimStyleTable.add(style)
+    db.setDimStyleAnnotationScale('1-1', 16)
+
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(100, 0, 0),
+      new AcGePoint3d(50, 20, 0)
+    )
+    dim.dimensionStyleName = '1-1'
+    db.tables.blockTable.modelSpace.appendEntity(dim)
+
+    const block = dim.createDimBlock('*Danno')
+    const texts = [...block.newIterator()].filter(e => e instanceof AcDbMText)
+    expect(texts).toHaveLength(1)
+    expect(texts[0].height).toBeCloseTo(48, 5)
+  })
+
   it('rotated createDimBlock inherits aligned builder', () => {
     const db = createDb()
     const dim = new AcDbRotatedDimension(

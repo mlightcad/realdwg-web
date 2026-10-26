@@ -6,6 +6,15 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import {
+  acdbBuildAnnotationText,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
+  acdbEnsureDimArrowBlocks,
+  acdbTextHeightFromStyle
+} from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
 /**
@@ -54,6 +63,31 @@ export class AcDbOrdinateDimension extends AcDbDimension {
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
     this.dimensionStyleName = dimStyle
+    // DXF group 70 low nibble 6 = ordinate. Bit 0x40 selects the X datum.
+    this.dimensionType = 6
+  }
+
+  /**
+   * Ordinate origin (DXF group 10). Measurement is the X or Y delta from this
+   * point to {@link definingPoint}.
+   */
+  get origin() {
+    return this._dxfDefinitionPoint
+  }
+  set origin(value: AcGePoint3d) {
+    this._dxfDefinitionPoint.copy(value)
+  }
+
+  /**
+   * When true the dimension reports the X coordinate (group 70 bit 64).
+   * Otherwise it reports the Y coordinate.
+   */
+  get useXAxis() {
+    return (this.dimensionType & 0x40) !== 0
+  }
+  set useXAxis(value: boolean) {
+    const preserved = (this.dimensionType & ~0x4f) | 6
+    this.dimensionType = value ? preserved | 0x40 : preserved
   }
 
   /**
@@ -122,6 +156,7 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    * @inheritdoc
    */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
+    this._dxfDefinitionPoint.applyMatrix4(matrix)
     this._definingPoint.applyMatrix4(matrix)
     this._leaderEndPoint.applyMatrix4(matrix)
   }
@@ -153,6 +188,60 @@ export class AcDbOrdinateDimension extends AcDbDimension {
    */
   protected get arrowLineCount() {
     return 0
+  }
+
+  protected override getMeasurementPropertyValue() {
+    if (this.measurement != null) return this.measurement
+    return this.useXAxis
+      ? this.definingPoint.x - this.origin.x
+      : this.definingPoint.y - this.origin.y
+  }
+
+  createDimBlock(blockName: string) {
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
+    const def = this.definingPoint
+    const end = this.leaderEndPoint
+    const knee = this.useXAxis
+      ? new AcGePoint3d(def.x, end.y, def.z)
+      : new AcGePoint3d(end.x, def.y, def.z)
+
+    if (def.distanceTo(knee) > 1e-9) {
+      block.appendEntity(acdbCreateDimLineEntity(def, knee, style))
+    }
+    if (knee.distanceTo(end) > 1e-9) {
+      block.appendEntity(acdbCreateDimLineEntity(knee, end, style))
+    } else if (def.distanceTo(end) > 1e-9 && def.distanceTo(knee) <= 1e-9) {
+      block.appendEntity(acdbCreateDimLineEntity(def, end, style))
+    }
+
+    const alongX = this.useXAxis || style.dimtih !== 0
+    const rotation = alongX ? 0 : Math.PI / 2
+    const gap =
+      (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style) +
+      acdbTextHeightFromStyle(style) * 0.5
+    const textPos = new AcGePoint3d(
+      end.x + (this.useXAxis ? Math.sign(end.x - def.x || 1) * gap : 0),
+      end.y + (this.useXAxis ? 0 : Math.sign(end.y - def.y || 1) * gap),
+      end.z
+    )
+    this.textPosition = textPos
+    const mtext = acdbCreateDimMText({
+      contents: acdbBuildAnnotationText(
+        this.getMeasurementPropertyValue() ?? 0,
+        this.dimensionText,
+        style,
+        'linear'
+      ),
+      position: textPos,
+      rotation,
+      style
+    })
+    if (mtext) block.appendEntity(mtext)
+
+    return block
   }
 
   /**

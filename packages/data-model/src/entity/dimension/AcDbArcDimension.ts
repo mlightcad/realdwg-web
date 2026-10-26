@@ -6,6 +6,22 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import {
+  acdbAngleOfPoints,
+  acdbArrowScaleFromStyle,
+  acdbBuildAnnotationText,
+  acdbCreateDimArcEntity,
+  acdbCreateDimArrowInsert,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
+  acdbEnsureDimArrowBlocks,
+  acdbPointAt,
+  acdbResolveAngularSweep,
+  acdbResolveArrowBlockName,
+  acdbTextHeightFromStyle
+} from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
 /**
@@ -62,6 +78,8 @@ export class AcDbArcDimension extends AcDbDimension {
     this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
     this.dimensionStyleName = dimStyle
+    // DXF group 70 low nibble 8 = arc length.
+    this.dimensionType = 8
   }
 
   /**
@@ -189,6 +207,143 @@ export class AcDbArcDimension extends AcDbDimension {
       this.centerPoint,
       this.arcPoint
     ])
+  }
+
+  /**
+   * Arc length of the feature arc (feature radius × sweep), not the offset
+   * dimension-arc radius.
+   */
+  protected override getMeasurementPropertyValue() {
+    if (this.measurement != null) return this.measurement
+    const featureRadius = this.centerPoint.distanceTo(this.xLine1Point)
+    const { sweep } = acdbResolveAngularSweep({
+      center: this.centerPoint,
+      xLine1: this.xLine1Point,
+      xLine2: this.xLine2Point,
+      arcPoint: this.arcPoint
+    })
+    return featureRadius * sweep
+  }
+
+  createDimBlock(blockName: string) {
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
+    const a1 = acdbAngleOfPoints(this.centerPoint, this.xLine1Point)
+    const a2 = acdbAngleOfPoints(this.centerPoint, this.xLine2Point)
+    const dimRadius = Math.max(this.centerPoint.distanceTo(this.arcPoint), 1e-9)
+    const { start, end, sweep } = acdbResolveAngularSweep({
+      center: this.centerPoint,
+      xLine1: this.xLine1Point,
+      xLine2: this.xLine2Point,
+      arcPoint: this.arcPoint
+    })
+
+    if (style.dimse1 === 0) {
+      block.appendEntity(
+        acdbCreateDimLineEntity(
+          this.xLine1Point,
+          acdbPointAt(this.centerPoint, a1, dimRadius),
+          style,
+          'extension'
+        )
+      )
+    }
+    if (style.dimse2 === 0) {
+      block.appendEntity(
+        acdbCreateDimLineEntity(
+          this.xLine2Point,
+          acdbPointAt(this.centerPoint, a2, dimRadius),
+          style,
+          'extension'
+        )
+      )
+    }
+
+    const midAngle = start + sweep / 2
+    if (style.dimsd1 === 0 && style.dimsd2 === 0) {
+      block.appendEntity(
+        acdbCreateDimArcEntity(
+          this.centerPoint,
+          dimRadius,
+          start,
+          end,
+          style
+        )
+      )
+    } else if (style.dimsd1 === 0 || style.dimsd2 === 0) {
+      if (style.dimsd1 === 0) {
+        block.appendEntity(
+          acdbCreateDimArcEntity(
+            this.centerPoint,
+            dimRadius,
+            start,
+            midAngle,
+            style
+          )
+        )
+      }
+      if (style.dimsd2 === 0) {
+        block.appendEntity(
+          acdbCreateDimArcEntity(
+            this.centerPoint,
+            dimRadius,
+            midAngle,
+            end,
+            style
+          )
+        )
+      }
+    }
+
+    const scale = acdbArrowScaleFromStyle(style)
+    const arrow1 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk1
+    )
+    const arrow2 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+    if (style.dimtsz <= 0) {
+      const aStart = acdbCreateDimArrowInsert(
+        acdbPointAt(this.centerPoint, start, dimRadius),
+        start - Math.PI / 2,
+        scale,
+        arrow1
+      )
+      const aEnd = acdbCreateDimArrowInsert(
+        acdbPointAt(this.centerPoint, end, dimRadius),
+        end + Math.PI / 2,
+        scale,
+        arrow2
+      )
+      if (aStart) block.appendEntity(aStart)
+      if (aEnd) block.appendEntity(aEnd)
+    }
+
+    const gap =
+      (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style)
+    const textPos = acdbPointAt(
+      this.centerPoint,
+      midAngle,
+      dimRadius + gap + acdbTextHeightFromStyle(style) * 0.5
+    )
+    this.textPosition = textPos
+    const contents = acdbBuildAnnotationText(
+      this.getMeasurementPropertyValue() ?? 0,
+      this.dimensionText,
+      style,
+      'linear'
+    )
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: textPos,
+      rotation: midAngle + Math.PI / 2,
+      style
+    })
+    if (mtext) block.appendEntity(mtext)
+
+    return block
   }
 
   /**

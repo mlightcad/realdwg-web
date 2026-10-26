@@ -126,6 +126,7 @@ export {
   AcDbRadialDimension,
   AcDbRotatedDimension,
   CLOSED_FILLED_ARROW_BLOCK,
+  acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
   acdbFormatAngularMeasurement,
   acdbFormatLinearMeasurement,

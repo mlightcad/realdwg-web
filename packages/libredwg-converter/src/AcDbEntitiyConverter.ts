@@ -1332,6 +1332,13 @@ export class AcDbEntityConverter {
         entity.subDefinitionPoint1,
         entity.subDefinitionPoint2
       )
+      if (entity.definitionPoint) {
+        dbEntity.origin = new AcGePoint3d(
+          entity.definitionPoint.x,
+          entity.definitionPoint.y,
+          entity.definitionPoint.z
+        )
+      }
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
     } else if (dimension.subclassMarker == 'AcDbRadialDimension') {
@@ -1615,6 +1622,10 @@ export class AcDbEntityConverter {
     dbEntity.dimensionStyleName = entity.styleName
     dbEntity.dimensionText = entity.text || ''
     dbEntity.measurement = entity.measurement
+    // Group 70: low nibble is the dim kind; bit 0x40 selects X vs Y ordinate.
+    if (entity.dimensionType != null) {
+      dbEntity.dimensionType = entity.dimensionType
+    }
   }
 
   private processCommonAttrs(entity: DwgEntity, dbEntity: AcDbEntity) {

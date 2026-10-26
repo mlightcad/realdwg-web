@@ -182,6 +182,7 @@ export {
   AcDbCurve,
   AcDbDiametricDimension,
   AcDbDimension,
+  acdbDimFeatureScale,
   AcDbEllipse,
   AcDbEntity,
   AcDbFace,

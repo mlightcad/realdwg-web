@@ -15,6 +15,7 @@ import {
   acdbCreateDimLineEntity,
   acdbCreateDimMText,
   acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
   acdbPointAt,
   acdbResolveAngularSweep,
@@ -291,8 +292,8 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       this.centerPoint,
       midAngle,
       radius +
-        style.dimgap * (style.dimscale > 0 ? style.dimscale : 1) +
-        style.dimtxt * (style.dimscale > 0 ? style.dimscale : 1)
+        style.dimgap * acdbDimFeatureScale(style) +
+        style.dimtxt * acdbDimFeatureScale(style)
     )
     this.textPosition = textPos
     const measured = this.getMeasurementPropertyValue() ?? sweep

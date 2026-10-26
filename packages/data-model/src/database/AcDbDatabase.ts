@@ -439,6 +439,8 @@ export class AcDbDatabase extends AcDbObject {
   }
   /** Current annotation scale name (CANNOSCALE), e.g. `"1:100"`. */
   private _cannoscale: string
+  /** Uppercase dimstyle name → annotative model/paper scale factor. */
+  private _dimStyleAnnotationScales = new Map<string, number>()
   /**
    * Whether annotative objects that do not support the current annotation
    * scale are still displayed (ANNOALLVISIBLE). Defaults to AutoCAD's `1`.
@@ -560,6 +562,7 @@ export class AcDbDatabase extends AcDbObject {
     this._tilemode = 1
     this._psltscale = true
     this._cannoscale = '1:1'
+    this._dimStyleAnnotationScales = new Map()
     // AutoCAD initial value of ANNOALLVISIBLE is 1 (show unsupported).
     this._annoallvisible = true
     this._pdmode = 0
@@ -1732,6 +1735,20 @@ export class AcDbDatabase extends AcDbObject {
   }
   set cannoscale(value: string) {
     this._cannoscale = value || '1:1'
+  }
+
+  /**
+   * Model-space feature scale (drawing units per paper unit) used by
+   * annotative dimensions of `styleName`. Replaces DIMSCALE when present.
+   */
+  getDimStyleAnnotationScale(styleName: string): number | undefined {
+    if (!styleName) return undefined
+    return this._dimStyleAnnotationScales.get(styleName.trim().toUpperCase())
+  }
+
+  setDimStyleAnnotationScale(styleName: string, factor: number) {
+    if (!styleName || !(factor > 0)) return
+    this._dimStyleAnnotationScales.set(styleName.trim().toUpperCase(), factor)
   }
 
   /**
@@ -3775,6 +3792,7 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
     this._cannoscale = '1:1'
+    this._dimStyleAnnotationScales.clear()
     this._annoallvisible = true
     this._layerFilters = new AcLyLayerFilterTree()
     this._currentSpace = undefined
