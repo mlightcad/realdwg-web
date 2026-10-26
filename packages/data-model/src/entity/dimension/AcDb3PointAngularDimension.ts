@@ -6,7 +6,6 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
-import { AcDbDimension } from './AcDbDimension.js'
 import {
   acdbAngleOfPoints,
   acdbArrowScaleFromStyle,
@@ -21,6 +20,7 @@ import {
   acdbResolveAngularSweep,
   acdbResolveArrowBlockName
 } from './AcDbDimBlockBuilder.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents a three-point angular dimension entity in AutoCAD.

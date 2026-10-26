@@ -6,7 +6,6 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
-import { AcDbDimension } from './AcDbDimension.js'
 import {
   acdbAngleOfPoints,
   acdbAppendCenterMark,
@@ -21,6 +20,7 @@ import {
   acdbPointAt,
   acdbResolveArrowBlockName
 } from './AcDbDimBlockBuilder.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents a radial dimension entity in AutoCAD.

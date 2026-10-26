@@ -10,7 +10,6 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
-import { AcDbDimension } from './AcDbDimension.js'
 import {
   acdbArrowScaleFromStyle,
   acdbBuildAnnotationText,
@@ -24,6 +23,7 @@ import {
   acdbOffsetTextAlongNormal,
   acdbResolveArrowBlockName
 } from './AcDbDimBlockBuilder.js'
+import { AcDbDimension } from './AcDbDimension.js'
 
 /**
  * Represents an aligned dimension entity in AutoCAD.

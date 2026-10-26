@@ -10,12 +10,12 @@ import {
   AcGiMTextAttachmentPoint
 } from '@mlightcad/graphic-interface'
 
+import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord.js'
+import { AcDbDatabase } from '../../database/AcDbDatabase.js'
 import {
   AcDbDimStyleTableRecord,
   AcDbDimTextVertical
 } from '../../database/AcDbDimStyleTableRecord.js'
-import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord.js'
-import { AcDbDatabase } from '../../database/AcDbDatabase.js'
 import { AcDbDataGenerator } from '../../misc/AcDbDataGenerator.js'
 import { acdbDecodeDimStyleColor } from '../../misc/AcDbMLeaderStyleColorCodec.js'
 import { AcDbArc } from '../AcDbArc.js'
