@@ -1,5 +1,4 @@
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
-
 import { AcDbAnnotScaleObjectContextData } from './AcDbAnnotScaleObjectContextData.js'
 
 /**

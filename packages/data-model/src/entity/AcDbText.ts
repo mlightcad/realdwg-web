@@ -25,8 +25,8 @@ import {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
-  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext,
   acdbSetAnnotative

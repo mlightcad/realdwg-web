@@ -40,14 +40,13 @@ import {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
-  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext,
   acdbResolveAnnotationScaleDrawInfo,
   acdbSetAnnotative
 } from '../misc/AcDbAnnotationScale.js'
-import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.js'
 import {
   acdbIsSolidHatchPatternName,
   DEFAULT_GRADIENT_HATCH_NAME,
@@ -56,6 +55,7 @@ import {
 } from '../misc/AcDbConstants.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined.js'
+import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {

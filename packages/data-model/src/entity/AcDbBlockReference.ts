@@ -17,17 +17,17 @@ import {
   type AcDbAnnotationScaleContext,
   type AcDbAnnotationScaleDrawInfo,
   acdbBuildAnnotationScaleDrawInfo,
-  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext,
   acdbResolveAnnotationScaleDrawInfo,
   acdbSetAnnotative
 } from '../misc/AcDbAnnotationScale.js'
-import { AcDbBlkRefObjectContextData } from '../object/AcDbBlkRefObjectContextData.js'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbBlkRefObjectContextData } from '../object/AcDbBlkRefObjectContextData.js'
 import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference.js'
 import { AcDbAttribute } from './AcDbAttribute.js'
 import { AcDbEntity } from './AcDbEntity.js'

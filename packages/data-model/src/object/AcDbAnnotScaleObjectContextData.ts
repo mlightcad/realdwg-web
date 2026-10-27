@@ -1,6 +1,5 @@
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import type { AcDbObjectId } from '../base/AcDbObject.js'
-
 import { AcDbObjectContextData } from './AcDbObjectContextData.js'
 
 /**

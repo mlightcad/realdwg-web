@@ -1,7 +1,6 @@
 import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
-
 import { AcDbAnnotScaleObjectContextData } from './AcDbAnnotScaleObjectContextData.js'
 
 /**

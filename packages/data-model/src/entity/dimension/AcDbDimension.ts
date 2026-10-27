@@ -24,14 +24,13 @@ import {
   type AcDbAnnotationScaleContext,
   type AcDbAnnotationScaleDrawInfo,
   acdbBuildAnnotationScaleDrawInfo,
-  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext,
+  AcDbRenderingCache,
   acdbResolveAnnotationScaleDrawInfo,
-  acdbSetAnnotative,
-  AcDbRenderingCache
-} from '../../misc/index.js'
+  acdbSetAnnotative} from '../../misc/index.js'
 import { AcDbOsnapMode } from '../../misc/index.js'
 import { AcDbDimensionObjectContextData } from '../../object/AcDbDimensionObjectContextData.js'
 import { AcDbBlockReference } from '../AcDbBlockReference.js'

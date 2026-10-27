@@ -21,14 +21,14 @@ import {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
-  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
   acdbIsAnnotativeObject,
   acdbMatchAnnotationScaleContext,
   acdbSetAnnotative
 } from '../misc/AcDbAnnotationScale.js'
-import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
