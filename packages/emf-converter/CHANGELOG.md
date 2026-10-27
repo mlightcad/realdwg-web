@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.15
+
+### Patch Changes
+
+- feat: expands annotative scale object context data and CANNOSCALE presentation, and generates dimension blocks from DIMSTYLE settings. Also recognizes ODA/BricsCAD $DWGCODEPAGE aliases and aligns TEXT grip and INS osnap with the placement anchor
+
 ## 1.15.14
 
 ### Patch Changes
