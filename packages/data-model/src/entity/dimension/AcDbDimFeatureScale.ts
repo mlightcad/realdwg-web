@@ -19,7 +19,13 @@ export function acdbDimFeatureScale(
       return resolved.preferred.scale.scaleFactor
     }
   }
-  const annotated = style.database?.getDimStyleAnnotationScale(style.name)
-  if (annotated != null && annotated > 0) return annotated
+  try {
+    // `.database` falls back to the host working DB and throws when unset
+    // (detached dimstyles in unit tests / clones).
+    const annotated = style.database?.getDimStyleAnnotationScale(style.name)
+    if (annotated != null && annotated > 0) return annotated
+  } catch {
+    // Fall through to DIMSCALE.
+  }
   return style.dimscale > 0 ? style.dimscale : 1
 }

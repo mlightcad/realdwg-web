@@ -126,9 +126,19 @@ export function acdbFindScale(
 export function acdbGetAnnotationScaleContexts(
   object: AcDbObject
 ): AcDbAnnotationScaleContext[] {
-  const db = object.database
+  // Check the extension dictionary before touching `.database` — the latter
+  // falls back to the host working database and throws when unset (common for
+  // detached entities in unit tests / clone paths).
   const extId = object.extensionDictionary
-  if (!db || !extId) return []
+  if (!extId) return []
+
+  let db: AcDbDatabase | undefined
+  try {
+    db = object.database
+  } catch {
+    return []
+  }
+  if (!db) return []
 
   const extDict = db.getObjectById(normalizeHandle(extId))
   if (!(extDict instanceof AcDbDictionary)) return []
@@ -217,9 +227,16 @@ export function acdbMatchAnnotationScaleContext(
 export function acdbGetViewportAnnotationScale(
   viewport: AcDbObject
 ): AcDbScale | undefined {
-  const db = viewport.database
   const extId = viewport.extensionDictionary
-  if (!db || !extId) return undefined
+  if (!extId) return undefined
+
+  let db: AcDbDatabase | undefined
+  try {
+    db = viewport.database
+  } catch {
+    return undefined
+  }
+  if (!db) return undefined
 
   const extDict = db.getObjectById(normalizeHandle(extId))
   if (!(extDict instanceof AcDbDictionary)) return undefined
@@ -357,7 +374,12 @@ export function acdbAddAnnotationScaleToObject(
   object: AcDbObject,
   scaleName: string
 ): boolean {
-  const db = object.database
+  let db: AcDbDatabase | undefined
+  try {
+    db = object.database
+  } catch {
+    return false
+  }
   if (!db) return false
   const scale = acdbEnsureNamedScale(db, scaleName)
   const existing = acdbGetAnnotationScaleContexts(object)
@@ -387,9 +409,16 @@ export function acdbRemoveAnnotationScaleFromObject(
   object: AcDbObject,
   scaleName: string
 ): boolean {
-  const db = object.database
   const extId = object.extensionDictionary
-  if (!db || !extId) return false
+  if (!extId) return false
+
+  let db: AcDbDatabase | undefined
+  try {
+    db = object.database
+  } catch {
+    return false
+  }
+  if (!db) return false
 
   const extDict = db.getObjectById(normalizeHandle(extId))
   if (!(extDict instanceof AcDbDictionary)) return false
