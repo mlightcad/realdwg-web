@@ -1,6 +1,23 @@
-import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
+import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+import {
+  AcGiEntity,
+  AcGiMTextAttachmentPoint,
+  AcGiMTextData,
+  AcGiRenderer
+} from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotationScaleContexts,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext
+} from '../misc/AcDbAnnotationScale.js'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbMText } from './AcDbMText.js'
 import { AcDbText } from './AcDbText.js'
 /**
@@ -380,6 +397,78 @@ export class AcDbAttributeDefinition extends AcDbText {
    * @param delay - When true, the renderer may defer heavy work
    * @returns The rendered text entity, or undefined when not drawn
    */
+  /**
+   * Resolves height / insertion for multi-line ATTDEF at CANNOSCALE.
+   */
+  private resolveMTextAnnotativePresentation(contents: string): {
+    contents: string
+    height: number
+    width: number
+    position: AcGePoint3d
+    direction: AcGeVector3d
+    attachmentPoint: AcGiMTextAttachmentPoint
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const mt = this.mtext
+    const baseHeight = mt?.height ?? this.height
+    const baseWidth = mt?.width ?? 0
+    const basePosition = mt?.location
+      ? new AcGePoint3d(mt.location)
+      : this.position.clone()
+    const baseDirection = mt?.direction
+      ? new AcGeVector3d(mt.direction)
+      : new AcGeVector3d(1, 0, 0)
+    const baseAttachment =
+      (mt?.attachmentPoint as AcGiMTextAttachmentPoint | undefined) ??
+      AcGiMTextAttachmentPoint.TopLeft
+
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 || acdbIsAnnotativeObject(this)
+
+    let height = baseHeight
+    let width = baseWidth
+    let position = basePosition
+    let direction = baseDirection
+    let attachmentPoint = baseAttachment
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      height = acdbAnnotativeModelHeight(
+        acdbAnnotativePaperHeight(baseHeight, contexts),
+        preferred.scale.scaleFactor
+      )
+      const ctx = preferred.contextData
+      if (ctx instanceof AcDbMTextObjectContextData) {
+        position = ctx.insertionPoint.clone()
+        direction = ctx.direction.clone()
+        attachmentPoint = ctx.attachmentPoint as AcGiMTextAttachmentPoint
+        if (ctx.definedWidth > 0) width = ctx.definedWidth
+      }
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+    }
+
+    return {
+      contents,
+      height,
+      width,
+      position,
+      direction,
+      attachmentPoint,
+      preferred,
+      annotationScale
+    }
+  }
+
   override subWorldDraw(
     renderer: AcGiRenderer,
     delay?: boolean
@@ -387,6 +476,30 @@ export class AcDbAttributeDefinition extends AcDbText {
     const display = this.resolveDisplayText()
     if (display === undefined) {
       return undefined
+    }
+
+    if (this.isMTextAttribute && this.mtext) {
+      const presentation = this.resolveMTextAnnotativePresentation(display)
+      const mtextData: AcGiMTextData = {
+        text: presentation.contents,
+        height: presentation.height,
+        width: presentation.width,
+        position: presentation.position,
+        rotation: this.mtext.rotation,
+        directionVector: presentation.direction,
+        attachmentPoint: presentation.attachmentPoint,
+        drawingDirection: this.mtext.drawingDirection,
+        lineSpaceFactor: this.mtext.lineSpacingFactor,
+        lineSpaceStyle: this.mtext.lineSpacingStyle
+      }
+      const drawable = renderer.mtext(mtextData, this.getTextStyle(), delay)
+      if (drawable && presentation.annotationScale) {
+        const userData = (drawable.userData ??= {}) as {
+          annotationScale?: AcDbAnnotationScaleDrawInfo
+        }
+        userData.annotationScale = presentation.annotationScale
+      }
+      return drawable
     }
 
     if (display === this.textString) {

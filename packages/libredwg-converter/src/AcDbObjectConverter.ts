@@ -1,13 +1,20 @@
 import {
   acdbDecodeMLeaderStyleRawColor,
+  AcDbBlkRefObjectContextData,
   AcDbDictionaryVar,
+  AcDbDimensionObjectContextData,
+  AcDbHatchScaleContextData,
   AcDbLayerFilter,
   AcDbLayerIndex,
+  AcDbLeaderObjectContextData,
+  AcDbMLeaderObjectContextData,
   AcDbMLeaderStyle,
+  AcDbMTextAttributeObjectContextData,
   AcDbMTextObjectContextData,
   AcDbObject,
   AcDbResultBuffer,
   AcDbScale,
+  AcDbTextObjectContextData,
   AcDbXrecord,
   AcGePoint3d,
   AcGeVector3d
@@ -50,6 +57,67 @@ export interface LibreDwgMTextObjectContextDataObject extends DwgCommonObject {
   extentsWidth?: number
   extentsHeight?: number
   columnType?: number
+}
+
+/** LibreDWG dimension object-context-data (when exposed by libredwg-web). */
+export interface LibreDwgDimensionObjectContextDataObject
+  extends DwgCommonObject {
+  classVersion?: number
+  isDefault?: boolean
+  scaleId?: string
+  scaleHandle?: string
+  /** Anonymous dim block name for this scale (DXF 2). */
+  name?: string
+  blockName?: string
+  defPt?: { x: number; y: number; z?: number }
+  definitionPoint?: { x: number; y: number; z?: number }
+  dimLinePoint?: { x: number; y: number; z?: number }
+  _11pt?: { x: number; y: number; z?: number }
+}
+
+/** Shared annot-scale context fields exposed by LibreDWG. */
+export interface LibreDwgAnnotScaleContextDataObject extends DwgCommonObject {
+  classVersion?: number
+  isDefault?: boolean
+  scaleId?: string
+  scaleHandle?: string
+}
+
+export interface LibreDwgTextObjectContextDataObject
+  extends LibreDwgAnnotScaleContextDataObject {
+  horizontalMode?: number
+  rotation?: number
+  alignmentPoint?: { x: number; y: number; z?: number }
+  position?: { x: number; y: number; z?: number }
+}
+
+export interface LibreDwgHatchScaleContextDataObject
+  extends LibreDwgAnnotScaleContextDataObject {
+  patternScale?: number
+  scale?: number
+}
+
+export interface LibreDwgBlkRefObjectContextDataObject
+  extends LibreDwgAnnotScaleContextDataObject {
+  position?: { x: number; y: number; z?: number }
+  insertionPoint?: { x: number; y: number; z?: number }
+  rotation?: number
+  scaleX?: number
+  scaleY?: number
+  scaleZ?: number
+  xScale?: number
+  yScale?: number
+  zScale?: number
+}
+
+export interface LibreDwgMLeaderObjectContextDataObject
+  extends LibreDwgAnnotScaleContextDataObject {
+  contentScale?: number
+  textHeight?: number
+  arrowheadSize?: number
+  arrowSize?: number
+  textAnchor?: { x: number; y: number; z?: number }
+  landingPoint?: { x: number; y: number; z?: number }
 }
 
 /**
@@ -268,6 +336,159 @@ export class AcDbObjectConverter {
     return dbObject
   }
 
+  convertDimensionObjectContextData(
+    context: LibreDwgDimensionObjectContextDataObject
+  ) {
+    const dbObject = new AcDbDimensionObjectContextData()
+    if (context.classVersion != null) {
+      dbObject.classVersion = context.classVersion
+    }
+    dbObject.isDefault = !!context.isDefault
+    dbObject.scaleId = context.scaleId ?? context.scaleHandle ?? ''
+    dbObject.blockName = context.blockName ?? context.name ?? ''
+    const def = context.definitionPoint ?? context.defPt
+    if (def) {
+      dbObject.definitionPoint = new AcGePoint3d(def.x, def.y, def.z ?? 0)
+    }
+    const dimLine = context.dimLinePoint ?? context._11pt
+    if (dimLine) {
+      dbObject.dimLinePoint = new AcGePoint3d(
+        dimLine.x,
+        dimLine.y,
+        dimLine.z ?? 0
+      )
+    }
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertTextObjectContextData(context: LibreDwgTextObjectContextDataObject) {
+    const dbObject = new AcDbTextObjectContextData()
+    this.applyAnnotScaleContextBase(context, dbObject)
+    if (context.horizontalMode != null) {
+      dbObject.horizontalMode = context.horizontalMode
+    }
+    if (context.rotation != null) dbObject.rotation = context.rotation
+    if (context.alignmentPoint) {
+      dbObject.alignmentPoint = new AcGePoint3d(
+        context.alignmentPoint.x,
+        context.alignmentPoint.y,
+        context.alignmentPoint.z ?? 0
+      )
+    }
+    if (context.position) {
+      dbObject.position = new AcGePoint3d(
+        context.position.x,
+        context.position.y,
+        context.position.z ?? 0
+      )
+    }
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertHatchScaleContextData(
+    context: LibreDwgHatchScaleContextDataObject
+  ) {
+    const dbObject = new AcDbHatchScaleContextData()
+    this.applyAnnotScaleContextBase(context, dbObject)
+    const patternScale = context.patternScale ?? context.scale
+    if (patternScale != null && patternScale > 0) {
+      dbObject.patternScale = patternScale
+    }
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertBlkRefObjectContextData(
+    context: LibreDwgBlkRefObjectContextDataObject
+  ) {
+    const dbObject = new AcDbBlkRefObjectContextData()
+    this.applyAnnotScaleContextBase(context, dbObject)
+    const pos = context.position ?? context.insertionPoint
+    if (pos) {
+      dbObject.position = new AcGePoint3d(pos.x, pos.y, pos.z ?? 0)
+    }
+    if (context.rotation != null) dbObject.rotation = context.rotation
+    const sx = context.scaleX ?? context.xScale
+    const sy = context.scaleY ?? context.yScale
+    const sz = context.scaleZ ?? context.zScale
+    if (sx != null) dbObject.scaleX = sx
+    if (sy != null) dbObject.scaleY = sy
+    if (sz != null) dbObject.scaleZ = sz
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertLeaderObjectContextData(
+    context: LibreDwgAnnotScaleContextDataObject
+  ) {
+    const dbObject = new AcDbLeaderObjectContextData()
+    this.applyAnnotScaleContextBase(context, dbObject)
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertMLeaderObjectContextData(
+    context: LibreDwgMLeaderObjectContextDataObject
+  ) {
+    const dbObject = new AcDbMLeaderObjectContextData()
+    this.applyAnnotScaleContextBase(context, dbObject)
+    if (context.contentScale != null && context.contentScale > 0) {
+      dbObject.contentScale = context.contentScale
+    }
+    if (context.textHeight != null && context.textHeight > 0) {
+      dbObject.textHeight = context.textHeight
+    }
+    const arrow = context.arrowheadSize ?? context.arrowSize
+    if (arrow != null && arrow > 0) dbObject.arrowheadSize = arrow
+    const anchor = context.textAnchor ?? context.landingPoint
+    if (anchor) {
+      dbObject.textAnchor = new AcGePoint3d(
+        anchor.x,
+        anchor.y,
+        anchor.z ?? 0
+      )
+    }
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
+  convertMTextAttributeObjectContextData(
+    context: LibreDwgMTextObjectContextDataObject
+  ) {
+    const dbObject = new AcDbMTextAttributeObjectContextData()
+    if (context.classVersion != null) dbObject.classVersion = context.classVersion
+    dbObject.isDefault = !!context.isDefault
+    dbObject.scaleId = context.scaleId ?? context.scaleHandle ?? ''
+    if (context.attachment != null) dbObject.attachmentPoint = context.attachment
+    if (context.xAxisDir) {
+      dbObject.direction = new AcGeVector3d(
+        context.xAxisDir.x,
+        context.xAxisDir.y,
+        context.xAxisDir.z ?? 0
+      )
+    }
+    if (context.insertionPoint) {
+      dbObject.insertionPoint = new AcGePoint3d(
+        context.insertionPoint.x,
+        context.insertionPoint.y,
+        context.insertionPoint.z ?? 0
+      )
+    }
+    if (context.definedWidth != null) dbObject.definedWidth = context.definedWidth
+    if (context.definedHeight != null) {
+      dbObject.definedHeight = context.definedHeight
+    }
+    if (context.extentsWidth != null) dbObject.extentsWidth = context.extentsWidth
+    if (context.extentsHeight != null) {
+      dbObject.extentsHeight = context.extentsHeight
+    }
+    if (context.columnType != null) dbObject.columnType = context.columnType
+    this.processCommonAttrs(context, dbObject)
+    return dbObject
+  }
+
   convertXRecord(xrecord: DwgXRecordObject) {
     const dbObject = new AcDbXrecord()
     this.processCommonAttrs(xrecord, dbObject)
@@ -281,6 +502,21 @@ export class AcDbObjectConverter {
       }))
     )
     return dbObject
+  }
+
+  private applyAnnotScaleContextBase(
+    context: LibreDwgAnnotScaleContextDataObject,
+    dbObject: {
+      classVersion: number
+      isDefault: boolean
+      scaleId: string
+    }
+  ) {
+    if (context.classVersion != null) {
+      dbObject.classVersion = context.classVersion
+    }
+    dbObject.isDefault = !!context.isDefault
+    dbObject.scaleId = context.scaleId ?? context.scaleHandle ?? ''
   }
 
   private processCommonAttrs(object: DwgCommonObject, dbObject: AcDbObject) {

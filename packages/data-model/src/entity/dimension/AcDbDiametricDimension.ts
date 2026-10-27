@@ -249,7 +249,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
       acdbCreateDimLineEntity(this.farChordPoint, outer, style)
     )
 
-    const scale = acdbArrowScaleFromStyle(style)
+    const scale = acdbArrowScaleFromStyle(style, this)
     const arrow1 = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk1
     )
@@ -270,7 +270,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
     let textRotation = angle
     if (leaderLen > 0) {
       const doglegLen =
-        style.dimasz * acdbDimFeatureScale(style) * 2
+        style.dimasz * acdbDimFeatureScale(style, this) * 2
       const doglegEnd = new AcGePoint3d(
         outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
         outer.y,
@@ -281,7 +281,12 @@ export class AcDbDiametricDimension extends AcDbDimension {
       textRotation = 0
     }
 
-    const textPos = acdbOffsetTextAlongNormal(textAnchor, textRotation, style)
+    const textPos = acdbOffsetTextAlongNormal(
+      textAnchor,
+      textRotation,
+      style,
+      this
+    )
     this.textPosition = textPos
     const contents = acdbBuildAnnotationText(
       this.measurement ?? diameter,
@@ -293,7 +298,8 @@ export class AcDbDiametricDimension extends AcDbDimension {
       contents,
       position: textPos,
       rotation: textRotation,
-      style
+      style,
+      entity: this
     })
     if (mtext) block.appendEntity(mtext)
 

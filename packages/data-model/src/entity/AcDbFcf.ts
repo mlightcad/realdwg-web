@@ -17,6 +17,12 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbDimStyleTableRecord } from '../database/index.js'
+import {
+  type AcDbAnnotationScaleDrawInfo,
+  acdbGetAnnotative,
+  acdbResolveAnnotationScaleDrawInfo,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -296,6 +302,17 @@ export class AcDbFcf extends AcDbEntity {
           groupName: 'tolerance',
           properties: [
             {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
+                }
+              }
+            },
+            {
               name: 'text',
               type: 'string',
               editable: true,
@@ -369,6 +386,16 @@ export class AcDbFcf extends AcDbEntity {
     }
   }
 
+  /**
+   * Whether this tolerance (FCF) is annotative.
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
+  }
+
   subWorldDraw(
     renderer: AcGiRenderer,
     delay?: boolean
@@ -378,16 +405,26 @@ export class AcDbFcf extends AcDbEntity {
       renderer.lines([start, end])
     )
     const textEntity = this.drawToleranceText(renderer, delay)
+    let drawable: AcGiEntity | undefined
     if (frameEntities.length > 0 && textEntity) {
-      return renderer.group([...frameEntities, textEntity])
+      drawable = renderer.group([...frameEntities, textEntity])
+    } else if (frameEntities.length === 1) {
+      drawable = frameEntities[0]
+    } else if (frameEntities.length > 1) {
+      drawable = renderer.group(frameEntities)
+    } else {
+      drawable = textEntity
     }
-    if (frameEntities.length === 1) {
-      return frameEntities[0]
+    if (drawable && this.annotative) {
+      const resolved = acdbResolveAnnotationScaleDrawInfo(this)
+      if (resolved.annotationScale) {
+        const userData = (drawable.userData ??= {}) as {
+          annotationScale?: AcDbAnnotationScaleDrawInfo
+        }
+        userData.annotationScale = resolved.annotationScale
+      }
     }
-    if (frameEntities.length > 1) {
-      return renderer.group(frameEntities)
-    }
-    return textEntity
+    return drawable
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

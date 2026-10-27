@@ -4,6 +4,10 @@ import { AcGePoint3d } from '@mlightcad/geometry-engine'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbObjectId } from '../base/AcDbObject.js'
 import { AcDbEntity } from '../entity/AcDbEntity.js'
+import {
+  acdbGetAnnotative,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
 import { acdbHexStringsToBytes } from '../misc/proxyGraphic/AcDbProxyGraphicBinaryStream.js'
@@ -283,6 +287,17 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   }
   set flags(value: number) {
     this.setAttr('flags', value)
+  }
+
+  /**
+   * Whether this block definition is annotative (AcadAnnotative XDATA).
+   * Annotative INSERTs require an annotative block definition.
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**

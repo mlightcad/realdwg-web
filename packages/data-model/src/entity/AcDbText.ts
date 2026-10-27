@@ -19,7 +19,20 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotative,
+  acdbGetAnnotationScaleContexts,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
@@ -246,6 +259,16 @@ export class AcDbText extends AcDbEntity {
    */
   get height() {
     return this._height
+  }
+
+  /**
+   * Whether this TEXT is annotative (AcadAnnotative XDATA and/or scale contexts).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**
@@ -722,6 +745,17 @@ export class AcDbText extends AcDbEntity {
               }
             },
             {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
+                }
+              }
+            },
+            {
               name: 'styleName',
               type: 'string',
               editable: true,
@@ -853,6 +887,67 @@ export class AcDbText extends AcDbEntity {
    * is true.
    * @returns The rendered text entity, or undefined if drawing failed
    */
+  /**
+   * Resolves height / anchor / rotation for the active CANNOSCALE when this
+   * TEXT is annotative.
+   */
+  resolveAnnotativePresentation(): {
+    height: number
+    position: AcGePoint3d
+    attachmentPoint: AcGiMTextAttachmentPoint
+    rotation: number
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const { anchor, attachmentPoint } = this.resolveTextAnchor()
+    const draw = this.extrusionDrawingAdjust()
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 || acdbIsAnnotativeObject(this)
+
+    let height = this.height
+    let position = anchor
+    let rotation = draw.rotation
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      const paperHeight = acdbAnnotativePaperHeight(this.height, contexts)
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      height = acdbAnnotativeModelHeight(
+        paperHeight,
+        preferred.scale.scaleFactor
+      )
+      const ctx = preferred.contextData
+      if (ctx instanceof AcDbTextObjectContextData) {
+        const useAlignment =
+          ctx.horizontalMode !== AcDbTextHorizontalMode.LEFT ||
+          ctx.alignmentPoint.x !== 0 ||
+          ctx.alignmentPoint.y !== 0 ||
+          ctx.alignmentPoint.z !== 0
+        const ctxAnchor = useAlignment ? ctx.alignmentPoint : ctx.position
+        position = this.pointToWcs(ctxAnchor)
+        rotation = ctx.rotation
+      }
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+    }
+
+    return {
+      height,
+      position,
+      attachmentPoint,
+      rotation,
+      preferred,
+      annotationScale
+    }
+  }
+
   subWorldDraw(
     renderer: AcGiRenderer,
     delay?: boolean
@@ -863,22 +958,35 @@ export class AcDbText extends AcDbEntity {
     // or MIDDLE/TOP/BOTTOM modes. Pick the right reference + the matching
     // attachment point so the renderer can compute the offset itself
     // from the real bbox of the laid-out glyphs.
-    const { anchor: position, attachmentPoint } = this.resolveTextAnchor()
+    const {
+      height,
+      position,
+      attachmentPoint,
+      rotation,
+      annotationScale
+    } = this.resolveAnnotativePresentation()
     const draw = this.extrusionDrawingAdjust()
     const mtextData: AcGiMTextData = {
       text: this.textString,
-      height: this.height,
+      height,
       width: Infinity,
       widthFactor: draw.widthFactor,
       position,
       // Please use 'rotation' and do not set value of 'directionVector' because it will overrides
       // rotation value.
-      rotation: draw.rotation,
+      rotation,
       // MText draw text from top to bottom.
       drawingDirection: AcGiMTextFlowDirection.BOTTOM_TO_TOP,
       attachmentPoint
     }
-    return renderer.mtext(mtextData, this.getTextStyle(), delay)
+    const drawable = renderer.mtext(mtextData, this.getTextStyle(), delay)
+    if (drawable && annotationScale) {
+      const userData = drawable.userData as {
+        annotationScale?: AcDbAnnotationScaleDrawInfo
+      }
+      userData.annotationScale = annotationScale
+    }
+    return drawable
   }
 
   /**

@@ -21,10 +21,13 @@ import {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
   acdbIsAnnotativeObject,
-  acdbMatchAnnotationScaleContext
+  acdbMatchAnnotationScaleContext,
+  acdbSetAnnotative
 } from '../misc/AcDbAnnotationScale.js'
+import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -210,6 +213,16 @@ export class AcDbMText extends AcDbEntity {
    */
   set height(value: number) {
     this._height = value
+  }
+
+  /**
+   * Whether this MTEXT is annotative (AcadAnnotative XDATA and/or scale contexts).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**
@@ -465,7 +478,7 @@ export class AcDbMText extends AcDbEntity {
    * Resolves height / width / insertion / orientation for the active
    * annotation scale (CANNOSCALE), matching {@link subWorldDraw}.
    */
-  private resolveAnnotativePresentation(): {
+  resolveAnnotativePresentation(): {
     height: number
     width: number
     extentsWidth: number
@@ -502,7 +515,7 @@ export class AcDbMText extends AcDbEntity {
         preferred.scale.scaleFactor
       )
       const ctx = preferred.contextData
-      if (ctx) {
+      if (ctx instanceof AcDbMTextObjectContextData) {
         position = ctx.insertionPoint
         direction = ctx.direction
         attachmentPoint = ctx.attachmentPoint
@@ -568,7 +581,7 @@ export class AcDbMText extends AcDbEntity {
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
     const { preferred } = this.resolveAnnotativePresentation()
     const ctx = preferred?.contextData
-    if (ctx) {
+    if (ctx instanceof AcDbMTextObjectContextData) {
       acdbMovePrimaryGripPointAt(indices, offset, ctx.insertionPoint)
       // Keep the entity record in sync when editing the default representation.
       if (preferred?.isDefault) {
@@ -675,6 +688,17 @@ export class AcDbMText extends AcDbEntity {
                 get: () => this.contents,
                 set: (v: string) => {
                   this.contents = v
+                }
+              }
+            },
+            {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
                 }
               }
             },

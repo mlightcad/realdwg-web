@@ -362,7 +362,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
     // Capture arrow anchors before DIMDLE extends the line past the heads.
     const arrowStart = dimLine.startPoint.clone()
     const arrowEnd = dimLine.endPoint.clone()
-    acdbExtendLineByDimDle(dimLine, style)
+    acdbExtendLineByDimDle(dimLine, style, this)
 
     if (style.dimsd1 === 0 && style.dimsd2 === 0) {
       block.appendEntity(
@@ -401,7 +401,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
       )
     }
 
-    const scale = acdbArrowScaleFromStyle(style)
+    const scale = acdbArrowScaleFromStyle(style, this)
     const arrow1 = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk1
     )
@@ -452,14 +452,16 @@ export class AcDbAlignedDimension extends AcDbDimension {
     const textPos = acdbOffsetTextAlongNormal(
       acdbMidPoint(dimLine.startPoint, dimLine.endPoint),
       this.rotation,
-      style
+      style,
+      this
     )
     this.textPosition = textPos
     const mtext = acdbCreateDimMText({
       contents,
       position: textPos,
       rotation: this.rotation,
-      style
+      style,
+      entity: this
     })
     if (mtext) block.appendEntity(mtext)
 

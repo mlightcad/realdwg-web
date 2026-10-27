@@ -60,7 +60,7 @@ import { AcDbLayerFilter } from '../object/AcDbLayerFilter.js'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
-import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
+import { AcDbAnnotScaleObjectContextData } from '../object/AcDbAnnotScaleObjectContextData.js'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef.js'
 import { AcDbScale } from '../object/AcDbScale.js'
 import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
@@ -432,7 +432,7 @@ export class AcDbDatabase extends AcDbObject {
     readonly layout: AcDbLayoutDictionary
     readonly mleaderStyle: AcDbDictionary<AcDbMLeaderStyle>
     readonly mlineStyle: AcDbDictionary<AcDbMlineStyle>
-    readonly objectContextData: AcDbDictionary<AcDbMTextObjectContextData>
+    readonly objectContextData: AcDbDictionary<AcDbAnnotScaleObjectContextData>
     readonly scale: AcDbDictionary<AcDbScale>
     readonly sortentsTable: AcDbDictionary<AcDbSortentsTable>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
@@ -1734,7 +1734,14 @@ export class AcDbDatabase extends AcDbObject {
     return this._cannoscale
   }
   set cannoscale(value: string) {
-    this._cannoscale = value || '1:1'
+    this.updateSysVar(
+      AcDbSystemVariables.CANNOSCALE,
+      this._cannoscale,
+      value || '1:1',
+      nextValue => {
+        this._cannoscale = nextValue
+      }
+    )
   }
 
   /**
@@ -1760,7 +1767,16 @@ export class AcDbDatabase extends AcDbObject {
     return this._annoallvisible
   }
   set annoallvisible(value: boolean) {
-    this._annoallvisible = value
+    // Coerce so status-bar toggles that write 0/1 still store a real boolean.
+    const next = !!value
+    this.updateSysVar(
+      AcDbSystemVariables.ANNOALLVISIBLE,
+      this._annoallvisible,
+      next,
+      nextValue => {
+        this._annoallvisible = nextValue
+      }
+    )
   }
 
   /**

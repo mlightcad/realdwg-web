@@ -35,6 +35,20 @@ import type { AcDbDatabase } from '../database/AcDbDatabase.js'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotative,
+  acdbGetAnnotationScaleContexts,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext,
+  acdbResolveAnnotationScaleDrawInfo,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
+import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.js'
+import {
   acdbIsSolidHatchPatternName,
   DEFAULT_GRADIENT_HATCH_NAME,
   HATCH_PATTERN_SOLID,
@@ -451,6 +465,16 @@ export class AcDbHatch extends AcDbEntity {
     this._patternScale = value
     this._patternScaleSet = true
     this.updatePredefinedPatternDefinitionLines()
+  }
+
+  /**
+   * Whether this hatch is annotative (AcadAnnotative XDATA and/or scale contexts).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**
@@ -1135,6 +1159,17 @@ export class AcDbHatch extends AcDbEntity {
               }
             },
             {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
+                }
+              }
+            },
+            {
               name: 'associative',
               type: 'boolean',
               editable: true,
@@ -1678,38 +1713,111 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Resolves pattern scale / draw-info for the active CANNOSCALE when this
+   * hatch is annotative.
+   */
+  resolveAnnotativePresentation(): {
+    patternScale: number
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const baseScale = this.getEffectivePatternScale()
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 || acdbIsAnnotativeObject(this)
+
+    let patternScale = baseScale
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+      const ctx = preferred.contextData
+      if (
+        ctx instanceof AcDbHatchScaleContextData &&
+        ctx.patternScale > 0
+      ) {
+        patternScale = ctx.patternScale
+      } else {
+        patternScale = acdbAnnotativeModelHeight(
+          acdbAnnotativePaperHeight(baseScale, contexts),
+          preferred.scale.scaleFactor
+        )
+      }
+    } else if (isAnnotative) {
+      annotationScale = acdbResolveAnnotationScaleDrawInfo(this).annotationScale
+    }
+
+    return { patternScale, preferred, annotationScale }
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    this.updatePredefinedPatternDefinitionLines()
-    const traits = renderer.subEntityTraits
-    traits.fillType = {
-      solidFill: this.isSolidFill,
-      patternAngle: this.getRenderablePatternAngle(),
-      definitionLines: this.definitionLines,
-      backgroundColor: this.backgroundColor?.clone(),
-      gradient: this.isGradient
-        ? {
-            name: this.gradientName,
-            angle: this.gradientAngle,
-            shift: this.gradientShift,
-            oneColorMode: this.gradientOneColorMode,
-            shadeTintValue: this.shadeTintValue,
-            startColor: this.gradientStartColor,
-            endColor: this.gradientEndColor
+    const presentation = this.resolveAnnotativePresentation()
+    const savedScale = this._patternScale
+    const savedSet = this._patternScaleSet
+    this._patternScale = presentation.patternScale
+    this._patternScaleSet = true
+    try {
+      this.updatePredefinedPatternDefinitionLines()
+      const traits = renderer.subEntityTraits
+      traits.fillType = {
+        solidFill: this.isSolidFill,
+        patternAngle: this.getRenderablePatternAngle(),
+        definitionLines: this.definitionLines,
+        backgroundColor: this.backgroundColor?.clone(),
+        gradient: this.isGradient
+          ? {
+              name: this.gradientName,
+              angle: this.gradientAngle,
+              shift: this.gradientShift,
+              oneColorMode: this.gradientOneColorMode,
+              shadeTintValue: this.shadeTintValue,
+              startColor: this.gradientStartColor,
+              endColor: this.gradientEndColor
+            }
+          : undefined
+      }
+      traits.drawOrder = -1
+      const areas = this.buildAreasFromLoops()
+      let drawable
+      if (areas.length === 0) {
+        drawable = renderer.area(this._geo)
+      } else if (areas.length === 1) {
+        drawable = renderer.area(areas[0])
+      } else {
+        const entities = areas.map(area => renderer.area(area))
+        drawable = renderer.group(entities)
+      }
+      if (drawable && this.annotative) {
+        let info = presentation.annotationScale
+        if (!info) {
+          info = {
+            drawnScaleFactor: 1,
+            supportedScaleFactors: [1],
+            supportedScaleNames: []
           }
-        : undefined
+        }
+        const userData = (drawable.userData ??= {}) as {
+          annotationScale?: AcDbAnnotationScaleDrawInfo
+        }
+        userData.annotationScale = info
+      }
+      return drawable
+    } finally {
+      this._patternScale = savedScale
+      this._patternScaleSet = savedSet
+      this.updatePredefinedPatternDefinitionLines()
     }
-    traits.drawOrder = -1
-    const areas = this.buildAreasFromLoops()
-    if (areas.length === 0) {
-      return renderer.area(this._geo)
-    }
-    if (areas.length === 1) {
-      return renderer.area(areas[0])
-    }
-    const entities = areas.map(area => renderer.area(area))
-    return renderer.group(entities)
   }
 
   /**

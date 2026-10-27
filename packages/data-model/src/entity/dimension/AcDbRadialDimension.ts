@@ -362,7 +362,7 @@ export class AcDbRadialDimension extends AcDbDimension {
     if (leaderLen > 0) {
       // Horizontal dogleg toward text
       const doglegLen =
-        style.dimasz * acdbDimFeatureScale(style) * 2
+        style.dimasz * acdbDimFeatureScale(style, this) * 2
       const doglegEnd = new AcGePoint3d(
         outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
         outer.y,
@@ -372,7 +372,8 @@ export class AcDbRadialDimension extends AcDbDimension {
       const textPos = acdbOffsetTextAlongNormal(
         doglegEnd,
         0,
-        style
+        style,
+        this
       )
       this.textPosition = textPos
       const contents = acdbBuildAnnotationText(
@@ -385,14 +386,16 @@ export class AcDbRadialDimension extends AcDbDimension {
         contents,
         position: textPos,
         rotation: 0,
-        style
+        style,
+        entity: this
       })
       if (mtext) block.appendEntity(mtext)
     } else {
       const textPos = acdbOffsetTextAlongNormal(
         acdbPointAt(this.center, angle, radius * 0.5),
         angle,
-        style
+        style,
+        this
       )
       this.textPosition = textPos
       const contents = acdbBuildAnnotationText(
@@ -405,12 +408,13 @@ export class AcDbRadialDimension extends AcDbDimension {
         contents,
         position: textPos,
         rotation: angle,
-        style
+        style,
+        entity: this
       })
       if (mtext) block.appendEntity(mtext)
     }
 
-    const scale = acdbArrowScaleFromStyle(style)
+    const scale = acdbArrowScaleFromStyle(style, this)
     const arrowName = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk2
     )
@@ -422,7 +426,7 @@ export class AcDbRadialDimension extends AcDbDimension {
     )
     if (arrow) block.appendEntity(arrow)
 
-    acdbAppendCenterMark(block, this.center, style)
+    acdbAppendCenterMark(block, this.center, style, this)
     return block
   }
 

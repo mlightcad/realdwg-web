@@ -15,9 +15,16 @@ import { AcDbLayerFilter } from '../object/AcDbLayerFilter.js'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
+import { AcDbBlkRefObjectContextData } from '../object/AcDbBlkRefObjectContextData.js'
+import { AcDbDimensionObjectContextData } from '../object/AcDbDimensionObjectContextData.js'
+import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.js'
+import { AcDbLeaderObjectContextData } from '../object/AcDbLeaderObjectContextData.js'
+import { AcDbMLeaderObjectContextData } from '../object/AcDbMLeaderObjectContextData.js'
+import { AcDbMTextAttributeObjectContextData } from '../object/AcDbMTextAttributeObjectContextData.js'
 import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef.js'
 import { AcDbScale } from '../object/AcDbScale.js'
+import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
 import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
 import { AcDbXrecord } from '../object/AcDbXrecord.js'
 import { AcDbLayout } from '../object/layout/AcDbLayout.js'
@@ -73,6 +80,7 @@ export class AcDbDxfObjectsReader {
     this.finishNamedObjectDictionaries()
     this.materializeBufferedDictionaries()
     this.finishCannoscale()
+    this.finishAnnoallvisible()
     this.finishLayerFilterTree()
     this.linkLayoutsToBlockTableRecords()
     if (this._db.objects.layout.numEntries === 0) {
@@ -164,6 +172,76 @@ export class AcDbDxfObjectsReader {
       }
       case 'ACDB_MTEXTOBJECTCONTEXTDATA_CLASS': {
         const context = new AcDbMTextObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_TEXTOBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbTextObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_ALDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_ANGDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_ARCDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_DMDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_ORDDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_RADDIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_RADIMOBJECTCONTEXTDATA_CLASS':
+      case 'ACDB_RADDIMLGCOBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbDimensionObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_HATCHSCALECONTEXTDATA_CLASS': {
+        const context = new AcDbHatchScaleContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_BLKREFOBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbBlkRefObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_LEADEROBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbLeaderObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_MLEADEROBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbMLeaderObjectContextData()
+        context.dxfIn(filer)
+        const handle = normalizeHandle(context.objectId)
+        if (handle) {
+          this._db.objects.objectContextData.setAt(handle, context)
+        }
+        break
+      }
+      case 'ACDB_MTEXTATTRIBUTEOBJECTCONTEXTDATA_CLASS': {
+        const context = new AcDbMTextAttributeObjectContextData()
         context.dxfIn(filer)
         const handle = normalizeHandle(context.objectId)
         if (handle) {
@@ -403,6 +481,22 @@ export class AcDbDxfObjectsReader {
     if (cannoscaleVar instanceof AcDbDictionaryVar && cannoscaleVar.value) {
       this._db.cannoscale = cannoscaleVar.value
     }
+  }
+
+  /**
+   * Reads ANNOALLVISIBLE from AcDbVariableDictionary → DICTIONARYVAR.
+   * AutoCAD stores `"0"` / `"1"`; defaults to true when absent.
+   */
+  private finishAnnoallvisible(): void {
+    const root = this._db.objects.dictionary
+    const variableDict = root.getAt('AcDbVariableDictionary')
+    if (!(variableDict instanceof AcDbDictionary)) return
+    const annoVar = variableDict.getAt('ANNOALLVISIBLE')
+    if (!(annoVar instanceof AcDbDictionaryVar) || annoVar.value == null) {
+      return
+    }
+    const raw = String(annoVar.value).trim()
+    this._db.annoallvisible = raw !== '0' && raw.toLowerCase() !== 'false'
   }
 
   private readPersistDictionary(filer: AcDbDxfFiler): AcDbPersistDictionary {

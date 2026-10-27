@@ -220,8 +220,9 @@ export class AcDbOrdinateDimension extends AcDbDimension {
     const alongX = this.useXAxis || style.dimtih !== 0
     const rotation = alongX ? 0 : Math.PI / 2
     const gap =
-      (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style) +
-      acdbTextHeightFromStyle(style) * 0.5
+      (style.dimgap >= 0 ? style.dimgap : 0) *
+        acdbDimFeatureScale(style, this) +
+      acdbTextHeightFromStyle(style, this) * 0.5
     const textPos = new AcGePoint3d(
       end.x + (this.useXAxis ? Math.sign(end.x - def.x || 1) * gap : 0),
       end.y + (this.useXAxis ? 0 : Math.sign(end.y - def.y || 1) * gap),
@@ -237,7 +238,8 @@ export class AcDbOrdinateDimension extends AcDbDimension {
       ),
       position: textPos,
       rotation,
-      style
+      style,
+      entity: this
     })
     if (mtext) block.appendEntity(mtext)
 

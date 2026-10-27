@@ -58,9 +58,15 @@ import {
 import { AcDbEntityConverter } from './AcDbEntitiyConverter.js'
 import {
   AcDbObjectConverter,
+  type LibreDwgAnnotScaleContextDataObject,
+  type LibreDwgBlkRefObjectContextDataObject,
   type LibreDwgDictionaryVarObject,
+  type LibreDwgDimensionObjectContextDataObject,
+  type LibreDwgHatchScaleContextDataObject,
+  type LibreDwgMLeaderObjectContextDataObject,
   type LibreDwgMTextObjectContextDataObject,
-  type LibreDwgScaleObject
+  type LibreDwgScaleObject,
+  type LibreDwgTextObjectContextDataObject
 } from './AcDbObjectConverter.js'
 
 const MODEL_SPACE = '*MODEL_SPACE'
@@ -637,6 +643,13 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.processScales(model, db)
     this.processDictionaryVars(model, db)
     this.processMTextObjectContextData(model, db)
+    this.processTextObjectContextData(model, db)
+    this.processDimensionObjectContextData(model, db)
+    this.processHatchScaleContextData(model, db)
+    this.processBlkRefObjectContextData(model, db)
+    this.processLeaderObjectContextData(model, db)
+    this.processMLeaderObjectContextData(model, db)
+    this.processMTextAttributeObjectContextData(model, db)
     this.processXRecords(model, db)
     this.processLayouts(model, db)
     this.processImageDefs(model, db)
@@ -646,6 +659,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.processMLeaderStyles(model, db)
     this.processDynBlockMetadata(model, db)
     this.finishCannoscale(model, db)
+    this.finishAnnoallvisible(model, db)
   }
 
   /**
@@ -904,6 +918,168 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     }
   }
 
+  private processDimensionObjectContextData(
+    model: DwgDatabase,
+    db: AcDbDatabase
+  ) {
+    const keys = [
+      'ALDIMOBJECTCONTEXTDATA',
+      'ACDB_ALDIMOBJECTCONTEXTDATA_CLASS',
+      'ANGDIMOBJECTCONTEXTDATA',
+      'ACDB_ANGDIMOBJECTCONTEXTDATA_CLASS',
+      'ARCDIMOBJECTCONTEXTDATA',
+      'ACDB_ARCDIMOBJECTCONTEXTDATA_CLASS',
+      'DMDIMOBJECTCONTEXTDATA',
+      'ACDB_DMDIMOBJECTCONTEXTDATA_CLASS',
+      'ORDDIMOBJECTCONTEXTDATA',
+      'ACDB_ORDDIMOBJECTCONTEXTDATA_CLASS',
+      'RADDIMOBJECTCONTEXTDATA',
+      'ACDB_RADDIMOBJECTCONTEXTDATA_CLASS',
+      'RADIMOBJECTCONTEXTDATA',
+      'ACDB_RADIMOBJECTCONTEXTDATA_CLASS',
+      'RADDIMLGCOBJECTCONTEXTDATA',
+      'ACDB_RADDIMLGCOBJECTCONTEXTDATA_CLASS'
+    ]
+    const objectConverter = new AcDbObjectConverter()
+    const contextDict = db.objects.objectContextData
+    for (const key of keys) {
+      const contexts =
+        this.optionalObjectArray<LibreDwgDimensionObjectContextDataObject>(
+          model,
+          key
+        )
+      if (!contexts?.length) continue
+      for (const context of contexts) {
+        const dbContext =
+          objectConverter.convertDimensionObjectContextData(context)
+        if (dbContext.objectId) {
+          contextDict.setAt(dbContext.objectId, dbContext)
+        }
+      }
+    }
+  }
+
+  private processTextObjectContextData(model: DwgDatabase, db: AcDbDatabase) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgTextObjectContextDataObject>(
+        model,
+        'TEXTOBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgTextObjectContextDataObject>(
+        model,
+        'ACDB_TEXTOBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertTextObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processHatchScaleContextData(model: DwgDatabase, db: AcDbDatabase) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgHatchScaleContextDataObject>(
+        model,
+        'HATCHSCALECONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgHatchScaleContextDataObject>(
+        model,
+        'ACDB_HATCHSCALECONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertHatchScaleContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processBlkRefObjectContextData(model: DwgDatabase, db: AcDbDatabase) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgBlkRefObjectContextDataObject>(
+        model,
+        'BLKREFOBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgBlkRefObjectContextDataObject>(
+        model,
+        'ACDB_BLKREFOBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertBlkRefObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processLeaderObjectContextData(model: DwgDatabase, db: AcDbDatabase) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgAnnotScaleContextDataObject>(
+        model,
+        'LEADEROBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgAnnotScaleContextDataObject>(
+        model,
+        'ACDB_LEADEROBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertLeaderObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processMLeaderObjectContextData(
+    model: DwgDatabase,
+    db: AcDbDatabase
+  ) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgMLeaderObjectContextDataObject>(
+        model,
+        'MLEADEROBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgMLeaderObjectContextDataObject>(
+        model,
+        'ACDB_MLEADEROBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext = objectConverter.convertMLeaderObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
+  private processMTextAttributeObjectContextData(
+    model: DwgDatabase,
+    db: AcDbDatabase
+  ) {
+    const contexts =
+      this.optionalObjectArray<LibreDwgMTextObjectContextDataObject>(
+        model,
+        'MTEXTATTRIBUTEOBJECTCONTEXTDATA'
+      ) ??
+      this.optionalObjectArray<LibreDwgMTextObjectContextDataObject>(
+        model,
+        'ACDB_MTEXTATTRIBUTEOBJECTCONTEXTDATA_CLASS'
+      )
+    if (!contexts?.length) return
+    const contextDict = db.objects.objectContextData
+    const objectConverter = new AcDbObjectConverter()
+    for (const context of contexts) {
+      const dbContext =
+        objectConverter.convertMTextAttributeObjectContextData(context)
+      if (dbContext.objectId) contextDict.setAt(dbContext.objectId, dbContext)
+    }
+  }
+
   private processXRecords(model: DwgDatabase, db: AcDbDatabase) {
     const xrecords = model.objects.XRECORD
     if (!xrecords?.length) return
@@ -953,6 +1129,38 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         // Ownership conflicts — CANNOSCALE is already applied.
       }
       return
+    }
+  }
+
+  /**
+   * Reads ANNOALLVISIBLE from AcDbVariableDictionary → DICTIONARYVAR.
+   */
+  private finishAnnoallvisible(model: DwgDatabase, db: AcDbDatabase) {
+    const tryRead = (variableDict: AcDbDictionary) => {
+      const annoVar = variableDict.getAt('ANNOALLVISIBLE')
+      if (!(annoVar instanceof AcDbDictionaryVar) || annoVar.value == null) {
+        return false
+      }
+      const raw = String(annoVar.value).trim()
+      db.annoallvisible = raw !== '0' && raw.toLowerCase() !== 'false'
+      return true
+    }
+
+    const fromRoot = db.objects.dictionary.getAt('AcDbVariableDictionary')
+    if (fromRoot instanceof AcDbDictionary && tryRead(fromRoot)) return
+
+    const normalize = (handle?: string | number) =>
+      handle == null || handle === '' || handle === 0
+        ? ''
+        : String(handle).trim().toUpperCase()
+
+    for (const dict of model.objects.DICTIONARY ?? []) {
+      const entries = dict.entries ?? {}
+      const childHandle = entries['AcDbVariableDictionary']
+      if (!childHandle) continue
+      const variableDict = db.getObjectById(normalize(childHandle))
+      if (!(variableDict instanceof AcDbDictionary)) continue
+      if (tryRead(variableDict)) return
     }
   }
 

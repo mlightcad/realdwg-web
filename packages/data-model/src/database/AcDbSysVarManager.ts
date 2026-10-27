@@ -154,6 +154,12 @@ export class AcDbSysVarManager {
 
   /** Registers all known system variables in alphabetical order by name. */
   private constructor() {
+    this.registerVar({
+      name: AcDbSystemVariables.ANNOALLVISIBLE,
+      type: 'boolean',
+      isDbVar: true,
+      defaultValue: true
+    })
     /**
      * Base angle for zero direction (**ANGBASE**), in radians.
      */
@@ -202,6 +208,12 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: true,
       defaultValue: 0
+    })
+    this.registerVar({
+      name: AcDbSystemVariables.CANNOSCALE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: '1:1'
     })
     this.registerVar({
       name: AcDbSystemVariables.CECOLOR,
@@ -964,6 +976,9 @@ export class AcDbSysVarManager {
           }
           value = tmp
         }
+      } else if (descriptor.type === 'boolean') {
+        // Status-bar toggles may write 0/1 numbers; normalize to boolean.
+        value = !!value
       }
       if (name === AcDbSystemVariables.GRIPCOLOR.toLowerCase()) {
         const intVal = Math.trunc(value as number)

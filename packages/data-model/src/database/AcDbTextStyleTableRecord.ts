@@ -3,6 +3,10 @@ import { AcGiTextStyle } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
+  acdbGetAnnotative,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
+import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
 } from './AcDbSymbolTableRecord.js'
@@ -96,6 +100,16 @@ export class AcDbTextStyleTableRecord extends AcDbSymbolTableRecord<AcDbTextStyl
   }
   set obliquingAngle(value: number) {
     this.setAttr('obliqueAngle', value)
+  }
+
+  /**
+   * Whether this text style is annotative (AcadAnnotative XDATA).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**

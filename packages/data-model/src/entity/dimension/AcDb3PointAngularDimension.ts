@@ -268,7 +268,7 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       }
     }
 
-    const scale = acdbArrowScaleFromStyle(style)
+    const scale = acdbArrowScaleFromStyle(style, this)
     const arrow1 = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk1
     )
@@ -292,8 +292,8 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       this.centerPoint,
       midAngle,
       radius +
-        style.dimgap * acdbDimFeatureScale(style) +
-        style.dimtxt * acdbDimFeatureScale(style)
+        style.dimgap * acdbDimFeatureScale(style, this) +
+        style.dimtxt * acdbDimFeatureScale(style, this)
     )
     this.textPosition = textPos
     const measured = this.getMeasurementPropertyValue() ?? sweep
@@ -307,7 +307,8 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       contents,
       position: textPos,
       rotation: midAngle - Math.PI / 2,
-      style
+      style,
+      entity: this
     })
     if (mtext) block.appendEntity(mtext)
 
