@@ -139,6 +139,10 @@ export interface AcDbDimStyleTableRecordAttrs
   dimtfac: number
   /** Gap between dimension line and text */
   dimgap: number
+  /** Text background fill: 0 = off, 1 = drawing background color, 2 = custom color */
+  dimtfill: 0 | 1 | 2
+  /** Custom fill color for dimension text background (ACI or packed true color) */
+  dimtfillclr: number
   /** Alternate unit rounding */
   dimaltrnd: number
   /** Enable/disable tolerance display */
@@ -149,6 +153,8 @@ export interface AcDbDimStyleTableRecordAttrs
   dimtih: 0 | 1
   /** Text horizontal alignment outside extension lines */
   dimtoh: 0 | 1
+  /** Dimension text viewing direction: 0 = left to right, 1 = right to left */
+  dimtxtdirection: 0 | 1
   /** Suppress first extension line */
   dimse1: 0 | 1
   /** Suppress second extension line */
@@ -263,6 +269,8 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     dimtvp: 0.0,
     dimtfac: 1.0,
     dimgap: 1.0,
+    dimtfill: 0,
+    dimtfillclr: 0,
     dimaltrnd: 0.0,
     dimtol: 0,
     dimlim: 0,
@@ -270,6 +278,7 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     dimtih: 0,
     // TODO: Its initial value is 1 (imperial) or 0 (metric)
     dimtoh: 0,
+    dimtxtdirection: 0,
     dimse1: 0,
     dimse2: 0,
     // TODO: Its initial value is 0 (imperial) or 1 (metric)
@@ -585,6 +594,31 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
   }
 
   /**
+   * Text fill. Controls whether the space behind dimension text is filled to
+   * hide drawing elements under the text.
+   * - 0: No background fill
+   * - 1: Fills with the drawing background color
+   * - 2: Fills with the color stored in dimtfillclr
+   */
+  get dimtfill() {
+    return this.getAttr('dimtfill')
+  }
+  set dimtfill(value: 0 | 1 | 2) {
+    this.setAttr('dimtfill', value)
+  }
+
+  /**
+   * Text fill custom color. This property stores the ACI (or packed true)
+   * color used as dimension text background when dimtfill is 2.
+   */
+  get dimtfillclr() {
+    return this.getAttr('dimtfillclr')
+  }
+  set dimtfillclr(value: number) {
+    this.setAttr('dimtfillclr', value)
+  }
+
+  /**
    * Dimension alternate rounding. This property controls rounds off the alternate dimension units.
    */
   get dimaltrnd() {
@@ -642,6 +676,18 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
   }
   set dimtoh(value: 0 | 1) {
     this.setAttr('dimtoh', value)
+  }
+
+  /**
+   * Text viewing direction. Controls the reading direction of dimension text.
+   * - 0: Places text so it reads from left to right
+   * - 1: Places text so it reads from right to left (mirrored)
+   */
+  get dimtxtdirection() {
+    return this.getAttr('dimtxtdirection')
+  }
+  set dimtxtdirection(value: 0 | 1) {
+    this.setAttr('dimtxtdirection', value)
   }
 
   /**
@@ -1285,11 +1331,14 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
     filer.writeDouble(44, this.dimexe)
     filer.writeDouble(140, this.dimtxt)
     filer.writeDouble(147, this.dimgap)
+    filer.writeInt16(69, this.dimtfill)
+    filer.writeInt16(70, this.dimtfillclr)
     filer.writeInt16(170, this.dimalt)
     filer.writeInt16(171, this.dimtol)
     filer.writeInt16(172, this.dimlim)
     filer.writeInt16(173, this.dimtih)
     filer.writeInt16(174, this.dimtoh)
+    filer.writeInt16(295, this.dimtxtdirection)
     filer.writeObjectId(340, textStyle?.objectId)
     filer.writeObjectId(341, dimldrblk?.objectId)
     filer.writeObjectId(342, dimblk?.objectId)
@@ -1307,6 +1356,12 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
 
     const flag01 = (v: number): 0 | 1 => (v === 0 ? 0 : 1)
 
+    // Track group code 70 occurrences: the first one carries standard flags,
+    // and a later one (usually right after DIMTFILL, group 69) carries
+    // DIMTFILLCLR. Real DIMSTYLE records may contain both.
+    let prevCode = -1
+    let flagsSeen = false
+
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
       if (!item) break
@@ -1321,7 +1376,15 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
           this.name = String(item.value)
           break
         case 70:
-          // Standard flags — unused beyond presence.
+          if (flagsSeen || prevCode === 69) {
+            this.dimtfillclr = n
+          } else {
+            // Standard flags — unused beyond presence.
+            flagsSeen = true
+          }
+          break
+        case 69:
+          this.dimtfill = n === 1 || n === 2 ? (n as 1 | 2) : 0
           break
         case 3:
           this.dimpost = String(item.value)
@@ -1513,6 +1576,12 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
         case 289:
           this.dimatfit = n
           break
+        case 294:
+        case 295:
+          // DIMTXTDIRECTION — undocumented DIMSTYLE record code (ODA: 295,
+          // netDXF: 294). Accept both representations.
+          this.dimtxtdirection = flag01(n)
+          break
         case 340:
           this.dimtxsty = String(item.value)
           break
@@ -1537,6 +1606,7 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
         default:
           break
       }
+      prevCode = code
     }
     return this
   }
