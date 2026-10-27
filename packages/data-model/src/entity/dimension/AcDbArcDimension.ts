@@ -297,7 +297,7 @@ export class AcDbArcDimension extends AcDbDimension {
       }
     }
 
-    const scale = acdbArrowScaleFromStyle(style)
+    const scale = acdbArrowScaleFromStyle(style, this)
     const arrow1 = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk1
     )
@@ -322,11 +322,11 @@ export class AcDbArcDimension extends AcDbDimension {
     }
 
     const gap =
-      (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style)
+      (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style, this)
     const textPos = acdbPointAt(
       this.centerPoint,
       midAngle,
-      dimRadius + gap + acdbTextHeightFromStyle(style) * 0.5
+      dimRadius + gap + acdbTextHeightFromStyle(style, this) * 0.5
     )
     this.textPosition = textPos
     const contents = acdbBuildAnnotationText(
@@ -339,7 +339,8 @@ export class AcDbArcDimension extends AcDbDimension {
       contents,
       position: textPos,
       rotation: midAngle + Math.PI / 2,
-      style
+      style,
+      entity: this
     })
     if (mtext) block.appendEntity(mtext)
 

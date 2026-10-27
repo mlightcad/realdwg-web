@@ -13,9 +13,21 @@ import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbObjectId } from '../base/AcDbObject.js'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext,
+  acdbResolveAnnotationScaleDrawInfo,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { AcDbObjectIterator } from '../misc/AcDbObjectIterator.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbBlkRefObjectContextData } from '../object/AcDbBlkRefObjectContextData.js'
 import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference.js'
 import { AcDbAttribute } from './AcDbAttribute.js'
 import { AcDbEntity } from './AcDbEntity.js'
@@ -96,6 +108,15 @@ export class AcDbBlockReference extends AcDbEntity {
    * blockRef.rotation = Math.PI / 6; // 30 degrees
    * ```
    */
+  /** Transient presentation used while `subWorldDraw` is in progress. */
+  private _drawPresentation?: {
+    position: AcGePoint3d
+    rotation: number
+    scaleFactors: AcGePoint3d
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  }
+
   constructor(blockName: string) {
     super()
     this._blockName = blockName ?? ''
@@ -117,6 +138,19 @@ export class AcDbBlockReference extends AcDbEntity {
    * console.log(`Block position: ${position.x}, ${position.y}, ${position.z}`);
    * ```
    */
+  /**
+   * Whether this INSERT is annotative (entity XDATA/contexts, or an annotative
+   * block definition).
+   */
+  get annotative() {
+    if (acdbGetAnnotative(this)) return true
+    const btr = this.blockTableRecord
+    return !!btr?.annotative
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
+  }
+
   get position(): AcGePoint3d {
     return this._position
   }
@@ -425,6 +459,11 @@ export class AcDbBlockReference extends AcDbEntity {
     // If the block record is missing, fall back to (0,0,0).
     const basePoint = blockTableRecord?.origin ?? AcGePoint3d.ORIGIN
 
+    const position = this._drawPresentation?.position ?? this._position
+    const rotation = this._drawPresentation?.rotation ?? this._rotation
+    const scaleFactors =
+      this._drawPresentation?.scaleFactors ?? this._scaleFactors
+
     // ------------------------------------------------------------
     // Step 1: Translate geometry by the negative block base point
     //
@@ -446,9 +485,9 @@ export class AcDbBlockReference extends AcDbEntity {
     // Negative or non-uniform scales are supported.
     // ------------------------------------------------------------
     const mScale = new AcGeMatrix3d().makeScale(
-      this._scaleFactors.x,
-      this._scaleFactors.y,
-      this._scaleFactors.z
+      scaleFactors.x,
+      scaleFactors.y,
+      scaleFactors.z
     )
 
     // ------------------------------------------------------------
@@ -463,7 +502,7 @@ export class AcDbBlockReference extends AcDbEntity {
     // ------------------------------------------------------------
     const qRot = new AcGeQuaternion().setFromAxisAngle(
       AcGeVector3d.Z_AXIS,
-      this._rotation
+      rotation
     )
     const mRot = new AcGeMatrix3d().makeRotationFromQuaternion(qRot)
 
@@ -481,8 +520,8 @@ export class AcDbBlockReference extends AcDbEntity {
     // on-screen. The stored position.z is unchanged for properties / DXF.
     // ------------------------------------------------------------
     const mInsert = new AcGeMatrix3d().makeTranslation(
-      this._position.x,
-      this._position.y,
+      position.x,
+      position.y,
       0
     )
 
@@ -656,6 +695,17 @@ export class AcDbBlockReference extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
+            {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
+                }
+              }
+            },
             {
               name: 'blockName',
               type: 'float',
@@ -867,9 +917,98 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Resolves insertion / scale for the active CANNOSCALE when this INSERT is
+   * annotative.
+   */
+  resolveAnnotativePresentation(): {
+    position: AcGePoint3d
+    rotation: number
+    scaleFactors: AcGePoint3d
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 ||
+      acdbIsAnnotativeObject(this) ||
+      !!this.blockTableRecord?.annotative
+
+    let position = this._position.clone()
+    let rotation = this._rotation
+    let scaleFactors = this._scaleFactors.clone()
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+      const ctx = preferred.contextData
+      if (ctx instanceof AcDbBlkRefObjectContextData) {
+        position = ctx.position.clone()
+        rotation = ctx.rotation
+        scaleFactors = new AcGePoint3d(ctx.scaleX, ctx.scaleY, ctx.scaleZ)
+      }
+    } else if (isAnnotative) {
+      annotationScale = acdbResolveAnnotationScaleDrawInfo(this).annotationScale
+    }
+
+    return {
+      position,
+      rotation,
+      scaleFactors,
+      preferred,
+      annotationScale
+    }
+  }
+
+  /**
    * @inheritdoc
    */
+  private attachAnnotationScaleDrawInfo(
+    drawable: AcGiEntity | undefined,
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  ) {
+    if (!drawable || !this.annotative) return drawable
+    let info = annotationScale
+    if (!info) {
+      info = acdbResolveAnnotationScaleDrawInfo(this).annotationScale
+    }
+    if (!info) {
+      info = {
+        drawnScaleFactor: 1,
+        supportedScaleFactors: [1],
+        supportedScaleNames: []
+      }
+    }
+    const userData = (drawable.userData ??= {}) as {
+      annotationScale?: AcDbAnnotationScaleDrawInfo
+    }
+    userData.annotationScale = info
+    return drawable
+  }
+
   subWorldDraw(renderer: AcGiRenderer) {
+    const presentation = this.resolveAnnotativePresentation()
+    this._drawPresentation = presentation
+    try {
+      return this.subWorldDrawWithPresentation(renderer, presentation)
+    } finally {
+      this._drawPresentation = undefined
+    }
+  }
+
+  private subWorldDrawWithPresentation(
+    renderer: AcGiRenderer,
+    presentation: {
+      annotationScale?: AcDbAnnotationScaleDrawInfo
+    }
+  ) {
     const blockTableRecord = this.drawableBlockTableRecord
     if (blockTableRecord != null) {
       const attribs: AcGiEntity[] = []
@@ -882,14 +1021,17 @@ export class AcDbBlockReference extends AcDbEntity {
       const cols = Math.max(1, this.columnCount)
       const rows = Math.max(1, this.rowCount)
       if (cols === 1 && rows === 1) {
-        return AcDbRenderingCache.instance.draw(
-          renderer,
-          blockTableRecord,
-          this.resolvedColor,
-          attribs,
-          true,
-          this.blockTransform,
-          this._normal
+        return this.attachAnnotationScaleDrawInfo(
+          AcDbRenderingCache.instance.draw(
+            renderer,
+            blockTableRecord,
+            this.resolvedColor,
+            attribs,
+            true,
+            this.blockTransform,
+            this._normal
+          ),
+          presentation.annotationScale
         )
       }
       const instances: AcGiEntity[] = []
@@ -916,7 +1058,10 @@ export class AcDbBlockReference extends AcDbEntity {
           if (drawn) instances.push(drawn)
         }
       }
-      return renderer.group(instances)
+      return this.attachAnnotationScaleDrawInfo(
+        renderer.group(instances),
+        presentation.annotationScale
+      )
     } else {
       const block = renderer.group([])
       return block

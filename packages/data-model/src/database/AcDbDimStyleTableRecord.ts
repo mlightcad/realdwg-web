@@ -1,6 +1,10 @@
 import { defaults } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import {
+  acdbGetAnnotative,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import {
   AcDbSymbolTableRecord,
@@ -372,6 +376,16 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
   }
   set dimscale(value: number) {
     this.setAttr('dimscale', value)
+  }
+
+  /**
+   * Whether this dimension style is annotative (AcadAnnotative XDATA).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
   }
 
   /**

@@ -10,6 +10,7 @@ import {
   AcGiMTextAttachmentPoint
 } from '@mlightcad/graphic-interface'
 
+import type { AcDbObject } from '../../base/AcDbObject.js'
 import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord.js'
 import { AcDbDatabase } from '../../database/AcDbDatabase.js'
 import {
@@ -101,16 +102,22 @@ export function acdbCreateDimArrowInsert(
   return insert
 }
 
-export function acdbArrowScaleFromStyle(style: AcDbDimStyleTableRecord): number {
-  const scale = acdbDimFeatureScale(style)
+export function acdbArrowScaleFromStyle(
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
+): number {
+  const scale = acdbDimFeatureScale(style, entity)
   if (style.dimtsz > 0) {
     return style.dimtsz * scale
   }
   return style.dimasz * scale
 }
 
-export function acdbTextHeightFromStyle(style: AcDbDimStyleTableRecord): number {
-  return style.dimtxt * acdbDimFeatureScale(style)
+export function acdbTextHeightFromStyle(
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
+): number {
+  return style.dimtxt * acdbDimFeatureScale(style, entity)
 }
 
 export function acdbCreateDimMText(options: {
@@ -119,6 +126,7 @@ export function acdbCreateDimMText(options: {
   rotation: number
   style: AcDbDimStyleTableRecord
   attachmentPoint?: AcGiMTextAttachmentPoint
+  entity?: AcDbObject
 }): AcDbMText | null {
   if (!options.contents) return null
   const mtext = new AcDbMText()
@@ -126,7 +134,7 @@ export function acdbCreateDimMText(options: {
   mtext.color = colorFromDimAci(options.style.dimclrt)
   mtext.location = options.position
   mtext.contents = options.contents
-  mtext.height = acdbTextHeightFromStyle(options.style)
+  mtext.height = acdbTextHeightFromStyle(options.style, options.entity)
   mtext.direction = {
     x: Math.cos(options.rotation),
     y: Math.sin(options.rotation),
@@ -157,10 +165,12 @@ function attachmentFromDimTad(
 export function acdbOffsetTextAlongNormal(
   mid: AcGePoint3dLike,
   rotation: number,
-  style: AcDbDimStyleTableRecord
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
 ): AcGePoint3d {
-  const gap = (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style)
-  const height = acdbTextHeightFromStyle(style)
+  const gap =
+    (style.dimgap >= 0 ? style.dimgap : 0) * acdbDimFeatureScale(style, entity)
+  const height = acdbTextHeightFromStyle(style, entity)
   let offset = 0
   if (style.dimtad === AcDbDimTextVertical.Above) {
     offset = gap + height * 0.5
@@ -177,9 +187,10 @@ export function acdbOffsetTextAlongNormal(
 export function acdbAppendCenterMark(
   block: AcDbBlockTableRecord,
   center: AcGePoint3dLike,
-  style: AcDbDimStyleTableRecord
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
 ) {
-  const size = style.dimcen * acdbDimFeatureScale(style)
+  const size = style.dimcen * acdbDimFeatureScale(style, entity)
   if (size === 0) return
   const abs = Math.abs(size)
   const c = new AcGePoint3d().copy(center)
@@ -336,9 +347,10 @@ export function acdbMidPoint(
 
 export function acdbExtendLineByDimDle(
   line: AcGeLine3d,
-  style: AcDbDimStyleTableRecord
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
 ) {
-  const dle = style.dimdle * acdbDimFeatureScale(style)
+  const dle = style.dimdle * acdbDimFeatureScale(style, entity)
   if (dle !== 0) {
     line.extend(dle)
     line.extend(dle, true)

@@ -1,7 +1,7 @@
 import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
-import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject.js'
+import { AcDbAnnotScaleObjectContextData } from './AcDbAnnotScaleObjectContextData.js'
 
 /**
  * Per-annotation-scale representation for an annotative MTEXT
@@ -10,10 +10,7 @@ import { AcDbObject, type AcDbObjectId } from '../base/AcDbObject.js'
  * Text height is not stored here — derive it from the linked {@link scaleId}
  * and the entity's stored height for the default scale.
  */
-export class AcDbMTextObjectContextData extends AcDbObject {
-  private _classVersion = 4
-  private _isDefault = false
-  private _scaleId: AcDbObjectId = ''
+export class AcDbMTextObjectContextData extends AcDbAnnotScaleObjectContextData {
   private _attachmentPoint = 1
   private _direction = new AcGeVector3d(1, 0, 0)
   private _insertionPoint = new AcGePoint3d()
@@ -22,29 +19,6 @@ export class AcDbMTextObjectContextData extends AcDbObject {
   private _extentsWidth = 0
   private _extentsHeight = 0
   private _columnType = 0
-
-  get classVersion() {
-    return this._classVersion
-  }
-  set classVersion(value: number) {
-    this._classVersion = value
-  }
-
-  /** True when this representation matches the entity record (DXF 290). */
-  get isDefault() {
-    return this._isDefault
-  }
-  set isDefault(value: boolean) {
-    this._isDefault = value
-  }
-
-  /** Soft-pointer to the {@link AcDbScale} object (DXF 340). */
-  get scaleId() {
-    return this._scaleId
-  }
-  set scaleId(value: AcDbObjectId) {
-    this._scaleId = value
-  }
 
   get attachmentPoint() {
     return this._attachmentPoint
@@ -103,12 +77,9 @@ export class AcDbMTextObjectContextData extends AcDbObject {
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {
+    // Match AutoCAD: emit ObjectContextData + AnnotScale + MTEXT fields.
+    // AutoCAD often omits the AcDbMTextObjectContextData marker on write.
     super.dxfOutFields(filer)
-    filer.writeSubclassMarker('AcDbObjectContextData')
-    filer.writeInt16(70, this._classVersion)
-    filer.writeBoolean(290, this._isDefault)
-    filer.writeSubclassMarker('AcDbAnnotScaleObjectContextData')
-    filer.writeObjectId(340, this._scaleId)
     filer.writeInt16(70, this._attachmentPoint)
     filer.writeVector3d(10, this._direction)
     filer.writePoint3d(11, this._insertionPoint)
@@ -137,7 +108,10 @@ export class AcDbMTextObjectContextData extends AcDbObject {
           section = 'annot'
           continue
         }
-        if (marker === 'AcDbMTextObjectContextData') {
+        if (
+          marker === 'AcDbMTextObjectContextData' ||
+          marker === 'AcDbMTextAttributeObjectContextData'
+        ) {
           section = 'mtext'
           continue
         }
@@ -148,10 +122,10 @@ export class AcDbMTextObjectContextData extends AcDbObject {
       if (section === 'object') {
         switch (code) {
           case 70:
-            this._classVersion = Number(item.value)
+            this.classVersion = Number(item.value)
             break
           case 290:
-            this._isDefault = Boolean(Number(item.value))
+            this.isDefault = Boolean(Number(item.value))
             break
           default:
             break
@@ -163,7 +137,7 @@ export class AcDbMTextObjectContextData extends AcDbObject {
       // AcDbAnnotScaleObjectContextData (AutoCAD often omits the MTEXT marker).
       switch (code) {
         case 340:
-          this._scaleId = String(item.value)
+          this.scaleId = String(item.value)
           break
         case 70:
           this._attachmentPoint = Number(item.value)

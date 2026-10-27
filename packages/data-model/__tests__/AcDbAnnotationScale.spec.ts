@@ -8,10 +8,12 @@ import { AcDbViewport } from '../src/entity/AcDbViewport'
 import {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
+  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
   acdbGetViewportAnnotationScale,
   acdbIsAnnotativeObject,
-  acdbMatchAnnotationScaleContext
+  acdbMatchAnnotationScaleContext,
+  acdbSetAnnotative
 } from '../src/misc/AcDbAnnotationScale'
 import { AcDbOsnapMode } from '../src/misc/AcDbOsnapMode'
 import { AcDbDictionary } from '../src/object/AcDbDictionary'
@@ -63,6 +65,9 @@ describe('annotation scale support (#749)', () => {
     const textB = mtexts.find(t => t.contents === 'B')!
     expect(acdbIsAnnotativeObject(textA)).toBe(true)
     expect(acdbIsAnnotativeObject(textB)).toBe(true)
+    expect(textA.annotative).toBe(true)
+    expect(textB.annotative).toBe(true)
+    expect(acdbGetAnnotative(textA)).toBe(true)
 
     // Extension dictionaries and context objects must resolve by handle.
     expect(textA.extensionDictionary).toBeTruthy()
@@ -155,7 +160,8 @@ describe('annotation scale support (#749)', () => {
 
     const contexts = acdbGetAnnotationScaleContexts(textA)
     const matched100 = acdbMatchAnnotationScaleContext(contexts, '1:100')!
-    const ctxPoint = matched100.contextData!.insertionPoint
+    const mtextCtx = matched100.contextData as AcDbMTextObjectContextData
+    const ctxPoint = mtextCtx.insertionPoint
 
     // Stored height is 125 (1:50 default); CANNOSCALE 1:100 draws at 250.
     expect(textA.height).toBeCloseTo(125, 6)
@@ -177,5 +183,26 @@ describe('annotation scale support (#749)', () => {
     const grips = textA.subGetGripPoints()
     expect(grips[0].x).toBeCloseTo(ctxPoint.x, 6)
     expect(grips[0].y).toBeCloseTo(ctxPoint.y, 6)
+  })
+
+  it('supports get/set annotative via AcadAnnotative XDATA', async () => {
+    const db = await openFixture()
+    const textA = [...db.tables.blockTable.modelSpace.newIterator()].find(
+      e => e instanceof AcDbMText && e.contents === 'A'
+    ) as AcDbMText
+
+    expect(textA.annotative).toBe(true)
+    textA.annotative = false
+    expect(acdbIsAnnotativeObject(textA)).toBe(false)
+    expect(acdbGetAnnotative(textA)).toBe(false)
+    expect(textA.annotative).toBe(false)
+    expect(acdbGetAnnotationScaleContexts(textA)).toHaveLength(0)
+
+    const plain = new AcDbMText()
+    plain.database = db
+    expect(plain.annotative).toBe(false)
+    acdbSetAnnotative(plain, true)
+    expect(acdbIsAnnotativeObject(plain)).toBe(true)
+    expect(plain.annotative).toBe(true)
   })
 })

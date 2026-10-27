@@ -17,6 +17,12 @@ export type AcDbColorTheme = 'light' | 'dark'
 export const AcDbSystemVariables = {
   /** Drawing version identifier, for example `AC1014`. */
   ACADVER: 'ACADVER',
+  /**
+   * When `true`/`1`, annotative objects that do not support the current
+   * annotation scale remain visible (`ANNOALLVISIBLE`). AutoCAD initial value
+   * is on.
+   */
+  ANNOALLVISIBLE: 'ANNOALLVISIBLE',
   /** Base angle, in radians, used as the zero direction for angular input/output. */
   ANGBASE: 'ANGBASE',
   /** Positive angle direction flag: `0` for counterclockwise, `1` for clockwise. */
@@ -25,6 +31,11 @@ export const AcDbSystemVariables = {
   AUNITS: 'AUNITS',
   /** Number of decimal places (or display precision) for angular values; used together with AUNITS. */
   AUPREC: 'AUPREC',
+  /**
+   * Current annotation scale name (`CANNOSCALE`), for example `"1:100"`.
+   * Drives which per-scale representation annotative objects use in model space.
+   */
+  CANNOSCALE: 'CANNOSCALE',
   /** Current color applied to newly created entities. */
   CECOLOR: 'CECOLOR',
   /** Current entity linetype scale multiplier for newly created entities. */

@@ -2,14 +2,22 @@ export { AcDbAngleUnits } from './AcDbAngleUnits.js'
 export {
   ACDB_ANNOTATIVE_XDATA_APP,
   ACDB_VIEWPORT_ANNOTATION_SCALE_XREC,
+  acdbAddAnnotationScaleToObject,
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
+  acdbEnsureDefaultAnnotationScales,
+  acdbEnsureNamedScale,
   acdbFindScale,
+  acdbGetAnnotative,
   acdbGetAnnotationScaleContexts,
   acdbGetViewportAnnotationScale,
   acdbIsAnnotativeObject,
-  acdbMatchAnnotationScaleContext
+  acdbListAnnotationScales,
+  acdbMatchAnnotationScaleContext,
+  acdbRemoveAnnotationScaleFromObject,
+  acdbResolveAnnotationScaleDrawInfo,
+  acdbSetAnnotative
 } from './AcDbAnnotationScale.js'
 export type {
   AcDbAnnotationScaleContext,

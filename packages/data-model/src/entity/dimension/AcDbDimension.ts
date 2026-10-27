@@ -20,8 +20,19 @@ import {
 import { AcDbObjectId } from '../../base/index.js'
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbDimStyleTableRecord } from '../../database/index.js'
-import { AcDbRenderingCache } from '../../misc/index.js'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext,
+  AcDbRenderingCache,
+  acdbResolveAnnotationScaleDrawInfo,
+  acdbSetAnnotative} from '../../misc/index.js'
 import { AcDbOsnapMode } from '../../misc/index.js'
+import { AcDbDimensionObjectContextData } from '../../object/AcDbDimensionObjectContextData.js'
 import { AcDbBlockReference } from '../AcDbBlockReference.js'
 import { AcDbEntity } from '../AcDbEntity.js'
 import {
@@ -434,6 +445,16 @@ export abstract class AcDbDimension extends AcDbEntity {
     this._normal.copy(value).normalize()
   }
 
+  /**
+   * Whether this dimension is annotative (AcadAnnotative XDATA and/or scale contexts).
+   */
+  get annotative() {
+    return acdbGetAnnotative(this)
+  }
+  set annotative(value: boolean) {
+    acdbSetAnnotative(this, value)
+  }
+
   override get properties(): AcDbEntityProperties {
     return this.getBaseProperties()
   }
@@ -547,12 +568,68 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Resolves the anonymous dim block and transform origin for the active
+   * CANNOSCALE when this dimension is annotative.
+   */
+  resolveAnnotativePresentation(): {
+    dimBlockId: string | null
+    blockPosition: AcGePoint3d
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+    featureScale: number
+    contextData?: AcDbDimensionObjectContextData
+  } {
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 || acdbIsAnnotativeObject(this)
+
+    let dimBlockId = this.dimBlockId
+    let blockPosition = this._dimBlockPosition.clone()
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+    let contextData: AcDbDimensionObjectContextData | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+      const ctx = preferred.contextData
+      if (ctx instanceof AcDbDimensionObjectContextData) {
+        contextData = ctx
+        if (ctx.blockName) dimBlockId = ctx.blockName
+        blockPosition = ctx.definitionPoint.clone()
+      }
+    } else {
+      const resolved = acdbResolveAnnotationScaleDrawInfo(this)
+      preferred = resolved.preferred
+      annotationScale = resolved.annotationScale
+    }
+
+    return {
+      dimBlockId,
+      blockPosition,
+      preferred,
+      annotationScale,
+      featureScale: acdbDimFeatureScale(this.dimensionStyle, this),
+      contextData
+    }
+  }
+
+  /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    const blockTableRecord = this.getDimBlockTableRecord()
+    const presentation = this.resolveAnnotativePresentation()
+    const blockTableRecord = this.getDimBlockTableRecord(
+      presentation.dimBlockId
+    )
     if (blockTableRecord) {
-      const matrix = this.computeDimBlockTransform()
+      const matrix = this.computeDimBlockTransform(presentation.blockPosition)
       const group = AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
@@ -562,17 +639,48 @@ export abstract class AcDbDimension extends AcDbEntity {
         matrix,
         this._normal
       )
+      this.attachAnnotationScaleDrawInfo(group, presentation.annotationScale)
       return group
     }
     const group = renderer.group([])
+    this.attachAnnotationScaleDrawInfo(group, presentation.annotationScale)
     return group
+  }
+
+  /**
+   * Attaches viewport annotation-scale metadata when this dimension is annotative.
+   */
+  private attachAnnotationScaleDrawInfo(
+    group: { userData?: object } | undefined,
+    info?: AcDbAnnotationScaleDrawInfo
+  ) {
+    if (!group) return
+    let resolved = info
+    if (!resolved && this.annotative) {
+      const factor = acdbDimFeatureScale(this.dimensionStyle, this)
+      if (factor > 0) {
+        resolved = {
+          drawnScaleFactor: factor,
+          supportedScaleFactors: [factor],
+          supportedScaleNames: []
+        }
+      }
+    }
+    if (!resolved) return
+    const userData = (group.userData ??= {}) as {
+      annotationScale?: AcDbAnnotationScaleDrawInfo
+    }
+    userData.annotationScale = resolved
   }
 
   /** @inheritdoc */
   override subGetIntersectCurves(): AcGeIntersectPrimitive[] {
-    const blockTableRecord = this.getDimBlockTableRecord()
+    const presentation = this.resolveAnnotativePresentation()
+    const blockTableRecord = this.getDimBlockTableRecord(
+      presentation.dimBlockId
+    )
     if (!blockTableRecord) return []
-    const matrix = this.getFullDimBlockTransform()
+    const matrix = this.getFullDimBlockTransform(presentation.blockPosition)
     const primitives: AcGeIntersectPrimitive[] = []
     for (const entity of blockTableRecord.newIterator()) {
       primitives.push(
@@ -590,14 +698,17 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   protected getDimBlockGeometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
-    const blockTableRecord = this.getDimBlockTableRecord()
+    const presentation = this.resolveAnnotativePresentation()
+    const blockTableRecord = this.getDimBlockTableRecord(
+      presentation.dimBlockId
+    )
     if (!blockTableRecord) return box
 
     for (const entity of blockTableRecord.newIterator()) {
       box.union(entity.geometricExtents)
     }
 
-    box.applyMatrix4(this.getFullDimBlockTransform())
+    box.applyMatrix4(this.getFullDimBlockTransform(presentation.blockPosition))
     return box
   }
 
@@ -670,18 +781,26 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
-   * Looks up the anonymous block referenced by `dimBlockId`.
+   * Looks up the anonymous block referenced by `dimBlockId` (or an override
+   * from the active annotation-scale context).
    */
-  protected getDimBlockTableRecord() {
-    return this.dimBlockId
-      ? this.database.tables.blockTable.getAt(this.dimBlockId)
-      : undefined
+  protected getDimBlockTableRecord(blockId?: string | null) {
+    const id = blockId !== undefined ? blockId : this.dimBlockId
+    return id ? this.database.tables.blockTable.getAt(id) : undefined
   }
 
   protected getDimensionProperties(): AcDbEntityPropertyGroup {
     return {
       groupName: 'dimension',
       properties: [
+        this.createProperty(
+          'annotative',
+          'boolean',
+          () => this.annotative,
+          (value: boolean) => {
+            this.annotative = value
+          }
+        ),
         this.createProperty(
           'dimensionStyleName',
           'string',
@@ -808,8 +927,8 @@ export abstract class AcDbDimension extends AcDbEntity {
   /**
    * Builds the complete dimension-block transform (OCS transform + extrusion).
    */
-  protected getFullDimBlockTransform() {
-    const dimBlockTransform = this.computeDimBlockTransform()
+  protected getFullDimBlockTransform(blockPosition?: AcGePoint3dLike) {
+    const dimBlockTransform = this.computeDimBlockTransform(blockPosition)
     if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
       return dimBlockTransform
     }
@@ -946,7 +1065,7 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   protected adjustExtensionLine(extensionLine: AcGeLine3d) {
     const dimStyle = this.dimensionStyle
-    const scale = acdbDimFeatureScale(dimStyle)
+    const scale = acdbDimFeatureScale(dimStyle, this)
     extensionLine.extend(dimStyle.dimexe * scale)
     extensionLine.extend(-dimStyle.dimexo * scale, true)
   }
@@ -1015,9 +1134,19 @@ export abstract class AcDbDimension extends AcDbEntity {
    * @returns A transformation matrix that positions the anonymous dimension
    *          block in OCS space, excluding extrusion.
    */
-  private computeDimBlockTransform(): AcGeMatrix3d {
-    const blockTableRecord = this.dimBlockId
-      ? this.database.tables.blockTable.getAt(this.dimBlockId)
+  private computeDimBlockTransform(
+    blockPosition?: AcGePoint3dLike
+  ): AcGeMatrix3d {
+    const presentation =
+      blockPosition == null ? this.resolveAnnotativePresentation() : undefined
+    const blockId = presentation?.dimBlockId ?? this.dimBlockId
+    const insert =
+      blockPosition ??
+      presentation?.blockPosition ??
+      this._dimBlockPosition
+
+    const blockTableRecord = blockId
+      ? this.database.tables.blockTable.getAt(blockId)
       : undefined
 
     // The base point of the anonymous dimension block definition
@@ -1036,15 +1165,15 @@ export abstract class AcDbDimension extends AcDbEntity {
     )
 
     // ------------------------------------------------------------
-    // Step 2: Insertion offset (DXF group code 12)
+    // Step 2: Insertion offset (DXF group code 12 / context def_pt)
     //
     // This is the relative offset of the dimension block
     // in WCS, applied in dimension OCS coordinates.
     // ------------------------------------------------------------
     const mInsert = new AcGeMatrix3d().makeTranslation(
-      this._dimBlockPosition.x,
-      this._dimBlockPosition.y,
-      this._dimBlockPosition.z
+      insert.x,
+      insert.y,
+      insert.z ?? 0
     )
 
     const mRot = new AcGeMatrix3d().makeRotationZ(this._dimBlockRotation)

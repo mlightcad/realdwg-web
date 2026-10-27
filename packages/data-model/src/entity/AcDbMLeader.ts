@@ -23,10 +23,23 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
+import {
+  type AcDbAnnotationScaleContext,
+  type AcDbAnnotationScaleDrawInfo,
+  acdbAnnotativeModelHeight,
+  acdbAnnotativePaperHeight,
+  acdbBuildAnnotationScaleDrawInfo,
+  acdbGetAnnotationScaleContexts,
+  acdbGetAnnotative,
+  acdbIsAnnotativeObject,
+  acdbMatchAnnotationScaleContext,
+  acdbSetAnnotative
+} from '../misc/AcDbAnnotationScale.js'
 import { DEFAULT_MLEADER_STYLE } from '../misc/AcDbConstants.js'
 import { acdbDecodeMLeaderStyleRawColor } from '../misc/AcDbMLeaderStyleColorCodec.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbMLeaderObjectContextData } from '../object/AcDbMLeaderObjectContextData.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -319,6 +332,14 @@ export class AcDbMLeader extends AcDbEntity {
   private _planeXAxisDirection?: AcGeVector3d
   private _planeYAxisDirection?: AcGeVector3d
   private _planeNormalReversed?: boolean
+  /** Transient presentation used while `subWorldDraw` is in progress. */
+  private _drawPresentation?: {
+    textHeight: number
+    arrowheadSize: number
+    textAnchor?: AcGePoint3d
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  }
   /**
    * Creates an empty multileader entity with default style-related state.
    *
@@ -711,6 +732,19 @@ export class AcDbMLeader extends AcDbEntity {
   }
   set annotativeScaleEnabled(value: boolean | undefined) {
     this._annotativeScaleEnabled = value
+  }
+
+  /**
+   * Whether this multileader is annotative (XDATA/contexts or scale-enabled flag).
+   */
+  get annotative() {
+    return (
+      this._annotativeScaleEnabled === true || acdbGetAnnotative(this)
+    )
+  }
+  set annotative(value: boolean) {
+    this._annotativeScaleEnabled = value
+    acdbSetAnnotative(this, value)
   }
 
   /**
@@ -1556,6 +1590,17 @@ export class AcDbMLeader extends AcDbEntity {
           groupName: 'leader',
           properties: [
             {
+              name: 'annotative',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.annotative,
+                set: (v: boolean) => {
+                  this.annotative = v
+                }
+              }
+            },
+            {
               name: 'contentType',
               type: 'enum',
               editable: true,
@@ -1722,10 +1767,86 @@ export class AcDbMLeader extends AcDbEntity {
    * @param renderer Graphics renderer used to create draw entities.
    * @returns A single entity, an entity group, or undefined when nothing is drawable.
    */
+  /**
+   * Resolves text/arrow sizes and metadata for the active CANNOSCALE when
+   * this multileader is annotative.
+   */
+  resolveAnnotativePresentation(): {
+    textHeight: number
+    arrowheadSize: number
+    textAnchor?: AcGePoint3d
+    preferred?: AcDbAnnotationScaleContext
+    annotationScale?: AcDbAnnotationScaleDrawInfo
+  } {
+    const baseTextHeight = this.getBaseTextHeight()
+    const baseArrowSize = this.getBaseArrowheadSize()
+    const contexts = acdbGetAnnotationScaleContexts(this)
+    const isAnnotative =
+      contexts.length > 0 ||
+      this._annotativeScaleEnabled === true ||
+      acdbIsAnnotativeObject(this)
+
+    let textHeight = baseTextHeight
+    let arrowheadSize = baseArrowSize
+    let textAnchor: AcGePoint3d | undefined
+    let preferred: AcDbAnnotationScaleContext | undefined
+    let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
+
+    if (isAnnotative && contexts.length > 0) {
+      preferred =
+        acdbMatchAnnotationScaleContext(
+          contexts,
+          this.database?.cannoscale
+        ) ??
+        contexts.find(c => c.isDefault) ??
+        contexts[0]
+      annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
+      const ctx = preferred.contextData
+      if (ctx instanceof AcDbMLeaderObjectContextData) {
+        if (ctx.textHeight > 0) textHeight = ctx.textHeight
+        else {
+          textHeight = acdbAnnotativeModelHeight(
+            acdbAnnotativePaperHeight(baseTextHeight, contexts),
+            preferred.scale.scaleFactor
+          )
+        }
+        if (ctx.arrowheadSize > 0) arrowheadSize = ctx.arrowheadSize
+        else {
+          arrowheadSize = acdbAnnotativeModelHeight(
+            acdbAnnotativePaperHeight(baseArrowSize, contexts),
+            preferred.scale.scaleFactor
+          )
+        }
+        if (ctx.hasTextAnchor) textAnchor = ctx.textAnchor.clone()
+      } else {
+        textHeight = acdbAnnotativeModelHeight(
+          acdbAnnotativePaperHeight(baseTextHeight, contexts),
+          preferred.scale.scaleFactor
+        )
+        arrowheadSize = acdbAnnotativeModelHeight(
+          acdbAnnotativePaperHeight(baseArrowSize, contexts),
+          preferred.scale.scaleFactor
+        )
+      }
+    }
+
+    return {
+      textHeight,
+      arrowheadSize,
+      textAnchor,
+      preferred,
+      annotationScale
+    }
+  }
+
   subWorldDraw(
     renderer: AcGiRenderer,
     delay?: boolean
   ): AcGiEntity | undefined {
+    const presentation = this.resolveAnnotativePresentation()
+    // Stash for arrow helpers called during this draw pass.
+    this._drawPresentation = presentation
+
     const entities: AcGiEntity[] = []
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
@@ -1764,12 +1885,12 @@ export class AcDbMLeader extends AcDbEntity {
         this.hasMText === true)
     if (shouldDrawMText && mtextContent) {
       this.applyColorTraits(traits, textColor, originalColor)
-      const textHeight = this.getResolvedTextHeight()
+      const textHeight = presentation.textHeight
       const mtextData: AcGiMTextData = {
         text: mtextContent.text,
         height: textHeight,
         width: this.getMTextRenderWidth(mtextContent.text, textHeight),
-        position: mtextContent.anchorPoint,
+        position: presentation.textAnchor ?? mtextContent.anchorPoint,
         rotation: this.textRotation,
         directionVector: this.textDirection,
         attachmentPoint: this.textAttachmentPoint,
@@ -1785,8 +1906,26 @@ export class AcDbMLeader extends AcDbEntity {
     traits.color = originalColor
     traits.lineType = originalLineType
     traits.lineWeight = originalLineWeight
+    this._drawPresentation = undefined
     if (entities.length === 0) return undefined
-    return entities.length === 1 ? entities[0] : renderer.group(entities)
+    const drawable =
+      entities.length === 1 ? entities[0] : renderer.group(entities)
+    if (drawable && this.annotative) {
+      let info: AcDbAnnotationScaleDrawInfo | undefined =
+        presentation.annotationScale
+      if (!info) {
+        info = {
+          drawnScaleFactor: 1,
+          supportedScaleFactors: [1],
+          supportedScaleNames: []
+        }
+      }
+      const userData = (drawable.userData ??= {}) as {
+        annotationScale?: AcDbAnnotationScaleDrawInfo
+      }
+      userData.annotationScale = info
+    }
+    return drawable
   }
 
   /**
@@ -3250,27 +3389,33 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
-   * Resolves the effective arrowhead size.
-   *
-   * @returns Arrowhead size used for rendering.
+   * Base (non-annotative) arrowhead size from entity / style overrides.
    */
-  private getResolvedArrowheadSize() {
+  private getBaseArrowheadSize() {
     const style = this.getMLeaderStyle()
     const styleArrowSize = style?.arrowSize ?? style?.scale
     return (
       this.arrowheadSize ??
       this.contentScale ??
       styleArrowSize ??
-      this.getResolvedTextHeight()
+      this.getBaseTextHeight()
     )
   }
 
   /**
-   * Resolves effective text height by style and override-flag rules.
+   * Resolves the effective arrowhead size (annotative when drawing).
    *
-   * @returns Effective text height used for rendering.
+   * @returns Arrowhead size used for rendering.
    */
-  private getResolvedTextHeight() {
+  private getResolvedArrowheadSize() {
+    if (this._drawPresentation) return this._drawPresentation.arrowheadSize
+    return this.getBaseArrowheadSize()
+  }
+
+  /**
+   * Base (non-annotative) text height from entity / style overrides.
+   */
+  private getBaseTextHeight() {
     const styleTextHeight = this.getMLeaderStyle()?.textHeight
     if (this.textHeight > 0) return this.textHeight
     if (styleTextHeight != null && styleTextHeight > 0) return styleTextHeight
