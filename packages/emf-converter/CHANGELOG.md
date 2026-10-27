@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.16
+
+### Patch Changes
+
+- feat: adds DIMSTYLE text fill and view direction fields to dimension styles, so the Dimension Style Manager can render the AutoCAD Text tab "Fill color" and "View direction" options. DIMTFILL, DIMTFILLCLR and DIMTXTDIRECTION are persisted through the LibreDWG converter and exported to DXF with the proper group codes
+
 ## 1.15.15
 
 ### Patch Changes
