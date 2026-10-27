@@ -6,6 +6,21 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import {
+  acdbAngleOfPoints,
+  acdbAppendCenterMark,
+  acdbArrowScaleFromStyle,
+  acdbBuildAnnotationText,
+  acdbCreateDimArrowInsert,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
+  acdbEnsureDimArrowBlocks,
+  acdbOffsetTextAlongNormal,
+  acdbPointAt,
+  acdbResolveArrowBlockName
+} from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
 /**
@@ -323,6 +338,92 @@ export class AcDbRadialDimension extends AcDbDimension {
 
   protected override getMeasurementPropertyValue() {
     return this.measurement ?? this.center.distanceTo(this.chordPoint)
+  }
+
+  createDimBlock(blockName: string) {
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
+    const radius = this.center.distanceTo(this.chordPoint)
+    const angle = acdbAngleOfPoints(this.center, this.chordPoint)
+    const leaderLen = this.leaderLength
+
+    // Dimension line from center through chord, optionally extended by leader
+    const outer =
+      leaderLen > 0
+        ? acdbPointAt(this.chordPoint, angle, leaderLen)
+        : this.chordPoint.clone()
+
+    block.appendEntity(
+      acdbCreateDimLineEntity(this.center, outer, style)
+    )
+
+    if (leaderLen > 0) {
+      // Horizontal dogleg toward text
+      const doglegLen =
+        style.dimasz * acdbDimFeatureScale(style) * 2
+      const doglegEnd = new AcGePoint3d(
+        outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
+        outer.y,
+        outer.z
+      )
+      block.appendEntity(acdbCreateDimLineEntity(outer, doglegEnd, style))
+      const textPos = acdbOffsetTextAlongNormal(
+        doglegEnd,
+        0,
+        style
+      )
+      this.textPosition = textPos
+      const contents = acdbBuildAnnotationText(
+        this.measurement ?? radius,
+        this.dimensionText,
+        style,
+        'radial'
+      )
+      const mtext = acdbCreateDimMText({
+        contents,
+        position: textPos,
+        rotation: 0,
+        style
+      })
+      if (mtext) block.appendEntity(mtext)
+    } else {
+      const textPos = acdbOffsetTextAlongNormal(
+        acdbPointAt(this.center, angle, radius * 0.5),
+        angle,
+        style
+      )
+      this.textPosition = textPos
+      const contents = acdbBuildAnnotationText(
+        this.measurement ?? radius,
+        this.dimensionText,
+        style,
+        'radial'
+      )
+      const mtext = acdbCreateDimMText({
+        contents,
+        position: textPos,
+        rotation: angle,
+        style
+      })
+      if (mtext) block.appendEntity(mtext)
+    }
+
+    const scale = acdbArrowScaleFromStyle(style)
+    const arrowName = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+    const arrow = acdbCreateDimArrowInsert(
+      this.chordPoint,
+      angle,
+      scale,
+      arrowName
+    )
+    if (arrow) block.appendEntity(arrow)
+
+    acdbAppendCenterMark(block, this.center, style)
+    return block
   }
 
   /**

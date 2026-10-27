@@ -84,6 +84,9 @@ export function acdbEncodeMLeaderStyleRawColor(color: AcCmColor) {
  */
 export function acdbDecodeMLeaderStyleRawColor(rawColor: number) {
   const color = new AcCmColor(AcCmColorMethod.ByBlock)
+  if (!Number.isFinite(rawColor)) {
+    return color
+  }
   const flags = (rawColor >>> 24) & 0xff
   switch (flags) {
     case RAW_COLOR_TYPE_BY_LAYER:
@@ -111,4 +114,95 @@ export function acdbDecodeMLeaderStyleRawColor(rawColor: number) {
       break
   }
   return color
+}
+
+/**
+ * LibreDWG CMC / {@link Dwg_Color}-like object used for DIMCLRD/E/T and similar.
+ */
+export type AcDbDwgColorLike = {
+  index?: number
+  rgb?: number
+  method?: number
+  name?: string
+}
+
+/**
+ * Decodes a dim-style color field from LibreDWG / DXF.
+ *
+ * Accepts:
+ * - plain ACI `0` / `1..255` / `256`
+ * - packed CMC int32 (high byte `0xC0..0xC8`)
+ * - LibreDWG CMC objects `{ method, index, rgb }`
+ *
+ * Invalid values fall back to ByBlock so glyph construction never sees NaN ACI.
+ */
+export function acdbDecodeDimStyleColor(raw: unknown): AcCmColor {
+  if (raw == null) {
+    return new AcCmColor(AcCmColorMethod.ByBlock)
+  }
+  if (typeof raw === 'number') {
+    return acdbDecodeMLeaderStyleRawColor(raw)
+  }
+  if (typeof raw === 'object') {
+    const c = raw as AcDbDwgColorLike
+    const method =
+      c.method != null && c.method !== 0
+        ? c.method & 0xff
+        : typeof c.rgb === 'number'
+          ? (c.rgb >>> 24) & 0xff
+          : 0
+    if (
+      typeof c.rgb === 'number' &&
+      Number.isFinite(c.rgb) &&
+      method >= RAW_COLOR_TYPE_BY_LAYER &&
+      method <= RAW_COLOR_TYPE_WINDOW_BG
+    ) {
+      // Prefer packed rgb when it already carries the CMC type flag.
+      if (((c.rgb >>> 24) & 0xff) === method) {
+        return acdbDecodeMLeaderStyleRawColor(c.rgb >> 0)
+      }
+    }
+    if (method === RAW_COLOR_TYPE_BY_LAYER || c.index === 256) {
+      const color = new AcCmColor()
+      color.setByLayer()
+      return color
+    }
+    if (method === RAW_COLOR_TYPE_BY_BLOCK || c.index === 0) {
+      return new AcCmColor(AcCmColorMethod.ByBlock)
+    }
+    if (method === RAW_COLOR_TYPE_RGB && typeof c.rgb === 'number') {
+      const color = new AcCmColor()
+      color.setRGBValue(c.rgb & 0xffffff)
+      return color
+    }
+    if (method === RAW_COLOR_TYPE_ACI) {
+      const aci =
+        typeof c.rgb === 'number' ? c.rgb & 0xff : (c.index ?? 0) & 0xff
+      return acdbDecodeMLeaderStyleRawColor(aci)
+    }
+    if (typeof c.index === 'number' && c.index >= 0 && c.index <= 256) {
+      return acdbDecodeMLeaderStyleRawColor(c.index)
+    }
+    if (typeof c.rgb === 'number' && Number.isFinite(c.rgb)) {
+      return acdbDecodeMLeaderStyleRawColor(c.rgb >> 0)
+    }
+  }
+  return new AcCmColor(AcCmColorMethod.ByBlock)
+}
+
+/**
+ * Normalizes a dim-style color field to a plain number for
+ * {@link AcDbDimStyleTableRecord} storage (`0` / `1..255` / `256`, or packed RGB).
+ */
+export function acdbNormalizeDimStyleColorNumber(raw: unknown): number {
+  const color = acdbDecodeDimStyleColor(raw)
+  if (color.isByBlock) return 0
+  if (color.isByLayer) return 256
+  const aci = color.colorIndex
+  if (aci != null && aci > 0 && aci < 256) return aci
+  const rgb = color.RGB
+  if (typeof rgb === 'number') {
+    return ((RAW_COLOR_TYPE_RGB << 24) | (rgb & 0xffffff)) >> 0
+  }
+  return 0
 }

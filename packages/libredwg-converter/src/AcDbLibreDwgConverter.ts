@@ -25,6 +25,7 @@ import {
   AcDbLayout,
   AcDbLinetypeTableRecord,
   AcDbLinetypeTableRecordAttrs,
+  acdbNormalizeDimStyleColorNumber,
   acdbNormalizeExtensionDictionaryId,
   AcDbObject,
   AcDbOpenDatabaseError,
@@ -179,9 +180,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimsah: item.DIMSAH,
         dimtix: item.DIMTIX,
         dimsoxd: item.DIMSOXD,
-        dimclrd: item.DIMCLRD,
-        dimclre: item.DIMCLRE,
-        dimclrt: item.DIMCLRT,
+        // LibreDWG returns CMC objects / packed ints for these — normalize to
+        // plain ACI (0/1..255/256) or packed RGB so dim block builders never
+        // see NaN colorIndex when constructing MTEXT.
+        dimclrd: acdbNormalizeDimStyleColorNumber(item.DIMCLRD),
+        dimclre: acdbNormalizeDimStyleColorNumber(item.DIMCLRE),
+        dimclrt: acdbNormalizeDimStyleColorNumber(item.DIMCLRT),
         dimadec: item.DIMADEC || 0,
         dimunit: item.DIMUNIT || 2,
         dimdec: item.DIMDEC,
@@ -203,7 +207,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimfit: item.DIMFIT || 0,
         dimupt: item.DIMUPT,
         dimatfit: item.DIMATFIT,
-        dimtxsty: DEFAULT_TEXT_STYLE, // TODO: Set correct value
+        dimtxsty: this.resolveDimTextStyleName(model, item.DIMTXSTY),
         dimldrblk: '', // TODO: Set correct value
         dimblk: item.DIMBLK || '', // TODO: Set correct value
         dimblk1: item.DIMBLK1 || '', // TODO: Set correct value
@@ -215,6 +219,48 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       this.processCommonTableEntryAttrs(item, record)
       db.tables.dimStyleTable.add(record)
     })
+    const scales = (
+      model as DwgDatabase & {
+        dimStyleAnnotationScales?: Record<string, number>
+      }
+    ).dimStyleAnnotationScales
+    if (scales) {
+      for (const [name, factor] of Object.entries(scales)) {
+        db.setDimStyleAnnotationScale(name, factor)
+      }
+    }
+  }
+
+  /**
+   * DIMTXSTY is a hard pointer. LibreDWG exposes it as a numeric handle
+   * (for example 0x28D → 653) rather than the text style name.
+   */
+  private resolveDimTextStyleName(
+    model: DwgDatabase,
+    dimTxsty: unknown
+  ): string {
+    if (typeof dimTxsty === 'string') {
+      const text = dimTxsty.trim()
+      if (text && !/^[0-9]+$/.test(text) && !/^[0-9A-F]+$/i.test(text)) {
+        return text
+      }
+      if (text && /[A-Z]/i.test(text)) {
+        const byHex = model.tables.STYLE.entries.find(
+          entry => String(entry.handle).toUpperCase() === text.toUpperCase()
+        )
+        if (byHex?.name) return byHex.name
+      }
+    }
+    const numeric =
+      typeof dimTxsty === 'number' ? dimTxsty : Number(dimTxsty)
+    if (Number.isFinite(numeric) && numeric > 0) {
+      const hex = Math.trunc(numeric).toString(16).toUpperCase()
+      const match = model.tables.STYLE.entries.find(
+        entry => String(entry.handle).toUpperCase() === hex
+      )
+      if (match?.name) return match.name
+    }
+    return DEFAULT_TEXT_STYLE
   }
 
   protected processLayers(model: DwgDatabase, db: AcDbDatabase) {
@@ -561,6 +607,12 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.pdmode = header.PDMODE ?? 0
     db.pdsize = header.PDSIZE ?? 0.0
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
+    // Match DXF header reader: new dimensions must inherit $DIMSTYLE.
+    // Without this, DWG loads leave db.dimstyle as the constructor default
+    // ("Standard"), so dims pick imperial 0.18 text/arrow while the drawing's
+    // active style (e.g. metric "2-1" with dimtxt/dimasz=3) is ignored.
+    db.dimstyle =
+      this.normalizeHeaderStringValue(header.DIMSTYLE) ?? DEFAULT_TEXT_STYLE
     const cmleaderStyle =
       this.normalizeHeaderStringValue(
         (header as { CMLEADERSTYLE?: string }).CMLEADERSTYLE

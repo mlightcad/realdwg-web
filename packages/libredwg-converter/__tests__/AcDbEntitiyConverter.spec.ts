@@ -10,6 +10,7 @@ import {
   AcDbLeader,
   AcDbLeaderAnnotationType,
   AcDbMText,
+  AcDbOrdinateDimension,
   AcDbPolyline,
   AcDbProxyEntity,
   AcDbShape,
@@ -353,6 +354,35 @@ describe('libredwg AcDbEntityConverter', () => {
 
     expect(result).toBeInstanceOf(AcDb3PointAngularDimension)
     expect((result as AcDb3PointAngularDimension).dimBlockId).toBe('*D64')
+  })
+
+  it('converts AcDbOrdinateDimension origin and X-axis flag from group 70', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const result = converter.convert({
+      type: 'DIMENSION',
+      subclassMarker: 'AcDbOrdinateDimension',
+      handle: '2A01',
+      ownerBlockRecordSoftId: '18',
+      layer: '0',
+      name: '*D10',
+      styleName: 'Standard',
+      text: '',
+      textPoint: { x: 20, y: 7, z: 0 },
+      measurement: 10,
+      // 6 = ordinate, 64 = X-type, 32 = exclusive block ref (R13+)
+      dimensionType: 6 | 64 | 32,
+      definitionPoint: { x: 2, y: 1, z: 0 },
+      subDefinitionPoint1: { x: 12, y: 7, z: 0 },
+      subDefinitionPoint2: { x: 20, y: 7, z: 0 }
+    } as any)
+
+    expect(result).toBeInstanceOf(AcDbOrdinateDimension)
+    const dim = result as AcDbOrdinateDimension
+    expect(dim.origin).toMatchObject({ x: 2, y: 1, z: 0 })
+    expect(dim.definingPoint).toMatchObject({ x: 12, y: 7, z: 0 })
+    expect(dim.useXAxis).toBe(true)
+    expect(dim.dimensionType & 0x40).toBe(0x40)
   })
 
   it('converts LEADER hook-line metadata from libredwg entities', () => {

@@ -10,6 +10,10 @@ class TestLibreDwgConverter extends AcDbLibreDwgConverter {
   processLayersPublic(model: any, db: AcDbDatabase) {
     return this.processLayers(model, db)
   }
+
+  processDimStylesPublic(model: any, db: AcDbDatabase) {
+    return this.processDimStyles(model, db)
+  }
 }
 
 describe('AcDbLibreDwgConverter', () => {
@@ -43,6 +47,52 @@ describe('AcDbLibreDwgConverter', () => {
     const missing = new AcDbDatabase()
     converter.processHeaderPublic({ header: {} }, missing)
     expect(missing.tilemode).toBe(1)
+  })
+
+  it('resolves DIMTXSTY handles and records annotative scale', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processDimStylesPublic(
+      {
+        tables: {
+          STYLE: {
+            entries: [{ name: '仿宋', handle: '28D' }]
+          },
+          DIMSTYLE: {
+            entries: [
+              {
+                name: '1-1',
+                handle: 'C38',
+                ownerHandle: '0',
+                DIMTXT: 3,
+                DIMSCALE: 1,
+                DIMTXSTY: 0x28d
+              }
+            ]
+          }
+        },
+        dimStyleAnnotationScales: { '1-1': 16 }
+      },
+      db
+    )
+    expect(db.tables.dimStyleTable.getAt('1-1')?.dimtxsty).toBe('仿宋')
+    expect(db.getDimStyleAnnotationScale('1-1')).toBe(16)
+  })
+
+  it('maps $DIMSTYLE from the DWG header onto db.dimstyle', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    const withStyle = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { DIMSTYLE: '1-1' } }, withStyle)
+    expect(withStyle.dimstyle).toBe('1-1')
+
+    const blank = new AcDbDatabase()
+    converter.processHeaderPublic({ header: { DIMSTYLE: '  ' } }, blank)
+    expect(blank.dimstyle).toBe('Standard')
+
+    const missing = new AcDbDatabase()
+    converter.processHeaderPublic({ header: {} }, missing)
+    expect(missing.dimstyle).toBe('Standard')
   })
 
   it('keeps CMC RGB for layers when libredwg leaves colorIndex at 256', () => {

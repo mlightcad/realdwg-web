@@ -8,6 +8,7 @@ import { AcDbLayerTableRecord } from '../database/AcDbLayerTableRecord.js'
 import { AcDbLinetypeTableRecord } from '../database/AcDbLinetypeTableRecord.js'
 import { AcDbTextStyleTableRecord } from '../database/AcDbTextStyleTableRecord.js'
 import { AcDbHatch } from '../entity/AcDbHatch.js'
+import { AcDbLine } from '../entity/AcDbLine.js'
 import { AcDbLayout } from '../object/layout/AcDbLayout.js'
 import { DEFAULT_TEXT_STYLE, HATCH_PATTERN_SOLID } from './AcDbConstants.js'
 
@@ -124,22 +125,178 @@ export class AcDbDataGenerator {
   }
 
   createArrowBlock() {
-    const blockName = '_CAXARROW'
-    if (!this.db.tables.blockTable.getAt(blockName)) {
-      // Create arrow
+    // Legacy alias kept for drawings that already reference _CAXARROW
+    this.ensureArrowBlock('_CAXARROW')
+    this.ensureArrowBlock('_CLOSEDFILLED')
+  }
+
+  /**
+   * Ensure a standard AutoCAD-style arrowhead block exists in the block table.
+   * Arrow geometry is authored in unit size with tip at the origin pointing +X
+   * when rotated 0; inserts typically rotate so the tip points along the
+   * dimension line toward the outside.
+   */
+  ensureArrowBlock(blockName: string) {
+    if (!blockName) return
+    if (this.db.tables.blockTable.getAt(blockName)) return
+
+    const name = blockName.toUpperCase()
+    const block = new AcDbBlockTableRecord()
+    block.name = blockName
+
+    const addFilledTriangle = (halfWidth = 0.125) => {
       const hatch = new AcDbHatch()
       hatch.patternName = HATCH_PATTERN_SOLID
       const loop = new AcGeLoop2d()
-      loop.add(new AcGeLine2d({ x: 0, y: 0 }, { x: -1, y: 0.125 }))
-      loop.add(new AcGeLine2d({ x: -1, y: 0.125 }, { x: -1, y: -0.125 }))
-      loop.add(new AcGeLine2d({ x: -1, y: -0.125 }, { x: 0, y: 0 }))
+      loop.add(new AcGeLine2d({ x: 0, y: 0 }, { x: -1, y: halfWidth }))
+      loop.add(new AcGeLine2d({ x: -1, y: halfWidth }, { x: -1, y: -halfWidth }))
+      loop.add(new AcGeLine2d({ x: -1, y: -halfWidth }, { x: 0, y: 0 }))
       hatch.add(loop)
-
-      // Create block and add the hatch entity in this block
-      const block = new AcDbBlockTableRecord()
-      block.name = '_CAXARROW'
       block.appendEntity(hatch)
-      this.db.tables.blockTable.add(block)
     }
+
+    const addOpenTriangle = (halfWidth = 0.125) => {
+      block.appendEntity(
+        this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -1, y: halfWidth, z: 0 })
+      )
+      block.appendEntity(
+        this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -1, y: -halfWidth, z: 0 })
+      )
+    }
+
+    const addCircle = (radius: number, filled: boolean) => {
+      if (filled) {
+        const hatch = new AcDbHatch()
+        hatch.patternName = HATCH_PATTERN_SOLID
+        // Approximate filled dot with a small diamond loop around origin
+        const loop = new AcGeLoop2d()
+        const r = radius
+        loop.add(new AcGeLine2d({ x: r, y: 0 }, { x: 0, y: r }))
+        loop.add(new AcGeLine2d({ x: 0, y: r }, { x: -r, y: 0 }))
+        loop.add(new AcGeLine2d({ x: -r, y: 0 }, { x: 0, y: -r }))
+        loop.add(new AcGeLine2d({ x: 0, y: -r }, { x: r, y: 0 }))
+        hatch.add(loop)
+        block.appendEntity(hatch)
+      } else {
+        // Cross-hair circle approximation with two diameters
+        block.appendEntity(
+          this.lineEntity({ x: -radius, y: 0, z: 0 }, { x: radius, y: 0, z: 0 })
+        )
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: -radius, z: 0 }, { x: 0, y: radius, z: 0 })
+        )
+      }
+    }
+
+    switch (name) {
+      case '_CAXARROW':
+      case '_CLOSEDFILLED':
+      case '':
+        addFilledTriangle()
+        break
+      case '_CLOSED':
+        addOpenTriangle()
+        block.appendEntity(
+          this.lineEntity({ x: -1, y: 0.125, z: 0 }, { x: -1, y: -0.125, z: 0 })
+        )
+        break
+      case '_CLOSEDBLANK':
+        addOpenTriangle()
+        block.appendEntity(
+          this.lineEntity({ x: -1, y: 0.125, z: 0 }, { x: -1, y: -0.125, z: 0 })
+        )
+        break
+      case '_OPEN':
+        addOpenTriangle(0.1667)
+        break
+      case '_OPEN30':
+        addOpenTriangle(0.2679)
+        break
+      case '_OPEN90':
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -0.5, y: 0.5, z: 0 })
+        )
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -0.5, y: -0.5, z: 0 })
+        )
+        break
+      case '_OBLIQUE':
+      case '_ARCHTICK':
+        block.appendEntity(
+          this.lineEntity({ x: -0.5, y: -0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 })
+        )
+        break
+      case '_DOT':
+        addCircle(0.25, true)
+        break
+      case '_DOTSMALL':
+      case '_SMALL':
+        addCircle(0.125, true)
+        break
+      case '_DOTBLANK':
+        addCircle(0.25, false)
+        break
+      case '_BOXFILLED':
+        {
+          const hatch = new AcDbHatch()
+          hatch.patternName = HATCH_PATTERN_SOLID
+          const loop = new AcGeLoop2d()
+          loop.add(new AcGeLine2d({ x: -1, y: -0.5 }, { x: 0, y: -0.5 }))
+          loop.add(new AcGeLine2d({ x: 0, y: -0.5 }, { x: 0, y: 0.5 }))
+          loop.add(new AcGeLine2d({ x: 0, y: 0.5 }, { x: -1, y: 0.5 }))
+          loop.add(new AcGeLine2d({ x: -1, y: 0.5 }, { x: -1, y: -0.5 }))
+          hatch.add(loop)
+          block.appendEntity(hatch)
+        }
+        break
+      case '_BOXBLANK':
+        block.appendEntity(
+          this.lineEntity({ x: -1, y: -0.5, z: 0 }, { x: 0, y: -0.5, z: 0 })
+        )
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: -0.5, z: 0 }, { x: 0, y: 0.5, z: 0 })
+        )
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: 0.5, z: 0 }, { x: -1, y: 0.5, z: 0 })
+        )
+        block.appendEntity(
+          this.lineEntity({ x: -1, y: 0.5, z: 0 }, { x: -1, y: -0.5, z: 0 })
+        )
+        break
+      case '_DATUMFILLED':
+        addFilledTriangle(0.5)
+        break
+      case '_DATUMBLANK':
+        addOpenTriangle(0.5)
+        block.appendEntity(
+          this.lineEntity({ x: -1, y: 0.5, z: 0 }, { x: -1, y: -0.5, z: 0 })
+        )
+        break
+      case '_ORIGIN':
+      case '_ORIGIN2':
+        addCircle(0.5, false)
+        addCircle(0.125, true)
+        break
+      case '_INTEGRAL':
+        block.appendEntity(
+          this.lineEntity({ x: 0, y: -0.5, z: 0 }, { x: 0, y: 0.5, z: 0 })
+        )
+        break
+      case '_NONE':
+        // empty block
+        break
+      default:
+        addFilledTriangle()
+        break
+    }
+
+    this.db.tables.blockTable.add(block)
+  }
+
+  private lineEntity(
+    start: { x: number; y: number; z: number },
+    end: { x: number; y: number; z: number }
+  ) {
+    return new AcDbLine(start, end)
   }
 }

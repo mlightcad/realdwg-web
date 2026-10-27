@@ -6,6 +6,21 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import {
+  acdbAngleOfPoints,
+  acdbArrowScaleFromStyle,
+  acdbBuildAnnotationText,
+  acdbCreateDimArrowInsert,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbDimFeatureScale,
+  acdbEnsureDimArrowBlocks,
+  acdbMidPoint,
+  acdbOffsetTextAlongNormal,
+  acdbPointAt,
+  acdbResolveArrowBlockName
+} from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
 /**
@@ -214,6 +229,75 @@ export class AcDbDiametricDimension extends AcDbDimension {
 
   protected override getMeasurementPropertyValue() {
     return this.measurement ?? this.chordPoint.distanceTo(this.farChordPoint)
+  }
+
+  createDimBlock(blockName: string) {
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
+    const diameter = this.chordPoint.distanceTo(this.farChordPoint)
+    const angle = acdbAngleOfPoints(this.farChordPoint, this.chordPoint)
+    const leaderLen = this.leaderLength
+
+    const outer =
+      leaderLen > 0
+        ? acdbPointAt(this.chordPoint, angle, leaderLen)
+        : this.chordPoint.clone()
+
+    block.appendEntity(
+      acdbCreateDimLineEntity(this.farChordPoint, outer, style)
+    )
+
+    const scale = acdbArrowScaleFromStyle(style)
+    const arrow1 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk1
+    )
+    const arrow2 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+    const a1 = acdbCreateDimArrowInsert(
+      this.farChordPoint,
+      angle + Math.PI,
+      scale,
+      arrow1
+    )
+    const a2 = acdbCreateDimArrowInsert(this.chordPoint, angle, scale, arrow2)
+    if (a1) block.appendEntity(a1)
+    if (a2) block.appendEntity(a2)
+
+    let textAnchor = acdbMidPoint(this.chordPoint, this.farChordPoint)
+    let textRotation = angle
+    if (leaderLen > 0) {
+      const doglegLen =
+        style.dimasz * acdbDimFeatureScale(style) * 2
+      const doglegEnd = new AcGePoint3d(
+        outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
+        outer.y,
+        outer.z
+      )
+      block.appendEntity(acdbCreateDimLineEntity(outer, doglegEnd, style))
+      textAnchor = doglegEnd
+      textRotation = 0
+    }
+
+    const textPos = acdbOffsetTextAlongNormal(textAnchor, textRotation, style)
+    this.textPosition = textPos
+    const contents = acdbBuildAnnotationText(
+      this.measurement ?? diameter,
+      this.dimensionText,
+      style,
+      'diametric'
+    )
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: textPos,
+      rotation: textRotation,
+      style
+    })
+    if (mtext) block.appendEntity(mtext)
+
+    return block
   }
 
   /**

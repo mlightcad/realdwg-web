@@ -1,4 +1,3 @@
-import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
   AcGeLine3d,
   AcGeMatrix3d,
@@ -10,11 +9,20 @@ import {
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base/index.js'
-import { AcDbBlockTableRecord } from '../../database/index.js'
-import { AcDbBlockReference } from '../AcDbBlockReference.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
-import { AcDbLine } from '../AcDbLine.js'
-import { AcDbMText } from '../AcDbMText.js'
+import {
+  acdbArrowScaleFromStyle,
+  acdbBuildAnnotationText,
+  acdbCreateDimArrowInsert,
+  acdbCreateDimLineEntity,
+  acdbCreateDimMText,
+  acdbCreateEmptyDimBlock,
+  acdbEnsureDimArrowBlocks,
+  acdbExtendLineByDimDle,
+  acdbMidPoint,
+  acdbOffsetTextAlongNormal,
+  acdbResolveArrowBlockName
+} from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
 /**
@@ -106,15 +114,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
     this._rotation = 0
     this.calculateRotation()
 
-    if (dimText) {
-      this.dimensionText = dimText
-    } else {
-      // TODO: Decide the umber of digits after the decimal point
-      this.dimensionText = this._xLine1Point
-        .distanceTo(this._xLine2Point)
-        .toFixed(3)
-    }
-
+    this.dimensionText = dimText
     // TODO: Set it to the current default dimStyle within the AutoCAD editor if dimStyle is null
     this.dimensionStyleName = dimStyle
   }
@@ -353,70 +353,117 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   createDimBlock(blockName: string) {
-    // Create block and add the hatch entity in this block
-    const block = new AcDbBlockTableRecord()
-    block.name = blockName
+    const style = this.dimensionStyle
+    acdbEnsureDimArrowBlocks(this.database, style)
+
+    const block = acdbCreateEmptyDimBlock(blockName)
     const lines = this.createLines()
-    lines.forEach(line =>
-      block.appendEntity(new AcDbLine(line.startPoint, line.endPoint))
-    )
+    const dimLine = lines[0]
+    // Capture arrow anchors before DIMDLE extends the line past the heads.
+    const arrowStart = dimLine.startPoint.clone()
+    const arrowEnd = dimLine.endPoint.clone()
+    acdbExtendLineByDimDle(dimLine, style)
 
-    // Create arrows at the end of dimension line
-    const arrows = this.createArrows(lines[0])
-    arrows.forEach(arrow => block.appendEntity(arrow))
-
-    // Create dimension texts above dimension line
-    const textPos = lines[0].midPoint
-    const texts = this.createMText(textPos, this._rotation)
-    if (texts) block.appendEntity(texts)
-
-    return block
-  }
-
-  private createMText(pos: AcGePoint3dLike, rotation: number) {
-    const angleDegToUnitVector = (angleRad: number) => {
-      return {
-        x: Math.cos(angleRad),
-        y: Math.sin(angleRad),
-        z: 0
+    if (style.dimsd1 === 0 && style.dimsd2 === 0) {
+      block.appendEntity(
+        acdbCreateDimLineEntity(dimLine.startPoint, dimLine.endPoint, style)
+      )
+    } else if (style.dimsd1 === 0 || style.dimsd2 === 0) {
+      const mid = acdbMidPoint(dimLine.startPoint, dimLine.endPoint)
+      if (style.dimsd1 === 0) {
+        block.appendEntity(
+          acdbCreateDimLineEntity(dimLine.startPoint, mid, style)
+        )
+      }
+      if (style.dimsd2 === 0) {
+        block.appendEntity(acdbCreateDimLineEntity(mid, dimLine.endPoint, style))
       }
     }
 
-    if (this.dimensionText) {
-      const mtext = new AcDbMText()
-      mtext.attachmentPoint = this.attachmentPoint
-      mtext.layer = '0'
-      mtext.color = new AcCmColor(AcCmColorMethod.ByBlock)
-      mtext.location = pos
-      mtext.contents = this.dimensionText ?? ''
-      mtext.height = 10
-      mtext.direction = angleDegToUnitVector(rotation)
-      mtext.styleName = this.dimensionStyle.dimtxsty
-      return mtext
+    if (style.dimse1 === 0 && lines[1]) {
+      block.appendEntity(
+        acdbCreateDimLineEntity(
+          lines[1].startPoint,
+          lines[1].endPoint,
+          style,
+          'extension'
+        )
+      )
     }
-    return undefined
-  }
+    if (style.dimse2 === 0 && lines[2]) {
+      block.appendEntity(
+        acdbCreateDimLineEntity(
+          lines[2].startPoint,
+          lines[2].endPoint,
+          style,
+          'extension'
+        )
+      )
+    }
 
-  private createArrows(dimensionLine: AcGeLine3d) {
-    const arrows: AcDbBlockReference[] = []
-    arrows.push(
-      this.createArrow(dimensionLine.startPoint, this.rotation + Math.PI, 10)
+    const scale = acdbArrowScaleFromStyle(style)
+    const arrow1 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk1
     )
-    arrows.push(this.createArrow(dimensionLine.endPoint, this.rotation, 10))
-    return arrows
-  }
+    const arrow2 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+    if (style.dimtsz <= 0) {
+      const a1 = acdbCreateDimArrowInsert(
+        arrowStart,
+        this.rotation + Math.PI,
+        scale,
+        arrow1
+      )
+      const a2 = acdbCreateDimArrowInsert(
+        arrowEnd,
+        this.rotation,
+        scale,
+        arrow2
+      )
+      if (a1) block.appendEntity(a1)
+      if (a2) block.appendEntity(a2)
+    } else {
+      // Architectural tick: short oblique strokes at each end
+      const tick = acdbCreateDimArrowInsert(
+        arrowStart,
+        this.rotation + Math.PI / 4,
+        scale,
+        '_ARCHTICK'
+      )
+      const tick2 = acdbCreateDimArrowInsert(
+        arrowEnd,
+        this.rotation + Math.PI / 4,
+        scale,
+        '_ARCHTICK'
+      )
+      if (tick) block.appendEntity(tick)
+      if (tick2) block.appendEntity(tick2)
+    }
 
-  private createArrow(
-    pos: AcGePoint3dLike,
-    rotation: number,
-    scaleFactor: number
-  ) {
-    const blockName = '_CAXARROW'
-    const insert = new AcDbBlockReference(blockName)
-    insert.position = pos
-    insert.rotation = rotation
-    insert.scaleFactors = { x: scaleFactor, y: scaleFactor, z: scaleFactor }
-    return insert
+    const measured =
+      this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
+    const contents = acdbBuildAnnotationText(
+      measured,
+      this.dimensionText,
+      style,
+      'linear'
+    )
+    const textPos = acdbOffsetTextAlongNormal(
+      acdbMidPoint(dimLine.startPoint, dimLine.endPoint),
+      this.rotation,
+      style
+    )
+    this.textPosition = textPos
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: textPos,
+      rotation: this.rotation,
+      style
+    })
+    if (mtext) block.appendEntity(mtext)
+
+    return block
   }
 
   /**

@@ -32,6 +32,7 @@ import {
 } from '../AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from '../AcDbGripHelpers.js'
 import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers.js'
+import { acdbDimFeatureScale } from './AcDbDimFeatureScale.js'
 
 /**
  * Defines the line spacing style for dimension text.
@@ -945,8 +946,9 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   protected adjustExtensionLine(extensionLine: AcGeLine3d) {
     const dimStyle = this.dimensionStyle
-    extensionLine.extend(dimStyle.dimexe)
-    extensionLine.extend(-dimStyle.dimexo, true)
+    const scale = acdbDimFeatureScale(dimStyle)
+    extensionLine.extend(dimStyle.dimexe * scale)
+    extensionLine.extend(-dimStyle.dimexo * scale, true)
   }
 
   /**

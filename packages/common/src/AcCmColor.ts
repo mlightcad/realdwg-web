@@ -41,7 +41,16 @@ export class AcCmColor {
       } else if (value === 256) {
         this._colorMethod = AcCmColorMethod.ByLayer
       } else {
-        this._value = Math.max(0, Math.min(value, 256))
+        const clamped = Math.max(0, Math.min(256, Math.round(Number(value))))
+        if (!Number.isFinite(clamped) || clamped === 0) {
+          this._colorMethod = AcCmColorMethod.ByBlock
+          this._value = undefined
+        } else if (clamped === 256) {
+          this._colorMethod = AcCmColorMethod.ByLayer
+          this._value = undefined
+        } else {
+          this._value = clamped
+        }
       }
     } else {
       this._value = value
@@ -263,7 +272,14 @@ export class AcCmColor {
    */
   set colorIndex(index: number | undefined) {
     if (index == null) return
-    const clamped = Math.max(0, Math.min(256, Math.round(index)))
+    const clamped = Math.max(0, Math.min(256, Math.round(Number(index))))
+    // Non-numeric input (CMC objects, NaN) must not leave ByACI with NaN —
+    // mtext-parser rejects that and aborts glyph construction.
+    if (!Number.isFinite(clamped)) {
+      this._colorMethod = AcCmColorMethod.ByBlock
+      this._value = undefined
+      return
+    }
 
     if (clamped === 0) {
       this._colorMethod = AcCmColorMethod.ByBlock
