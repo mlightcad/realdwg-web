@@ -6,6 +6,7 @@ export {
   acdbAnnotativeModelHeight,
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
+  acdbEnsureDefaultAnnotationScales,
   acdbEnsureNamedScale,
   acdbFindScale,
   acdbGetAnnotative,

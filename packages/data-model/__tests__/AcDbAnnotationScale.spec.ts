@@ -194,8 +194,9 @@ describe('annotation scale support (#749)', () => {
     expect(textA.annotative).toBe(true)
     textA.annotative = false
     expect(acdbIsAnnotativeObject(textA)).toBe(false)
-    // Contexts still mark it annotative via acdbGetAnnotative
-    expect(acdbGetAnnotative(textA)).toBe(true)
+    expect(acdbGetAnnotative(textA)).toBe(false)
+    expect(textA.annotative).toBe(false)
+    expect(acdbGetAnnotationScaleContexts(textA)).toHaveLength(0)
 
     const plain = new AcDbMText()
     plain.database = db

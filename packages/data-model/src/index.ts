@@ -403,6 +403,7 @@ export {
   acdbAnnotativePaperHeight,
   acdbBuildAnnotationScaleDrawInfo,
   acdbAddAnnotationScaleToObject,
+  acdbEnsureDefaultAnnotationScales,
   acdbEnsureNamedScale,
   acdbFindScale,
   acdbGetAnnotative,
