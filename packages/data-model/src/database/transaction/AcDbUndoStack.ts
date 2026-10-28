@@ -3,8 +3,10 @@ import { AcDbUndoRecord } from './AcDbUndoRecord.js'
 /**
  * Manages undo and redo history for database changes.
  *
- * Stores committed {@link AcDbUndoRecord} entries and clears the redo stack
- * whenever a new undo record is pushed.
+ * Stores committed {@link AcDbUndoRecord} entries. {@link push} is the
+ * user-initiated entry point and clears the redo stack, while
+ * {@link pushUndo} only restores an undone record during a redo so the
+ * remaining redo records survive.
  */
 export class AcDbUndoStack {
   private readonly undoRecords: AcDbUndoRecord[] = []
@@ -16,6 +18,9 @@ export class AcDbUndoStack {
   /**
    * Pushes a new undo record and clears redo history.
    *
+   * Use this when the user performs a new operation: any previously undone
+   * step can no longer be redone, so the redo stack is discarded.
+   *
    * When {@link maxDepth} is exceeded, the oldest undo record is discarded.
    *
    * @param record - Undo record produced by {@link AcDbDatabaseTransactionManager}
@@ -23,6 +28,27 @@ export class AcDbUndoStack {
   push(record: AcDbUndoRecord): void {
     this.undoRecords.push(record)
     this.redoRecords.length = 0
+    this.trimUndoRecords()
+  }
+
+  /**
+   * Pushes a record back onto the undo stack without clearing redo history.
+   *
+   * Used when replaying a redo. Calling {@link push} in that situation would
+   * discard the remaining redo records, which made it impossible to redo more
+   * than one step in a row.
+   *
+   * @param record - Record that was just redone
+   */
+  pushUndo(record: AcDbUndoRecord): void {
+    this.undoRecords.push(record)
+    this.trimUndoRecords()
+  }
+
+  /**
+   * Discards the oldest undo records when {@link maxDepth} is exceeded.
+   */
+  private trimUndoRecords(): void {
     if (this.undoRecords.length > this.maxDepth) {
       this.undoRecords.shift()
     }

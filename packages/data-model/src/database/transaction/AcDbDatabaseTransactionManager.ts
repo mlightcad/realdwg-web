@@ -264,7 +264,7 @@ export class AcDbDatabaseTransactionManager {
       this.database.endEventBatch()
     }
 
-    this.undoStack.push(record)
+    this.undoStack.pushUndo(record)
     return true
   }
 

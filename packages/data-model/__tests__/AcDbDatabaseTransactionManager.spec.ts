@@ -97,6 +97,57 @@ describe('AcDbDatabaseTransactionManager', () => {
     expect(db.tables.blockTable.getEntityById(line.objectId)).toBeDefined()
   })
 
+  it('supports multiple consecutive redo steps', () => {
+    const db = new AcDbDatabase()
+    const lineA = createLine()
+    const lineB = createLine(
+      new AcGePoint3d(0, 10, 0),
+      new AcGePoint3d(10, 10, 0)
+    )
+
+    db.transactionManager.runUndoable('Add A', () => {
+      db.tables.blockTable.modelSpace.appendEntity(lineA)
+    })
+    db.transactionManager.runUndoable('Add B', () => {
+      db.tables.blockTable.modelSpace.appendEntity(lineB)
+    })
+
+    expect(db.transactionManager.undo()).toBe(true)
+    expect(db.tables.blockTable.getEntityById(lineB.objectId)).toBeUndefined()
+
+    expect(db.transactionManager.undo()).toBe(true)
+    expect(db.tables.blockTable.getEntityById(lineA.objectId)).toBeUndefined()
+
+    expect(db.transactionManager.canRedo()).toBe(true)
+    expect(db.transactionManager.redo()).toBe(true)
+    expect(db.tables.blockTable.getEntityById(lineA.objectId)).toBeDefined()
+    expect(db.transactionManager.canRedo()).toBe(true)
+
+    expect(db.transactionManager.redo()).toBe(true)
+    expect(db.tables.blockTable.getEntityById(lineB.objectId)).toBeDefined()
+    expect(db.transactionManager.canRedo()).toBe(false)
+  })
+
+  it('clears redo history when a new undo record is pushed', () => {
+    const db = new AcDbDatabase()
+    const lineA = createLine()
+    const lineB = createLine(
+      new AcGePoint3d(0, 10, 0),
+      new AcGePoint3d(10, 10, 0)
+    )
+
+    db.transactionManager.runUndoable('Add A', () => {
+      db.tables.blockTable.modelSpace.appendEntity(lineA)
+    })
+    db.transactionManager.undo()
+    expect(db.transactionManager.canRedo()).toBe(true)
+
+    db.transactionManager.runUndoable('Add B', () => {
+      db.tables.blockTable.modelSpace.appendEntity(lineB)
+    })
+    expect(db.transactionManager.canRedo()).toBe(false)
+  })
+
   it('supports undo and redo for entity modification', () => {
     const db = new AcDbDatabase()
     const line = createLine()
