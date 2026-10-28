@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.17
+
+### Patch Changes
+
+- fix: restores multi-step redo so consecutive redo operations replay every undone record. `AcDbUndoStack.pushUndo()` reinstates a record without clearing the redo stack, and the transaction manager `redo()` uses it, so `canRedo()` stays true until the redo history is exhausted while new edits still invalidate it
+- Updated dependencies
+  - @mlightcad/common@1.15.17
+  - @mlightcad/emf-converter@1.15.17
+  - @mlightcad/geometry-engine@3.15.17
+  - @mlightcad/graphic-interface@3.15.17
+
 ## 1.15.16
 
 ### Patch Changes

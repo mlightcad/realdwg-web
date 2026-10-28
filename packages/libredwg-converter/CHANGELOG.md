@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.15.17
+
+### Patch Changes
+
+- fix: restores multi-step redo so consecutive redo operations replay every undone record. `AcDbUndoStack.pushUndo()` reinstates a record without clearing the redo stack, and the transaction manager `redo()` uses it, so `canRedo()` stays true until the redo history is exhausted while new edits still invalidate it
+- Updated dependencies
+  - @mlightcad/data-model@1.15.17
+
 ## 3.15.16
 
 ### Patch Changes
