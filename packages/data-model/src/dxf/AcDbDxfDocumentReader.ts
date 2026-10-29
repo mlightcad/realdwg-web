@@ -609,8 +609,8 @@ export class AcDbDxfDocumentReader {
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
       const entity = acdbDxfInEntity(filer, typeName)
       if (entity) {
-        // Model/paper geometry lives in ENTITIES; skip space BTRs here to
-        // avoid duplicating entities that also appear with group 67 / owner.
+        // *Model_Space and the active *Paper_Space live in ENTITIES.
+        // Inactive *Paper_SpaceN layouts keep their entities in the block.
         if (this.shouldAcceptBlockEntity(btr)) {
           this.acceptEntity(entity, btr)
         }
@@ -630,11 +630,28 @@ export class AcDbDxfDocumentReader {
   }
 
   /**
-   * Block definitions may own entities; *Model_Space / *Paper_Space contents
-   * are streamed from the ENTITIES section in modern DXF.
+   * Block definitions may own entities. `*Model_Space` and the active
+   * `*Paper_Space` layout are streamed from the ENTITIES section. Inactive
+   * layouts (`*Paper_Space0`, `*Paper_Space1`, …) keep their entities in the
+   * block (ezdxf and some CAD writers); those must be read here.
+   *
+   * @see https://ezdxf.readthedocs.io/en/stable/dxfinternals/filestructure.html
    */
   private shouldAcceptBlockEntity(btr: AcDbBlockTableRecord): boolean {
-    return !btr.isModelSapce && !btr.isPaperSapce
+    if (btr.isModelSapce) return false
+    if (AcDbDxfDocumentReader.isActivePaperSpaceName(btr.name)) return false
+    return true
+  }
+
+  /**
+   * The active paper-space layout's internal block name is exactly
+   * `*Paper_Space`. Numbered names are inactive layouts.
+   */
+  private static isActivePaperSpaceName(name: string): boolean {
+    return (
+      name.toLowerCase() ===
+      AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX.toLowerCase()
+    )
   }
 
   /** Consume a SEQEND object after its `(0, SEQEND)` pair was already read. */
