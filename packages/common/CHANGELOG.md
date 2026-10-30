@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.15.18
+
+### Patch Changes
+
+- fix: keeps entities on inactive paper-space layouts when opening DXF. ezdxf and AutoCAD store geometry for layouts other than the active \*Paper_Space block in the BLOCKS section, and the importer skipped every paper-space block, so those entities never appeared. Non-current layouts now keep their geometry and the drawing opens with the full paper-space content
+
 ## 1.15.17
 
 ### Patch Changes
