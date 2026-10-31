@@ -149,17 +149,21 @@ export class AcDbDataGenerator {
       hatch.patternName = HATCH_PATTERN_SOLID
       const loop = new AcGeLoop2d()
       loop.add(new AcGeLine2d({ x: 0, y: 0 }, { x: -1, y: halfWidth }))
-      loop.add(new AcGeLine2d({ x: -1, y: halfWidth }, { x: -1, y: -halfWidth }))
+      loop.add(
+        new AcGeLine2d({ x: -1, y: halfWidth }, { x: -1, y: -halfWidth })
+      )
       loop.add(new AcGeLine2d({ x: -1, y: -halfWidth }, { x: 0, y: 0 }))
       hatch.add(loop)
-      block.appendEntity(hatch)
+      this.appendArrowEntity(block, hatch)
     }
 
     const addOpenTriangle = (halfWidth = 0.125) => {
-      block.appendEntity(
+      this.appendArrowEntity(
+        block,
         this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -1, y: halfWidth, z: 0 })
       )
-      block.appendEntity(
+      this.appendArrowEntity(
+        block,
         this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -1, y: -halfWidth, z: 0 })
       )
     }
@@ -176,13 +180,15 @@ export class AcDbDataGenerator {
         loop.add(new AcGeLine2d({ x: -r, y: 0 }, { x: 0, y: -r }))
         loop.add(new AcGeLine2d({ x: 0, y: -r }, { x: r, y: 0 }))
         hatch.add(loop)
-        block.appendEntity(hatch)
+        this.appendArrowEntity(block, hatch)
       } else {
         // Cross-hair circle approximation with two diameters
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -radius, y: 0, z: 0 }, { x: radius, y: 0, z: 0 })
         )
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: -radius, z: 0 }, { x: 0, y: radius, z: 0 })
         )
       }
@@ -196,13 +202,15 @@ export class AcDbDataGenerator {
         break
       case '_CLOSED':
         addOpenTriangle()
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -1, y: 0.125, z: 0 }, { x: -1, y: -0.125, z: 0 })
         )
         break
       case '_CLOSEDBLANK':
         addOpenTriangle()
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -1, y: 0.125, z: 0 }, { x: -1, y: -0.125, z: 0 })
         )
         break
@@ -213,16 +221,19 @@ export class AcDbDataGenerator {
         addOpenTriangle(0.2679)
         break
       case '_OPEN90':
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -0.5, y: 0.5, z: 0 })
         )
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: 0, z: 0 }, { x: -0.5, y: -0.5, z: 0 })
         )
         break
       case '_OBLIQUE':
       case '_ARCHTICK':
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -0.5, y: -0.5, z: 0 }, { x: 0.5, y: 0.5, z: 0 })
         )
         break
@@ -246,20 +257,24 @@ export class AcDbDataGenerator {
           loop.add(new AcGeLine2d({ x: 0, y: 0.5 }, { x: -1, y: 0.5 }))
           loop.add(new AcGeLine2d({ x: -1, y: 0.5 }, { x: -1, y: -0.5 }))
           hatch.add(loop)
-          block.appendEntity(hatch)
+          this.appendArrowEntity(block, hatch)
         }
         break
       case '_BOXBLANK':
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -1, y: -0.5, z: 0 }, { x: 0, y: -0.5, z: 0 })
         )
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: -0.5, z: 0 }, { x: 0, y: 0.5, z: 0 })
         )
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: 0.5, z: 0 }, { x: -1, y: 0.5, z: 0 })
         )
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -1, y: 0.5, z: 0 }, { x: -1, y: -0.5, z: 0 })
         )
         break
@@ -268,7 +283,8 @@ export class AcDbDataGenerator {
         break
       case '_DATUMBLANK':
         addOpenTriangle(0.5)
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: -1, y: 0.5, z: 0 }, { x: -1, y: -0.5, z: 0 })
         )
         break
@@ -278,7 +294,8 @@ export class AcDbDataGenerator {
         addCircle(0.125, true)
         break
       case '_INTEGRAL':
-        block.appendEntity(
+        this.appendArrowEntity(
+          block,
           this.lineEntity({ x: 0, y: -0.5, z: 0 }, { x: 0, y: 0.5, z: 0 })
         )
         break
@@ -291,6 +308,20 @@ export class AcDbDataGenerator {
     }
 
     this.db.tables.blockTable.add(block)
+  }
+
+  /**
+   * Arrowheads are authored ByBlock. An INSERT or leader then paints them
+   * with the dimension line color (DIMCLRD). Leaving the default ByLayer
+   * color makes the arrow follow layer 0 / CECOLOR, which is black when the
+   * leader line itself is a style color.
+   */
+  private appendArrowEntity(
+    block: AcDbBlockTableRecord,
+    entity: AcDbHatch | AcDbLine
+  ) {
+    entity.color = new AcCmColor().setByBlock()
+    block.appendEntity(entity)
   }
 
   private lineEntity(

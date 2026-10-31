@@ -5,6 +5,7 @@ import {
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
 import {
+  AcGiContext,
   AcGiMTextAttachmentPoint,
   DEFAULT_ACGI_CONTEXT
 } from '@mlightcad/graphic-interface'
@@ -794,6 +795,61 @@ describe('AcDbLeader', () => {
       const base = new AcGePoint3d(0, 1, 0).applyMatrix4(matrix)
       expect(tip.distanceTo(base)).toBeCloseTo(100, 4)
       drawSpy.mockRestore()
+    })
+
+    it('paints a generated closed-filled arrow with the leader line color', () => {
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'RED_LEADER'
+      style.dimldrblk = ''
+      style.dimasz = 2.5
+      style.dimclrd = 1
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'RED_LEADER'
+      const entityColor = new AcCmColor()
+      entityColor.colorIndex = 7
+      leader.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      const renderer = createArrowRenderer()
+      renderer.context = new AcGiContext()
+      let lineRgb: number | undefined
+      let fillRgb: number | undefined
+      renderer.lines = jest.fn((points: unknown[]) => {
+        lineRgb = (renderer.subEntityTraits.color as AcCmColor).RGB
+        return { kind: 'lines', points }
+      })
+      renderer.area = jest.fn((area: unknown) => {
+        fillRgb = (renderer.subEntityTraits.color as AcCmColor).RGB
+        return { kind: 'area', area }
+      })
+      renderer.group = jest.fn((entities: unknown[]) => ({
+        kind: 'group',
+        entities,
+        userData: {} as { blockCacheKey?: string },
+        fastDeepClone() {
+          return this
+        },
+        applyMatrix() {
+          return this
+        }
+      }))
+      // The draw path stores a block template on the process-wide cache.
+      // Drop it afterwards so later suites do not reuse this stand-in group.
+      AcDbRenderingCache.instance.clear()
+      try {
+        leader.subWorldDraw(renderer as never)
+
+        const arrowBlock = db.tables.blockTable.getAt('_CLOSEDFILLED')
+        const arrowEntity = arrowBlock?.newIterator().toArray()[0]
+        expect(arrowEntity?.color.isByBlock).toBe(true)
+        expect(lineRgb).toBe(0xff0000)
+        expect(fillRgb).toBe(lineRgb)
+      } finally {
+        AcDbRenderingCache.instance.clear()
+      }
     })
 
     it('paints DIMCLRD ByLayer and group 77, and restores the previous traits color', () => {
