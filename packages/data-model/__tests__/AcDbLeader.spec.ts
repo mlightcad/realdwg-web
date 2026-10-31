@@ -807,4 +807,115 @@ describe('AcDbLeader', () => {
       drawSpy.mockRestore()
     })
   })
+
+  describe('properties', () => {
+    const byName = (leader: AcDbLeader) => {
+      const props = leader.properties
+      expect(props.type).toBe('Leader')
+      const general = props.groups.find(g => g.groupName === 'general')
+      const leaderGroup = props.groups.find(g => g.groupName === 'leader')
+      const textGroup = props.groups.find(g => g.groupName === 'text')
+      const geometry = props.groups.find(g => g.groupName === 'geometry')
+      expect(general).toBeDefined()
+      expect(leaderGroup).toBeDefined()
+      expect(textGroup).toBeDefined()
+      expect(geometry).toBeDefined()
+
+      return Object.fromEntries(
+        [
+          ...(leaderGroup?.properties ?? []),
+          ...(textGroup?.properties ?? []),
+          ...(geometry?.properties ?? [])
+        ].map(p => [p.name, p])
+      )
+    }
+
+    it('exposes the DXF leader fields with working accessors', () => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(0, 0, 0))
+      leader.appendVertex(new AcGePoint3d(5, 5, 0))
+      const props = byName(leader)
+
+      expect(props.dimensionStyleName.editable).toBe(true)
+      props.dimensionStyleName.accessor.set?.('Standard')
+      expect(leader.dimensionStyle).toBe('Standard')
+      expect(props.dimensionStyleName.accessor.get()).toBe('Standard')
+
+      props.annoType.accessor.set?.(AcDbLeaderAnnotationType.MText)
+      expect(leader.annoType).toBe(AcDbLeaderAnnotationType.MText)
+      expect(props.annoType.accessor.get()).toBe(AcDbLeaderAnnotationType.MText)
+
+      props.hasArrowHead.accessor.set?.(true)
+      props.hasHookLine.accessor.set?.(true)
+      props.isHookLineSameDirection.accessor.set?.(true)
+      props.isSplined.accessor.set?.(true)
+      expect(leader.hasArrowHead).toBe(true)
+      expect(leader.hasHookLine).toBe(true)
+      expect(leader.isHookLineSameDirection).toBe(true)
+      expect(leader.isSplined).toBe(true)
+      expect(props.hasArrowHead.accessor.get()).toBe(true)
+
+      props.textHeight.accessor.set?.(2.5)
+      props.textWidth.accessor.set?.(12)
+      expect(leader.textHeight).toBe(2.5)
+      expect(leader.textWidth).toBe(12)
+      expect(props.textWidth.accessor.get()).toBe(12)
+    })
+
+    it('offers the annotation types as enum options and keeps read-only fields read-only', () => {
+      const leader = new AcDbLeader()
+      const props = byName(leader)
+
+      expect(props.annoType.type).toBe('enum')
+      expect(props.annoType.options?.map(option => option.value)).toEqual([
+        AcDbLeaderAnnotationType.MText,
+        AcDbLeaderAnnotationType.Fcf,
+        AcDbLeaderAnnotationType.BlockReference,
+        AcDbLeaderAnnotationType.NoAnnotation
+      ])
+      // Labels come from the TypeScript enum names so the palette can
+      // translate them through `entity.enum`.
+      expect(props.annoType.options?.map(option => option.label)).toEqual([
+        'MText',
+        'Fcf',
+        'BlockReference',
+        'NoAnnotation'
+      ])
+
+      expect(props.associatedAnnotation.editable).toBe(false)
+      expect(props.byBlockColor.editable).toBe(false)
+      expect(props.vertices.editable).toBe(false)
+    })
+
+    it('exposes vertices, normal, horizontal direction and optional offsets', () => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(1, 2, 3))
+      leader.appendVertex(new AcGePoint3d(4, 5, 6))
+      const props = byName(leader)
+
+      expect(props.vertices.type).toBe('array')
+      expect(props.vertices.accessor.get()).toEqual([
+        { x: 1, y: 2, z: 3 },
+        { x: 4, y: 5, z: 6 }
+      ])
+      // The palette edits array elements in place, which must not leak into
+      // the entity through a shared object.
+      ;(props.vertices.accessor.get() as { x: number; y: number }[])[0].y = 99
+      expect(leader.vertices[0].y).toBe(2)
+
+      expect(props.normalZ.accessor.get()).toBe(1)
+      props.horizontalDirectionX.accessor.set?.(0)
+      expect(leader.horizontalDirection.x).toBe(0)
+
+      // Optional vectors start out absent.
+      expect(props.offsetFromBlockX.accessor.get()).toBeUndefined()
+      props.offsetFromBlockX.accessor.set?.(3)
+      expect(leader.offsetFromBlock).toMatchObject({ x: 3, y: 0, z: 0 })
+      expect(props.offsetFromBlockX.accessor.get()).toBe(3)
+
+      props.offsetFromAnnotationZ.accessor.set?.(4)
+      expect(leader.offsetFromAnnotation).toMatchObject({ x: 0, y: 0, z: 4 })
+      expect(props.offsetFromAnnotationZ.accessor.get()).toBe(4)
+    })
+  })
 })

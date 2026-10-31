@@ -26,6 +26,11 @@ import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyType,
+  AcDbEntityRuntimeProperty
+} from './AcDbEntityProperties.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbMText } from './AcDbMText.js'
@@ -387,6 +392,256 @@ export class AcDbLeader extends AcDbCurve {
   }
   set offsetFromAnnotation(value: AcGeVector3dLike | undefined) {
     this._offsetFromAnnotation = value ? new AcGeVector3d(value) : undefined
+  }
+
+  /**
+   * Returns the runtime property definition of this leader so the property
+   * palette can show and edit it like other entities.
+   *
+   * The palette resolves each `name` through the `entity.property` locale
+   * namespace and each enum `label` through `entity.enum`, so the names used
+   * here are the ones translated by the viewer.
+   */
+  override get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'leader',
+          properties: [
+            this.createProperty(
+              'dimensionStyleName',
+              'string',
+              () => this.dimensionStyle,
+              (value: string) => {
+                this.dimensionStyle = value
+              }
+            ),
+            this.createProperty(
+              'annoType',
+              'enum',
+              () => this.annoType,
+              (value: AcDbLeaderAnnotationType) => {
+                this.annoType = value
+              },
+              [
+                {
+                  label:
+                    AcDbLeaderAnnotationType[AcDbLeaderAnnotationType.MText],
+                  value: AcDbLeaderAnnotationType.MText
+                },
+                {
+                  label: AcDbLeaderAnnotationType[AcDbLeaderAnnotationType.Fcf],
+                  value: AcDbLeaderAnnotationType.Fcf
+                },
+                {
+                  label:
+                    AcDbLeaderAnnotationType[
+                      AcDbLeaderAnnotationType.BlockReference
+                    ],
+                  value: AcDbLeaderAnnotationType.BlockReference
+                },
+                {
+                  label:
+                    AcDbLeaderAnnotationType[
+                      AcDbLeaderAnnotationType.NoAnnotation
+                    ],
+                  value: AcDbLeaderAnnotationType.NoAnnotation
+                }
+              ]
+            ),
+            this.createProperty(
+              'hasArrowHead',
+              'boolean',
+              () => this.hasArrowHead,
+              (value: boolean) => {
+                this.hasArrowHead = value
+              }
+            ),
+            this.createProperty(
+              'hasHookLine',
+              'boolean',
+              () => this.hasHookLine,
+              (value: boolean) => {
+                this.hasHookLine = value
+              }
+            ),
+            this.createProperty(
+              'isHookLineSameDirection',
+              'boolean',
+              () => this.isHookLineSameDirection,
+              (value: boolean) => {
+                this.isHookLineSameDirection = value
+              }
+            ),
+            this.createProperty(
+              'isSplined',
+              'boolean',
+              () => this.isSplined,
+              (value: boolean) => {
+                this.isSplined = value
+              }
+            ),
+            this.createProperty(
+              'associatedAnnotation',
+              'string',
+              () => this._associatedAnnotation
+            ),
+            this.createProperty('byBlockColor', 'int', () => this._byBlockColor)
+          ]
+        },
+        {
+          groupName: 'text',
+          properties: [
+            this.createProperty(
+              'textHeight',
+              'float',
+              () => this.textHeight,
+              (value: number) => {
+                this.textHeight = value
+              }
+            ),
+            this.createProperty(
+              'textWidth',
+              'float',
+              () => this.textWidth,
+              (value: number) => {
+                this.textWidth = value
+              }
+            )
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'vertices',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  { name: 'x', type: 'float', editable: false },
+                  { name: 'y', type: 'float', editable: false },
+                  { name: 'z', type: 'float', editable: false }
+                ]
+              },
+              accessor: {
+                get: () =>
+                  this.vertices.map(vertex => ({
+                    x: vertex.x,
+                    y: vertex.y,
+                    z: vertex.z
+                  }))
+              }
+            },
+            ...this.createPoint3dProperties('normal', () => this._normal),
+            ...this.createPoint3dProperties(
+              'horizontalDirection',
+              () => this._horizontalDirection
+            ),
+            ...this.createOptionalPoint3dProperties(
+              'offsetFromBlock',
+              () => this.offsetFromBlock,
+              value => {
+                this.offsetFromBlock = value
+              }
+            ),
+            ...this.createOptionalPoint3dProperties(
+              'offsetFromAnnotation',
+              () => this.offsetFromAnnotation,
+              value => {
+                this.offsetFromAnnotation = value
+              }
+            )
+          ]
+        }
+      ]
+    }
+  }
+
+  /**
+   * Builds one runtime property, marking it editable only when a setter exists.
+   */
+  private createProperty<T>(
+    name: string,
+    type: AcDbEntityPropertyType,
+    get: () => T,
+    set?: (value: T) => void,
+    options?: { label: string; value: unknown }[]
+  ): AcDbEntityRuntimeProperty<T> {
+    return {
+      name,
+      type,
+      editable: set != null,
+      options,
+      accessor: set ? { get, set } : { get }
+    }
+  }
+
+  /**
+   * Builds the X/Y/Z properties of a required vector.
+   */
+  private createPoint3dProperties(
+    prefix: string,
+    getVector: () => AcGeVector3d
+  ): AcDbEntityRuntimeProperty<number>[] {
+    return [
+      this.createProperty(
+        `${prefix}X`,
+        'float',
+        () => getVector().x,
+        (value: number) => {
+          getVector().x = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Y`,
+        'float',
+        () => getVector().y,
+        (value: number) => {
+          getVector().y = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Z`,
+        'float',
+        () => getVector().z,
+        (value: number) => {
+          getVector().z = value
+        }
+      )
+    ]
+  }
+
+  /**
+   * Builds the X/Y/Z properties of a vector that may not be present yet.
+   *
+   * Reading an absent vector returns `undefined` so the palette shows an empty
+   * cell; writing any component materializes the vector with the other
+   * components defaulting to `0`.
+   */
+  private createOptionalPoint3dProperties(
+    prefix: string,
+    getVector: () => AcGeVector3dLike | undefined,
+    setVector: (value: AcGeVector3dLike | undefined) => void
+  ): AcDbEntityRuntimeProperty<number | undefined>[] {
+    const createAxis = (axis: 'x' | 'y' | 'z') =>
+      this.createProperty<number | undefined>(
+        `${prefix}${axis.toUpperCase()}`,
+        'float',
+        () => getVector()?.[axis],
+        (value: number | undefined) => {
+          if (value == null) return
+          const vector = getVector()
+          setVector({
+            x: axis === 'x' ? value : (vector?.x ?? 0),
+            y: axis === 'y' ? value : (vector?.y ?? 0),
+            z: axis === 'z' ? value : (vector?.z ?? 0)
+          })
+        }
+      )
+    return [createAxis('x'), createAxis('y'), createAxis('z')]
   }
 
   /**
