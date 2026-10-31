@@ -1,16 +1,33 @@
-import { AcGeMatrix3d, AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
-import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
+import { AcCmColor } from '@mlightcad/common'
+import {
+  AcGeMatrix3d,
+  AcGePoint3d,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
+import {
+  AcGiMTextAttachmentPoint,
+  DEFAULT_ACGI_CONTEXT
+} from '@mlightcad/graphic-interface'
 
-import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
-import { AcDbDatabase } from '../src/database'
+import {
+  AcDbDxfCode,
+  AcDbDxfFiler,
+  acdbHostApplicationServices,
+  AcDbResultBuffer
+} from '../src/base'
+import {
+  AcDbBlockTableRecord,
+  AcDbDatabase,
+  AcDbDimStyleTableRecord
+} from '../src/database'
 import {
   AcDbLeader,
   AcDbLeaderAnnotationType,
   AcDbMText,
   AcDbPolyline
 } from '../src/entity'
+import { AcDbOsnapMode, AcDbRenderingCache } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
-import { AcDbOsnapMode } from '../src/misc'
 
 const createWorkingDb = () => {
   const db = new AcDbDatabase()
@@ -163,7 +180,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 15, y: 5, z: 0 })
   })
@@ -188,7 +207,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2]).toMatchObject({ x: 28, y: 5, z: 0 })
   })
 
@@ -205,18 +226,86 @@ describe('AcDbLeader', () => {
     leader.appendVertex(new AcGePoint3d(0, 0, 0))
     leader.appendVertex(new AcGePoint3d(10, 6, 0))
     leader.hasHookLine = true
+    leader.annoType = AcDbLeaderAnnotationType.MText
     leader.textWidth = 0
     leader.isHookLineSameDirection = true
     leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 30, y: 6, z: 0 })
   })
 
-  it('draws hook line from associated MTEXT bounds when hasHookLine is false', () => {
+  it('does not extend a standalone leader over an unrelated nearby MTEXT', () => {
+    const db = createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.location = new AcGePoint3d(10, 8, 0)
+    mtext.height = 5
+    mtext.extentsWidth = 16
+    db.tables.blockTable.modelSpace.appendEntity(mtext)
+
+    // DXF 73 = 3 (no annotation) and DXF 75 = 0: AutoCAD draws the stored
+    // vertices only, even though a TEXT/MTEXT sits right next to the landing.
+    const leader = new AcDbLeader()
+    db.tables.blockTable.modelSpace.appendEntity(leader)
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(10, 6, 0))
+    leader.hasHookLine = false
+    leader.annoType = AcDbLeaderAnnotationType.NoAnnotation
+    leader.textWidth = 0
+    leader.isHookLineSameDirection = true
+    leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
+
+    const renderer = createRenderer()
+    leader.subWorldDraw(renderer as never)
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
+    expect(points).toHaveLength(2)
+    expect(points[1]).toMatchObject({ x: 10, y: 6, z: 0 })
+  })
+
+  it('keeps the author geometry for leaders like handles 4E61F / 4E621', () => {
+    // Exact DXF values from 蓝田记翼项目檐下集装饰施工图8.19.dwg:
+    //   71 = 0 (no arrowhead), 72 = 0, 73 = 3 (no annotation), 74 = 1,
+    //   75 absent (no hook line), 40 = 0, 41 = 0.
+    const db = createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.location = new AcGePoint3d(4355.61, 6591.5, 0)
+    mtext.height = 5
+    mtext.extentsWidth = 40
+    db.tables.blockTable.modelSpace.appendEntity(mtext)
+
+    const leader = new AcDbLeader()
+    db.tables.blockTable.modelSpace.appendEntity(leader)
+    leader.appendVertex(
+      new AcGePoint3d(4297.252344611998, 6590.970519376428, 0)
+    )
+    leader.appendVertex(new AcGePoint3d(4370.38725693262, 6590.970519376428, 0))
+    leader.hasArrowHead = false
+    leader.hasHookLine = false
+    leader.annoType = AcDbLeaderAnnotationType.NoAnnotation
+    leader.isHookLineSameDirection = true
+    leader.textHeight = 0
+    leader.textWidth = 0
+    leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
+
+    const renderer = createRenderer()
+    leader.subWorldDraw(renderer as never)
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
+
+    expect(points).toHaveLength(2)
+    expect(points[1].x).toBeCloseTo(4370.387, 3)
+    expect(points[1].y).toBeCloseTo(6590.971, 3)
+  })
+
+  it('only uses associated MTEXT for landing geometry of annotated leaders', () => {
     const db = createWorkingDb()
     const mtext = new AcDbMText()
     mtext.location = new AcGePoint3d(10, 8, 0)
@@ -228,14 +317,17 @@ describe('AcDbLeader', () => {
     db.tables.blockTable.modelSpace.appendEntity(leader)
     leader.appendVertex(new AcGePoint3d(0, 0, 0))
     leader.appendVertex(new AcGePoint3d(10, 6, 0))
-    leader.hasHookLine = false
+    leader.hasHookLine = true
+    leader.annoType = AcDbLeaderAnnotationType.MText
     leader.textWidth = 0
     leader.isHookLineSameDirection = true
     leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2]).toMatchObject({ x: 26, y: 6, z: 0 })
   })
@@ -251,7 +343,9 @@ describe('AcDbLeader', () => {
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2]).toMatchObject({ x: 5, y: 5, z: 0 })
   })
 
@@ -275,13 +369,16 @@ describe('AcDbLeader', () => {
     leader.appendVertex(new AcGePoint3d(10, 5, 0))
     leader.associatedAnnotation = farMtext.objectId
     leader.hasHookLine = true
+    leader.annoType = AcDbLeaderAnnotationType.MText
     leader.isHookLineSameDirection = true
     leader.textWidth = 0
     leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points[2].x).toBeGreaterThan(100)
     expect(points[2].x).not.toBeCloseTo(20)
   })
@@ -321,13 +418,16 @@ describe('AcDbLeader', () => {
     leader.appendVertex(new AcGePoint3d(0, 0, 0))
     leader.appendVertex(new AcGePoint3d(12, 20, 0))
     leader.hasHookLine = true
+    leader.annoType = AcDbLeaderAnnotationType.MText
     leader.isHookLineSameDirection = true
     leader.textWidth = 0
     leader.horizontalDirection = new AcGeVector3d(1, 0, 0)
 
     const renderer = createRenderer()
     leader.subWorldDraw(renderer as never)
-    const points = (renderer.lines.mock.calls[0] as unknown[][])[0] as AcGePoint3d[]
+    const points = (
+      renderer.lines.mock.calls[0] as unknown[][]
+    )[0] as AcGePoint3d[]
     expect(points).toHaveLength(3)
     expect(points[2].x).toBeCloseTo(14)
     expect(points[2].y).toBeCloseTo(20)
@@ -480,5 +580,231 @@ describe('AcDbLeader', () => {
       nearestPoints
     )
     expect(nearestPoints).toHaveLength(1)
+  })
+
+  describe('arrowhead (DXF group code 71)', () => {
+    const createArrowRenderer = () => ({
+      context: DEFAULT_ACGI_CONTEXT,
+      subEntityTraits: {
+        color: new AcCmColor(),
+        fillType: undefined
+      } as Record<string, unknown>,
+      lines: jest.fn((points: unknown[]) => ({ kind: 'lines', points })),
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities }))
+    })
+
+    const createLeader = (hasArrowHead: boolean) => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(0, 0, 0))
+      leader.appendVertex(new AcGePoint3d(10, 0, 0))
+      leader.hasArrowHead = hasArrowHead
+      return leader
+    }
+
+    it('draws no arrowhead when group 71 is 0', () => {
+      const leader = createLeader(false)
+      const renderer = createArrowRenderer()
+
+      const result = leader.subWorldDraw(renderer as never)
+
+      expect(renderer.area).not.toHaveBeenCalled()
+      expect(renderer.group).not.toHaveBeenCalled()
+      expect(result).toMatchObject({ kind: 'lines' })
+    })
+
+    it('falls back to a filled triangle when the arrow block is missing', () => {
+      const leader = createLeader(true)
+      const renderer = createArrowRenderer()
+
+      leader.subWorldDraw(renderer as never)
+
+      expect(renderer.lines).toHaveBeenCalledTimes(1)
+      expect(renderer.area).toHaveBeenCalledTimes(1)
+      expect(renderer.group).toHaveBeenCalledTimes(1)
+      // The procedural arrow uses the tip vertex and points along the segment.
+      const area = (renderer.area.mock.calls[0] as unknown[])[0] as {
+        loops: unknown[]
+      }
+      expect(area).toBeDefined()
+    })
+
+    it('renders the arrow block from the dimension style DIMLDRBLK', () => {
+      const db = createWorkingDb()
+      const arrowBlock = new AcDbBlockTableRecord()
+      arrowBlock.name = '_CLOSEDFILLED'
+      db.tables.blockTable.add(arrowBlock)
+
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'ARROW_STYLE'
+      style.dimldrblk = '_CLOSEDFILLED'
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'ARROW_STYLE'
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      const renderer = createArrowRenderer()
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+
+      leader.subWorldDraw(renderer as never)
+
+      expect(drawSpy).toHaveBeenCalledTimes(1)
+      expect(drawSpy.mock.calls[0][1]).toBe(arrowBlock)
+      expect(renderer.area).not.toHaveBeenCalled()
+
+      drawSpy.mockRestore()
+    })
+
+    it('skips the arrowhead when DIMLDRBLK resolves to _NONE', () => {
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'NO_ARROW_STYLE'
+      style.dimldrblk = '_NONE'
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'NO_ARROW_STYLE'
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      const renderer = createArrowRenderer()
+      leader.subWorldDraw(renderer as never)
+
+      expect(renderer.area).not.toHaveBeenCalled()
+      expect(renderer.group).not.toHaveBeenCalled()
+    })
+
+    it('generates a missing built-in arrow block instead of dropping the arrow', () => {
+      // Drawings only store custom arrow blocks; `_DOT` / `_ARCHTICK` are
+      // AutoCAD built-ins that are absent from the block table. Dimensions
+      // generate them on demand, so leaders must do the same.
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'DOT_STYLE'
+      style.dimldrblk = '_DOT'
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'DOT_STYLE'
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      const renderer = createArrowRenderer()
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+
+      leader.subWorldDraw(renderer as never)
+
+      expect(db.tables.blockTable.getAt('_DOT')).toBeTruthy()
+      expect(drawSpy).toHaveBeenCalledTimes(1)
+      drawSpy.mockRestore()
+    })
+
+    it('sizes the arrowhead from DIMASZ × DIMSCALE, not DIMTSZ', () => {
+      // DIMASZ is documented as the size of dimension line *and leader line*
+      // arrowheads. DIMTSZ only replaces terminators on dimension entities.
+      const db = createWorkingDb()
+      const arrowBlock = new AcDbBlockTableRecord()
+      arrowBlock.name = '_CLOSEDFILLED'
+      db.tables.blockTable.add(arrowBlock)
+
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'SIZE_STYLE'
+      style.dimldrblk = '_CLOSEDFILLED'
+      style.dimasz = 3
+      style.dimtsz = 7
+      style.dimscale = 2
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'SIZE_STYLE'
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      const renderer = createArrowRenderer()
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+
+      leader.subWorldDraw(renderer as never)
+
+      const matrix = drawSpy.mock.calls[0][5] as unknown as AcGeMatrix3d
+      const tip = new AcGePoint3d(0, 0, 0).applyMatrix4(matrix)
+      // Arrow blocks are authored tip-at-origin with the tail along -X, so a
+      // block point one unit up the base maps exactly one arrow size away.
+      const base = new AcGePoint3d(0, 1, 0).applyMatrix4(matrix)
+      expect(tip.distanceTo(base)).toBeCloseTo(6, 6)
+      drawSpy.mockRestore()
+    })
+
+    it('stays off the direct batch path when an arrowhead may be drawn', () => {
+      expect(createLeader(false).directBatchPrimitive).toBe('lineStrip')
+      expect(createLeader(true).directBatchPrimitive).toBeNull()
+    })
+
+    it('memoizes the effective style and invalidates it with ACAD XData', () => {
+      // `subWorldDraw` resolves the style for the arrow size, the arrow block
+      // name and the hook gap. With overrides present each call would otherwise
+      // clone the table record, so the resolved style has to be cached.
+      const db = createWorkingDb()
+      const block = new AcDbBlockTableRecord()
+      block.name = '_CLOSEDFILLED'
+      db.tables.blockTable.add(block)
+
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'CACHE_STYLE'
+      style.dimldrblk = '_CLOSEDFILLED'
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'CACHE_STYLE'
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+      leader.setXData(
+        new AcDbResultBuffer([
+          { code: AcDbDxfCode.ExtendedDataRegAppName, value: 'ACAD' },
+          { code: AcDbDxfCode.ExtendedDataAsciiString, value: 'DSTYLE' },
+          { code: AcDbDxfCode.ExtendedDataControlString, value: '{' },
+          { code: AcDbDxfCode.ExtendedDataInteger16, value: 41 },
+          { code: AcDbDxfCode.ExtendedDataReal, value: 4 },
+          { code: AcDbDxfCode.ExtendedDataControlString, value: '}' }
+        ] as never)
+      )
+
+      let clones = 0
+      const original = style.clonePreservingIdentity.bind(style)
+      style.clonePreservingIdentity = (() => {
+        clones++
+        return original()
+      }) as never
+
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+      const renderer = createArrowRenderer()
+
+      leader.subWorldDraw(renderer as never)
+      const afterFirst = clones
+      leader.subWorldDraw(renderer as never)
+
+      expect(afterFirst).toBe(1)
+      expect(clones).toBe(1)
+
+      // New overrides must rebuild the effective style.
+      leader.setXData(
+        new AcDbResultBuffer([
+          { code: AcDbDxfCode.ExtendedDataRegAppName, value: 'ACAD' },
+          { code: AcDbDxfCode.ExtendedDataAsciiString, value: 'DSTYLE' },
+          { code: AcDbDxfCode.ExtendedDataControlString, value: '{' },
+          { code: AcDbDxfCode.ExtendedDataInteger16, value: 41 },
+          { code: AcDbDxfCode.ExtendedDataReal, value: 6 },
+          { code: AcDbDxfCode.ExtendedDataControlString, value: '}' }
+        ] as never)
+      )
+      leader.subWorldDraw(renderer as never)
+      expect(clones).toBe(2)
+
+      drawSpy.mockRestore()
+    })
   })
 })
