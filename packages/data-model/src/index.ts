@@ -416,9 +416,22 @@ export {
   acdbResolveAnnotationScaleDrawInfo,
   acdbSetAnnotative
 } from './misc/index.js'
+export {
+  ACDB_DEFAULT_DIM_STYLE,
+  ACDB_DSTYLE_XDATA_APP,
+  ACDB_DSTYLE_XDATA_MARKER,
+  acdbApplyDimStyleOverrides,
+  acdbDimStylePropertyForCode,
+  acdbIsIntegerDimStyleCode,
+  acdbReadDimStyleOverrides,
+  acdbResolveDimStyleOverrides,
+  acdbResolveEffectiveDimStyle,
+  acdbWriteDimStyleOverrides
+} from './misc/index.js'
 export type {
   AcDbAnnotationScaleContext,
   AcDbAnnotationScaleDrawInfo,
+  AcDbDimStyleOverride,
   AcDbFormatterOptions,
   AcDbMemoryEstimate,
   AcDbMemoryEstimateBucket,

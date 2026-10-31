@@ -1,24 +1,30 @@
 import {
+  AcGeArea2d,
   AcGeBox3d,
   AcGeIntersectPrimitive,
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePoint3d,
   AcGePoint3dLike,
+  AcGePolyline2d,
   AcGeSpline3d,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
-import { AcGiRenderer } from '@mlightcad/graphic-interface'
+import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import {
   AcDbBlockTableRecord,
-  AcDbDimStyleTableRecord,
-  AcDbDimTextVertical
+  AcDbDimStyleTableRecord
 } from '../database/index.js'
+import {
+  ACDB_DSTYLE_XDATA_APP,
+  acdbResolveEffectiveDimStyle
+} from '../misc/AcDbDimStyleOverrides.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
@@ -27,7 +33,7 @@ import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
+import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,
@@ -35,6 +41,12 @@ import {
   acdbScorePointAgainstMTextLayout,
   acdbStripMTextControlCodes
 } from './AcDbTextExtentsHelpers.js'
+import {
+  acdbEnsureDimArrowBlocks,
+  acdbResolveArrowBlockName,
+  CLOSED_FILLED_ARROW_BLOCK
+} from './dimension/AcDbDimBlockBuilder.js'
+import { acdbDimFeatureScale } from './dimension/AcDbDimFeatureScale.js'
 
 /**
  * Defines the annotation type for leader entities.
@@ -95,6 +107,10 @@ export class AcDbLeader extends AcDbCurve {
   private _vertices: AcGePoint3d[]
   /** The dimension style applied to this leader */
   private _dimensionStyle: string
+  /** Memoized effective style (table record plus `ACAD`/`DSTYLE` overrides). */
+  private _dimStyle?: AcDbDimStyleTableRecord
+  /** Name the memoized {@link _dimStyle} was resolved for. */
+  private _dimStyleName?: string
   /** Whether this leader has a hook line */
   private _hasHookLine: boolean
   /** Whether the hook line has the same direction as the horizontal vector */
@@ -284,6 +300,8 @@ export class AcDbLeader extends AcDbCurve {
    */
   set dimensionStyle(value: string) {
     this._dimensionStyle = value
+    this._dimStyle = undefined
+    this._dimStyleName = undefined
   }
 
   /**
@@ -547,19 +565,173 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * This leader always draws as a single `lineStrip` primitive.
+   * This leader draws as a single `lineStrip` primitive unless an arrowhead
+   * may add a second primitive.
+   *
+   * The check deliberately stays cheap (no dimension-style lookup): a leader
+   * that advertises an arrowhead (DXF 71) simply falls back to the legacy draw
+   * path so renderers never see an unexpected multi-primitive batch payload.
    *
    * @internal
    */
   override get directBatchPrimitive() {
-    return 'lineStrip' as const
+    const mayDrawArrowHead = this._hasArrowHead && this._vertices.length >= 2
+    return mayDrawArrowHead ? null : ('lineStrip' as const)
   }
 
   /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
-    return renderer.lines(this.collectDrawPoints(renderer))
+    const entities: AcGiEntity[] = []
+    const points = this.collectDrawPoints(renderer)
+    if (points.length > 0) {
+      entities.push(renderer.lines(points))
+    }
+    const arrowHead = this.drawArrowHead(renderer, points)
+    if (arrowHead) entities.push(arrowHead)
+    if (entities.length === 0) return renderer.lines([])
+    return entities.length === 1 ? entities[0] : renderer.group(entities)
+  }
+
+  /**
+   * Whether an arrowhead primitive is emitted at the leader start.
+   *
+   * DXF group code 71 (`hasArrowHead`) is authoritative: when it is 0 AutoCAD
+   * draws no arrowhead at all. The arrow geometry itself comes from the
+   * dimension style (DIMLDRBLK arrow block scaled by DIMASZ).
+   */
+  private get hasRenderableArrowHead() {
+    if (!this._hasArrowHead || this.numVertices < 2) return false
+    if (this.resolveArrowHeadBlockName() === '') return false
+    return this.resolveArrowHeadSize() > 0
+  }
+
+  /**
+   * Draws the arrowhead (DXF group code 71) at the first leader vertex.
+   *
+   * The tip sits on the first vertex and the tail points toward the second
+   * vertex. Arrow blocks are authored with the tip at the block origin and the
+   * tail along -X, so the insert angle maps block +X onto the outward leader
+   * direction. When the referenced block is missing, the built-in AutoCAD
+   * arrow blocks are generated on demand; only the default closed filled arrow
+   * can still be reproduced procedurally if that lookup also fails.
+   *
+   * @param renderer - Renderer used to create the primitive.
+   * @param points - Leader draw points whose first entry is the arrow tip.
+   * @returns The arrowhead primitive, or `undefined` when none is drawn.
+   */
+  private drawArrowHead(
+    renderer: AcGiRenderer,
+    points: AcGePoint3d[]
+  ): AcGiEntity | undefined {
+    if (!this.hasRenderableArrowHead || points.length < 2) return undefined
+
+    const tip = points[0]
+    const next = points.find(point => !point.equals(tip))
+    if (!next) return undefined
+
+    const intoBody = new AcGeVector3d().subVectors(next, tip)
+    if (intoBody.lengthSq() === 0) return undefined
+    intoBody.normalize()
+
+    const size = this.resolveArrowHeadSize()
+    const angle = Math.atan2(-intoBody.y, -intoBody.x)
+    const blockName = this.resolveArrowHeadBlockName()
+    const blockTableRecord = this.resolveArrowHeadBlock(blockName)
+
+    if (blockTableRecord) {
+      const basePoint = blockTableRecord.origin ?? AcGePoint3d.ORIGIN
+      const mBase = new AcGeMatrix3d().makeTranslation(
+        -basePoint.x,
+        -basePoint.y,
+        -basePoint.z
+      )
+      const mScale = new AcGeMatrix3d().makeScale(size, size, size)
+      const mRot = new AcGeMatrix3d().makeRotationZ(angle)
+      const mInsert = new AcGeMatrix3d().makeTranslation(tip.x, tip.y, tip.z)
+      const matrix = new AcGeMatrix3d()
+        .multiplyMatrices(mInsert, mRot)
+        .multiply(mScale)
+        .multiply(mBase)
+      return AcDbRenderingCache.instance.draw(
+        renderer,
+        blockTableRecord,
+        this.resolvedColor,
+        [],
+        true,
+        matrix,
+        new AcGeVector3d(this.normal)
+      )
+    }
+
+    // Only the default closed-filled arrow can be reproduced procedurally.
+    if (blockName !== CLOSED_FILLED_ARROW_BLOCK) return undefined
+
+    const baseCenter = tip.clone().addScaledVector(intoBody, size)
+    const halfWidth = size / 6
+    const perpendicular = new AcGeVector3d(-intoBody.y, intoBody.x, intoBody.z)
+    const left = baseCenter.clone().addScaledVector(perpendicular, halfWidth)
+    const right = baseCenter.clone().addScaledVector(perpendicular, -halfWidth)
+
+    const area = new AcGeArea2d()
+    area.add(new AcGePolyline2d([tip, left, right, tip], true))
+    const traits = renderer.subEntityTraits
+    const originalFillType = traits.fillType
+    traits.fillType = {
+      solidFill: true,
+      patternAngle: 0,
+      definitionLines: []
+    }
+    const entity = renderer.area(area)
+    traits.fillType = originalFillType
+    return entity
+  }
+
+  /**
+   * Resolves the arrowhead size in drawing units.
+   *
+   * AutoCAD documents DIMASZ as "the size of dimension line **and leader line**
+   * arrowheads", so leaders always use DIMASZ (not the DIMTSZ oblique-tick size,
+   * which only replaces terminators on linear/radius/diameter dimensions).
+   * DIMASZ is scaled by the effective dimension/annotation scale.
+   */
+  private resolveArrowHeadSize(): number {
+    const dimStyle = this.resolveDimensionStyle()
+    if (!dimStyle) {
+      return AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimasz
+    }
+    const scale = acdbDimFeatureScale(dimStyle, this)
+    const size = (dimStyle.dimasz ?? 0) * (scale > 0 ? scale : 1)
+    return size > 0 ? size : 0
+  }
+
+  /**
+   * Resolves the leader arrowhead block name from DIMLDRBLK.
+   *
+   * An empty DIMLDRBLK means the default closed filled arrow; `_NONE` resolves
+   * to an empty name so no arrowhead is drawn.
+   */
+  private resolveArrowHeadBlockName(): string {
+    const dimStyle = this.resolveDimensionStyle()
+    return acdbResolveArrowBlockName(dimStyle?.dimldrblk)
+  }
+
+  /**
+   * Looks up the arrowhead block table record by name.
+   */
+  private resolveArrowHeadBlock(name: string) {
+    if (!name) return undefined
+    const database = this.tryGetDatabase()
+    if (!database) return undefined
+    const existing = database.tables.blockTable.getAt(name)
+    if (existing) return existing
+    // Arrowhead blocks such as `_DOT` / `_ARCHTICK` are AutoCAD built-ins and
+    // are often missing from the drawing's block table; dimension entities
+    // generate them on demand, so leaders must do the same before giving up.
+    const dimStyle = this.resolveDimensionStyle()
+    if (dimStyle) acdbEnsureDimArrowBlocks(database, dimStyle)
+    return database.tables.blockTable.getAt(name)
   }
 
   /**
@@ -586,29 +758,19 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * Whether a hook line should be rendered for the landing vertex.
+   * Whether a hook line (the landing segment at the annotation end) should be
+   * rendered for the landing vertex.
+   *
+   * DXF group code 75 (and its DWG equivalent `hookline_on`) is authoritative:
+   * when it is 0 AutoCAD does not draw any landing segment, even if the leader
+   * happens to sit next to a text entity. Only a leader that advertises a hook
+   * line is extended here.
    */
   private shouldDrawHookLine(lastVertex: AcGePoint3d): boolean {
-    if (this.resolveHookLineLength(lastVertex) <= 0) {
+    if (!this._hasHookLine) {
       return false
     }
-    if (this._hasHookLine) {
-      return true
-    }
-
-    const mtext = this.resolveAssociatedMText()
-    if (mtext && this.resolveHookSpanFromMText(mtext, lastVertex) > 0) {
-      return true
-    }
-
-    if (this._annoType !== AcDbLeaderAnnotationType.MText) {
-      return false
-    }
-
-    const dimStyle = this.resolveDimensionStyle()
-    const dimtad =
-      dimStyle?.dimtad ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimtad
-    return dimtad !== AcDbDimTextVertical.Center
+    return this.resolveHookLineLength(lastVertex) > 0
   }
 
   /**
@@ -625,28 +787,33 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * Resolves hook-line length using dimension-style gap plus associated MTEXT
-   * geometry when available.
+   * Resolves the hook-line (landing segment) length and side.
+   *
+   * The landing segment spans the annotation box (DXF 41 / associated MTEXT
+   * width) plus the dimension-style gap. A negative DXF 41 means the author
+   * flipped the landing to the opposite side, which matches AutoCAD. When no
+   * annotation width can be resolved there is nothing to land under, so the
+   * hook line is skipped instead of drawing a gap-sized stub past the author's
+   * own geometry.
+   *
+   * @returns The absolute landing length.
    */
   private resolveHookLineLength(lastVertex: AcGePoint3d): number {
     const dimStyle = this.resolveDimensionStyle()
     const gap =
-      (dimStyle?.dimgap ??
-        AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimgap) *
-      (dimStyle?.dimscale ??
-        AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimscale)
-    let length = this._textWidth + gap
+      (dimStyle?.dimgap ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimgap) *
+      (dimStyle ? acdbDimFeatureScale(dimStyle, this) : 1)
+    const declaredWidth = Math.abs(this._textWidth)
+    let length = declaredWidth > 0 ? declaredWidth + gap : 0
 
     const mtext = this.resolveAssociatedMText()
     if (mtext) {
       const span = this.resolveHookSpanFromMText(mtext, lastVertex)
-      if (span > 0) {
-        length = Math.max(length, span)
+      if (span > length) {
+        length = span
       } else {
         const width = this.resolveAnnotationWidth(mtext)
-        if (width > 0) {
-          length = Math.max(length, width)
-        }
+        if (width > length) length = width
       }
     }
 
@@ -655,6 +822,9 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Returns the signed axis along which the hook line extends.
+   *
+   * DXF 74 gives the hook-line direction relative to the horizontal vector and
+   * a negative DXF 41 (annotation box width) flips it once more.
    */
   private resolveHookAxis(): AcGeVector3d {
     const direction = this._horizontalDirection.clone()
@@ -663,13 +833,18 @@ export class AcDbLeader extends AcDbCurve {
     } else {
       direction.normalize()
     }
-    const sign = this._isHookLineSameDirection ? 1 : -1
+    // Same direction as the horizontal vector → +1; a negative DXF 41 flips it.
+    let sign = this._isHookLineSameDirection ? 1 : -1
+    if (this._textWidth < 0) sign = -sign
     direction.multiplyScalar(sign)
     return direction
   }
 
   /**
    * Computes hook span from the landing vertex to the far edge of MTEXT bounds.
+   *
+   * The span is measured along the resolved landing axis, which already folds
+   * in the DXF 74 direction and a negative DXF 41 flip.
    */
   private resolveHookSpanFromMText(
     mtext: AcDbMText,
@@ -745,6 +920,14 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Resolves the dimension style referenced by this leader.
+   *
+   * Entity-level `ACAD`/`DSTYLE` XData overrides are layered on top of the
+   * referenced table record, so per-leader changes to DIMASZ / DIMGAP /
+   * DIMLDRBLK take effect the way AutoCAD draws them.
+   *
+   * The resolved record is memoized: a leader with overrides needs the
+   * detached style copy, and `subWorldDraw` asks for the style several times
+   * per frame (arrow size, arrow block name, hook gap).
    */
   private resolveDimensionStyle(): AcDbDimStyleTableRecord | undefined {
     const styleName = this._dimensionStyle?.trim()
@@ -752,11 +935,43 @@ export class AcDbLeader extends AcDbCurve {
     if (!styleName || !database) {
       return undefined
     }
-    return database.tables.dimStyleTable.getAt(styleName)
+    if (this._dimStyle && this._dimStyleName === styleName) {
+      return this._dimStyle
+    }
+    const base = database.tables.dimStyleTable.getAt(styleName)
+    const resolved = acdbResolveEffectiveDimStyle(this, base, database)
+    this._dimStyle = resolved
+    this._dimStyleName = styleName
+    return resolved
+  }
+
+  /**
+   * Drops the memoized effective style when `ACAD` XData changes.
+   */
+  protected override onXDataChanged(appId: string): void {
+    if (appId === ACDB_DSTYLE_XDATA_APP) {
+      this._dimStyle = undefined
+      this._dimStyleName = undefined
+    }
+  }
+
+  /**
+   * Drops the memoized effective style when the leader moves to another
+   * database, because the referenced style record belongs to the previous one.
+   */
+  protected override onDatabaseChanged(): void {
+    this._dimStyle = undefined
+    this._dimStyleName = undefined
   }
 
   /**
    * Resolves the MTEXT annotation associated with this leader.
+   *
+   * An explicit `associatedAnnotation` hard pointer (DXF 340) always wins.
+   * The spatial search is only a fallback for leaders that were created with an
+   * MTEXT annotation (DXF 73 = 0); a standalone leader (DXF 73 = 3) has no
+   * annotation, so borrowing an unrelated nearby MTEXT would corrupt its
+   * landing geometry.
    */
   private resolveAssociatedMText(): AcDbMText | undefined {
     const database = this.tryGetDatabase()
@@ -766,12 +981,13 @@ export class AcDbLeader extends AcDbCurve {
 
     if (this._associatedAnnotation) {
       const object = database.getObjectById(this._associatedAnnotation)
-      if (object instanceof AcDbMText) {
-        return object
-      }
+      return object instanceof AcDbMText ? object : undefined
     }
 
-    if (this._vertices.length === 0) {
+    if (
+      this._annoType !== AcDbLeaderAnnotationType.MText ||
+      this._vertices.length === 0
+    ) {
       return undefined
     }
 
@@ -1028,7 +1244,11 @@ export class AcDbLeader extends AcDbCurve {
    * @returns Offset polyline along the leader path, or `null` when offset fails
    */
   private createOffsetCurve(offsetDist: number): AcDbCurve | null {
-    return acdbOffsetVertexPathAsPolyline(this.collectPath2d(), false, offsetDist)
+    return acdbOffsetVertexPathAsPolyline(
+      this.collectPath2d(),
+      false,
+      offsetDist
+    )
   }
 
   /**
@@ -1060,4 +1280,3 @@ export class AcDbLeader extends AcDbCurve {
     )
   }
 }
-

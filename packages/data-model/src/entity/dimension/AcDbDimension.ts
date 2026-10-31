@@ -19,8 +19,10 @@ import {
 
 import { AcDbObjectId } from '../../base/index.js'
 import { AcDbDxfFiler } from '../../base/index.js'
+import { AcDbDatabase } from '../../database/index.js'
 import { AcDbDimStyleTableRecord } from '../../database/index.js'
 import {
+  ACDB_DSTYLE_XDATA_APP,
   type AcDbAnnotationScaleContext,
   type AcDbAnnotationScaleDrawInfo,
   acdbBuildAnnotationScaleDrawInfo,
@@ -30,7 +32,9 @@ import {
   acdbMatchAnnotationScaleContext,
   AcDbRenderingCache,
   acdbResolveAnnotationScaleDrawInfo,
-  acdbSetAnnotative} from '../../misc/index.js'
+  acdbResolveEffectiveDimStyle,
+  acdbSetAnnotative
+} from '../../misc/index.js'
 import { AcDbOsnapMode } from '../../misc/index.js'
 import { AcDbDimensionObjectContextData } from '../../object/AcDbDimensionObjectContextData.js'
 import { AcDbBlockReference } from '../AcDbBlockReference.js'
@@ -277,10 +281,11 @@ export abstract class AcDbDimension extends AcDbEntity {
   /**
    * Gets the dimension style used by this dimension.
    *
-   * This method returns the dimension style record associated with this dimension.
-   * If no style is specified, it returns the default dimension style.
+   * Entity-level `ACAD`/`DSTYLE` XData overrides are layered on top of the
+   * referenced table record, which is how AutoCAD stores per-dimension changes
+   * to DIMASZ, DIMGAP, DIMLDRBLK, tolerance settings and so on.
    *
-   * @returns The dimension style record
+   * @returns The effective dimension style record
    *
    * @example
    * ```typescript
@@ -297,7 +302,9 @@ export abstract class AcDbDimension extends AcDbEntity {
         )
       }
       if (dimStyle == null) dimStyle = new AcDbDimStyleTableRecord()
-      this._dimStyle = dimStyle
+      this._dimStyle =
+        acdbResolveEffectiveDimStyle(this, dimStyle, this.tryGetDatabase()) ??
+        dimStyle
     }
     return this._dimStyle
   }
@@ -580,8 +587,7 @@ export abstract class AcDbDimension extends AcDbEntity {
     contextData?: AcDbDimensionObjectContextData
   } {
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let dimBlockId = this.dimBlockId
     let blockPosition = this._dimBlockPosition.clone()
@@ -591,10 +597,7 @@ export abstract class AcDbDimension extends AcDbEntity {
 
     if (isAnnotative && contexts.length > 0) {
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
@@ -1141,9 +1144,7 @@ export abstract class AcDbDimension extends AcDbEntity {
       blockPosition == null ? this.resolveAnnotativePresentation() : undefined
     const blockId = presentation?.dimBlockId ?? this.dimBlockId
     const insert =
-      blockPosition ??
-      presentation?.blockPosition ??
-      this._dimBlockPosition
+      blockPosition ?? presentation?.blockPosition ?? this._dimBlockPosition
 
     const blockTableRecord = blockId
       ? this.database.tables.blockTable.getAt(blockId)
@@ -1363,5 +1364,41 @@ export abstract class AcDbDimension extends AcDbEntity {
     this.textRotation = (textRotDeg * Math.PI) / 180
     this.normal.copy(new AcGeVector3d(nx, ny, nz))
     return this
+  }
+
+  /**
+   * Returns the owning database, or `undefined` for a detached dimension.
+   *
+   * `.database` falls back to the host working database and throws when none is
+   * set (detached entities in unit tests / clone paths), so style resolution
+   * cannot rely on it.
+   */
+  private tryGetDatabase(): AcDbDatabase | undefined {
+    try {
+      return this.database
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
+   * Drops the cached effective dimension style when `ACAD` XData changes.
+   *
+   * `dimensionStyle` memoizes the record built from the base table record plus
+   * the entity-level `ACAD`/`DSTYLE` overrides. Writing new XData, clearing the
+   * style or reloading the entity must not keep the previous geometry settings.
+   */
+  protected override onXDataChanged(appId: string): void {
+    if (appId === ACDB_DSTYLE_XDATA_APP) {
+      this._dimStyle = undefined
+    }
+  }
+
+  /**
+   * Drops the cached effective style when the entity moves to another database,
+   * because the referenced style record belongs to the previous database.
+   */
+  protected override onDatabaseChanged(): void {
+    this._dimStyle = undefined
   }
 }

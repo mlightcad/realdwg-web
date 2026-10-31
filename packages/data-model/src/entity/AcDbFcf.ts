@@ -23,6 +23,10 @@ import {
   acdbResolveAnnotationScaleDrawInfo,
   acdbSetAnnotative
 } from '../misc/AcDbAnnotationScale.js'
+import {
+  ACDB_DSTYLE_XDATA_APP,
+  acdbResolveEffectiveDimStyle
+} from '../misc/AcDbDimStyleOverrides.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -83,6 +87,10 @@ export class AcDbFcf extends AcDbEntity {
   private _text: string
   /** The dimension style name applied to this feature control frame. */
   private _dimensionStyle: string
+  /** Memoized effective style (table record plus `ACAD`/`DSTYLE` overrides). */
+  private _dimStyle?: AcDbDimStyleTableRecord
+  /** Name the memoized {@link _dimStyle} was resolved for. */
+  private _dimStyleName?: string
   /** The plane normal vector in WCS coordinates. */
   private _normal: AcGeVector3d
   /** The X-axis direction vector for the feature control frame in WCS coordinates. */
@@ -148,6 +156,8 @@ export class AcDbFcf extends AcDbEntity {
    */
   set dimensionStyle(value: string) {
     this._dimensionStyle = value
+    this._dimStyle = undefined
+    this._dimStyleName = undefined
   }
 
   /**
@@ -524,8 +534,7 @@ export class AcDbFcf extends AcDbEntity {
     const dimtxt =
       dimStyle?.dimtxt ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimtxt
     const dimscale =
-      dimStyle?.dimscale ??
-      AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimscale
+      dimStyle?.dimscale ?? AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimscale
     return dimtxt * dimscale
   }
 
@@ -595,10 +604,7 @@ export class AcDbFcf extends AcDbEntity {
       segments.push([start, end])
     }
 
-    pushSegment(
-      this.toFrameWcs(0, frameTop),
-      this.toFrameWcs(width, frameTop)
-    )
+    pushSegment(this.toFrameWcs(0, frameTop), this.toFrameWcs(width, frameTop))
     pushSegment(
       this.toFrameWcs(width, frameTop),
       this.toFrameWcs(width, frameBottom)
@@ -607,10 +613,7 @@ export class AcDbFcf extends AcDbEntity {
       this.toFrameWcs(width, frameBottom),
       this.toFrameWcs(0, frameBottom)
     )
-    pushSegment(
-      this.toFrameWcs(0, frameBottom),
-      this.toFrameWcs(0, frameTop)
-    )
+    pushSegment(this.toFrameWcs(0, frameBottom), this.toFrameWcs(0, frameTop))
 
     for (const division of columnDivisions) {
       pushSegment(
@@ -673,7 +676,11 @@ export class AcDbFcf extends AcDbEntity {
 
     const columnDivisions: number[] = [0]
     let cursorX = cellPadding
-    for (let columnIndex = 0; columnIndex < columnWidths.length; columnIndex++) {
+    for (
+      let columnIndex = 0;
+      columnIndex < columnWidths.length;
+      columnIndex++
+    ) {
       cursorX += columnWidths[columnIndex]
       cursorX += columnGap
       columnDivisions.push(cursorX - cellPadding)
@@ -810,13 +817,50 @@ export class AcDbFcf extends AcDbEntity {
     return { xAxis, yAxis, zAxis }
   }
 
+  /**
+   * Resolves the dimension style referenced by this FCF.
+   *
+   * Entity-level `ACAD`/`DSTYLE` XData overrides are layered on top of the
+   * referenced table record, so a tolerance frame that was edited per entity
+   * keeps its own DIMTXT / DIMCLRD / DIMGAP values.
+   *
+   * The result is memoized because the draw path asks for it repeatedly (frame
+   * layout, text height and text style), and a frame with overrides would
+   * otherwise clone the table record on every one of those calls.
+   */
   private resolveDimensionStyle(): AcDbDimStyleTableRecord | undefined {
     const styleName = this._dimensionStyle.trim()
     const database = this.tryGetDatabase()
     if (!styleName || !database) {
       return undefined
     }
-    return database.tables.dimStyleTable.getAt(styleName)
+    if (this._dimStyle && this._dimStyleName === styleName) {
+      return this._dimStyle
+    }
+    const base = database.tables.dimStyleTable.getAt(styleName)
+    const resolved = acdbResolveEffectiveDimStyle(this, base, database)
+    this._dimStyle = resolved
+    this._dimStyleName = styleName
+    return resolved
+  }
+
+  /**
+   * Drops the memoized effective style when `ACAD` XData changes.
+   */
+  protected override onXDataChanged(appId: string): void {
+    if (appId === ACDB_DSTYLE_XDATA_APP) {
+      this._dimStyle = undefined
+      this._dimStyleName = undefined
+    }
+  }
+
+  /**
+   * Drops the memoized effective style when the frame moves to another
+   * database, because the referenced style record belongs to the previous one.
+   */
+  protected override onDatabaseChanged(): void {
+    this._dimStyle = undefined
+    this._dimStyleName = undefined
   }
 
   private tryGetDatabase() {
@@ -840,4 +884,3 @@ export class AcDbFcf extends AcDbEntity {
     return style.textStyle
   }
 }
-

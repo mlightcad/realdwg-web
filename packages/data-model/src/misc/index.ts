@@ -1,5 +1,18 @@
 export { AcDbAngleUnits } from './AcDbAngleUnits.js'
 export {
+  ACDB_DEFAULT_DIM_STYLE,
+  ACDB_DSTYLE_XDATA_APP,
+  ACDB_DSTYLE_XDATA_MARKER,
+  acdbApplyDimStyleOverrides,
+  acdbDimStylePropertyForCode,
+  acdbIsIntegerDimStyleCode,
+  acdbReadDimStyleOverrides,
+  acdbResolveDimStyleOverrides,
+  acdbResolveEffectiveDimStyle,
+  acdbWriteDimStyleOverrides
+} from './AcDbDimStyleOverrides.js'
+export type { AcDbDimStyleOverride } from './AcDbDimStyleOverrides.js'
+export {
   ACDB_ANNOTATIVE_XDATA_APP,
   ACDB_VIEWPORT_ANNOTATION_SCALE_XREC,
   acdbAddAnnotationScaleToObject,
@@ -172,7 +185,10 @@ export {
   acdbCombineDxfBinaryChunks,
   acdbHexStringsToBytes
 } from './proxyGraphic/index.js'
-export { acdbPreviewIconToDataUrl, acdbThumbnailImageToDataUrl } from './AcDbPreviewIcon.js'
+export {
+  acdbPreviewIconToDataUrl,
+  acdbThumbnailImageToDataUrl
+} from './AcDbPreviewIcon.js'
 export type {
   AcDbPatDocument,
   AcDbPatGradientColor,

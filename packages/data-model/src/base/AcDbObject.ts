@@ -385,9 +385,21 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * and call this helper to avoid `super` setter restrictions.
    */
   protected assignDatabase(db: AcDbDatabase) {
-    this._database = db
+    if (this._database !== db) {
+      this._database = db
+      this.onDatabaseChanged(db)
+    }
   }
 
+  /**
+   * Called when this object is re-associated with a different database.
+   *
+   * Subclasses that cache database-derived state (for example a dimension style
+   * resolved from the style table) override this to drop that cache.
+   *
+   * @param _db - The database that this object now belongs to.
+   */
+  protected onDatabaseChanged(_db: AcDbDatabase): void {}
   /**
    * Finds one imported compact XData block.
    *
@@ -465,6 +477,26 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     }
   }
 
+  /**
+   * Called whenever XData for an AppId changes.
+   *
+   * Subclasses that cache values derived from XData (for example the effective
+   * dimension style assembled from `ACAD`/`DSTYLE`) override this to drop the
+   * stale cache instead of re-parsing the stream on every read.
+   *
+   * @param appId - The AppId whose XData was written, replaced or removed.
+   */
+  protected onXDataChanged(_appId: string): void {}
+
+  /**
+   * Notifies subclasses that XData for `appId` changed.
+   *
+   * @param appId - The AppId whose XData was written, replaced or removed.
+   */
+  protected notifyXDataChanged(appId: string): void {
+    this.onXDataChanged(appId)
+  }
+
   private *importedXDataValues(
     start: number,
     end: number
@@ -526,6 +558,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
         target.push(value)
       }
       this.rememberXDataApp(block.appId)
+      this.notifyXDataChanged(block.appId)
     }
   }
 
@@ -576,6 +609,37 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
+   * Iterates the XData of one application without materializing it.
+   *
+   * Behaves like {@link getXData} for readers, but never converts the compact
+   * imported form into an {@link AcDbResultBuffer}. Use this on hot paths that
+   * only *read* XData (for example drawing dimension-style overrides), so a
+   * drawing keeps its lossless compact representation and pays no per-entity
+   * allocation. Use {@link getXData} when the returned values may be edited.
+   *
+   * @param appId - The application ID (registered AppId name) that owns the XData
+   * @returns The typed values of that AppId, or an empty iterable when absent
+   *
+   * @example
+   * ```typescript
+   * for (const item of obj.iterateXData('ACAD')) {
+   *   // inspect item.code / item.value
+   * }
+   * ```
+   */
+  *iterateXData(appId: string): IterableIterator<AcDbTypedValue> {
+    const existing = this._xDataMap?.get(appId)
+    if (existing) {
+      yield* existing
+      return
+    }
+
+    const range = this.findImportedXDataRange(appId)
+    if (!range) return
+    yield* this.importedXDataValues(range[0], range[1])
+  }
+
+  /**
    * Attaches or replaces XData for this object.
    *
    * If XData already exists for the given AppId, it is replaced by the provided
@@ -606,6 +670,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
         this.removeImportedXData(appId)
         ;(this._xDataMap ??= new Map()).set(appId, resbuf)
         this.rememberXDataApp(appId)
+        this.notifyXDataChanged(appId)
       }
     }
   }
@@ -630,6 +695,7 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     this.removeImportedXData(appId)
     this.clearMaterializedXData(appId)
     this.forgetXDataApp(appId)
+    this.notifyXDataChanged(appId)
   }
 
   /**
