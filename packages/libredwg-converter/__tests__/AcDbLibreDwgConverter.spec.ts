@@ -79,6 +79,88 @@ describe('AcDbLibreDwgConverter', () => {
     expect(db.getDimStyleAnnotationScale('1-1')).toBe(16)
   })
 
+  it('resolves DIMLDRBLK handles and DIMBLK names to arrow blocks', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processDimStylesPublic(
+      {
+        tables: {
+          BLOCK_RECORD: {
+            entries: [
+              { name: '_DOT', handle: '2A' },
+              { name: 'ACE', handle: '11' },
+              { name: '_OPEN90', handle: 'ACE' },
+              { name: '_OPEN', handle: '2B' }
+            ]
+          },
+          DIMSTYLE: {
+            entries: [
+              {
+                name: 'Arrows',
+                handle: 'C38',
+                ownerHandle: '0',
+                DIMLDRBLK: 0x2a,
+                DIMBLK: '_CLOSEDFILLED',
+                DIMBLK1: 'ACE',
+                DIMBLK2: '43'
+              },
+              {
+                name: 'DefaultArrow',
+                handle: 'C39',
+                ownerHandle: '0',
+                DIMLDRBLK: 0,
+                DIMBLK: '.',
+                DIMBLK1: '',
+                DIMBLK2: 'NOT_A_HANDLE'
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    const arrows = db.tables.dimStyleTable.getAt('Arrows')
+    expect(arrows?.dimldrblk).toBe('_DOT')
+    expect(arrows?.dimblk).toBe('_CLOSEDFILLED')
+    // "ACE" is the block name, even though another record's handle is ACE.
+    expect(arrows?.dimblk1).toBe('ACE')
+    expect(arrows?.dimblk2).toBe('_OPEN')
+
+    const defaults = db.tables.dimStyleTable.getAt('DefaultArrow')
+    expect(defaults?.dimldrblk).toBe('')
+    expect(defaults?.dimblk).toBe('')
+    expect(defaults?.dimblk1).toBe('')
+    expect(defaults?.dimblk2).toBe('NOT_A_HANDLE')
+  })
+
+  it('uses the closed-filled arrow when the block table is missing', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processDimStylesPublic(
+      {
+        tables: {
+          DIMSTYLE: {
+            entries: [
+              {
+                name: 'NoBlocks',
+                handle: '2',
+                ownerHandle: '0',
+                DIMLDRBLK: 0x2a,
+                DIMBLK: 0x2b
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    const style = db.tables.dimStyleTable.getAt('NoBlocks')
+    expect(style?.dimldrblk).toBe('')
+    expect(style?.dimblk).toBe('')
+  })
+
   it('maps $DIMSTYLE from the DWG header onto db.dimstyle', () => {
     const converter = new TestLibreDwgConverter({ useWorker: false })
 

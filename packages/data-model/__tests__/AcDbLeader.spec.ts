@@ -26,7 +26,11 @@ import {
   AcDbMText,
   AcDbPolyline
 } from '../src/entity'
-import { AcDbOsnapMode, AcDbRenderingCache } from '../src/misc'
+import {
+  AcDbOsnapMode,
+  AcDbRenderingCache,
+  acdbWriteDimStyleOverrides
+} from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -738,6 +742,139 @@ describe('AcDbLeader', () => {
       drawSpy.mockRestore()
     })
 
+    it('applies DSTYLE overrides for arrow size, arrow block, and DIMCLRD', () => {
+      const db = createWorkingDb()
+      const arrowBlock = new AcDbBlockTableRecord()
+      arrowBlock.name = '_CLOSEDFILLED'
+      db.tables.blockTable.add(arrowBlock)
+
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'OVERRIDE_STYLE'
+      style.dimldrblk = '_DOT'
+      style.dimasz = 0.4
+      style.dimscale = 40
+      style.dimclrd = 44
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'OVERRIDE_STYLE'
+      const entityColor = new AcCmColor()
+      entityColor.setByLayer()
+      leader.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+      acdbWriteDimStyleOverrides(leader, [
+        { code: 41, value: 2.5 },
+        { code: 176, value: 1 },
+        { code: 341, value: '0' }
+      ])
+
+      const renderer = createArrowRenderer()
+      const originalColor = renderer.subEntityTraits.color
+      let drawnColor: AcCmColor | undefined
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+
+      leader.subWorldDraw(renderer as never)
+
+      expect(drawnColor?.colorIndex).toBe(1)
+      expect(drawnColor).not.toBe(originalColor)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+      const arrowColor = drawSpy.mock.calls[0][2] as AcCmColor
+      expect(arrowColor.colorIndex).toBe(1)
+      // Code 341 = 0 clears DIMLDRBLK, so the style's `_DOT` is not used.
+      expect(drawSpy.mock.calls[0][1]).toBe(arrowBlock)
+      expect(db.tables.blockTable.getAt('_DOT')).toBeFalsy()
+      const matrix = drawSpy.mock.calls[0][5] as unknown as AcGeMatrix3d
+      const tip = new AcGePoint3d(0, 0, 0).applyMatrix4(matrix)
+      const base = new AcGePoint3d(0, 1, 0).applyMatrix4(matrix)
+      expect(tip.distanceTo(base)).toBeCloseTo(100, 4)
+      drawSpy.mockRestore()
+    })
+
+    it('paints DIMCLRD ByLayer and group 77, and restores the previous traits color', () => {
+      const db = createWorkingDb()
+      const byLayer = new AcDbDimStyleTableRecord()
+      byLayer.name = 'BYLAYER_STYLE'
+      byLayer.dimclrd = 256
+      db.tables.dimStyleTable.add(byLayer)
+
+      const byBlock = new AcDbDimStyleTableRecord()
+      byBlock.name = 'BYBLOCK_STYLE'
+      byBlock.dimclrd = 0
+      db.tables.dimStyleTable.add(byBlock)
+
+      const entityColor = new AcCmColor()
+      entityColor.colorIndex = 1
+
+      const explicit = createLeader(false)
+      explicit.dimensionStyle = 'BYLAYER_STYLE'
+      explicit.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(explicit)
+      // Layer 0 is ACI 7, which differs from the entity ACI, so the batch
+      // path would keep the wrong color.
+      expect(explicit.directBatchPrimitive).toBeNull()
+
+      const renderer = createArrowRenderer()
+      const originalColor = renderer.subEntityTraits.color
+      let drawnColor: AcCmColor | undefined
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      explicit.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(7)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+
+      const grouped = createLeader(false)
+      grouped.dimensionStyle = 'BYBLOCK_STYLE'
+      grouped.byBlockColor = 5
+      grouped.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(grouped)
+      expect(grouped.directBatchPrimitive).toBeNull()
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      grouped.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(5)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+
+      const layerFromGroup = createLeader(false)
+      layerFromGroup.dimensionStyle = 'BYBLOCK_STYLE'
+      layerFromGroup.byBlockColor = 256
+      layerFromGroup.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(layerFromGroup)
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      layerFromGroup.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(7)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+    })
+
+    it('keeps the lineStrip batch path when DIMCLRD resolves to the entity color', () => {
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'BYLAYER_STYLE'
+      style.dimclrd = 256
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(false)
+      leader.dimensionStyle = 'BYLAYER_STYLE'
+      const entityColor = new AcCmColor()
+      entityColor.setByLayer()
+      leader.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      expect(leader.directBatchPrimitive).toBe('lineStrip')
+    })
+
     it('stays off the direct batch path when an arrowhead may be drawn', () => {
       expect(createLeader(false).directBatchPrimitive).toBe('lineStrip')
       expect(createLeader(true).directBatchPrimitive).toBeNull()
@@ -805,6 +942,117 @@ describe('AcDbLeader', () => {
       expect(clones).toBe(2)
 
       drawSpy.mockRestore()
+    })
+  })
+
+  describe('properties', () => {
+    const byName = (leader: AcDbLeader) => {
+      const props = leader.properties
+      expect(props.type).toBe('Leader')
+      const general = props.groups.find(g => g.groupName === 'general')
+      const leaderGroup = props.groups.find(g => g.groupName === 'leader')
+      const textGroup = props.groups.find(g => g.groupName === 'text')
+      const geometry = props.groups.find(g => g.groupName === 'geometry')
+      expect(general).toBeDefined()
+      expect(leaderGroup).toBeDefined()
+      expect(textGroup).toBeDefined()
+      expect(geometry).toBeDefined()
+
+      return Object.fromEntries(
+        [
+          ...(leaderGroup?.properties ?? []),
+          ...(textGroup?.properties ?? []),
+          ...(geometry?.properties ?? [])
+        ].map(p => [p.name, p])
+      )
+    }
+
+    it('exposes the DXF leader fields with working accessors', () => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(0, 0, 0))
+      leader.appendVertex(new AcGePoint3d(5, 5, 0))
+      const props = byName(leader)
+
+      expect(props.dimensionStyleName.editable).toBe(true)
+      props.dimensionStyleName.accessor.set?.('Standard')
+      expect(leader.dimensionStyle).toBe('Standard')
+      expect(props.dimensionStyleName.accessor.get()).toBe('Standard')
+
+      props.annoType.accessor.set?.(AcDbLeaderAnnotationType.MText)
+      expect(leader.annoType).toBe(AcDbLeaderAnnotationType.MText)
+      expect(props.annoType.accessor.get()).toBe(AcDbLeaderAnnotationType.MText)
+
+      props.hasArrowHead.accessor.set?.(true)
+      props.hasHookLine.accessor.set?.(true)
+      props.isHookLineSameDirection.accessor.set?.(true)
+      props.isSplined.accessor.set?.(true)
+      expect(leader.hasArrowHead).toBe(true)
+      expect(leader.hasHookLine).toBe(true)
+      expect(leader.isHookLineSameDirection).toBe(true)
+      expect(leader.isSplined).toBe(true)
+      expect(props.hasArrowHead.accessor.get()).toBe(true)
+
+      props.textHeight.accessor.set?.(2.5)
+      props.textWidth.accessor.set?.(12)
+      expect(leader.textHeight).toBe(2.5)
+      expect(leader.textWidth).toBe(12)
+      expect(props.textWidth.accessor.get()).toBe(12)
+    })
+
+    it('offers the annotation types as enum options and keeps read-only fields read-only', () => {
+      const leader = new AcDbLeader()
+      const props = byName(leader)
+
+      expect(props.annoType.type).toBe('enum')
+      expect(props.annoType.options?.map(option => option.value)).toEqual([
+        AcDbLeaderAnnotationType.MText,
+        AcDbLeaderAnnotationType.Fcf,
+        AcDbLeaderAnnotationType.BlockReference,
+        AcDbLeaderAnnotationType.NoAnnotation
+      ])
+      // Labels come from the TypeScript enum names so the palette can
+      // translate them through `entity.enum`.
+      expect(props.annoType.options?.map(option => option.label)).toEqual([
+        'MText',
+        'Fcf',
+        'BlockReference',
+        'NoAnnotation'
+      ])
+
+      expect(props.associatedAnnotation.editable).toBe(false)
+      expect(props.byBlockColor.editable).toBe(false)
+      expect(props.vertices.editable).toBe(false)
+    })
+
+    it('exposes vertices, normal, horizontal direction and optional offsets', () => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(1, 2, 3))
+      leader.appendVertex(new AcGePoint3d(4, 5, 6))
+      const props = byName(leader)
+
+      expect(props.vertices.type).toBe('array')
+      expect(props.vertices.accessor.get()).toEqual([
+        { x: 1, y: 2, z: 3 },
+        { x: 4, y: 5, z: 6 }
+      ])
+      // The palette edits array elements in place, which must not leak into
+      // the entity through a shared object.
+      ;(props.vertices.accessor.get() as { x: number; y: number }[])[0].y = 99
+      expect(leader.vertices[0].y).toBe(2)
+
+      expect(props.normalZ.accessor.get()).toBe(1)
+      props.horizontalDirectionX.accessor.set?.(0)
+      expect(leader.horizontalDirection.x).toBe(0)
+
+      // Optional vectors start out absent.
+      expect(props.offsetFromBlockX.accessor.get()).toBeUndefined()
+      props.offsetFromBlockX.accessor.set?.(3)
+      expect(leader.offsetFromBlock).toMatchObject({ x: 3, y: 0, z: 0 })
+      expect(props.offsetFromBlockX.accessor.get()).toBe(3)
+
+      props.offsetFromAnnotationZ.accessor.set?.(4)
+      expect(leader.offsetFromAnnotation).toMatchObject({ x: 0, y: 0, z: 4 })
+      expect(props.offsetFromAnnotationZ.accessor.get()).toBe(4)
     })
   })
 })

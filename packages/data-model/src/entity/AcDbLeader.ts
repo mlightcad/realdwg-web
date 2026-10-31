@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -23,9 +24,15 @@ import {
   acdbResolveEffectiveDimStyle
 } from '../misc/AcDbDimStyleOverrides.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { acdbDecodeDimStyleColor } from '../misc/AcDbMLeaderStyleColorCodec.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  AcDbEntityProperties,
+  AcDbEntityPropertyType,
+  AcDbEntityRuntimeProperty
+} from './AcDbEntityProperties.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbMText } from './AcDbMText.js'
@@ -390,6 +397,256 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
+   * Returns the runtime property definition of this leader so the property
+   * palette can show and edit it like other entities.
+   *
+   * The palette resolves each `name` through the `entity.property` locale
+   * namespace and each enum `label` through `entity.enum`, so the names used
+   * here are the ones translated by the viewer.
+   */
+  override get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'leader',
+          properties: [
+            this.createProperty(
+              'dimensionStyleName',
+              'string',
+              () => this.dimensionStyle,
+              (value: string) => {
+                this.dimensionStyle = value
+              }
+            ),
+            this.createProperty(
+              'annoType',
+              'enum',
+              () => this.annoType,
+              (value: AcDbLeaderAnnotationType) => {
+                this.annoType = value
+              },
+              [
+                {
+                  label:
+                    AcDbLeaderAnnotationType[AcDbLeaderAnnotationType.MText],
+                  value: AcDbLeaderAnnotationType.MText
+                },
+                {
+                  label: AcDbLeaderAnnotationType[AcDbLeaderAnnotationType.Fcf],
+                  value: AcDbLeaderAnnotationType.Fcf
+                },
+                {
+                  label:
+                    AcDbLeaderAnnotationType[
+                      AcDbLeaderAnnotationType.BlockReference
+                    ],
+                  value: AcDbLeaderAnnotationType.BlockReference
+                },
+                {
+                  label:
+                    AcDbLeaderAnnotationType[
+                      AcDbLeaderAnnotationType.NoAnnotation
+                    ],
+                  value: AcDbLeaderAnnotationType.NoAnnotation
+                }
+              ]
+            ),
+            this.createProperty(
+              'hasArrowHead',
+              'boolean',
+              () => this.hasArrowHead,
+              (value: boolean) => {
+                this.hasArrowHead = value
+              }
+            ),
+            this.createProperty(
+              'hasHookLine',
+              'boolean',
+              () => this.hasHookLine,
+              (value: boolean) => {
+                this.hasHookLine = value
+              }
+            ),
+            this.createProperty(
+              'isHookLineSameDirection',
+              'boolean',
+              () => this.isHookLineSameDirection,
+              (value: boolean) => {
+                this.isHookLineSameDirection = value
+              }
+            ),
+            this.createProperty(
+              'isSplined',
+              'boolean',
+              () => this.isSplined,
+              (value: boolean) => {
+                this.isSplined = value
+              }
+            ),
+            this.createProperty(
+              'associatedAnnotation',
+              'string',
+              () => this._associatedAnnotation
+            ),
+            this.createProperty('byBlockColor', 'int', () => this._byBlockColor)
+          ]
+        },
+        {
+          groupName: 'text',
+          properties: [
+            this.createProperty(
+              'textHeight',
+              'float',
+              () => this.textHeight,
+              (value: number) => {
+                this.textHeight = value
+              }
+            ),
+            this.createProperty(
+              'textWidth',
+              'float',
+              () => this.textWidth,
+              (value: number) => {
+                this.textWidth = value
+              }
+            )
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'vertices',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  { name: 'x', type: 'float', editable: false },
+                  { name: 'y', type: 'float', editable: false },
+                  { name: 'z', type: 'float', editable: false }
+                ]
+              },
+              accessor: {
+                get: () =>
+                  this.vertices.map(vertex => ({
+                    x: vertex.x,
+                    y: vertex.y,
+                    z: vertex.z
+                  }))
+              }
+            },
+            ...this.createPoint3dProperties('normal', () => this._normal),
+            ...this.createPoint3dProperties(
+              'horizontalDirection',
+              () => this._horizontalDirection
+            ),
+            ...this.createOptionalPoint3dProperties(
+              'offsetFromBlock',
+              () => this.offsetFromBlock,
+              value => {
+                this.offsetFromBlock = value
+              }
+            ),
+            ...this.createOptionalPoint3dProperties(
+              'offsetFromAnnotation',
+              () => this.offsetFromAnnotation,
+              value => {
+                this.offsetFromAnnotation = value
+              }
+            )
+          ]
+        }
+      ]
+    }
+  }
+
+  /**
+   * Builds one runtime property, marking it editable only when a setter exists.
+   */
+  private createProperty<T>(
+    name: string,
+    type: AcDbEntityPropertyType,
+    get: () => T,
+    set?: (value: T) => void,
+    options?: { label: string; value: unknown }[]
+  ): AcDbEntityRuntimeProperty<T> {
+    return {
+      name,
+      type,
+      editable: set != null,
+      options,
+      accessor: set ? { get, set } : { get }
+    }
+  }
+
+  /**
+   * Builds the X/Y/Z properties of a required vector.
+   */
+  private createPoint3dProperties(
+    prefix: string,
+    getVector: () => AcGeVector3d
+  ): AcDbEntityRuntimeProperty<number>[] {
+    return [
+      this.createProperty(
+        `${prefix}X`,
+        'float',
+        () => getVector().x,
+        (value: number) => {
+          getVector().x = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Y`,
+        'float',
+        () => getVector().y,
+        (value: number) => {
+          getVector().y = value
+        }
+      ),
+      this.createProperty(
+        `${prefix}Z`,
+        'float',
+        () => getVector().z,
+        (value: number) => {
+          getVector().z = value
+        }
+      )
+    ]
+  }
+
+  /**
+   * Builds the X/Y/Z properties of a vector that may not be present yet.
+   *
+   * Reading an absent vector returns `undefined` so the palette shows an empty
+   * cell; writing any component materializes the vector with the other
+   * components defaulting to `0`.
+   */
+  private createOptionalPoint3dProperties(
+    prefix: string,
+    getVector: () => AcGeVector3dLike | undefined,
+    setVector: (value: AcGeVector3dLike | undefined) => void
+  ): AcDbEntityRuntimeProperty<number | undefined>[] {
+    const createAxis = (axis: 'x' | 'y' | 'z') =>
+      this.createProperty<number | undefined>(
+        `${prefix}${axis.toUpperCase()}`,
+        'float',
+        () => getVector()?.[axis],
+        (value: number | undefined) => {
+          if (value == null) return
+          const vector = getVector()
+          setVector({
+            x: axis === 'x' ? value : (vector?.x ?? 0),
+            y: axis === 'y' ? value : (vector?.y ?? 0),
+            z: axis === 'z' ? value : (vector?.z ?? 0)
+          })
+        }
+      )
+    return [createAxis('x'), createAxis('y'), createAxis('z')]
+  }
+
+  /**
    * Appends vertex to the end of the vertex list for this leader. If vertex is not in the plane of the
    * leader, then it will be projected parallel the leader's normal onto the leader's plane and the
    * projection will be appended to the leader's vertex list. If the new vertex is too close to the one
@@ -565,18 +822,20 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * This leader draws as a single `lineStrip` primitive unless an arrowhead
-   * may add a second primitive.
+   * This leader draws as a single `lineStrip` primitive unless drawing it
+   * needs more than the entity color already applied by `worldDraw`.
    *
-   * The check deliberately stays cheap (no dimension-style lookup): a leader
-   * that advertises an arrowhead (DXF 71) simply falls back to the legacy draw
-   * path so renderers never see an unexpected multi-primitive batch payload.
+   * An arrowhead (DXF 71) adds a second primitive. A DIMCLRD or group 77 color
+   * that differs from the entity color is applied inside `subWorldDraw`, and a
+   * geometry-only batch would keep the entity color instead. Either case falls
+   * back to the legacy draw path. The style lookup is memoized on the leader.
    *
    * @internal
    */
   override get directBatchPrimitive() {
     const mayDrawArrowHead = this._hasArrowHead && this._vertices.length >= 2
-    return mayDrawArrowHead ? null : ('lineStrip' as const)
+    if (mayDrawArrowHead || this.leaderLineColorDiffersFromEntity()) return null
+    return 'lineStrip' as const
   }
 
   /**
@@ -585,11 +844,28 @@ export class AcDbLeader extends AcDbCurve {
   subWorldDraw(renderer: AcGiRenderer) {
     const entities: AcGiEntity[] = []
     const points = this.collectDrawPoints(renderer)
-    if (points.length > 0) {
-      entities.push(renderer.lines(points))
+    const leaderColor = this.resolveLeaderLineColor()
+    const traits = renderer.subEntityTraits
+    const drawGeometry = () => {
+      if (points.length > 0) {
+        entities.push(renderer.lines(points))
+      }
+      const arrowHead = this.drawArrowHead(renderer, points, leaderColor)
+      if (arrowHead) entities.push(arrowHead)
     }
-    const arrowHead = this.drawArrowHead(renderer, points)
-    if (arrowHead) entities.push(arrowHead)
+    // Geometry-only renderers omit traits. Touch them only when a dimension
+    // color has to replace the entity color for this draw.
+    if (leaderColor && traits) {
+      const previousColor = traits.color
+      traits.color = leaderColor
+      try {
+        drawGeometry()
+      } finally {
+        traits.color = previousColor
+      }
+    } else {
+      drawGeometry()
+    }
     if (entities.length === 0) return renderer.lines([])
     return entities.length === 1 ? entities[0] : renderer.group(entities)
   }
@@ -608,6 +884,72 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
+   * Color of the leader line and arrowhead.
+   *
+   * AutoCAD paints both from DIMCLRD. An explicit ACI (including a DSTYLE
+   * override) wins over the entity color, which is why a ByLayer leader on
+   * layer 0 still draws red when DIMCLRD is 1. ByBlock keeps the entity
+   * color, unless DXF group 77 names a color to use in that case. Group 77
+   * follows the same ACI convention as group 62: 256 is ByLayer.
+   *
+   * @returns The dimension color, or `undefined` when the entity color
+   *   already on the renderer traits should be kept.
+   */
+  private resolveLeaderLineColor(): AcCmColor | undefined {
+    const style = this.resolveDimensionStyle()
+    if (!style) return undefined
+    const dimColor = acdbDecodeDimStyleColor(style.dimclrd)
+    if (dimColor.isByBlock) return this.resolveByBlockLeaderColor()
+    if (dimColor.isByLayer) return this.resolveLayerLeaderColor()
+    return dimColor
+  }
+
+  /**
+   * Whether {@link resolveLeaderLineColor} would paint something other than
+   * the color `worldDraw` already stored on the renderer.
+   */
+  private leaderLineColorDiffersFromEntity(): boolean {
+    const leaderColor = this.resolveLeaderLineColor()
+    if (!leaderColor) return false
+    try {
+      return !leaderColor.equals(this.resolvedColor)
+    } catch {
+      return true
+    }
+  }
+
+  /**
+   * DXF group 77, used only when DIMCLRD is ByBlock.
+   *
+   * `0` and a missing value keep the entity color. `256` is ByLayer.
+   */
+  private resolveByBlockLeaderColor(): AcCmColor | undefined {
+    const override = this._byBlockColor
+    if (override == null || override === 0) return undefined
+    if (override === 256) return this.resolveLayerLeaderColor()
+    if (override > 0 && override < 256) {
+      const color = new AcCmColor()
+      color.colorIndex = override
+      return color
+    }
+    return undefined
+  }
+
+  /**
+   * Layer color for DIMCLRD / group 77 ByLayer.
+   *
+   * The returned color is a clone so assigning it to renderer traits cannot
+   * mutate the layer table record.
+   */
+  private resolveLayerLeaderColor(): AcCmColor | undefined {
+    try {
+      return this.getLayerColor()?.clone()
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
    * Draws the arrowhead (DXF group code 71) at the first leader vertex.
    *
    * The tip sits on the first vertex and the tail points toward the second
@@ -619,11 +961,13 @@ export class AcDbLeader extends AcDbCurve {
    *
    * @param renderer - Renderer used to create the primitive.
    * @param points - Leader draw points whose first entry is the arrow tip.
+   * @param leaderColor - DIMCLRD color, when it replaces the entity color.
    * @returns The arrowhead primitive, or `undefined` when none is drawn.
    */
   private drawArrowHead(
     renderer: AcGiRenderer,
-    points: AcGePoint3d[]
+    points: AcGePoint3d[],
+    leaderColor?: AcCmColor
   ): AcGiEntity | undefined {
     if (!this.hasRenderableArrowHead || points.length < 2) return undefined
 
@@ -657,7 +1001,7 @@ export class AcDbLeader extends AcDbCurve {
       return AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
-        this.resolvedColor,
+        leaderColor ?? this.resolvedColor,
         [],
         true,
         matrix,

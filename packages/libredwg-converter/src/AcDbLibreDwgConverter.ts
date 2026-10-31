@@ -217,10 +217,10 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         dimupt: item.DIMUPT,
         dimatfit: item.DIMATFIT,
         dimtxsty: this.resolveDimTextStyleName(model, item.DIMTXSTY),
-        dimldrblk: '', // TODO: Set correct value
-        dimblk: item.DIMBLK || '', // TODO: Set correct value
-        dimblk1: item.DIMBLK1 || '', // TODO: Set correct value
-        dimblk2: item.DIMBLK2 || '', // TODO: Set correct value
+        dimldrblk: this.resolveDimBlockName(model, item.DIMLDRBLK),
+        dimblk: this.resolveDimBlockName(model, item.DIMBLK),
+        dimblk1: this.resolveDimBlockName(model, item.DIMBLK1),
+        dimblk2: this.resolveDimBlockName(model, item.DIMBLK2),
         dimlwd: item.DIMLWD,
         dimlwe: item.DIMLWE
       }
@@ -270,6 +270,37 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (match?.name) return match.name
     }
     return DEFAULT_TEXT_STYLE
+  }
+
+  /**
+   * DIMLDRBLK / DIMBLK* are hard pointers. LibreDWG exposes DIMLDRBLK as a
+   * numeric absref; DIMBLK* may be that absref or a block name, because the
+   * `*_T` strings are often empty. An empty name, `0`, or `.` means the
+   * closed-filled arrow. A missing block table yields that default instead of
+   * throwing.
+   */
+  private resolveDimBlockName(model: DwgDatabase, value: unknown): string {
+    const entries = model.tables.BLOCK_RECORD?.entries ?? []
+    const byHandle = (handle: string) =>
+      entries.find(
+        entry => String(entry.handle).toUpperCase() === handle.toUpperCase()
+      )?.name
+
+    if (typeof value === 'string') {
+      const text = value.trim()
+      if (!text || text === '.') return ''
+      // `_DOT` and other arrow names contain characters outside a handle.
+      if (!/^[0-9A-F]+$/i.test(text)) return text
+      const byName = entries.find(
+        entry => entry.name.toUpperCase() === text.toUpperCase()
+      )
+      if (byName?.name) return byName.name
+      if (/[A-Z]/i.test(text)) return byHandle(text) ?? text
+    }
+
+    const numeric = typeof value === 'number' ? value : Number(value)
+    if (!Number.isFinite(numeric) || numeric <= 0) return ''
+    return byHandle(Math.trunc(numeric).toString(16).toUpperCase()) ?? ''
   }
 
   protected processLayers(model: DwgDatabase, db: AcDbDatabase) {
