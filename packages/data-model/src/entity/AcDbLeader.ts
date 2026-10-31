@@ -1,3 +1,4 @@
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -23,6 +24,7 @@ import {
   acdbResolveEffectiveDimStyle
 } from '../misc/AcDbDimStyleOverrides.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
+import { acdbDecodeDimStyleColor } from '../misc/AcDbMLeaderStyleColorCodec.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbCurve } from './AcDbCurve.js'
@@ -820,18 +822,20 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * This leader draws as a single `lineStrip` primitive unless an arrowhead
-   * may add a second primitive.
+   * This leader draws as a single `lineStrip` primitive unless drawing it
+   * needs more than the entity color already applied by `worldDraw`.
    *
-   * The check deliberately stays cheap (no dimension-style lookup): a leader
-   * that advertises an arrowhead (DXF 71) simply falls back to the legacy draw
-   * path so renderers never see an unexpected multi-primitive batch payload.
+   * An arrowhead (DXF 71) adds a second primitive. A DIMCLRD or group 77 color
+   * that differs from the entity color is applied inside `subWorldDraw`, and a
+   * geometry-only batch would keep the entity color instead. Either case falls
+   * back to the legacy draw path. The style lookup is memoized on the leader.
    *
    * @internal
    */
   override get directBatchPrimitive() {
     const mayDrawArrowHead = this._hasArrowHead && this._vertices.length >= 2
-    return mayDrawArrowHead ? null : ('lineStrip' as const)
+    if (mayDrawArrowHead || this.leaderLineColorDiffersFromEntity()) return null
+    return 'lineStrip' as const
   }
 
   /**
@@ -840,11 +844,28 @@ export class AcDbLeader extends AcDbCurve {
   subWorldDraw(renderer: AcGiRenderer) {
     const entities: AcGiEntity[] = []
     const points = this.collectDrawPoints(renderer)
-    if (points.length > 0) {
-      entities.push(renderer.lines(points))
+    const leaderColor = this.resolveLeaderLineColor()
+    const traits = renderer.subEntityTraits
+    const drawGeometry = () => {
+      if (points.length > 0) {
+        entities.push(renderer.lines(points))
+      }
+      const arrowHead = this.drawArrowHead(renderer, points, leaderColor)
+      if (arrowHead) entities.push(arrowHead)
     }
-    const arrowHead = this.drawArrowHead(renderer, points)
-    if (arrowHead) entities.push(arrowHead)
+    // Geometry-only renderers omit traits. Touch them only when a dimension
+    // color has to replace the entity color for this draw.
+    if (leaderColor && traits) {
+      const previousColor = traits.color
+      traits.color = leaderColor
+      try {
+        drawGeometry()
+      } finally {
+        traits.color = previousColor
+      }
+    } else {
+      drawGeometry()
+    }
     if (entities.length === 0) return renderer.lines([])
     return entities.length === 1 ? entities[0] : renderer.group(entities)
   }
@@ -863,6 +884,72 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
+   * Color of the leader line and arrowhead.
+   *
+   * AutoCAD paints both from DIMCLRD. An explicit ACI (including a DSTYLE
+   * override) wins over the entity color, which is why a ByLayer leader on
+   * layer 0 still draws red when DIMCLRD is 1. ByBlock keeps the entity
+   * color, unless DXF group 77 names a color to use in that case. Group 77
+   * follows the same ACI convention as group 62: 256 is ByLayer.
+   *
+   * @returns The dimension color, or `undefined` when the entity color
+   *   already on the renderer traits should be kept.
+   */
+  private resolveLeaderLineColor(): AcCmColor | undefined {
+    const style = this.resolveDimensionStyle()
+    if (!style) return undefined
+    const dimColor = acdbDecodeDimStyleColor(style.dimclrd)
+    if (dimColor.isByBlock) return this.resolveByBlockLeaderColor()
+    if (dimColor.isByLayer) return this.resolveLayerLeaderColor()
+    return dimColor
+  }
+
+  /**
+   * Whether {@link resolveLeaderLineColor} would paint something other than
+   * the color `worldDraw` already stored on the renderer.
+   */
+  private leaderLineColorDiffersFromEntity(): boolean {
+    const leaderColor = this.resolveLeaderLineColor()
+    if (!leaderColor) return false
+    try {
+      return !leaderColor.equals(this.resolvedColor)
+    } catch {
+      return true
+    }
+  }
+
+  /**
+   * DXF group 77, used only when DIMCLRD is ByBlock.
+   *
+   * `0` and a missing value keep the entity color. `256` is ByLayer.
+   */
+  private resolveByBlockLeaderColor(): AcCmColor | undefined {
+    const override = this._byBlockColor
+    if (override == null || override === 0) return undefined
+    if (override === 256) return this.resolveLayerLeaderColor()
+    if (override > 0 && override < 256) {
+      const color = new AcCmColor()
+      color.colorIndex = override
+      return color
+    }
+    return undefined
+  }
+
+  /**
+   * Layer color for DIMCLRD / group 77 ByLayer.
+   *
+   * The returned color is a clone so assigning it to renderer traits cannot
+   * mutate the layer table record.
+   */
+  private resolveLayerLeaderColor(): AcCmColor | undefined {
+    try {
+      return this.getLayerColor()?.clone()
+    } catch {
+      return undefined
+    }
+  }
+
+  /**
    * Draws the arrowhead (DXF group code 71) at the first leader vertex.
    *
    * The tip sits on the first vertex and the tail points toward the second
@@ -874,11 +961,13 @@ export class AcDbLeader extends AcDbCurve {
    *
    * @param renderer - Renderer used to create the primitive.
    * @param points - Leader draw points whose first entry is the arrow tip.
+   * @param leaderColor - DIMCLRD color, when it replaces the entity color.
    * @returns The arrowhead primitive, or `undefined` when none is drawn.
    */
   private drawArrowHead(
     renderer: AcGiRenderer,
-    points: AcGePoint3d[]
+    points: AcGePoint3d[],
+    leaderColor?: AcCmColor
   ): AcGiEntity | undefined {
     if (!this.hasRenderableArrowHead || points.length < 2) return undefined
 
@@ -912,7 +1001,7 @@ export class AcDbLeader extends AcDbCurve {
       return AcDbRenderingCache.instance.draw(
         renderer,
         blockTableRecord,
-        this.resolvedColor,
+        leaderColor ?? this.resolvedColor,
         [],
         true,
         matrix,

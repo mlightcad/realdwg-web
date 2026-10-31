@@ -26,7 +26,11 @@ import {
   AcDbMText,
   AcDbPolyline
 } from '../src/entity'
-import { AcDbOsnapMode, AcDbRenderingCache } from '../src/misc'
+import {
+  AcDbOsnapMode,
+  AcDbRenderingCache,
+  acdbWriteDimStyleOverrides
+} from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createWorkingDb = () => {
@@ -736,6 +740,139 @@ describe('AcDbLeader', () => {
       const base = new AcGePoint3d(0, 1, 0).applyMatrix4(matrix)
       expect(tip.distanceTo(base)).toBeCloseTo(6, 6)
       drawSpy.mockRestore()
+    })
+
+    it('applies DSTYLE overrides for arrow size, arrow block, and DIMCLRD', () => {
+      const db = createWorkingDb()
+      const arrowBlock = new AcDbBlockTableRecord()
+      arrowBlock.name = '_CLOSEDFILLED'
+      db.tables.blockTable.add(arrowBlock)
+
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'OVERRIDE_STYLE'
+      style.dimldrblk = '_DOT'
+      style.dimasz = 0.4
+      style.dimscale = 40
+      style.dimclrd = 44
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(true)
+      leader.dimensionStyle = 'OVERRIDE_STYLE'
+      const entityColor = new AcCmColor()
+      entityColor.setByLayer()
+      leader.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+      acdbWriteDimStyleOverrides(leader, [
+        { code: 41, value: 2.5 },
+        { code: 176, value: 1 },
+        { code: 341, value: '0' }
+      ])
+
+      const renderer = createArrowRenderer()
+      const originalColor = renderer.subEntityTraits.color
+      let drawnColor: AcCmColor | undefined
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      const drawSpy = jest
+        .spyOn(AcDbRenderingCache.instance, 'draw')
+        .mockReturnValue({ kind: 'arrow-block' } as never)
+
+      leader.subWorldDraw(renderer as never)
+
+      expect(drawnColor?.colorIndex).toBe(1)
+      expect(drawnColor).not.toBe(originalColor)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+      const arrowColor = drawSpy.mock.calls[0][2] as AcCmColor
+      expect(arrowColor.colorIndex).toBe(1)
+      // Code 341 = 0 clears DIMLDRBLK, so the style's `_DOT` is not used.
+      expect(drawSpy.mock.calls[0][1]).toBe(arrowBlock)
+      expect(db.tables.blockTable.getAt('_DOT')).toBeFalsy()
+      const matrix = drawSpy.mock.calls[0][5] as unknown as AcGeMatrix3d
+      const tip = new AcGePoint3d(0, 0, 0).applyMatrix4(matrix)
+      const base = new AcGePoint3d(0, 1, 0).applyMatrix4(matrix)
+      expect(tip.distanceTo(base)).toBeCloseTo(100, 4)
+      drawSpy.mockRestore()
+    })
+
+    it('paints DIMCLRD ByLayer and group 77, and restores the previous traits color', () => {
+      const db = createWorkingDb()
+      const byLayer = new AcDbDimStyleTableRecord()
+      byLayer.name = 'BYLAYER_STYLE'
+      byLayer.dimclrd = 256
+      db.tables.dimStyleTable.add(byLayer)
+
+      const byBlock = new AcDbDimStyleTableRecord()
+      byBlock.name = 'BYBLOCK_STYLE'
+      byBlock.dimclrd = 0
+      db.tables.dimStyleTable.add(byBlock)
+
+      const entityColor = new AcCmColor()
+      entityColor.colorIndex = 1
+
+      const explicit = createLeader(false)
+      explicit.dimensionStyle = 'BYLAYER_STYLE'
+      explicit.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(explicit)
+      // Layer 0 is ACI 7, which differs from the entity ACI, so the batch
+      // path would keep the wrong color.
+      expect(explicit.directBatchPrimitive).toBeNull()
+
+      const renderer = createArrowRenderer()
+      const originalColor = renderer.subEntityTraits.color
+      let drawnColor: AcCmColor | undefined
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      explicit.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(7)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+
+      const grouped = createLeader(false)
+      grouped.dimensionStyle = 'BYBLOCK_STYLE'
+      grouped.byBlockColor = 5
+      grouped.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(grouped)
+      expect(grouped.directBatchPrimitive).toBeNull()
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      grouped.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(5)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+
+      const layerFromGroup = createLeader(false)
+      layerFromGroup.dimensionStyle = 'BYBLOCK_STYLE'
+      layerFromGroup.byBlockColor = 256
+      layerFromGroup.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(layerFromGroup)
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        return { kind: 'lines', points }
+      })
+      layerFromGroup.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(7)
+      expect(renderer.subEntityTraits.color).toBe(originalColor)
+    })
+
+    it('keeps the lineStrip batch path when DIMCLRD resolves to the entity color', () => {
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = 'BYLAYER_STYLE'
+      style.dimclrd = 256
+      db.tables.dimStyleTable.add(style)
+
+      const leader = createLeader(false)
+      leader.dimensionStyle = 'BYLAYER_STYLE'
+      const entityColor = new AcCmColor()
+      entityColor.setByLayer()
+      leader.color = entityColor
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+
+      expect(leader.directBatchPrimitive).toBe('lineStrip')
     })
 
     it('stays off the direct batch path when an arrowhead may be drawn', () => {
