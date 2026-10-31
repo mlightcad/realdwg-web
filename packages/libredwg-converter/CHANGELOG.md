@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.15.19
+
+### Patch Changes
+
+- fix: honors per-entity DSTYLE overrides on dimensions, leaders, and tolerance frames so Properties palette edits survive import. Leaders expose their DXF fields, draw arrowheads and hook lines from their own flags, and paint the line and generated arrow from DIMCLRD instead of the layer color. DIMLDRBLK handles resolve to block names, and a DIMDSEP override no longer splices its ASCII code into the measurement text
+- Updated dependencies
+  - @mlightcad/data-model@1.15.19
+
 ## 3.15.18
 
 ### Patch Changes
