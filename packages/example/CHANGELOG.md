@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.20
+
+### Patch Changes
+
+- feat: records whether a sub-entity's colour was authored ByLayer on graphic traits, so INSERT layer-0 inheritance can resolve ByLayer colours against the INSERT layer while leaving explicit ACI colours untouched. The resolved `color` value is unchanged, so renderers draw exactly as before.
+- Updated dependencies
+  - @mlightcad/data-model@1.15.20
+  - @mlightcad/libredwg-converter@3.15.20
+
 ## 0.15.19
 
 ### Patch Changes
