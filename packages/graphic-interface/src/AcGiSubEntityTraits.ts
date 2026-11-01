@@ -82,4 +82,19 @@ export interface AcGiSubEntityTraits {
    * background).
    */
   isBackgroundFill?: boolean
+
+  /**
+   * Whether the entity's *own* colour was ByLayer before {@link color} was
+   * resolved against the layer table.
+   *
+   * {@link color} is stored pre-resolved, so ByLayer content on an ACI-7 layer
+   * becomes an absolute ACI 7 and is indistinguishable from an explicitly
+   * authored ACI 7. Renderers need the original provenance to decide whether a
+   * layer-0 block entity inherits the INSERT layer's colour: a ByLayer colour
+   * must inherit, an explicit ACI 7 must stay white/black.
+   *
+   * `undefined` means "unknown" (foreign traits, legacy call sites); consumers
+   * must then fall back to inspecting {@link color}.
+   */
+  isColorByLayer?: boolean
 }
