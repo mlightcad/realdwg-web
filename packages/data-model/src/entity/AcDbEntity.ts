@@ -885,6 +885,11 @@ export abstract class AcDbEntity extends AcDbObject {
     }
 
     const traits = renderer.subEntityTraits
+    // Keep `color` resolved (the layer swatch is what actually gets drawn), but
+    // record whether it was authored ByLayer. The two are indistinguishable
+    // afterwards — ByLayer on an ACI-7 layer also resolves to an absolute ACI 7
+    // — and INSERT layer-0 inheritance depends on telling them apart.
+    traits.isColorByLayer = this.color.isByLayer
     traits.color = this.resolvedColor
     traits.lineType = this.lineStyle
     traits.lineTypeScale = this.linetypeScale
