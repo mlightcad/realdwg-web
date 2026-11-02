@@ -1,5 +1,14 @@
 # @mlightcad/graphic-interface
 
+## 3.15.21
+
+### Patch Changes
+
+- fix: keeps style-authored colours on leaders, multileaders and mlines from following the layer colour. LEADER, MULTILEADER and MLINE now record whether the colour they substitute for DIMCLRD or the style is really ByLayer, so a ByLayer leader whose DIMCLRD is red is no longer repainted with the layer's ACI 7 once the viewer re-syncs layer materials
+- Updated dependencies
+  - @mlightcad/common@1.15.21
+  - @mlightcad/geometry-engine@3.15.21
+
 ## 3.15.20
 
 ### Patch Changes
