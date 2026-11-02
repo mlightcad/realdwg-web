@@ -1850,6 +1850,7 @@ export class AcDbMLeader extends AcDbEntity {
     const entities: AcGiEntity[] = []
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
+    const originalIsColorByLayer = traits.isColorByLayer
     const originalLineType = traits.lineType
     const originalLineWeight = traits.lineWeight
     const leaderLineColor = this.getResolvedLeaderLineColor()
@@ -1860,7 +1861,12 @@ export class AcDbMLeader extends AcDbEntity {
     if (
       this.getResolvedLeaderLineType() !== AcDbMLeaderLineType.InvisibleLeader
     ) {
-      this.applyColorTraits(traits, leaderLineColor, originalColor)
+      this.applyColorTraits(
+        traits,
+        leaderLineColor,
+        originalColor,
+        originalIsColorByLayer
+      )
       this.applyLineTraits(traits, leaderLineStyle, leaderLineWeight)
       this._leaders.forEach(leader => {
         leader.leaderLines.forEach(line => {
@@ -1884,7 +1890,12 @@ export class AcDbMLeader extends AcDbEntity {
         this.contentType === AcDbMLeaderContentType.NoneContent ||
         this.hasMText === true)
     if (shouldDrawMText && mtextContent) {
-      this.applyColorTraits(traits, textColor, originalColor)
+      this.applyColorTraits(
+        traits,
+        textColor,
+        originalColor,
+        originalIsColorByLayer
+      )
       const textHeight = presentation.textHeight
       const mtextData: AcGiMTextData = {
         text: mtextContent.text,
@@ -1904,6 +1915,7 @@ export class AcDbMLeader extends AcDbEntity {
     }
 
     traits.color = originalColor
+    traits.isColorByLayer = originalIsColorByLayer
     traits.lineType = originalLineType
     traits.lineWeight = originalLineWeight
     this._drawPresentation = undefined
@@ -3792,18 +3804,20 @@ export class AcDbMLeader extends AcDbEntity {
    * @param traits Renderer traits object to mutate.
    * @param color Effective component color to apply.
    * @param originalColor Original trait color value.
-   * @param originalRgbColor Original trait RGB value.
+   * @param originalIsColorByLayer Original trait ByLayer provenance.
    * @returns `void`.
    */
   private applyColorTraits(
     traits: AcGiRenderer['subEntityTraits'],
     color: AcCmColor | undefined,
-    originalColor: AcGiRenderer['subEntityTraits']['color']
+    originalColor: AcGiRenderer['subEntityTraits']['color'],
+    originalIsColorByLayer: boolean | undefined
   ) {
     traits.color = originalColor
+    traits.isColorByLayer = originalIsColorByLayer
     if (!color) return
 
-    traits.color = color
+    this.applyTraitsColor(traits, color)
   }
 
   /**

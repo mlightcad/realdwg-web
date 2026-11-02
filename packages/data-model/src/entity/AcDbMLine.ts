@@ -226,6 +226,12 @@ export class AcDbMLine extends AcDbEntity {
   private _startPosition: AcGePoint3d
   private _normal: AcGeVector3d
   private _segments: AcDbMLineSegment[]
+  /**
+   * Entity color ByLayer provenance captured at the start of the current
+   * {@link subWorldDraw}, restored whenever traits fall back to the entity
+   * color between style-colored parts.
+   */
+  private _drawIsColorByLayer?: boolean
 
   /**
    * Creates a new MLINE entity initialized with AutoCAD-compatible defaults.
@@ -692,13 +698,14 @@ export class AcDbMLine extends AcDbEntity {
     const elementCount = this.getRenderableElementCount(mlineStyle)
     const traits = renderer.subEntityTraits
     const originalColor = traits.color
+    this._drawIsColorByLayer = traits.isColorByLayer
     const originalLineType = traits.lineType
     const originalFillType = traits.fillType
     const originalDrawOrder = traits.drawOrder
 
     const fillArea = this.createFillArea(mlineStyle, elementCount)
     if (fillArea) {
-      traits.color = originalColor
+      this.resetTraitsColor(traits, originalColor)
       this.applyFillTraits(mlineStyle, traits)
       traits.fillType = {
         solidFill: true,
@@ -716,7 +723,7 @@ export class AcDbMLine extends AcDbEntity {
       if (reference.length >= 2) entities.push(renderer.lines(reference))
     } else {
       for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
-        traits.color = originalColor
+        this.resetTraitsColor(traits, originalColor)
         traits.lineType = originalLineType
         this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
         const points = this.getElementPath(elementIndex, mlineStyle)
@@ -733,7 +740,7 @@ export class AcDbMLine extends AcDbEntity {
         originalLineType
       )
     }
-    traits.color = originalColor
+    this.resetTraitsColor(traits, originalColor)
     traits.lineType = originalLineType
     traits.fillType = originalFillType
     traits.drawOrder = originalDrawOrder
@@ -1903,7 +1910,7 @@ export class AcDbMLine extends AcDbEntity {
     mlineStyle: AcDbMlineStyle,
     elementIndex: number
   ) {
-    traits.color = originalColor
+    this.resetTraitsColor(traits, originalColor)
     traits.lineType = originalLineType
     this.applyStyleElementTraits(mlineStyle, elementIndex, traits)
   }
@@ -1983,7 +1990,7 @@ export class AcDbMLine extends AcDbEntity {
 
     if (styleElement.color.isByBlock || styleElement.color.isByLayer) return
 
-    traits.color = styleElement.color.clone()
+    this.applyTraitsColor(traits, styleElement.color.clone())
   }
 
   /**
@@ -2000,7 +2007,22 @@ export class AcDbMLine extends AcDbEntity {
     const fillColor = mlineStyle?.fillColor
     if (!fillColor || fillColor.isByBlock || fillColor.isByLayer) return
 
-    traits.color = fillColor.clone()
+    this.applyTraitsColor(traits, fillColor.clone())
+  }
+
+  /**
+   * Puts the entity color back on `traits` together with the ByLayer
+   * provenance captured when the current draw started.
+   *
+   * @param traits Mutable renderer trait set.
+   * @param originalColor Original trait color.
+   */
+  private resetTraitsColor(
+    traits: AcGiRenderer['subEntityTraits'],
+    originalColor: AcGiRenderer['subEntityTraits']['color']
+  ) {
+    traits.color = originalColor
+    traits.isColorByLayer = this._drawIsColorByLayer
   }
 
   /**

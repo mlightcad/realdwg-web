@@ -914,6 +914,58 @@ describe('AcDbLeader', () => {
       expect(renderer.subEntityTraits.color).toBe(originalColor)
     })
 
+    it('records ByLayer provenance for the DIMCLRD color it paints', () => {
+      // Handles 617BA / 62592: a ByLayer leader on layer 0 whose DSTYLE
+      // override sets DIMCLRD to red. `worldDraw` flags the traits as ByLayer
+      // for the entity color; keeping that flag on the substituted red lets
+      // renderers repaint the leader with the layer's ACI 7.
+      const db = createWorkingDb()
+      const style = new AcDbDimStyleTableRecord()
+      style.name = '1-40-4'
+      style.dimclrd = 44
+      db.tables.dimStyleTable.add(style)
+      const byLayerStyle = new AcDbDimStyleTableRecord()
+      byLayerStyle.name = 'BYLAYER_STYLE'
+      byLayerStyle.dimclrd = 256
+      db.tables.dimStyleTable.add(byLayerStyle)
+
+      const red = createLeader(false)
+      red.dimensionStyle = '1-40-4'
+      const byLayerColor = new AcCmColor()
+      byLayerColor.setByLayer()
+      red.color = byLayerColor
+      db.tables.blockTable.modelSpace.appendEntity(red)
+      acdbWriteDimStyleOverrides(red, [{ code: 176, value: 1 }])
+
+      const renderer = createArrowRenderer()
+      renderer.subEntityTraits.isColorByLayer = true
+      let drawnColor: AcCmColor | undefined
+      let drawnIsColorByLayer: unknown
+      renderer.lines = jest.fn((points: unknown[]) => {
+        drawnColor = renderer.subEntityTraits.color as AcCmColor
+        drawnIsColorByLayer = renderer.subEntityTraits.isColorByLayer
+        return { kind: 'lines', points }
+      })
+      red.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(1)
+      expect(drawnIsColorByLayer).toBe(false)
+      expect(renderer.subEntityTraits.isColorByLayer).toBe(true)
+
+      // DIMCLRD ByLayer paints the layer color, so it must follow the layer
+      // even when the entity color itself is explicit.
+      const layered = createLeader(false)
+      layered.dimensionStyle = 'BYLAYER_STYLE'
+      const blue = new AcCmColor()
+      blue.colorIndex = 5
+      layered.color = blue
+      db.tables.blockTable.modelSpace.appendEntity(layered)
+      renderer.subEntityTraits.isColorByLayer = false
+      layered.subWorldDraw(renderer as never)
+      expect(drawnColor?.colorIndex).toBe(7)
+      expect(drawnIsColorByLayer).toBe(true)
+      expect(renderer.subEntityTraits.isColorByLayer).toBe(false)
+    })
+
     it('keeps the lineStrip batch path when DIMCLRD resolves to the entity color', () => {
       const db = createWorkingDb()
       const style = new AcDbDimStyleTableRecord()

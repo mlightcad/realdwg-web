@@ -14,7 +14,8 @@ import {
   AcGiLineStyle,
   AcGiLineWeight,
   AcGiRenderer,
-  AcGiStyleType
+  AcGiStyleType,
+  AcGiSubEntityTraits
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
@@ -906,6 +907,37 @@ export abstract class AcDbEntity extends AcDbObject {
     const drawable = this.subWorldDraw(renderer, delay)
     this.attachEntityInfo(drawable)
     return drawable
+  }
+
+  /**
+   * Paints `traits` with a color taken from a style (DIMCLRD, MLEADER style
+   * colors) instead of this entity's own color.
+   *
+   * {@link worldDraw} records on the traits whether the entity color was
+   * ByLayer. A substituted color carries its own provenance: leaving the
+   * entity's flag in place makes renderers treat an explicit style color as
+   * layer-bound and repaint it with the layer color.
+   *
+   * @param traits - Renderer traits to update.
+   * @param color - Color to draw with.
+   * @param isByLayer - Whether `color` follows the layer. Defaults to
+   *   `color.isByLayer`; pass `true` for a layer color already resolved to a
+   *   concrete value.
+   * @returns A callback restoring the previous color and provenance.
+   */
+  protected applyTraitsColor(
+    traits: AcGiSubEntityTraits,
+    color: AcCmColor,
+    isByLayer: boolean = color.isByLayer
+  ): () => void {
+    const previousColor = traits.color
+    const previousIsColorByLayer = traits.isColorByLayer
+    traits.color = color
+    traits.isColorByLayer = isByLayer
+    return () => {
+      traits.color = previousColor
+      traits.isColorByLayer = previousIsColorByLayer
+    }
   }
 
   /**

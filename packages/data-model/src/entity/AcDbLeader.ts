@@ -856,12 +856,15 @@ export class AcDbLeader extends AcDbCurve {
     // Geometry-only renderers omit traits. Touch them only when a dimension
     // color has to replace the entity color for this draw.
     if (leaderColor && traits) {
-      const previousColor = traits.color
-      traits.color = leaderColor
+      const restoreColor = this.applyTraitsColor(
+        traits,
+        leaderColor,
+        this.leaderLineColorFollowsLayer()
+      )
       try {
         drawGeometry()
       } finally {
-        traits.color = previousColor
+        restoreColor()
       }
     } else {
       drawGeometry()
@@ -906,16 +909,33 @@ export class AcDbLeader extends AcDbCurve {
 
   /**
    * Whether {@link resolveLeaderLineColor} would paint something other than
-   * the color `worldDraw` already stored on the renderer.
+   * the color `worldDraw` already stored on the renderer, including whether
+   * that color follows the layer.
    */
   private leaderLineColorDiffersFromEntity(): boolean {
     const leaderColor = this.resolveLeaderLineColor()
     if (!leaderColor) return false
     try {
-      return !leaderColor.equals(this.resolvedColor)
+      return (
+        !leaderColor.equals(this.resolvedColor) ||
+        this.leaderLineColorFollowsLayer() !== this.color.isByLayer
+      )
     } catch {
       return true
     }
+  }
+
+  /**
+   * Whether {@link resolveLeaderLineColor} paints the layer color: DIMCLRD is
+   * ByLayer, or ByBlock with group 77 set to ByLayer. The returned color is
+   * already concrete, so renderers need this to keep it bound to the layer.
+   */
+  private leaderLineColorFollowsLayer(): boolean {
+    const style = this.resolveDimensionStyle()
+    if (!style) return false
+    const dimColor = acdbDecodeDimStyleColor(style.dimclrd)
+    if (dimColor.isByLayer) return true
+    return dimColor.isByBlock && this._byBlockColor === 256
   }
 
   /**
