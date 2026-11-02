@@ -233,6 +233,68 @@ describe('AcDbMLine', () => {
     expect(traits.drawOrder).toBe(0)
   })
 
+  it('records ByLayer provenance for the style colors it paints', () => {
+    const db = createDb()
+
+    const style = new AcDbMlineStyle()
+    style.styleName = 'PROVENANCE_STYLE'
+    // Fill plus square start/end caps, so the cap helpers reset traits too.
+    style.flags = 1 | 16 | 256
+    style.fillColor = createAciColor(1)
+    style.elements = [
+      { offset: 0.5, color: createAciColor(3), lineType: 'BYLAYER' },
+      { offset: -0.5, color: createAciColor(256), lineType: 'BYLAYER' }
+    ]
+    db.objects.mlineStyle.setAt(style.styleName, style)
+
+    const mline = createBasicMline(style)
+    db.tables.blockTable.modelSpace.appendEntity(mline)
+
+    // A ByLayer MLINE: `worldDraw` flags the entity color as ByLayer.
+    const baseColor = new AcCmColor()
+    baseColor.colorIndex = 7
+    const traits = {
+      color: baseColor,
+      isColorByLayer: true as boolean | undefined,
+      fillType: {
+        solidFill: false,
+        patternAngle: 0,
+        definitionLines: []
+      },
+      drawOrder: 0
+    }
+    const snapshots: Array<{
+      isEntityColor: boolean
+      isColorByLayer: unknown
+    }> = []
+    const snapshot = (kind: string) => {
+      snapshots.push({
+        isEntityColor: traits.color === baseColor,
+        isColorByLayer: traits.isColorByLayer
+      })
+      return { kind }
+    }
+    const renderer = {
+      subEntityTraits: traits,
+      area: jest.fn(() => snapshot('area')),
+      lines: jest.fn(() => snapshot('line')),
+      circularArc: jest.fn(() => snapshot('arc')),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities }))
+    }
+
+    mline.subWorldDraw(renderer as never)
+
+    // Explicit style colors must not stay bound to the layer, and the ByLayer
+    // element must get the entity's provenance back after an explicit one.
+    expect(snapshots.some(s => !s.isEntityColor)).toBe(true)
+    expect(snapshots.some(s => s.isEntityColor)).toBe(true)
+    for (const s of snapshots) {
+      expect(s.isColorByLayer).toBe(s.isEntityColor)
+    }
+    expect(traits.color).toBe(baseColor)
+    expect(traits.isColorByLayer).toBe(true)
+  })
+
   it('does not render fill area when fill flag is disabled', () => {
     const db = createDb()
 

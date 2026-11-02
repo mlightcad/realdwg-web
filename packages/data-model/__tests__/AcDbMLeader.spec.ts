@@ -266,6 +266,43 @@ describe('AcDbMLeader arrowhead rendering', () => {
     expect(mtextRgb).toBe(0x00aa00)
   })
 
+  it('records ByLayer provenance for the style colors it paints', () => {
+    const db = createWorkingDb()
+    const mleader = createSimpleLeader(db)
+    mleader.contents = 'Color by style'
+    mleader.textLocation = new AcGePoint3d(5, 2, 0)
+    mleader.color = new AcCmColor().setByLayer()
+    mleader.leaderLineColor = new AcCmColor().setByBlock()
+    mleader.textColor = new AcCmColor().setByLayer()
+
+    const style = new AcDbMLeaderStyle()
+    style.leaderLineColor = new AcCmColor(AcCmColorMethod.ByColor, 0xff0000)
+    style.textColor = new AcCmColor().setByLayer()
+    db.objects.mleaderStyle.setAt(style.objectId, style)
+    mleader.mleaderStyleId = style.objectId
+
+    const renderer = createRenderer()
+    const traits = renderer.subEntityTraits as unknown as AcGiSubEntityTraits
+    const lineProvenance: unknown[] = []
+    let mtextProvenance: unknown
+    renderer.lines.mockImplementation((points: unknown[]) => {
+      lineProvenance.push(traits.isColorByLayer)
+      return { kind: 'lines', points }
+    })
+    renderer.mtext.mockImplementation(() => {
+      mtextProvenance = traits.isColorByLayer
+      return { kind: 'mtext' }
+    })
+
+    mleader.worldDraw(renderer as never)
+
+    // An explicit style color on a ByLayer MULTILEADER must not stay bound
+    // to the layer, or renderers repaint it with the layer color.
+    expect(lineProvenance[0]).toBe(false)
+    expect(mtextProvenance).toBe(true)
+    expect(traits.isColorByLayer).toBe(true)
+  })
+
   it('forwards the delay flag to nested MText rendering', () => {
     const db = createWorkingDb()
     const mleader = createSimpleLeader(db)
