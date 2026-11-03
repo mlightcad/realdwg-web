@@ -87,6 +87,47 @@ describe('AcDbWipeout', () => {
     expect(boundary[3]).toMatchObject({ x: 100, y: 240 })
   })
 
+  it('resets the fill type to solid so a previous hatch pattern does not leak', () => {
+    const wipeout = new AcDbWipeout()
+    wipeout.position = new AcGePoint3d(0, 0, 0)
+    wipeout.width = 560
+    wipeout.height = 2100
+
+    // Traits as a previously drawn patterned hatch (ANSI38) leaves them.
+    const traits = {
+      isBackgroundFill: false,
+      fillType: {
+        solidFill: false,
+        patternAngle: Math.PI,
+        definitionLines: [
+          {
+            angle: Math.PI / 4,
+            base: { x: 0, y: 0 },
+            offset: { x: -0.4419, y: 0.4419 },
+            dashLengths: []
+          }
+        ]
+      }
+    }
+    let fillTypeAtDraw: unknown
+    const renderer = {
+      subEntityTraits: traits,
+      area: jest.fn(() => {
+        fillTypeAtDraw = JSON.parse(JSON.stringify(traits.fillType))
+        return 'ok'
+      })
+    }
+
+    wipeout.subWorldDraw(renderer as never)
+
+    expect(traits.isBackgroundFill).toBe(true)
+    expect(fillTypeAtDraw).toEqual({
+      solidFill: true,
+      patternAngle: 0,
+      definitionLines: []
+    })
+  })
+
   it('writes wipeout DXF fields using raster-image subclass marker', () => {
     createWorkingDb()
     const wipeout = new AcDbWipeout()

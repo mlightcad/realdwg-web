@@ -39,10 +39,21 @@ export class AcDbWipeout extends AcDbRasterImage {
    * @returns The rendered entity or undefined if rendering fails
    */
   subWorldDraw(renderer: AcGiRenderer) {
+    const traits = renderer.subEntityTraits
     // AutoCAD paints wipeouts with the layout background, not the entity
     // colour. Flag the fill so renderers track MODELBKCOLOR / PAPERBKCOLOR
     // (and theme flips) instead of resolving ACI / ByLayer to black/white.
-    renderer.subEntityTraits.isBackgroundFill = true
+    traits.isBackgroundFill = true
+    // A wipeout is always a solid mask. Traits are shared across entities,
+    // so without this the pattern of the last hatch drawn leaks in: the
+    // viewer drew the wipeout as background-coloured hatch lines that did
+    // not mask, and PDF export tessellated a dense pattern across the whole
+    // wipeout (hundreds of thousands of strokes per wipeout).
+    traits.fillType = {
+      solidFill: true,
+      patternAngle: 0,
+      definitionLines: []
+    }
     const points = this.boundaryPath()
     const area = new AcGeArea2d()
     area.add(new AcGePolyline2d(points))
