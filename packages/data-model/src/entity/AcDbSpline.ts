@@ -16,6 +16,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { AcDbPolyline } from './AcDbPolyline.js'
 
 function resolveSplineKnotParameterization(
@@ -559,6 +560,184 @@ export class AcDbSpline extends AcDbCurve {
   }
   set normal(value: AcGeVector3dLike) {
     this._normal.copy(value)
+  }
+
+  /**
+   * Returns the full property definition for this spline entity, including
+   * general group and geometry group.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'controlPoints',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  {
+                    name: 'x',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'y',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'z',
+                    type: 'float',
+                    editable: false
+                  }
+                ]
+              },
+              accessor: {
+                get: () => this._geo.controlPoints
+              }
+            },
+            {
+              name: 'fitPoints',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  {
+                    name: 'x',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'y',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'z',
+                    type: 'float',
+                    editable: false
+                  }
+                ]
+              },
+              accessor: {
+                get: () => this._geo.fitPoints ?? []
+              }
+            },
+            {
+              name: 'degree',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this._geo.degree
+              }
+            },
+            {
+              name: 'length',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this._geo.length
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this.area
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'others',
+          properties: [
+            {
+              name: 'closed',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.closed,
+                set: (v: boolean) => {
+                  this.closed = v
+                }
+              }
+            },
+            {
+              name: 'knotTolerance',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.knotTolerance,
+                set: (v: number) => {
+                  this.knotTolerance = v
+                }
+              }
+            },
+            {
+              name: 'controlTolerance',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.controlTolerance,
+                set: (v: number) => {
+                  this.controlTolerance = v
+                }
+              }
+            },
+            {
+              name: 'fitTolerance',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.fitTolerance,
+                set: (v: number) => {
+                  this.fitTolerance = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

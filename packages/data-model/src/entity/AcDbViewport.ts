@@ -16,6 +16,7 @@ import {
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale.js'
 import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 
@@ -557,6 +558,309 @@ export class AcDbViewport extends AcDbEntity {
   }
   set viewHeight(value: number) {
     this._viewHeight = value
+  }
+
+  /**
+   * Returns the full property definition for this viewport entity.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'viewport',
+          properties: [
+            {
+              name: 'number',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.number,
+                set: (v: number) => {
+                  this.number = v
+                }
+              }
+            },
+            {
+              name: 'centerX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.centerPoint.x,
+                set: (v: number) => {
+                  this.centerPoint.x = v
+                }
+              }
+            },
+            {
+              name: 'centerY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.centerPoint.y,
+                set: (v: number) => {
+                  this.centerPoint.y = v
+                }
+              }
+            },
+            {
+              name: 'centerZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.centerPoint.z,
+                set: (v: number) => {
+                  this.centerPoint.z = v
+                }
+              }
+            },
+            {
+              name: 'width',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.width,
+                set: (v: number) => {
+                  this.width = v
+                }
+              }
+            },
+            {
+              name: 'height',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.height,
+                set: (v: number) => {
+                  this.height = v
+                }
+              }
+            },
+            {
+              name: 'viewCenterX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewCenter.x,
+                set: (v: number) => {
+                  this.viewCenter.x = v
+                }
+              }
+            },
+            {
+              name: 'viewCenterY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewCenter.y,
+                set: (v: number) => {
+                  this.viewCenter.y = v
+                }
+              }
+            },
+            {
+              name: 'viewCenterZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewCenter.z,
+                set: (v: number) => {
+                  this.viewCenter.z = v
+                }
+              }
+            },
+            {
+              name: 'viewHeight',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewHeight,
+                set: (v: number) => {
+                  this.viewHeight = v
+                }
+              }
+            },
+            {
+              name: 'viewTwistAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewTwistAngle,
+                set: (v: number) => {
+                  this.viewTwistAngle = v
+                }
+              }
+            },
+            {
+              name: 'viewTargetX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewTarget.x,
+                set: (v: number) => {
+                  this.viewTarget.x = v
+                }
+              }
+            },
+            {
+              name: 'viewTargetY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewTarget.y,
+                set: (v: number) => {
+                  this.viewTarget.y = v
+                }
+              }
+            },
+            {
+              name: 'viewTargetZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewTarget.z,
+                set: (v: number) => {
+                  this.viewTarget.z = v
+                }
+              }
+            },
+            {
+              name: 'viewDirectionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewDirection.x,
+                set: (v: number) => {
+                  this.viewDirection.x = v
+                }
+              }
+            },
+            {
+              name: 'viewDirectionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewDirection.y,
+                set: (v: number) => {
+                  this.viewDirection.y = v
+                }
+              }
+            },
+            {
+              name: 'viewDirectionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.viewDirection.z,
+                set: (v: number) => {
+                  this.viewDirection.z = v
+                }
+              }
+            },
+            {
+              name: 'elevation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.elevation,
+                set: (v: number) => {
+                  this.elevation = v
+                }
+              }
+            },
+            {
+              name: 'snapAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.snapAngle,
+                set: (v: number) => {
+                  this.snapAngle = v
+                }
+              }
+            },
+            {
+              name: 'snapSpacingX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.snapSpacing.x,
+                set: (v: number) => {
+                  this.snapSpacing.x = v
+                }
+              }
+            },
+            {
+              name: 'snapSpacingY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.snapSpacing.y,
+                set: (v: number) => {
+                  this.snapSpacing.y = v
+                }
+              }
+            },
+            {
+              name: 'gridSpacingX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.gridSpacing.x,
+                set: (v: number) => {
+                  this.gridSpacing.x = v
+                }
+              }
+            },
+            {
+              name: 'gridSpacingY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.gridSpacing.y,
+                set: (v: number) => {
+                  this.gridSpacing.y = v
+                }
+              }
+            },
+            {
+              name: 'frontClipZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.frontClipZ,
+                set: (v: number) => {
+                  this.frontClipZ = v
+                }
+              }
+            },
+            {
+              name: 'backClipZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.backClipZ,
+                set: (v: number) => {
+                  this.backClipZ = v
+                }
+              }
+            },
+            {
+              name: 'renderMode',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.renderMode,
+                set: (v: number) => {
+                  this.renderMode = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

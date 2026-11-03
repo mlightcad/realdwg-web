@@ -1201,6 +1201,160 @@ export class AcDbHatch extends AcDbEntity {
                   this.patternDouble = v
                 }
               }
+            },
+            {
+              name: 'isGradient',
+              type: 'boolean',
+              editable: false,
+              accessor: {
+                get: () => this.isGradient
+              }
+            },
+            {
+              name: 'isSolidFill',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isSolidFill,
+                set: (v: boolean) => {
+                  this.isSolidFill = v
+                }
+              }
+            },
+            {
+              name: 'hatchStyle',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcDbHatchStyle[0], value: 0 },
+                { label: AcDbHatchStyle[1], value: 1 },
+                { label: AcDbHatchStyle[2], value: 2 }
+              ],
+              accessor: {
+                get: () => this.hatchStyle,
+                set: (v: AcDbHatchStyle) => {
+                  this.hatchStyle = v
+                }
+              }
+            },
+            {
+              name: 'gradientAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.gradientAngle,
+                set: (v: number) => {
+                  this.gradientAngle = v
+                }
+              }
+            },
+            {
+              name: 'gradientName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.gradientName,
+                set: (v: string) => {
+                  this.gradientName = v
+                }
+              }
+            },
+            {
+              name: 'gradientType',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label: AcDbGradientPatternType[0],
+                  value: 0
+                },
+                {
+                  label: AcDbGradientPatternType[1],
+                  value: 1
+                }
+              ],
+              accessor: {
+                get: () => this.gradientType,
+                set: (v: AcDbGradientPatternType) => {
+                  this.gradientType = v
+                }
+              }
+            },
+            {
+              name: 'gradientShift',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.gradientShift,
+                set: (v: number) => {
+                  this.gradientShift = v
+                }
+              }
+            },
+            {
+              name: 'gradientOneColorMode',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.gradientOneColorMode,
+                set: (v: boolean) => {
+                  this.gradientOneColorMode = v
+                }
+              }
+            },
+            {
+              name: 'shadeTintValue',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.shadeTintValue,
+                set: (v: number) => {
+                  this.shadeTintValue = v
+                }
+              }
+            },
+            {
+              name: 'gradientStartColor',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.gradientStartColor ?? 0,
+                set: (v: number) => {
+                  this.gradientStartColor = v
+                }
+              }
+            },
+            {
+              name: 'gradientEndColor',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.gradientEndColor ?? 0,
+                set: (v: number) => {
+                  this.gradientEndColor = v
+                }
+              }
+            },
+            {
+              name: 'hatchObjectType',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label: AcDbHatchObjectType[AcDbHatchObjectType.HatchObject],
+                  value: AcDbHatchObjectType.HatchObject
+                },
+                {
+                  label: AcDbHatchObjectType[AcDbHatchObjectType.GradientObject],
+                  value: AcDbHatchObjectType.GradientObject
+                }
+              ],
+              accessor: {
+                get: () => this.hatchObjectType,
+                set: (v: AcDbHatchObjectType) => {
+                  this.hatchObjectType = v
+                }
+              }
             }
           ]
         },
@@ -1224,6 +1378,39 @@ export class AcDbHatch extends AcDbEntity {
               editable: false,
               accessor: {
                 get: () => this.area
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
               }
             }
           ]

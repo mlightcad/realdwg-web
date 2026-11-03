@@ -449,7 +449,11 @@ describe('AcDbHatch', () => {
       patternName: 'TEST_PATTERN',
       patternAngle: Math.PI / 6,
       patternScale: 3.25,
-      elevation: 6
+      elevation: 6,
+      shadeTintValue: 0.5,
+      gradientStartColor: 0x112233,
+      gradientEndColor: 0x445566,
+      hatchObjectType: AcDbHatchObjectType.HatchObject
     }
 
     for (const group of [patternGroup!, geometryGroup!]) {

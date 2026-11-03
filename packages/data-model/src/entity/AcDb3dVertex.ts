@@ -10,6 +10,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 
 export enum AcDb3dVertexType {
@@ -86,6 +87,67 @@ export class AcDb3dVertex extends AcDbEntity {
    */
   set vertexType(value: AcDb3dVertexType) {
     this._vertexType = value
+  }
+
+  /**
+   * Returns the full property definition for this 3D vertex entity.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'positionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.x,
+                set: (v: number) => {
+                  this.position.x = v
+                }
+              }
+            },
+            {
+              name: 'positionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.y,
+                set: (v: number) => {
+                  this.position.y = v
+                }
+              }
+            },
+            {
+              name: 'positionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.position.z,
+                set: (v: number) => {
+                  this.position.z = v
+                }
+              }
+            },
+            {
+              name: 'vertexType',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.vertexType,
+                set: (v: number) => {
+                  this.vertexType = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

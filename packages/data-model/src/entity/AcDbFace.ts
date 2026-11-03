@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
@@ -162,6 +163,101 @@ export class AcDbFace extends AcDbEntity {
       throw new Error('Index out of range')
     }
     this._edgeInvisibilities = this._edgeInvisibilities | (1 << index)
+  }
+
+  private setEdgeVisibleAt(index: number, visible: boolean) {
+    let mask = 0
+    for (let i = 0; i < 4; i++) {
+      if (!this.isEdgeVisibleAt(i)) {
+        mask |= 1 << i
+      }
+    }
+    if (visible) {
+      mask &= ~(1 << index)
+    } else {
+      mask |= 1 << index
+    }
+    this.setEdgeInvisibilities(mask)
+  }
+
+  /**
+   * Returns the full property definition for this face entity, including
+   * general group and geometry group.
+   */
+  get properties(): AcDbEntityProperties {
+    const edgeVisibilityProperty = (index: number, name: string) => ({
+      name,
+      type: 'boolean' as const,
+      editable: true,
+      accessor: {
+        get: () => this.isEdgeVisibleAt(index),
+        set: (v: boolean) => {
+          this.setEdgeVisibleAt(index, v)
+        }
+      }
+    })
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'vertices',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  {
+                    name: 'x',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'y',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'z',
+                    type: 'float',
+                    editable: false
+                  }
+                ]
+              },
+              accessor: {
+                get: () => {
+                  const count = this._vertices.length
+                  const verts = []
+                  for (let i = 0; i < count; i++) {
+                    verts.push(this.getVertexAt(i))
+                  }
+                  return verts
+                }
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this.area
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'others',
+          properties: [
+            edgeVisibilityProperty(0, 'edge0Visible'),
+            edgeVisibilityProperty(1, 'edge1Visible'),
+            edgeVisibilityProperty(2, 'edge2Visible'),
+            edgeVisibilityProperty(3, 'edge3Visible')
+          ]
+        }
+      ]
+    }
   }
 
   /**

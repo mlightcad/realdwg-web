@@ -18,6 +18,7 @@ import {
   acdbMatchAnnotationScaleContext
 } from '../misc/AcDbAnnotationScale.js'
 import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { AcDbMText } from './AcDbMText.js'
 import { AcDbText } from './AcDbText.js'
 /**
@@ -514,6 +515,146 @@ export class AcDbAttributeDefinition extends AcDbText {
       this.textString = saved
     }
   }
+
+  /**
+   * Returns the full property definition for this attribute definition entity.
+   */
+  override get properties(): AcDbEntityProperties {
+    const base = this.getTextProperties()
+    return {
+      type: this.type,
+      groups: [
+        ...base.groups,
+        {
+          groupName: 'attribute',
+          properties: [
+            {
+              name: 'tag',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.tag,
+                set: (v: string) => {
+                  this.tag = v
+                }
+              }
+            },
+            {
+              name: 'prompt',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.prompt,
+                set: (v: string) => {
+                  this.prompt = v
+                }
+              }
+            },
+            {
+              name: 'isInvisible',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isInvisible,
+                set: (v: boolean) => {
+                  this.isInvisible = v
+                }
+              }
+            },
+            {
+              name: 'isConst',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isConst,
+                set: (v: boolean) => {
+                  this.isConst = v
+                }
+              }
+            },
+            {
+              name: 'isVerifiable',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isVerifiable,
+                set: (v: boolean) => {
+                  this.isVerifiable = v
+                }
+              }
+            },
+            {
+              name: 'isPreset',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isPreset,
+                set: (v: boolean) => {
+                  this.isPreset = v
+                }
+              }
+            },
+            {
+              name: 'isMTextAttribute',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isMTextAttribute,
+                set: (v: boolean) => {
+                  this.isMTextAttribute = v
+                }
+              }
+            },
+            {
+              name: 'fieldLength',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.fieldLength,
+                set: (v: number) => {
+                  this.fieldLength = v
+                }
+              }
+            },
+            {
+              name: 'lockPositionInBlock',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.lockPositionInBlock,
+                set: (v: boolean) => {
+                  this.lockPositionInBlock = v
+                }
+              }
+            },
+            {
+              name: 'isReallyLocked',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isReallyLocked,
+                set: (v: boolean) => {
+                  this.isReallyLocked = v
+                }
+              }
+            },
+            {
+              name: 'isConstMTextAttribute',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isConstMTextAttribute,
+                set: (v: boolean) => {
+                  this.isConstMTextAttribute = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
+  }
+
   /**
    * Writes DXF fields for this object.
    *

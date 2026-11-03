@@ -389,6 +389,72 @@ export class AcDbFcf extends AcDbEntity {
                   this.location.z = v
                 }
               }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            },
+            {
+              name: 'directionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.x,
+                set: (v: number) => {
+                  this.direction.x = v
+                }
+              }
+            },
+            {
+              name: 'directionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.y,
+                set: (v: number) => {
+                  this.direction.y = v
+                }
+              }
+            },
+            {
+              name: 'directionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.direction.z,
+                set: (v: number) => {
+                  this.direction.z = v
+                }
+              }
             }
           ]
         }

@@ -509,6 +509,260 @@ export class AcDbArcAlignedText extends AcDbEntity {
                   this.textSize = v
                 }
               }
+            },
+            {
+              name: 'xScale',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.xScale,
+                set: (v: number) => {
+                  this.xScale = v
+                }
+              }
+            },
+            {
+              name: 'characterSpacing',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.characterSpacing,
+                set: (v: number) => {
+                  this.characterSpacing = v
+                }
+              }
+            },
+            {
+              name: 'offsetFromArc',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.offsetFromArc,
+                set: (v: number) => {
+                  this.offsetFromArc = v
+                }
+              }
+            },
+            {
+              name: 'alignment',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label: AcDbArcTextAlignment[AcDbArcTextAlignment.Fit],
+                  value: AcDbArcTextAlignment.Fit
+                },
+                {
+                  label: AcDbArcTextAlignment[AcDbArcTextAlignment.Left],
+                  value: AcDbArcTextAlignment.Left
+                },
+                {
+                  label: AcDbArcTextAlignment[AcDbArcTextAlignment.Right],
+                  value: AcDbArcTextAlignment.Right
+                },
+                {
+                  label: AcDbArcTextAlignment[AcDbArcTextAlignment.Center],
+                  value: AcDbArcTextAlignment.Center
+                }
+              ],
+              accessor: {
+                get: () => this.alignment,
+                set: (v: AcDbArcTextAlignment) => {
+                  this.alignment = v
+                }
+              }
+            },
+            {
+              name: 'isBold',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isBold,
+                set: (v: boolean) => {
+                  this.isBold = v
+                }
+              }
+            },
+            {
+              name: 'isItalic',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isItalic,
+                set: (v: boolean) => {
+                  this.isItalic = v
+                }
+              }
+            },
+            {
+              name: 'isUnderlined',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isUnderlined,
+                set: (v: boolean) => {
+                  this.isUnderlined = v
+                }
+              }
+            },
+            {
+              name: 'isReverse',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isReverse,
+                set: (v: boolean) => {
+                  this.isReverse = v
+                }
+              }
+            },
+            {
+              name: 'fontName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.fontName,
+                set: (v: string) => {
+                  this.fontName = v
+                }
+              }
+            },
+            {
+              name: 'bigFontName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.bigFontName,
+                set: (v: string) => {
+                  this.bigFontName = v
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'centerX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.x,
+                set: (v: number) => {
+                  this.center.x = v
+                }
+              }
+            },
+            {
+              name: 'centerY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.y,
+                set: (v: number) => {
+                  this.center.y = v
+                }
+              }
+            },
+            {
+              name: 'centerZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.center.z,
+                set: (v: number) => {
+                  this.center.z = v
+                }
+              }
+            },
+            {
+              name: 'radius',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.radius,
+                set: (v: number) => {
+                  this.radius = v
+                }
+              }
+            },
+            {
+              name: 'startAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startAngle,
+                set: (v: number) => {
+                  this.startAngle = v
+                }
+              }
+            },
+            {
+              name: 'endAngle',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.endAngle,
+                set: (v: number) => {
+                  this.endAngle = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            },
+            {
+              name: 'leftOffset',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.leftOffset,
+                set: (v: number) => {
+                  this.leftOffset = v
+                }
+              }
+            },
+            {
+              name: 'rightOffset',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rightOffset,
+                set: (v: number) => {
+                  this.rightOffset = v
+                }
+              }
             }
           ]
         }

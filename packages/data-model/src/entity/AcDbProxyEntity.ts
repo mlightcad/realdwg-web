@@ -13,6 +13,7 @@ import {
   AcDbProxyGraphic
 } from '../misc/proxyGraphic/index.js'
 import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
@@ -399,6 +400,79 @@ export class AcDbProxyEntity extends AcDbEntity {
       }
     })
     return this
+  }
+
+  /**
+   * Returns the full property definition for this proxy entity.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'proxy',
+          properties: [
+            {
+              name: 'originalDxfName',
+              type: 'string',
+              editable: false,
+              accessor: {
+                get: () => this.originalDxfName
+              }
+            },
+            {
+              name: 'originalClassName',
+              type: 'string',
+              editable: false,
+              accessor: {
+                get: () => this.originalClassName
+              }
+            },
+            {
+              name: 'applicationName',
+              type: 'string',
+              editable: false,
+              accessor: {
+                get: () => this.applicationName
+              }
+            },
+            {
+              name: 'proxyEntityClassId',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.proxyEntityClassId
+              }
+            },
+            {
+              name: 'applicationEntityClassId',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.applicationEntityClassId
+              }
+            },
+            {
+              name: 'objectDrawingFormat',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.objectDrawingFormat
+              }
+            },
+            {
+              name: 'originalDataFormat',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.originalDataFormat
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

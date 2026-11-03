@@ -17,6 +17,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
@@ -312,6 +313,119 @@ export class AcDbTrace extends AcDbCurve {
       pickPoint,
       snapPoints
     )
+  }
+
+  /**
+   * Returns the full property definition for this trace entity, including
+   * general group and geometry group.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'vertices',
+              type: 'array',
+              editable: false,
+              itemSchema: {
+                properties: [
+                  {
+                    name: 'x',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'y',
+                    type: 'float',
+                    editable: false
+                  },
+                  {
+                    name: 'z',
+                    type: 'float',
+                    editable: false
+                  }
+                ]
+              },
+              accessor: {
+                get: () => [
+                  this.getPointAt(0),
+                  this.getPointAt(1),
+                  this.getPointAt(2),
+                  this.getPointAt(3)
+                ]
+              }
+            },
+            {
+              name: 'elevation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.elevation,
+                set: (v: number) => {
+                  this.elevation = v
+                }
+              }
+            },
+            {
+              name: 'thickness',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.thickness,
+                set: (v: number) => {
+                  this.thickness = v
+                }
+              }
+            },
+            {
+              name: 'area',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this.area
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /**

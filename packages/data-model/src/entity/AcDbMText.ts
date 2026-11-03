@@ -829,6 +829,146 @@ export class AcDbMText extends AcDbEntity {
                   this.direction.z = v
                 }
               }
+            },
+            {
+              name: 'lineSpacingStyle',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.lineSpacingStyle,
+                set: (v: number) => {
+                  this.lineSpacingStyle = v
+                }
+              }
+            },
+            {
+              name: 'backgroundFill',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.backgroundFill,
+                set: (v: boolean) => {
+                  this.backgroundFill = v
+                }
+              }
+            },
+            {
+              name: 'backgroundFillColor',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.backgroundFillColor,
+                set: (v: number) => {
+                  this.backgroundFillColor = v
+                }
+              }
+            },
+            {
+              name: 'backgroundScaleFactor',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.backgroundScaleFactor,
+                set: (v: number) => {
+                  this.backgroundScaleFactor = v
+                }
+              }
+            },
+            {
+              name: 'annotationHeight',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.annotationHeight,
+                set: (v: number) => {
+                  this.annotationHeight = v
+                }
+              }
+            },
+            {
+              name: 'columnType',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.columnType,
+                set: (v: number) => {
+                  this.columnType = v
+                }
+              }
+            },
+            {
+              name: 'columnCount',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.columnCount,
+                set: (v: number) => {
+                  this.columnCount = v
+                }
+              }
+            },
+            {
+              name: 'columnWidth',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.columnWidth,
+                set: (v: number) => {
+                  this.columnWidth = v
+                }
+              }
+            },
+            {
+              name: 'columnGutter',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.columnGutter,
+                set: (v: number) => {
+                  this.columnGutter = v
+                }
+              }
+            },
+            {
+              name: 'columnAutoHeight',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.columnAutoHeight,
+                set: (v: boolean) => {
+                  this.columnAutoHeight = v
+                }
+              }
+            },
+            {
+              name: 'columnFlowReversed',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.columnFlowReversed,
+                set: (v: boolean) => {
+                  this.columnFlowReversed = v
+                }
+              }
+            },
+            {
+              name: 'backgroundFillTransparency',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.backgroundFillTransparency,
+                set: (v: number) => {
+                  this.backgroundFillTransparency = v
+                }
+              }
+            },
+            {
+              name: 'extentsWidth',
+              type: 'float',
+              editable: false,
+              accessor: {
+                get: () => this.extentsWidth
+              }
             }
           ]
         },
@@ -865,6 +1005,39 @@ export class AcDbMText extends AcDbEntity {
                 get: () => this.location.z,
                 set: (v: number) => {
                   this.location.z = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
                 }
               }
             }

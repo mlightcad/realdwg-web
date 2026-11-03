@@ -316,6 +316,25 @@ export class AcDb3dPolyline extends AcDbCurve {
               accessor: {
                 get: () => this._geo.length
               }
+            },
+            {
+              name: 'polyType',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.polyType,
+                set: (v: number) => {
+                  this.polyType = v
+                }
+              }
+            },
+            {
+              name: 'numberOfVertices',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.numberOfVertices
+              }
             }
           ]
         },
@@ -324,7 +343,7 @@ export class AcDb3dPolyline extends AcDbCurve {
           properties: [
             {
               name: 'closed',
-              type: 'float',
+              type: 'boolean',
               editable: true,
               accessor: {
                 get: () => this.closed,

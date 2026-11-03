@@ -708,7 +708,7 @@ export class AcDbBlockReference extends AcDbEntity {
             },
             {
               name: 'blockName',
-              type: 'float',
+              type: 'string',
               editable: false,
               accessor: {
                 get: () => this._blockName
@@ -821,6 +821,50 @@ export class AcDbBlockReference extends AcDbEntity {
                 get: () => this.normal.z,
                 set: (v: number) => {
                   this.normal.z = v
+                }
+              }
+            },
+            {
+              name: 'columnCount',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.columnCount,
+                set: (v: number) => {
+                  this.columnCount = v
+                }
+              }
+            },
+            {
+              name: 'rowCount',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.rowCount,
+                set: (v: number) => {
+                  this.rowCount = v
+                }
+              }
+            },
+            {
+              name: 'columnSpacing',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.columnSpacing,
+                set: (v: number) => {
+                  this.columnSpacing = v
+                }
+              }
+            },
+            {
+              name: 'rowSpacing',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.rowSpacing,
+                set: (v: number) => {
+                  this.rowSpacing = v
                 }
               }
             }

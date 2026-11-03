@@ -64,7 +64,11 @@ describe('AcDbLine', () => {
       'endX',
       'endY',
       'endZ',
-      'length'
+      'length',
+      'thickness',
+      'normalX',
+      'normalY',
+      'normalZ'
     ])
 
     const startX = geometryGroup?.properties.find(p => p.name === 'startX')
