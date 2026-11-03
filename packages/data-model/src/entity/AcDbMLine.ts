@@ -574,12 +574,26 @@ export class AcDbMLine extends AcDbEntity {
             },
             {
               name: 'justification',
-              type: 'int',
+              type: 'enum',
               editable: true,
+              options: [
+                {
+                  label: AcDbMLineJustification[AcDbMLineJustification.Top],
+                  value: AcDbMLineJustification.Top
+                },
+                {
+                  label: AcDbMLineJustification[AcDbMLineJustification.Zero],
+                  value: AcDbMLineJustification.Zero
+                },
+                {
+                  label: AcDbMLineJustification[AcDbMLineJustification.Bottom],
+                  value: AcDbMLineJustification.Bottom
+                }
+              ],
               accessor: {
                 get: () => this.justification,
-                set: (value: number) => {
-                  this.justification = value as AcDbMLineJustification
+                set: (value: AcDbMLineJustification) => {
+                  this.justification = value
                 }
               }
             },
@@ -600,6 +614,110 @@ export class AcDbMLine extends AcDbEntity {
               editable: false,
               accessor: {
                 get: () => this.vertexCount
+              }
+            },
+            {
+              name: 'styleObjectHandle',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.styleObjectHandle,
+                set: (value: string) => {
+                  this.styleObjectHandle = value
+                }
+              }
+            },
+            {
+              name: 'suppressStartCaps',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.suppressStartCaps,
+                set: (value: boolean) => {
+                  this.suppressStartCaps = value
+                }
+              }
+            },
+            {
+              name: 'suppressEndCaps',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.suppressEndCaps,
+                set: (value: boolean) => {
+                  this.suppressEndCaps = value
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'startPositionX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPosition.x,
+                set: (value: number) => {
+                  this.startPosition.x = value
+                }
+              }
+            },
+            {
+              name: 'startPositionY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPosition.y,
+                set: (value: number) => {
+                  this.startPosition.y = value
+                }
+              }
+            },
+            {
+              name: 'startPositionZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.startPosition.z,
+                set: (value: number) => {
+                  this.startPosition.z = value
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (value: number) => {
+                  this.normal.x = value
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (value: number) => {
+                  this.normal.y = value
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (value: number) => {
+                  this.normal.z = value
+                }
               }
             }
           ]

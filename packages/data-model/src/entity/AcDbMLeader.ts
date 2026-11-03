@@ -1691,6 +1691,61 @@ export class AcDbMLeader extends AcDbEntity {
               accessor: {
                 get: () => this.numberOfLeaders
               }
+            },
+            {
+              name: 'mleaderStyleId',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.mleaderStyleId,
+                set: (value: string) => {
+                  this.mleaderStyleId = value
+                }
+              }
+            },
+            {
+              name: 'landingGap',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.landingGap ?? 0,
+                set: (value: number) => {
+                  this.landingGap = value
+                }
+              }
+            },
+            {
+              name: 'blockContentId',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.blockContentId ?? '',
+                set: (value: string) => {
+                  this.blockContentId = value
+                }
+              }
+            },
+            {
+              name: 'landingEnabled',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.landingEnabled ?? false,
+                set: (value: boolean) => {
+                  this.landingEnabled = value
+                }
+              }
+            },
+            {
+              name: 'arrowheadSize',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.arrowheadSize ?? 0,
+                set: (value: number) => {
+                  this.arrowheadSize = value
+                }
+              }
             }
           ]
         },
@@ -1738,6 +1793,265 @@ export class AcDbMLeader extends AcDbEntity {
                 get: () => this.textStyleName,
                 set: (value: string) => {
                   this.textStyleName = value
+                }
+              }
+            },
+            {
+              name: 'textRotation',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.textRotation,
+                set: (value: number) => {
+                  this.textRotation = value
+                }
+              }
+            },
+            {
+              name: 'textAttachmentPoint',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcGiMTextAttachmentPoint[1], value: 1 },
+                { label: AcGiMTextAttachmentPoint[2], value: 2 },
+                { label: AcGiMTextAttachmentPoint[3], value: 3 },
+                { label: AcGiMTextAttachmentPoint[4], value: 4 },
+                { label: AcGiMTextAttachmentPoint[5], value: 5 },
+                { label: AcGiMTextAttachmentPoint[6], value: 6 },
+                { label: AcGiMTextAttachmentPoint[7], value: 7 },
+                { label: AcGiMTextAttachmentPoint[8], value: 8 },
+                { label: AcGiMTextAttachmentPoint[9], value: 9 }
+              ],
+              accessor: {
+                get: () => this.textAttachmentPoint,
+                set: (value: AcGiMTextAttachmentPoint) => {
+                  this.textAttachmentPoint = value
+                }
+              }
+            },
+            {
+              name: 'textDrawingDirection',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcGiMTextFlowDirection[1], value: 1 },
+                { label: AcGiMTextFlowDirection[2], value: 2 },
+                { label: AcGiMTextFlowDirection[3], value: 3 },
+                { label: AcGiMTextFlowDirection[4], value: 4 },
+                { label: AcGiMTextFlowDirection[5], value: 5 }
+              ],
+              accessor: {
+                get: () => this.textDrawingDirection,
+                set: (value: AcGiMTextFlowDirection) => {
+                  this.textDrawingDirection = value
+                }
+              }
+            },
+            {
+              name: 'textLineSpacingFactor',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.textLineSpacingFactor,
+                set: (value: number) => {
+                  this.textLineSpacingFactor = value
+                }
+              }
+            }
+          ]
+        },
+        {
+          groupName: 'geometry',
+          properties: [
+            {
+              name: 'landingPointX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.landingPoint?.x ?? 0,
+                set: (value: number) => {
+                  const point = this.landingPoint
+                  if (point) {
+                    point.x = value
+                    this.landingPoint = point
+                  } else {
+                    this.landingPoint = { x: value, y: 0, z: 0 }
+                  }
+                }
+              }
+            },
+            {
+              name: 'landingPointY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.landingPoint?.y ?? 0,
+                set: (value: number) => {
+                  const point = this.landingPoint
+                  if (point) {
+                    point.y = value
+                    this.landingPoint = point
+                  } else {
+                    this.landingPoint = { x: 0, y: value, z: 0 }
+                  }
+                }
+              }
+            },
+            {
+              name: 'landingPointZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.landingPoint?.z ?? 0,
+                set: (value: number) => {
+                  const point = this.landingPoint
+                  if (point) {
+                    point.z = value
+                    this.landingPoint = point
+                  } else {
+                    this.landingPoint = { x: 0, y: 0, z: value }
+                  }
+                }
+              }
+            },
+            {
+              name: 'doglegVectorX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.doglegVector.x,
+                set: (value: number) => {
+                  this.doglegVector = {
+                    x: value,
+                    y: this.doglegVector.y,
+                    z: this.doglegVector.z
+                  }
+                }
+              }
+            },
+            {
+              name: 'doglegVectorY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.doglegVector.y,
+                set: (value: number) => {
+                  this.doglegVector = {
+                    x: this.doglegVector.x,
+                    y: value,
+                    z: this.doglegVector.z
+                  }
+                }
+              }
+            },
+            {
+              name: 'doglegVectorZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.doglegVector.z,
+                set: (value: number) => {
+                  this.doglegVector = {
+                    x: this.doglegVector.x,
+                    y: this.doglegVector.y,
+                    z: value
+                  }
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (value: number) => {
+                  this.normal = {
+                    x: value,
+                    y: this.normal.y,
+                    z: this.normal.z
+                  }
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (value: number) => {
+                  this.normal = {
+                    x: this.normal.x,
+                    y: value,
+                    z: this.normal.z
+                  }
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (value: number) => {
+                  this.normal = {
+                    x: this.normal.x,
+                    y: this.normal.y,
+                    z: value
+                  }
+                }
+              }
+            },
+            {
+              name: 'textLocationX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.textLocation?.x ?? 0,
+                set: (value: number) => {
+                  const point = this.textLocation
+                  if (point) {
+                    point.x = value
+                    this.textLocation = point
+                  } else {
+                    this.textLocation = { x: value, y: 0, z: 0 }
+                  }
+                }
+              }
+            },
+            {
+              name: 'textLocationY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.textLocation?.y ?? 0,
+                set: (value: number) => {
+                  const point = this.textLocation
+                  if (point) {
+                    point.y = value
+                    this.textLocation = point
+                  } else {
+                    this.textLocation = { x: 0, y: value, z: 0 }
+                  }
+                }
+              }
+            },
+            {
+              name: 'textLocationZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.textLocation?.z ?? 0,
+                set: (value: number) => {
+                  const point = this.textLocation
+                  if (point) {
+                    point.z = value
+                    this.textLocation = point
+                  } else {
+                    this.textLocation = { x: 0, y: 0, z: value }
+                  }
                 }
               }
             }

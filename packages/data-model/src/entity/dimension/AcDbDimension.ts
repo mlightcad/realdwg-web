@@ -870,7 +870,42 @@ export abstract class AcDbDimension extends AcDbEntity {
             }
           ]
         ),
-        ...this.createPoint3dProperties('normal', () => this.normal)
+        ...this.createPoint3dProperties('normal', () => this.normal),
+        this.createProperty(
+          'horizontalRotation',
+          'float',
+          () => this.horizontalRotation,
+          (value: number) => {
+            this.horizontalRotation = value
+          }
+        ),
+        this.createProperty(
+          'dimensionType',
+          'int',
+          () => this.dimensionType,
+          (value: number) => {
+            this.dimensionType = value
+          }
+        ),
+        this.createProperty(
+          'attachmentPoint',
+          'enum',
+          () => this.attachmentPoint,
+          (value: AcGiMTextAttachmentPoint) => {
+            this.attachmentPoint = value
+          },
+          [
+            { label: AcGiMTextAttachmentPoint[1], value: 1 },
+            { label: AcGiMTextAttachmentPoint[2], value: 2 },
+            { label: AcGiMTextAttachmentPoint[3], value: 3 },
+            { label: AcGiMTextAttachmentPoint[4], value: 4 },
+            { label: AcGiMTextAttachmentPoint[5], value: 5 },
+            { label: AcGiMTextAttachmentPoint[6], value: 6 },
+            { label: AcGiMTextAttachmentPoint[7], value: 7 },
+            { label: AcGiMTextAttachmentPoint[8], value: 8 },
+            { label: AcGiMTextAttachmentPoint[9], value: 9 }
+          ]
+        )
       ]
     }
   }

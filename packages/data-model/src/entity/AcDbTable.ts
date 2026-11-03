@@ -487,7 +487,7 @@ export class AcDbTable extends AcDbBlockReference {
           properties: [
             {
               name: 'numRows',
-              type: 'string',
+              type: 'int',
               editable: true,
               accessor: {
                 get: () => this.numRows,
@@ -498,12 +498,34 @@ export class AcDbTable extends AcDbBlockReference {
             },
             {
               name: 'numColumns',
-              type: 'float',
+              type: 'int',
               editable: true,
               accessor: {
                 get: () => this.numColumns,
                 set: (v: number) => {
                   this.numColumns = v
+                }
+              }
+            },
+            {
+              name: 'attachmentPoint',
+              type: 'enum',
+              editable: true,
+              options: [
+                { label: AcGiMTextAttachmentPoint[1], value: 1 },
+                { label: AcGiMTextAttachmentPoint[2], value: 2 },
+                { label: AcGiMTextAttachmentPoint[3], value: 3 },
+                { label: AcGiMTextAttachmentPoint[4], value: 4 },
+                { label: AcGiMTextAttachmentPoint[5], value: 5 },
+                { label: AcGiMTextAttachmentPoint[6], value: 6 },
+                { label: AcGiMTextAttachmentPoint[7], value: 7 },
+                { label: AcGiMTextAttachmentPoint[8], value: 8 },
+                { label: AcGiMTextAttachmentPoint[9], value: 9 }
+              ],
+              accessor: {
+                get: () => this.attachmentPoint,
+                set: (v: AcGiMTextAttachmentPoint) => {
+                  this.attachmentPoint = v
                 }
               }
             },

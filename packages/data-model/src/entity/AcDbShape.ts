@@ -435,6 +435,25 @@ export class AcDbShape extends AcDbEntity {
                   this.shapeNumber = v
                 }
               }
+            },
+            {
+              name: 'styleName',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.styleName,
+                set: (v: string) => {
+                  this.styleName = v
+                }
+              }
+            },
+            {
+              name: 'isPlanar',
+              type: 'boolean',
+              editable: false,
+              accessor: {
+                get: () => this.isPlanar
+              }
             }
           ]
         },
@@ -471,6 +490,50 @@ export class AcDbShape extends AcDbEntity {
                 get: () => this.position.z,
                 set: (v: number) => {
                   this.position.z = v
+                }
+              }
+            },
+            {
+              name: 'thickness',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.thickness,
+                set: (v: number) => {
+                  this.thickness = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
                 }
               }
             }

@@ -457,6 +457,58 @@ export class AcDb2dPolyline extends AcDbCurve {
               accessor: {
                 get: () => this._geo.length
               }
+            },
+            {
+              name: 'polyType',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.polyType,
+                set: (v: number) => {
+                  this.polyType = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
+                }
+              }
+            },
+            {
+              name: 'numberOfVertices',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.numberOfVertices
+              }
             }
           ]
         },
@@ -465,7 +517,7 @@ export class AcDb2dPolyline extends AcDbCurve {
           properties: [
             {
               name: 'closed',
-              type: 'float',
+              type: 'boolean',
               editable: true,
               accessor: {
                 get: () => this.closed,

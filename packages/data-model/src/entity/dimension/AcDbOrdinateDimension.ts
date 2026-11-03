@@ -138,6 +138,15 @@ export class AcDbOrdinateDimension extends AcDbDimension {
             ...this.createPoint3dProperties(
               'leaderEndPoint',
               () => this.leaderEndPoint
+            ),
+            ...this.createPoint3dProperties('origin', () => this.origin),
+            this.createProperty(
+              'useXAxis',
+              'boolean',
+              () => this.useXAxis,
+              (value: boolean) => {
+                this.useXAxis = value
+              }
             )
           ]
         }

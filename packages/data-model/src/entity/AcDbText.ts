@@ -726,6 +726,13 @@ export class AcDbText extends AcDbEntity {
    * Each property is an {@link AcDbEntityRuntimeProperty}.
    */
   get properties(): AcDbEntityProperties {
+    return this.getTextProperties()
+  }
+
+  /**
+   * Builds text/geometry property groups shared by TEXT, ATTRIB, and ATTDEF.
+   */
+  protected getTextProperties(): AcDbEntityProperties {
     return {
       type: this.type,
       groups: [
@@ -809,6 +816,69 @@ export class AcDbText extends AcDbEntity {
                   this.oblique = v
                 }
               }
+            },
+            {
+              name: 'thickness',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.thickness,
+                set: (v: number) => {
+                  this.thickness = v
+                }
+              }
+            },
+            {
+              name: 'horizontalMode',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.horizontalMode,
+                set: (v: number) => {
+                  this.horizontalMode = v
+                }
+              }
+            },
+            {
+              name: 'verticalMode',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.verticalMode,
+                set: (v: number) => {
+                  this.verticalMode = v
+                }
+              }
+            },
+            {
+              name: 'isBackward',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isBackward,
+                set: (v: boolean) => {
+                  this.isBackward = v
+                }
+              }
+            },
+            {
+              name: 'isUpsideDown',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.isUpsideDown,
+                set: (v: boolean) => {
+                  this.isUpsideDown = v
+                }
+              }
+            },
+            {
+              name: 'hasAlignmentPoint',
+              type: 'boolean',
+              editable: false,
+              accessor: {
+                get: () => this.hasAlignmentPoint
+              }
             }
           ]
         },
@@ -845,6 +915,72 @@ export class AcDbText extends AcDbEntity {
                 get: () => this.position.z,
                 set: (v: number) => {
                   this.position.z = v
+                }
+              }
+            },
+            {
+              name: 'alignmentPointX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.alignmentPoint.x,
+                set: (v: number) => {
+                  this.alignmentPoint.x = v
+                }
+              }
+            },
+            {
+              name: 'alignmentPointY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.alignmentPoint.y,
+                set: (v: number) => {
+                  this.alignmentPoint.y = v
+                }
+              }
+            },
+            {
+              name: 'alignmentPointZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.alignmentPoint.z,
+                set: (v: number) => {
+                  this.alignmentPoint.z = v
+                }
+              }
+            },
+            {
+              name: 'normalX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.x,
+                set: (v: number) => {
+                  this.normal.x = v
+                }
+              }
+            },
+            {
+              name: 'normalY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.y,
+                set: (v: number) => {
+                  this.normal.y = v
+                }
+              }
+            },
+            {
+              name: 'normalZ',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.normal.z,
+                set: (v: number) => {
+                  this.normal.z = v
                 }
               }
             }

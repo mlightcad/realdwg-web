@@ -15,6 +15,7 @@ import {
 } from '../acis/index.js'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbEntity } from './AcDbEntity.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 
 /**
  * Construction options for {@link AcDb3dSolid} when geometry is supplied as
@@ -302,6 +303,72 @@ export class AcDb3dSolid extends AcDbEntity {
    */
   get hasRenderableGeometry(): boolean {
     return this._wireframe.length > 0 || this._points.length > 0
+  }
+
+  /**
+   * Returns the full property definition for this 3D solid entity.
+   */
+  get properties(): AcDbEntityProperties {
+    return {
+      type: this.type,
+      groups: [
+        this.getGeneralProperties(),
+        {
+          groupName: 'solid',
+          properties: [
+            {
+              name: 'version',
+              type: 'int',
+              editable: false,
+              accessor: {
+                get: () => this.version ?? 0
+              }
+            },
+            {
+              name: 'guid',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.guid ?? '',
+                set: (v: string) => {
+                  this.guid = v
+                }
+              }
+            },
+            {
+              name: 'historyObjectSoftId',
+              type: 'string',
+              editable: true,
+              accessor: {
+                get: () => this.historyObjectSoftId ?? '',
+                set: (v: string) => {
+                  this.historyObjectSoftId = v
+                }
+              }
+            },
+            {
+              name: 'satCache',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.satCache ?? false,
+                set: (v: boolean) => {
+                  this.satCache = v
+                }
+              }
+            },
+            {
+              name: 'hasRenderableGeometry',
+              type: 'boolean',
+              editable: false,
+              accessor: {
+                get: () => this.hasRenderableGeometry
+              }
+            }
+          ]
+        }
+      ]
+    }
   }
 
   /** @inheritdoc */

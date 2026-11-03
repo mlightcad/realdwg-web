@@ -530,6 +530,17 @@ export class AcDbArc extends AcDbCurve {
               accessor: {
                 get: () => this.area
               }
+            },
+            {
+              name: 'thickness',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.thickness,
+                set: (v: number) => {
+                  this.thickness = v
+                }
+              }
             }
           ]
         }

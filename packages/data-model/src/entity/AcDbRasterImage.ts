@@ -484,6 +484,28 @@ export class AcDbRasterImage extends AcDbEntity {
                   this.height = v
                 }
               }
+            },
+            {
+              name: 'scaleX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scale.x,
+                set: (v: number) => {
+                  this.scale.x = v
+                }
+              }
+            },
+            {
+              name: 'scaleY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.scale.y,
+                set: (v: number) => {
+                  this.scale.y = v
+                }
+              }
             }
           ]
         },
@@ -565,6 +587,92 @@ export class AcDbRasterImage extends AcDbEntity {
                 set: (v: boolean) => {
                   this.isShownClipped = v
                 }
+              }
+            },
+            {
+              name: 'imageSizeX',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.imageSize.x,
+                set: (v: number) => {
+                  this.imageSize.x = v
+                }
+              }
+            },
+            {
+              name: 'imageSizeY',
+              type: 'float',
+              editable: true,
+              accessor: {
+                get: () => this.imageSize.y,
+                set: (v: number) => {
+                  this.imageSize.y = v
+                }
+              }
+            },
+            {
+              name: 'clipBoundaryType',
+              type: 'enum',
+              editable: true,
+              options: [
+                {
+                  label:
+                    AcDbRasterImageClipBoundaryType[
+                      AcDbRasterImageClipBoundaryType.Invalid
+                    ],
+                  value: AcDbRasterImageClipBoundaryType.Invalid
+                },
+                {
+                  label:
+                    AcDbRasterImageClipBoundaryType[
+                      AcDbRasterImageClipBoundaryType.Rect
+                    ],
+                  value: AcDbRasterImageClipBoundaryType.Rect
+                },
+                {
+                  label:
+                    AcDbRasterImageClipBoundaryType[
+                      AcDbRasterImageClipBoundaryType.Poly
+                    ],
+                  value: AcDbRasterImageClipBoundaryType.Poly
+                }
+              ],
+              accessor: {
+                get: () => this.clipBoundaryType,
+                set: (v: AcDbRasterImageClipBoundaryType) => {
+                  this.clipBoundaryType = v
+                }
+              }
+            },
+            {
+              name: 'clipMode',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.clipMode,
+                set: (v: number) => {
+                  this.clipMode = v
+                }
+              }
+            },
+            {
+              name: 'classVersion',
+              type: 'int',
+              editable: true,
+              accessor: {
+                get: () => this.classVersion,
+                set: (v: number) => {
+                  this.classVersion = v
+                }
+              }
+            },
+            {
+              name: 'imageDefId',
+              type: 'string',
+              editable: false,
+              accessor: {
+                get: () => this.imageDefId
               }
             }
           ]
