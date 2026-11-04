@@ -877,6 +877,22 @@ export class AcDbEntityConverter {
     if (mtext.extentsWidth != null && mtext.extentsWidth > 0) {
       dbEntity.extentsWidth = mtext.extentsWidth
     }
+    // Background mask (DXF groups 90 / 63 / 45 / 441) — object-level only.
+    const backgroundFlags = mtext.backgroundFill ?? 0
+    if (backgroundFlags !== 0) {
+      dbEntity.backgroundFill = true
+      // 1 = fill colour, 2 = drawing-window / layout background.
+      dbEntity.useBackgroundColor = backgroundFlags === 2
+      if (mtext.backgroundFillColor != null) {
+        dbEntity.backgroundFillColor = mtext.backgroundFillColor
+      }
+      if (mtext.fillBoxScale != null && mtext.fillBoxScale > 0) {
+        dbEntity.backgroundScaleFactor = mtext.fillBoxScale
+      }
+      if (mtext.backgroundFillTransparency != null) {
+        dbEntity.backgroundFillTransparency = mtext.backgroundFillTransparency
+      }
+    }
     return dbEntity
   }
 

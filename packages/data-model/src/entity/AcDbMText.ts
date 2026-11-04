@@ -1,9 +1,12 @@
+import { AcCmColor, AcCmColorUtil } from '@mlightcad/common'
 import {
+  AcGeArea2d,
   AcGeBox3d,
   AcGeMathUtil,
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  AcGePolyline2d,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -33,10 +36,9 @@ import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
-  acdbCountMTextLines,
-  acdbEstimateMTextHeight,
-  acdbEstimatePlainTextWidth,
-  acdbExpandBoxByOrientedTextRect
+  acdbCollectMTextOrientedCorners,
+  acdbMTextBackgroundMaskPadding,
+  acdbResolveMTextLayoutMetrics
 } from './AcDbTextExtentsHelpers.js'
 
 /**
@@ -83,9 +85,14 @@ export class AcDbMText extends AcDbEntity {
   private _lineSpacingStyle: number
   /** The line spacing factor */
   private _lineSpacingFactor: number
-  /** Whether background fill is enabled */
+  /** Whether background fill / mask is enabled (DXF group 90 ≠ 0) */
   private _backgroundFill: boolean
-  /** The background fill color */
+  /**
+   * When true, the mask uses the drawing / layout background colour
+   * (DXF group 90 = 2) instead of {@link backgroundFillColor}.
+   */
+  private _useBackgroundColor: boolean
+  /** The background fill color (RGB integer, or ACI when ≤ 255) */
   private _backgroundFillColor: number
   /** The background scale factor */
   private _backgroundScaleFactor: number
@@ -143,6 +150,7 @@ export class AcDbMText extends AcDbEntity {
     this._lineSpacingFactor = 1.0
     this._lineSpacingStyle = 0
     this._backgroundFill = false
+    this._useBackgroundColor = false
     this._backgroundFillColor = 0xc8c8c8
     this._backgroundFillTransparency = 1
     this._backgroundScaleFactor = 1
@@ -317,20 +325,41 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
-   * Toggle the background fill on or off. If it is true, background color is turned off, and no
-   * background fill color has been specified, this function sets the background fill color to
-   * an RGB value of 200,200,200.
+   * Toggle the background fill / mask on or off.
+   *
+   * Matches ObjectARX `AcDbMText::setBackgroundFill`: enabling fill without a
+   * previously assigned colour leaves the default RGB (200,200,200). The colour
+   * is not reset on every assignment so DXF / converter round-trips keep group
+   * 63 / 421 values when group 90 is applied first or last.
    */
   get backgroundFill() {
     return this._backgroundFill
   }
   set backgroundFill(value: boolean) {
     this._backgroundFill = value
-    this._backgroundFillColor = 0xc8c8c8
+    if (!value) {
+      this._useBackgroundColor = false
+    }
   }
 
   /**
-   * The background fill color. This property is valid only if background fill is enable.
+   * When true, the mask uses the drawing window / layout background colour
+   * (DXF group 90 = 2) instead of {@link backgroundFillColor}.
+   */
+  get useBackgroundColor() {
+    return this._useBackgroundColor
+  }
+  set useBackgroundColor(value: boolean) {
+    this._useBackgroundColor = value
+    if (value) {
+      this._backgroundFill = true
+    }
+  }
+
+  /**
+   * The background fill color. Valid only when background fill is enabled and
+   * {@link useBackgroundColor} is false. Stored as an RGB integer; ACI indices
+   * 1–255 are also accepted and resolved at draw / DXF-out time.
    */
   get backgroundFillColor() {
     return this._backgroundFillColor
@@ -350,7 +379,9 @@ export class AcDbMText extends AcDbEntity {
   }
 
   /**
-   * The background scale factor.
+   * Background mask border offset factor (DXF group 45).
+   * `1.0` fits the text; values above `1` extend the mask by
+   * `(factor - 1) × textHeight` on each side.
    */
   get backgroundScaleFactor() {
     return this._backgroundScaleFactor
@@ -543,29 +574,31 @@ export class AcDbMText extends AcDbEntity {
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
     const presentation = this.resolveAnnotativePresentation()
-    const width =
-      presentation.extentsWidth > 0
-        ? presentation.extentsWidth
-        : presentation.width > 0
-          ? presentation.width
-          : acdbEstimatePlainTextWidth(this.contents, presentation.height)
-    const lineCount = acdbCountMTextLines(this.contents)
-    const height = acdbEstimateMTextHeight(
-      lineCount,
-      presentation.height,
-      this.lineSpacingFactor,
-      this.lineSpacingStyle
-    )
-
-    return acdbExpandBoxByOrientedTextRect(
-      box,
-      presentation.position,
-      width,
-      height,
-      presentation.attachmentPoint,
-      this.rotation,
-      presentation.direction
-    )
+    const layout = acdbResolveMTextLayoutMetrics({
+      contents: this.contents,
+      height: presentation.height,
+      width: presentation.width,
+      extentsWidth: presentation.extentsWidth,
+      lineSpacingFactor: this.lineSpacingFactor,
+      lineSpacingStyle: this.lineSpacingStyle,
+      attachmentPoint: presentation.attachmentPoint,
+      rotation: this.rotation,
+      direction: presentation.direction,
+      location: presentation.position
+    })
+    const padding = this.backgroundFill
+      ? acdbMTextBackgroundMaskPadding(
+          this.backgroundScaleFactor,
+          presentation.height
+        )
+      : 0
+    for (const corner of acdbCollectMTextOrientedCorners(layout, padding)) {
+      box.expandByPoint(corner)
+    }
+    if (box.isEmpty()) {
+      box.expandByPoint(presentation.position)
+    }
+    return box
   }
 
   /**
@@ -853,6 +886,17 @@ export class AcDbMText extends AcDbEntity {
               }
             },
             {
+              name: 'useBackgroundColor',
+              type: 'boolean',
+              editable: true,
+              accessor: {
+                get: () => this.useBackgroundColor,
+                set: (v: boolean) => {
+                  this.useBackgroundColor = v
+                }
+              }
+            },
+            {
               name: 'backgroundFillColor',
               type: 'int',
               editable: true,
@@ -1069,11 +1113,26 @@ export class AcDbMText extends AcDbEntity {
     const {
       height,
       width,
+      extentsWidth,
       position,
       direction,
       attachmentPoint,
       annotationScale
     } = this.resolveAnnotativePresentation()
+
+    const entities = []
+    const background = this.drawBackgroundMask(
+      renderer,
+      height,
+      width,
+      extentsWidth,
+      position,
+      direction,
+      attachmentPoint
+    )
+    if (background) {
+      entities.push(background)
+    }
 
     const mtextData: AcGiMTextData = {
       text: this.contents,
@@ -1087,7 +1146,17 @@ export class AcDbMText extends AcDbEntity {
       lineSpaceFactor: this.lineSpacingFactor,
       lineSpaceStyle: this.lineSpacingStyle
     }
-    const drawable = renderer.mtext(mtextData, this.getTextStyle(), delay)
+    const textDrawable = renderer.mtext(mtextData, this.getTextStyle(), delay)
+    if (textDrawable) {
+      entities.push(textDrawable)
+    }
+
+    const drawable =
+      entities.length === 0
+        ? undefined
+        : entities.length === 1
+          ? entities[0]
+          : renderer.group(entities)
     if (drawable && annotationScale) {
       const userData = drawable.userData as {
         annotationScale?: AcDbAnnotationScaleDrawInfo
@@ -1095,6 +1164,97 @@ export class AcDbMText extends AcDbEntity {
       userData.annotationScale = annotationScale
     }
     return drawable
+  }
+
+  /**
+   * Draws the object-level MTEXT background mask (DXF groups 90 / 63 / 45 / 421).
+   *
+   * The mask covers the whole MTEXT rectangle — AutoCAD does not support
+   * per-run masking inside a single MTEXT entity.
+   */
+  private drawBackgroundMask(
+    renderer: AcGiRenderer,
+    textHeight: number,
+    width: number,
+    extentsWidth: number,
+    position: AcGePoint3d,
+    direction: AcGeVector3d,
+    attachmentPoint: AcGiMTextAttachmentPoint
+  ) {
+    if (!this.backgroundFill) return undefined
+
+    const layout = acdbResolveMTextLayoutMetrics({
+      contents: this.contents,
+      height: textHeight,
+      width,
+      extentsWidth,
+      lineSpacingFactor: this.lineSpacingFactor,
+      lineSpacingStyle: this.lineSpacingStyle,
+      attachmentPoint,
+      rotation: this.rotation,
+      direction,
+      location: position
+    })
+    if (layout.width <= 0 && layout.height <= 0) return undefined
+
+    const padding = acdbMTextBackgroundMaskPadding(
+      this.backgroundScaleFactor,
+      textHeight
+    )
+    const corners = acdbCollectMTextOrientedCorners(layout, padding)
+    if (corners.length < 3) return undefined
+
+    const traits = renderer.subEntityTraits
+    const previousColor = traits.color
+    const previousIsColorByLayer = traits.isColorByLayer
+    const previousFillType = traits.fillType
+    const previousIsBackgroundFill = traits.isBackgroundFill
+    const previousDrawOrder = traits.drawOrder
+
+    traits.fillType = {
+      solidFill: true,
+      patternAngle: 0,
+      definitionLines: []
+    }
+    traits.drawOrder = -1
+    if (this.useBackgroundColor) {
+      traits.isBackgroundFill = true
+    } else {
+      traits.isBackgroundFill = false
+      const fillColor = this.resolveBackgroundFillColor()
+      traits.color = fillColor
+      traits.isColorByLayer = false
+    }
+
+    const area = new AcGeArea2d()
+    area.add(new AcGePolyline2d(corners, true))
+    const entity = renderer.area(area)
+
+    traits.color = previousColor
+    traits.isColorByLayer = previousIsColorByLayer
+    traits.fillType = previousFillType
+    traits.isBackgroundFill = previousIsBackgroundFill
+    traits.drawOrder = previousDrawOrder
+    return entity
+  }
+
+  /**
+   * Resolves the mask fill colour from the stored RGB / ACI integer.
+   */
+  private resolveBackgroundFillColor(): AcCmColor {
+    const value = this.backgroundFillColor
+    const color = new AcCmColor()
+    if (value > 0 && value <= 255) {
+      const rgb = AcCmColorUtil.getColorByIndex(value)
+      if (rgb != null) {
+        color.setRGBValue(rgb)
+        return color
+      }
+      color.colorIndex = value
+      return color
+    }
+    color.setRGBValue(value >>> 0)
+    return color
   }
 
   private encodeMTextContentsForDxf(contents: string): string {
@@ -1128,8 +1288,19 @@ export class AcDbMText extends AcDbEntity {
     filer.writeInt16(73, this.lineSpacingStyle)
     filer.writeDouble(44, this.lineSpacingFactor)
     if (this.backgroundFill) {
-      filer.writeInt16(90, 1)
-      filer.writeInt32(63, this.backgroundFillColor)
+      // DXF group 90: 1 = fill colour, 2 = drawing-window / layout background.
+      filer.writeInt16(90, this.useBackgroundColor ? 2 : 1)
+      if (!this.useBackgroundColor) {
+        const fill = this.backgroundFillColor >>> 0
+        if (fill > 0 && fill <= 255) {
+          // ACI colour index (DXF group 63).
+          filer.writeInt16(63, fill)
+        } else {
+          // True-colour RGB (DXF group 421). Do not also write group 63 —
+          // a packed RGB is not a valid ACI and confuses ACI-only readers.
+          filer.writeInt32(421, fill)
+        }
+      }
       filer.writeInt32(441, this.backgroundFillTransparency)
       filer.writeDouble(45, this.backgroundScaleFactor)
     }
@@ -1249,11 +1420,19 @@ export class AcDbMText extends AcDbEntity {
         case 79:
           this.columnAutoHeight = n !== 0
           break
-        case 90:
-          this.backgroundFill = n !== 0
+        case 90: {
+          // 0 = off; 1 = colour fill; 2 = drawing-window colour.
+          const flags = n | 0
+          this._backgroundFill = flags !== 0
+          this._useBackgroundColor = flags === 2
           break
+        }
         case 63:
           this.backgroundFillColor = n
+          break
+        case 421:
+          // True-colour RGB background fill.
+          this.backgroundFillColor = n >>> 0
           break
         case 441:
           this.backgroundFillTransparency = n

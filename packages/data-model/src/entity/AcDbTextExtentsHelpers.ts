@@ -405,22 +405,30 @@ export function acdbWorldPointToMTextLocal(
  * `(minX, minY)` in local coordinates.
  *
  * @param layout - Resolved MTEXT layout metrics.
+ * @param padding - Optional uniform padding in drawing units applied on every
+ *   side of the local bounds (used for MTEXT background-mask offset).
  * @returns World-space corner points of the oriented text bounds.
  */
 export function acdbCollectMTextOrientedCorners(
-  layout: AcDbMTextLayoutMetrics
+  layout: AcDbMTextLayoutMetrics,
+  padding = 0
 ): AcGePoint3d[] {
   const bounds = acdbGetLocalBoundsFromAttachment(
     layout.width,
     layout.height,
     layout.attachment
   )
+  const pad = Math.max(0, padding)
+  const minX = bounds.minX - pad
+  const minY = bounds.minY - pad
+  const maxX = bounds.maxX + pad
+  const maxY = bounds.maxY + pad
   const { xAxis, yAxis } = getTextAxes(layout.rotation, layout.direction)
   const localCorners: Array<[number, number]> = [
-    [bounds.minX, bounds.minY],
-    [bounds.maxX, bounds.minY],
-    [bounds.maxX, bounds.maxY],
-    [bounds.minX, bounds.maxY]
+    [minX, minY],
+    [maxX, minY],
+    [maxX, maxY],
+    [minX, maxY]
   ]
 
   return localCorners.map(
@@ -431,6 +439,24 @@ export function acdbCollectMTextOrientedCorners(
         layout.location.z + xAxis.z * localX + yAxis.z * localY
       )
   )
+}
+
+/**
+ * Border padding for an MTEXT background mask from the DXF group-45 scale factor.
+ *
+ * AutoCAD applies the factor to text height: `1.0` fits the text exactly,
+ * `1.5` extends the mask by `0.5 × textHeight` on each side.
+ *
+ * @param scaleFactor - Background scale / offset factor (DXF group 45).
+ * @param textHeight - Nominal MTEXT character height.
+ * @returns Uniform padding in drawing units (never negative).
+ */
+export function acdbMTextBackgroundMaskPadding(
+  scaleFactor: number,
+  textHeight: number
+): number {
+  if (!(textHeight > 0) || !(scaleFactor > 1)) return 0
+  return (scaleFactor - 1) * textHeight
 }
 
 /**

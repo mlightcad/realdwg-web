@@ -464,6 +464,43 @@ describe('libredwg AcDbEntityConverter', () => {
     expect((result as AcDbMText).lineSpacingFactor).toBeCloseTo(1)
   })
 
+  it('converts MTEXT background mask fields from LibreDWG', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const colorFill = converter.convert({
+      type: 'MTEXT',
+      text: 'Masked',
+      textHeight: 2,
+      rectWidth: 10,
+      insertionPoint: { x: 0, y: 0, z: 0 },
+      backgroundFill: 1,
+      backgroundFillColor: 0x336699,
+      fillBoxScale: 1.5,
+      backgroundFillTransparency: 200
+    } as any) as AcDbMText
+
+    expect(colorFill.backgroundFill).toBe(true)
+    expect(colorFill.useBackgroundColor).toBe(false)
+    expect(colorFill.backgroundFillColor).toBe(0x336699)
+    expect(colorFill.backgroundScaleFactor).toBeCloseTo(1.5)
+    expect(colorFill.backgroundFillTransparency).toBe(200)
+
+    const windowFill = converter.convert({
+      type: 'MTEXT',
+      text: 'Window',
+      textHeight: 2,
+      rectWidth: 10,
+      insertionPoint: { x: 0, y: 0, z: 0 },
+      backgroundFill: 2,
+      fillBoxScale: 1.25
+    } as any) as AcDbMText
+
+    expect(windowFill.backgroundFill).toBe(true)
+    expect(windowFill.useBackgroundColor).toBe(true)
+    expect(windowFill.backgroundScaleFactor).toBeCloseTo(1.25)
+  })
+
   it('keeps tapered LWPOLYLINE vertex widths (valve triangles)', () => {
     acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
     const converter = new AcDbEntityConverter()
