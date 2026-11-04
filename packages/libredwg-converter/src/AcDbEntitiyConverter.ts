@@ -881,10 +881,29 @@ export class AcDbEntityConverter {
     const backgroundFlags = mtext.backgroundFill ?? 0
     if (backgroundFlags !== 0) {
       dbEntity.backgroundFill = true
-      // 1 = fill colour, 2 = drawing-window / layout background.
-      dbEntity.useBackgroundColor = backgroundFlags === 2
-      if (mtext.backgroundFillColor != null) {
-        dbEntity.backgroundFillColor = mtext.backgroundFillColor
+      // 1 = fill colour; 2 = window colour; 3 = canvas / layout background
+      // (AutoCAD "Use drawing background" — bit 0x02 set).
+      dbEntity.useBackgroundColor = (backgroundFlags & 0x02) !== 0
+      // Only apply an explicit fill colour for colour-fill mode. LibreDWG often
+      // still stores a ByLayer CMC placeholder (e.g. 0xC0000000) when flags are
+      // 2/3; treating that as RGB paints the mask black.
+      if (!dbEntity.useBackgroundColor && mtext.backgroundFillColor != null) {
+        const fill = mtext.backgroundFillColor >>> 0
+        const method = (fill >>> 24) & 0xff
+        if (method >= 0xc0 && method <= 0xc8) {
+          // Packed CMC that slipped through an older libredwg-web: keep ACI
+          // in the low byte when present, otherwise ignore the placeholder.
+          const aci = fill & 0xff
+          // AcCmEntityColor: 0xC2 = kByColor (RGB), 0xC3 = kByACI, 0xC5 = kForeground.
+          if (method === 0xc5 || (method === 0xc3 && aci >= 1 && aci <= 255)) {
+            dbEntity.backgroundFillColor = method === 0xc5 ? 7 : aci
+          } else if (method === 0xc2) {
+            const rgb24 = fill & 0xffffff
+            if (rgb24 !== 0) dbEntity.backgroundFillColor = rgb24
+          }
+        } else {
+          dbEntity.backgroundFillColor = fill
+        }
       }
       if (mtext.fillBoxScale != null && mtext.fillBoxScale > 0) {
         dbEntity.backgroundScaleFactor = mtext.fillBoxScale
