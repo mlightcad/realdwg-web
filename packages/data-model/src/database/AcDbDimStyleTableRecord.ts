@@ -1297,8 +1297,8 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
   override dxfOut(...args: unknown[]): unknown {
     const [filer, allXdata = false] = args as [AcDbDxfFiler, boolean?]
     filer.writeHandle(105, this.objectId)
+    this.dxfOutExtensionDictionary(filer)
     filer.writeObjectId(330, this.ownerId)
-    filer.writeObjectId(360, this.extensionDictionary)
     this.dxfOutFields(filer)
     if (allXdata) {
       this.dxfOutXData(filer)

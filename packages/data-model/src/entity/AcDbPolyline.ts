@@ -875,8 +875,8 @@ export class AcDbPolyline extends AcDbCurve {
    */
   dxfOutAs2dPolyline(filer: AcDbDxfFiler, allXdata = false) {
     filer.writeHandle(5, this.objectId)
+    this.dxfOutExtensionDictionary(filer)
     filer.writeObjectId(330, this.ownerId)
-    filer.writeObjectId(360, this.extensionDictionary)
     filer.writeSubclassMarker('AcDbEntity')
     filer.writeString(8, this.layer)
     filer.writeString(6, this.lineType)

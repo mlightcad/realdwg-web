@@ -25,6 +25,7 @@ import { AcDb3dSolid } from '../entity/AcDb3dSolid.js'
 import { AcDbAttribute } from '../entity/AcDbAttribute.js'
 import { AcDbBlockReference } from '../entity/AcDbBlockReference.js'
 import type { AcDbEntity } from '../entity/AcDbEntity.js'
+import { AcDbUnknownEntity } from '../entity/AcDbUnknownEntity.js'
 import { acdbCombineDxfBinaryChunks } from '../misc/proxyGraphic/index.js'
 import {
   acdbDxfInAcdsData,
@@ -55,8 +56,12 @@ export interface AcDbDxfDocumentReaderOptions {
 }
 
 export interface AcDbDxfDocumentReaderResult {
+  /**
+   * Entities without a native class. They are kept as
+   * {@link AcDbUnknownEntity} and written back verbatim.
+   */
   unknownEntityCount: number
-  /** OBJECTS-section types that were skipped (no native reader yet). */
+  /** OBJECTS-section records kept verbatim (no native reader yet). */
   unknownObjectCount: number
 }
 
@@ -72,6 +77,12 @@ export class AcDbDxfDocumentReader {
   private _unknownObjectCount = 0
   /** ATTRIB entities waiting for their owning INSERT (keyed by INSERT objectId). */
   private readonly _attributeMap = new Map<AcDbObjectId, AcDbAttribute[]>()
+  /**
+   * INSERT whose ATTRIB sequence may follow. ATTRIBs between an INSERT and
+   * its SEQEND belong to it structurally (DXF R12 files carry no 330 owner
+   * handles), as ezdxf and ODA link them.
+   */
+  private _openInsert?: AcDbBlockReference
   private readonly _yieldGate: AcCmUiYieldGate
 
   constructor(
@@ -95,6 +106,7 @@ export class AcDbDxfDocumentReader {
     this._unknownEntityCount = 0
     this._unknownObjectCount = 0
     this._attributeMap.clear()
+    this._openInsert = undefined
     filer.database = this._db
 
     while (!filer.atEof) {
@@ -345,7 +357,45 @@ export class AcDbDxfDocumentReader {
       filer.skipToEndOfObject()
     }
 
+    this.resolveDimStyleHandles()
     this._db.ensureTextStyleDefaults()
+  }
+
+  /**
+   * DIMSTYLE groups 340–344 are handles (text style / arrow block records),
+   * but {@link AcDbDimStyleTableRecord} stores names. BLOCK_RECORD follows
+   * DIMSTYLE in the TABLES section, so resolve once the section is read.
+   * Handles that resolve to nothing fall back to the defaults.
+   */
+  private resolveDimStyleHandles() {
+    const { textStyleTable, blockTable, dimStyleTable } = this._db.tables
+    const resolve = (
+      value: string,
+      table: typeof textStyleTable | typeof blockTable
+    ): string | undefined => {
+      if (!value || table.getAt(value)) return undefined
+      const record = table.getIdAt(value)
+      if (record) return record.name
+      // An unresolvable hex value is a dangling handle, not a record name.
+      return /^[0-9A-F]+$/i.test(value) ? '' : undefined
+    }
+    for (const dimStyle of dimStyleTable.newIterator()) {
+      const textStyle = resolve(dimStyle.dimtxsty, textStyleTable)
+      if (textStyle != null) {
+        dimStyle.dimtxsty =
+          textStyle ||
+          AcDbDimStyleTableRecord.DEFAULT_DIM_VALUES.dimtxsty ||
+          ''
+      }
+      const ldrblk = resolve(dimStyle.dimldrblk, blockTable)
+      if (ldrblk != null) dimStyle.dimldrblk = ldrblk
+      const blk = resolve(dimStyle.dimblk, blockTable)
+      if (blk != null) dimStyle.dimblk = blk
+      const blk1 = resolve(dimStyle.dimblk1, blockTable)
+      if (blk1 != null) dimStyle.dimblk1 = blk1
+      const blk2 = resolve(dimStyle.dimblk2, blockTable)
+      if (blk2 != null) dimStyle.dimblk2 = blk2
+    }
   }
 
   private readTableName(filer: AcDbDxfFiler): string {
@@ -577,6 +627,7 @@ export class AcDbDxfDocumentReader {
   ): Promise<number> {
     const header = this.readBlockBeginFields(filer)
     const btr = this.ensureBlockTableRecord(header)
+    this._openInsert = undefined
 
     while (!filer.atEof) {
       const item = filer.peekItem()
@@ -599,6 +650,7 @@ export class AcDbDxfDocumentReader {
       filer.readItem()
       // SEQEND closes INSERT+ATTRIB / POLYLINE vertex streams — not an entity.
       if (this.consumeSeqend(filer, typeName)) {
+        this._openInsert = undefined
         sinceYield += 1
         if (sinceYield >= batchSize) {
           sinceYield = 0
@@ -609,13 +661,16 @@ export class AcDbDxfDocumentReader {
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
       const entity = acdbDxfInEntity(filer, typeName)
       if (entity) {
+        this.countUnknownEntity(entity)
         // *Model_Space and the active *Paper_Space live in ENTITIES.
         // Inactive *Paper_SpaceN layouts keep their entities in the block.
         if (this.shouldAcceptBlockEntity(btr)) {
           this.acceptEntity(entity, btr)
+        } else {
+          this._openInsert = undefined
         }
       } else {
-        this._unknownEntityCount += 1
+        this._openInsert = undefined
         filer.skipToEndOfObject()
       }
 
@@ -666,6 +721,7 @@ export class AcDbDxfDocumentReader {
     flags: number
     origin: AcGePoint3d
     pathName: string
+    comments: string
     objectId?: string
     ownerId?: string
   } {
@@ -673,6 +729,7 @@ export class AcDbDxfDocumentReader {
     let name = ''
     let flags = 0
     let pathName = ''
+    let comments = ''
     let objectId: string | undefined
     let ownerId: string | undefined
 
@@ -711,6 +768,9 @@ export class AcDbDxfDocumentReader {
         case 1:
           pathName = String(item.value)
           break
+        case 4:
+          comments = String(item.value)
+          break
         case 8:
         case 67:
         case 410:
@@ -722,7 +782,7 @@ export class AcDbDxfDocumentReader {
       }
     }
 
-    return { name, flags, origin, pathName, objectId, ownerId }
+    return { name, flags, origin, pathName, comments, objectId, ownerId }
   }
 
   private ensureBlockTableRecord(header: {
@@ -730,6 +790,7 @@ export class AcDbDxfDocumentReader {
     flags: number
     origin: AcGePoint3d
     pathName: string
+    comments: string
     objectId?: string
     ownerId?: string
   }): AcDbBlockTableRecord {
@@ -747,6 +808,7 @@ export class AcDbDxfDocumentReader {
     }
 
     btr.origin.copy(header.origin)
+    if (header.comments) btr.comments = header.comments
     let flags = AcDbBlockTableRecord.sanitizeImportedFlags(header.flags)
     if (header.pathName) {
       btr.pathName = header.pathName
@@ -767,6 +829,7 @@ export class AcDbDxfDocumentReader {
     const batchSize = Math.max(1, this._options.entityBatchSize ?? 200)
     let sinceYield = 0
     const modelSpace = this._db.tables.blockTable.modelSpace
+    this._openInsert = undefined
 
     while (!filer.atEof) {
       const item = filer.peekItem()
@@ -785,6 +848,7 @@ export class AcDbDxfDocumentReader {
       filer.readItem()
       // SEQEND closes INSERT+ATTRIB / POLYLINE vertex streams — not an entity.
       if (this.consumeSeqend(filer, name)) {
+        this._openInsert = undefined
         sinceYield += 1
         if (sinceYield >= batchSize) {
           sinceYield = 0
@@ -795,9 +859,10 @@ export class AcDbDxfDocumentReader {
       // POLYLINE/DIMENSION composites are handled inside acdbDxfInEntity.
       const entity = acdbDxfInEntity(filer, name)
       if (entity) {
+        this.countUnknownEntity(entity)
         this.acceptEntity(entity, this.resolveEntityOwner(entity, modelSpace))
       } else {
-        this._unknownEntityCount += 1
+        this._openInsert = undefined
         filer.skipToEndOfObject()
       }
 
@@ -841,11 +906,18 @@ export class AcDbDxfDocumentReader {
     owner: AcDbBlockTableRecord
   ): void {
     if (entity instanceof AcDbAttribute) {
+      const insert = this._openInsert
+      if (insert) {
+        insert.appendAttributes(entity)
+        return
+      }
       this.linkOrDeferAttribute(entity, owner)
       return
     }
 
     owner.appendEntity(entity)
+    this._openInsert =
+      entity instanceof AcDbBlockReference ? entity : undefined
 
     if (entity instanceof AcDbBlockReference) {
       const pending = this._attributeMap.get(entity.objectId)
@@ -855,6 +927,12 @@ export class AcDbDxfDocumentReader {
         }
         this._attributeMap.delete(entity.objectId)
       }
+    }
+  }
+
+  private countUnknownEntity(entity: AcDbEntity) {
+    if (entity instanceof AcDbUnknownEntity) {
+      this._unknownEntityCount += 1
     }
   }
 

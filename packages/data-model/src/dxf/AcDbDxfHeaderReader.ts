@@ -1,6 +1,8 @@
+import { AcCmColor } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import type { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import type { AcDbDatabase } from '../database/AcDbDatabase.js'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
@@ -26,6 +28,7 @@ import {
  * Stops at `(0,ENDSEC)` without consuming pairs belonging to the next section.
  */
 export function acdbDxfInHeader(filer: AcDbDxfFiler, db: AcDbDatabase): void {
+  db.clearDxfHeaderExtras()
   while (!filer.atEof) {
     const item = filer.peekItem()
     if (!item) break
@@ -64,8 +67,22 @@ function applyHeaderVar(
       break
     }
     case '$CECOLOR': {
-      const n = readHeaderNumber(filer)
-      db.cecolor.colorIndex = n ?? 256
+      const color = readHeaderColor(filer)
+      if (color) {
+        db.cecolor = color
+      } else {
+        db.cecolor.colorIndex = 256
+      }
+      break
+    }
+    case '$HPCOLOR': {
+      const color = readHeaderColor(filer)
+      if (color) db.hpcolor = color
+      break
+    }
+    case '$HPBACKGROUNDCOLOR': {
+      const color = readHeaderColor(filer)
+      if (color) db.hpbackgroundcolor = color
       break
     }
     case '$ANGBASE':
@@ -230,12 +247,35 @@ function applyHeaderVar(
       if (v) db.initializeHandleSeed(v)
       break
     }
-    default:
-      // Skip unknown header value pair(s). Point vars may span multiple codes;
-      // consume until the next code 9 or 0.
-      skipHeaderValue(filer)
+    default: {
+      // Variables without a native model are kept verbatim (ezdxf keeps the
+      // whole HEADER) and re-emitted by dxfOut. Point vars span several codes.
+      const pairs = readHeaderValuePairs(filer)
+      if (pairs.length > 0) db.addDxfHeaderExtra(varName, pairs)
       break
+    }
   }
+}
+
+/**
+ * Reads a color header variable: ACI group 62 plus optional true color 420.
+ * Returns undefined when the variable has no value.
+ */
+function readHeaderColor(filer: AcDbDxfFiler): AcCmColor | undefined {
+  let color: AcCmColor | undefined
+  for (const item of readHeaderValuePairs(filer)) {
+    const code = Number(item.code)
+    const n = Number(item.value)
+    if (!Number.isFinite(n)) continue
+    if (code === 62 || code === 70) {
+      color ??= new AcCmColor()
+      color.colorIndex = n
+    } else if (code === 420) {
+      color ??= new AcCmColor()
+      color.setRGBValue(n)
+    }
+  }
+  return color
 }
 
 function readHeaderString(filer: AcDbDxfFiler): string | undefined {
@@ -334,12 +374,15 @@ function readHeaderPoint3d(filer: AcDbDxfFiler): AcGePoint3d | undefined {
   return got ? new AcGePoint3d(x, y, z) : undefined
 }
 
-function skipHeaderValue(filer: AcDbDxfFiler): void {
+function readHeaderValuePairs(filer: AcDbDxfFiler): AcDbTypedValue[] {
+  const pairs: AcDbTypedValue[] = []
   while (!filer.atEof) {
     const item = filer.peekItem()
     if (!item) break
     const code = Number(item.code)
     if (code === 9 || code === 0) break
     filer.readItem()
+    pairs.push(item)
   }
+  return pairs
 }

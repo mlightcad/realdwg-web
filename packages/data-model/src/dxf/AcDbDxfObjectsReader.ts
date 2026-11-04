@@ -1,4 +1,4 @@
-import type { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import type { AcDbObject } from '../base/AcDbObject.js'
 import { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
 import type { AcDbDatabase } from '../database/AcDbDatabase.js'
@@ -22,12 +22,20 @@ import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
 import { AcDbMTextAttributeObjectContextData } from '../object/AcDbMTextAttributeObjectContextData.js'
 import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
+import type { AcDbObjectContextData } from '../object/AcDbObjectContextData.js'
 import { AcDbRasterImageDef } from '../object/AcDbRasterImageDef.js'
 import { AcDbScale } from '../object/AcDbScale.js'
 import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
 import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
+import { AcDbUnknownObject } from '../object/AcDbUnknownObject.js'
 import { AcDbXrecord } from '../object/AcDbXrecord.js'
 import { AcDbLayout } from '../object/layout/AcDbLayout.js'
+import {
+  acdbDrainDxfObjectPairs,
+  AcDbDxfPairArrayReader,
+  acdbTypedValueToDxfPair
+} from './AcDbDxfPairArrayReader.js'
+import { acdbSplitDxfRawTags } from './AcDbDxfRawTags.js'
 
 const normalizeHandle = (handle?: string) =>
   handle ? handle.trim().toUpperCase() : ''
@@ -45,10 +53,12 @@ export class AcDbDxfObjectsReader {
   private readonly _xrecords: AcDbLayerFilterPersistSource['xrecords'] =
     new Map()
   private _unknownObjectCount = 0
+  /** Objects kept verbatim, linked into dictionaries once all are loaded. */
+  private readonly _unknownObjects: AcDbUnknownObject[] = []
 
   constructor(private readonly _db: AcDbDatabase) {}
 
-  /** Count of OBJECTS types skipped because no native reader exists yet. */
+  /** Count of OBJECTS records kept verbatim because no native reader exists. */
   get unknownObjectCount() {
     return this._unknownObjectCount
   }
@@ -59,6 +69,7 @@ export class AcDbDxfObjectsReader {
    */
   read(filer: AcDbDxfFiler): void {
     this._unknownObjectCount = 0
+    this._unknownObjects.length = 0
     while (!filer.atEof) {
       const item = filer.peekItem()
       if (!item) break
@@ -146,7 +157,7 @@ export class AcDbDxfObjectsReader {
       }
       case 'DICTIONARY':
       case 'ACDBDICTIONARYWDFLT': {
-        const dict = this.readPersistDictionary(filer)
+        const dict = this.readPersistDictionary(filer, typeName)
         if (dict.handle) {
           this._dictionaries.set(normalizeHandle(dict.handle), dict)
         }
@@ -171,8 +182,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_MTEXTOBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbMTextObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbMTextObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -180,8 +194,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_TEXTOBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbTextObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbTextObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -196,8 +213,11 @@ export class AcDbDxfObjectsReader {
       case 'ACDB_RADDIMOBJECTCONTEXTDATA_CLASS':
       case 'ACDB_RADIMOBJECTCONTEXTDATA_CLASS':
       case 'ACDB_RADDIMLGCOBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbDimensionObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbDimensionObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -205,8 +225,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_HATCHSCALECONTEXTDATA_CLASS': {
-        const context = new AcDbHatchScaleContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbHatchScaleContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -214,8 +237,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_BLKREFOBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbBlkRefObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbBlkRefObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -223,8 +249,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_LEADEROBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbLeaderObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbLeaderObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -232,8 +261,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_MLEADEROBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbMLeaderObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbMLeaderObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -241,8 +273,11 @@ export class AcDbDxfObjectsReader {
         break
       }
       case 'ACDB_MTEXTATTRIBUTEOBJECTCONTEXTDATA_CLASS': {
-        const context = new AcDbMTextAttributeObjectContextData()
-        context.dxfIn(filer)
+        const context = this.readContextData(
+          filer,
+          new AcDbMTextAttributeObjectContextData(),
+          typeName
+        )
         const handle = normalizeHandle(context.objectId)
         if (handle) {
           this._db.objects.objectContextData.setAt(handle, context)
@@ -274,12 +309,46 @@ export class AcDbDxfObjectsReader {
         }
         break
       }
-      default:
-        // Unsupported object type — skip its pairs and record for diagnostics.
+      default: {
+        // No native class: keep the tags verbatim (ezdxf DXFTagStorage) so
+        // dictionaries and handles that point at the record stay valid.
         this._unknownObjectCount += 1
-        filer.skipToEndOfObject()
+        const object = new AcDbUnknownObject(typeName)
+        object.dxfIn(filer)
+        if (object.objectId) {
+          object.database = this._db
+          this._db.registerObjectHandle(object)
+          this._db.addDxfUnknownObject(object)
+          this._unknownObjects.push(object)
+        }
         break
+      }
     }
+  }
+
+  /**
+   * Reads a context-data record keeping its tags for verbatim export; only
+   * part of each record is modeled natively.
+   */
+  private readContextData<T extends AcDbObjectContextData>(
+    filer: AcDbDxfFiler,
+    context: T,
+    typeName: string
+  ): T {
+    const pairs = acdbDrainDxfObjectPairs(filer)
+    // Trailing XData is replayed too so dxfIn stores it on the object.
+    while (!filer.atEndOfObject && !filer.atEof) {
+      const item = filer.readItem()
+      if (!item) break
+      pairs.push(acdbTypedValueToDxfPair(item))
+    }
+    const replay = AcDbDxfFiler.forReading(new AcDbDxfPairArrayReader(pairs), {
+      database: filer.database
+    })
+    context.dxfIn(replay)
+    context.dxfRecordName = typeName
+    context.setDxfRawTags(acdbSplitDxfRawTags(pairs).tags)
+    return context
   }
 
   /**
@@ -299,7 +368,7 @@ export class AcDbDxfObjectsReader {
     if (!root?.handle) return
 
     const rootDict = this._db.objects.dictionary
-    rootDict.objectId = root.handle
+    this.adoptDxfHandle(rootDict, root.handle)
     rootDict.ownerId = '0'
 
     const typedByKey: Record<string, AcDbDictionary> = {
@@ -319,7 +388,7 @@ export class AcDbDxfObjectsReader {
       const typed = typedByKey[key.toUpperCase()]
       if (!typed) continue
 
-      typed.objectId = childHandle
+      this.adoptDxfHandle(typed, childHandle)
       typed.ownerId = root.handle
       rootDict.setAt(key, typed)
 
@@ -336,17 +405,59 @@ export class AcDbDxfObjectsReader {
         // from the NOD child handle before merging, so ownerId-based hasId()
         // misses objects that were setAt under the previous dictionary handle.
         const targetId = normalizeHandle(obj.objectId)
-        let alreadyStored = false
-        for (const [, existing] of typed.entries()) {
+        let storedKey: string | undefined
+        for (const [key, existing] of typed.entries()) {
           if (normalizeHandle(existing.objectId) === targetId) {
-            alreadyStored = true
+            storedKey = key
             break
           }
         }
-        if (!typed.getAt(entryName) && !alreadyStored) {
+        if (
+          typed === this._db.objects.mleaderStyle &&
+          storedKey != null &&
+          storedKey !== entryName &&
+          normalizeHandle(storedKey) === targetId &&
+          !typed.getAt(entryName)
+        ) {
+          // MLEADERSTYLE has no name of its own: it is keyed by handle until
+          // the NOD entry names it. Without the rename, CMLEADERSTYLE never
+          // matches and a duplicate "Standard" style is created on every open.
+          typed.remove(storedKey)
+          typed.setAt(entryName, obj)
+          continue
+        }
+        if (!typed.getAt(entryName) && storedKey == null) {
           typed.setAt(entryName, obj)
         }
       }
+    }
+  }
+
+  /**
+   * Gives a bootstrap dictionary the handle it has in the DXF. A default
+   * object that was minted the same handle (e.g. an `ACAD_GROUP` the file
+   * does not contain) moves to a fresh handle so no handle is written twice.
+   */
+  private adoptDxfHandle(dict: AcDbDictionary, handle: string) {
+    if (normalizeHandle(dict.objectId) === normalizeHandle(handle)) return
+    const incumbent = this._db.getObjectById(handle)
+    if (incumbent && incumbent !== dict) {
+      const fresh = this._db.generateUniqueHandle()
+      this._db.releaseObjectHandle(incumbent)
+      incumbent.objectId = fresh
+      this._db.registerObjectHandle(incumbent)
+      if (incumbent instanceof AcDbDictionary) {
+        for (const [, entry] of incumbent.entries()) {
+          if (entry.ownerId === handle) entry.ownerId = fresh
+        }
+      }
+    }
+    const oldHandle = dict.objectId
+    this._db.releaseObjectHandle(dict)
+    dict.objectId = handle
+    this._db.registerObjectHandle(dict)
+    for (const [, entry] of dict.entries()) {
+      if (entry.ownerId === oldHandle) entry.ownerId = handle
     }
   }
 
@@ -368,6 +479,7 @@ export class AcDbDxfObjectsReader {
     for (const [, o] of this._db.objects.scale.entries()) add(o)
     for (const [, o] of this._db.objects.dictionaryVar.entries()) add(o)
     for (const [, o] of this._db.objects.objectContextData.entries()) add(o)
+    for (const o of this._unknownObjects) add(o)
     return map
   }
 
@@ -407,6 +519,7 @@ export class AcDbDxfObjectsReader {
       this._db.releaseObjectHandle(dict)
       dict.objectId = handle
       dict.ownerId = persist.ownerObjectId || '0'
+      if (persist.defaultId) dict.defaultId = persist.defaultId
       if (persist.extensionDictionaryId) {
         dict.extensionDictionary = persist.extensionDictionaryId
       }
@@ -499,13 +612,17 @@ export class AcDbDxfObjectsReader {
     this._db.annoallvisible = raw !== '0' && raw.toLowerCase() !== 'false'
   }
 
-  private readPersistDictionary(filer: AcDbDxfFiler): AcDbPersistDictionary {
+  private readPersistDictionary(
+    filer: AcDbDxfFiler,
+    typeName: string
+  ): AcDbPersistDictionary {
     const result: AcDbPersistDictionary = {
       handle: '',
       ownerObjectId: '',
       entries: {}
     }
     let pendingName: string | undefined
+    let inDefaultSubclass = false
 
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
       const item = filer.readItem()
@@ -519,6 +636,9 @@ export class AcDbDxfObjectsReader {
           result.ownerObjectId = String(item.value)
           break
         case 100:
+          inDefaultSubclass =
+            String(item.value) === 'AcDbDictionaryWithDefault'
+          break
         case 280:
         case 281:
           break
@@ -529,7 +649,13 @@ export class AcDbDxfObjectsReader {
         case 340:
         case 360: {
           const target = normalizeHandle(String(item.value))
-          if (pendingName) {
+          if (
+            code === 340 &&
+            (inDefaultSubclass || typeName === 'ACDBDICTIONARYWDFLT') &&
+            !pendingName
+          ) {
+            result.defaultId = target
+          } else if (pendingName) {
             result.entries[pendingName] = target
             pendingName = undefined
           } else if (code === 360 && !result.extensionDictionaryId) {

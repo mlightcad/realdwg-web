@@ -88,6 +88,10 @@ export interface AcDbBlockTableRecordAttrs extends AcDbSymbolTableRecordAttrs {
    */
   pathName: string
   /**
+   * Block description (DXF BLOCK group code 4, ObjectARX `comments()`).
+   */
+  comments: string
+  /**
    * PreviewIcon binary payload (DXF BLOCK_RECORD group 310), typically a DIB
    * (BITMAPINFO + bits). Stored as raw bytes rather than hex to save memory.
    */
@@ -188,6 +192,7 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
       layoutId: '',
       flags: AcDbBlockTableRecordFlag.None,
       pathName: '',
+      comments: '',
       blockInsertUnits: 0,
       explodability: 1,
       blockScaling: AcDbBlockScaling.Uniform,
@@ -310,6 +315,18 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
   }
   set pathName(value: string) {
     this.setAttr('pathName', value)
+  }
+
+  /**
+   * Gets or sets the block description.
+   *
+   * Corresponds to DXF BLOCK group code 4.
+   */
+  get comments() {
+    return this.getAttr('comments') ?? ''
+  }
+  set comments(value: string) {
+    this.setAttr('comments', value)
   }
 
   /**
@@ -588,7 +605,8 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
    */
   dxfOutBlockRecord(filer: AcDbDxfFiler) {
     filer.writeStart('BLOCK_RECORD')
-    this.dxfOut(filer)
+    // BLOCK_RECORD XData carries e.g. dynamic-block and DesignCenter data.
+    this.dxfOut(filer, true)
     return this
   }
 
@@ -615,6 +633,9 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
     filer.writeString(3, this.name)
     if (this.pathName) {
       filer.writeString(1, this.pathName)
+    }
+    if (this.comments && filer.capabilities.supportsSubclassMarkers) {
+      filer.writeString(4, this.comments)
     }
     return this
   }

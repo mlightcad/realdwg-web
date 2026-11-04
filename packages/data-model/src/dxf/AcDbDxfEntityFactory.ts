@@ -29,6 +29,7 @@ import { AcDbSpline } from '../entity/AcDbSpline.js'
 import { AcDbTable } from '../entity/AcDbTable.js'
 import { AcDbText } from '../entity/AcDbText.js'
 import { AcDbTrace } from '../entity/AcDbTrace.js'
+import { AcDbUnknownEntity } from '../entity/AcDbUnknownEntity.js'
 import { AcDbViewport } from '../entity/AcDbViewport.js'
 import { AcDbWipeout } from '../entity/AcDbWipeout.js'
 import { AcDbXline } from '../entity/AcDbXline.js'
@@ -114,6 +115,20 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
 }
 
 /**
+ * Record names that are structural markers, never standalone entities.
+ * Orphaned instances are skipped instead of being kept as unknown entities.
+ */
+const NON_ENTITY_RECORDS = new Set([
+  'SEQEND',
+  'VERTEX',
+  'ENDBLK',
+  'BLOCK',
+  'ENDSEC',
+  'EOF',
+  'SECTION'
+])
+
+/**
  * Create entity from the current filer position.
  * Expects the filer to be at (or just past) the type name pair (0, TYPENAME).
  * When `typeName` is omitted, reads the next (0, name) pair.
@@ -141,7 +156,13 @@ export function acdbDxfInEntity(
     return acdbDxfInDimension(filer)
   }
 
-  const entity = acdbCreateEntityForDxfIn(name)
+  // Types without a native class are kept verbatim (ezdxf DXFTagStorage /
+  // ODA unknown class) so a read → write round trip does not delete them.
+  const entity =
+    acdbCreateEntityForDxfIn(name) ??
+    (NON_ENTITY_RECORDS.has(upper) || !upper
+      ? null
+      : new AcDbUnknownEntity(upper))
   if (!entity) return null
   entity.dxfIn(filer)
   return entity

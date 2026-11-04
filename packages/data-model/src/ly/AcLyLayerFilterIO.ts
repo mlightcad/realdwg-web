@@ -50,6 +50,8 @@ export interface AcDbPersistDictionary {
   extensionDictionaryId?: string
   /** Named entries mapping to soft/hard-owned object handles. */
   entries: Record<string, string>
+  /** Default entry handle of an `ACDBDICTIONARYWDFLT` (group 340). */
+  defaultId?: string
 }
 
 /**
