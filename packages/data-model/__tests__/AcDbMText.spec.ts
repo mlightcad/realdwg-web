@@ -397,7 +397,8 @@ describe('AcDbMText', () => {
     const filerWithWindowColor = new AcDbDxfFiler()
     mtext.dxfOutFields(filerWithWindowColor)
     const dxfWithWindowColor = filerWithWindowColor.toString()
-    expect(dxfWithWindowColor).toContain('90\n2')
+    // AutoCAD writes 3 for canvas / "Use drawing background"
+    expect(dxfWithWindowColor).toContain('90\n3')
     expect(dxfWithWindowColor).not.toContain('421\n')
     expect(dxfWithWindowColor).not.toContain('\n63\n')
     expect(dxfWithWindowColor).toContain('45\n2.5')
@@ -486,13 +487,22 @@ describe('AcDbMText', () => {
     expect(result).toBe(groupEntity)
     expect(renderer.area).toHaveBeenCalledTimes(1)
     expect(renderer.mtext).toHaveBeenCalledTimes(1)
-    expect(traitsAtArea.drawOrder).toBe(-1)
+    // Linework tier (0), not hatch (-1) — mask must cover earlier entities.
+    expect(traitsAtArea.drawOrder).toBe(0)
     expect(traitsAtArea.fillType.solidFill).toBe(true)
     expect(traitsAtArea.isBackgroundFill).toBe(false)
     expect(traits.color).toBe(originalColor)
     expect(traits.isColorByLayer).toBe(true)
     expect(traits.isBackgroundFill).toBe(false)
     expect(traits.drawOrder).toBe(0)
+    expect(
+      (groupEntity as { userData: { skipMeshGlyphInstancing?: boolean } })
+        .userData.skipMeshGlyphInstancing
+    ).toBe(true)
+    expect(
+      (textEntity as { userData: { skipMeshGlyphInstancing?: boolean } })
+        .userData.skipMeshGlyphInstancing
+    ).toBe(true)
 
     const areaArg = (renderer.area as jest.Mock).mock.calls[0][0] as {
       loops: Array<{
@@ -525,10 +535,93 @@ describe('AcDbMText', () => {
       drawOrder: 0
     }
     let sawBackgroundFill = false
+    let sawColorByLayer: boolean | undefined
     const renderer = {
       subEntityTraits: traits,
       area: jest.fn(() => {
         sawBackgroundFill = traits.isBackgroundFill === true
+        sawColorByLayer = traits.isColorByLayer
+        return { id: 'mask' }
+      }),
+      mtext: jest.fn(() => ({ id: 'text', userData: {} })),
+      group: jest.fn((entities: unknown[]) => ({
+        id: 'group',
+        userData: {},
+        entities
+      }))
+    }
+
+    const result = mtext.subWorldDraw(renderer as never) as unknown as {
+      userData: { skipMeshGlyphInstancing?: boolean }
+      entities: Array<{ userData: { skipMeshGlyphInstancing?: boolean } }>
+    }
+    expect(sawBackgroundFill).toBe(true)
+    expect(sawColorByLayer).toBe(false)
+    expect(traits.isBackgroundFill).toBe(false)
+    // Mask + glyphs must share the mesh draw-order Z path so the canvas
+    // mask cannot cover its own text after InstancedMesh keeps Z at 0.
+    expect(result.userData.skipMeshGlyphInstancing).toBe(true)
+    expect(result.entities[1].userData.skipMeshGlyphInstancing).toBe(true)
+  })
+
+  it('reads DXF group 90 values 2 and 3 as useBackgroundColor', () => {
+    createWorkingDb()
+    const source = new AcDbMText()
+    source.ownerId = 'ABC'
+    source.location = { x: 0, y: 0, z: 0 }
+    source.height = 2
+    source.contents = 'Hi'
+    source.backgroundFill = true
+    source.useBackgroundColor = true
+    source.backgroundScaleFactor = 1.5
+
+    const out = new AcDbDxfFiler()
+    source.dxfOutFields(out)
+    const dxfWith3 = out.toString()
+    expect(dxfWith3).toContain('90\n3')
+
+    for (const flags of [2, 3]) {
+      const roundTrip = new AcDbMText()
+      roundTrip.dxfIn(
+        AcDbDxfFiler.fromString(dxfWith3.replace('90\n3', `90\n${flags}`))
+      )
+      expect(roundTrip.backgroundFill).toBe(true)
+      expect(roundTrip.useBackgroundColor).toBe(true)
+      expect(roundTrip.backgroundScaleFactor).toBeCloseTo(1.5)
+    }
+  })
+
+  it('keeps ACI 7 background fill as foreground colour', () => {
+    createWorkingDb()
+    const mtext = new AcDbMText()
+    mtext.contents = 'FG'
+    mtext.height = 2
+    mtext.width = 4
+    mtext.location = { x: 0, y: 0, z: 0 }
+    mtext.backgroundFill = true
+    mtext.backgroundFillColor = 7
+
+    const traits: {
+      color: unknown
+      isColorByLayer: boolean
+      fillType: { solidFill: boolean; patternAngle: number; definitionLines: unknown[] }
+      isBackgroundFill: boolean
+      drawOrder: number
+    } = {
+      color: { tag: 'keep' },
+      isColorByLayer: true,
+      fillType: { solidFill: false, patternAngle: 0, definitionLines: [] },
+      isBackgroundFill: false,
+      drawOrder: 0
+    }
+    let maskColor: { isForeground?: boolean; colorIndex?: number } | undefined
+    const renderer = {
+      subEntityTraits: traits,
+      area: jest.fn(() => {
+        maskColor = traits.color as {
+          isForeground?: boolean
+          colorIndex?: number
+        }
         return { id: 'mask' }
       }),
       mtext: jest.fn(() => ({ id: 'text', userData: {} })),
@@ -540,8 +633,8 @@ describe('AcDbMText', () => {
     }
 
     mtext.subWorldDraw(renderer as never)
-    expect(sawBackgroundFill).toBe(true)
-    expect(traits.isBackgroundFill).toBe(false)
+    expect(maskColor?.isForeground).toBe(true)
+    expect(maskColor?.colorIndex).toBe(7)
   })
 
   it('writes actual text width as DXF group 42 when extentsWidth is set', () => {

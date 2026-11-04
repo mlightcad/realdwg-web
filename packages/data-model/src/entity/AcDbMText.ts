@@ -1,4 +1,4 @@
-import { AcCmColor, AcCmColorUtil } from '@mlightcad/common'
+import { AcCmColor } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -89,7 +89,7 @@ export class AcDbMText extends AcDbEntity {
   private _backgroundFill: boolean
   /**
    * When true, the mask uses the drawing / layout background colour
-   * (DXF group 90 = 2) instead of {@link backgroundFillColor}.
+   * (DXF group 90 = 2 or 3) instead of {@link backgroundFillColor}.
    */
   private _useBackgroundColor: boolean
   /** The background fill color (RGB integer, or ACI when ≤ 255) */
@@ -344,7 +344,7 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * When true, the mask uses the drawing window / layout background colour
-   * (DXF group 90 = 2) instead of {@link backgroundFillColor}.
+   * (DXF group 90 = 2 or 3) instead of {@link backgroundFillColor}.
    */
   get useBackgroundColor() {
     return this._useBackgroundColor
@@ -1163,6 +1163,15 @@ export class AcDbMText extends AcDbEntity {
       }
       userData.annotationScale = annotationScale
     }
+    // Mask meshes take a draw-order Z elevation when batched; scene-level
+    // mesh-glyph InstancedMesh placements stay at Z=0. Keep glyphs as local
+    // meshes in the same group so they allocate Z after the mask and stay on
+    // top (canvas-coloured mask would otherwise hide the text).
+    if (drawable && background && textDrawable) {
+      const flag = { skipMeshGlyphInstancing: true as const }
+      Object.assign(drawable.userData, flag)
+      Object.assign(textDrawable.userData, flag)
+    }
     return drawable
   }
 
@@ -1216,9 +1225,16 @@ export class AcDbMText extends AcDbEntity {
       patternAngle: 0,
       definitionLines: []
     }
-    traits.drawOrder = -1
+    // Same tier as wipeouts / linework (`0`), not hatch (`-1`). Hatch-tier
+    // fills stay under all linework; the mask must occlude earlier entities
+    // (AutoCAD draw order) and only sit behind this MTEXT's own glyphs.
+    traits.drawOrder = 0
     if (this.useBackgroundColor) {
+      // Fuse with MODELBKCOLOR / PAPERBKCOLOR. Clear ByLayer provenance so
+      // renderers do not later rewrite the mask from the entity's ACI-7 layer
+      // colour (black on light paper).
       traits.isBackgroundFill = true
+      traits.isColorByLayer = false
     } else {
       traits.isBackgroundFill = false
       const fillColor = this.resolveBackgroundFillColor()
@@ -1240,16 +1256,14 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Resolves the mask fill colour from the stored RGB / ACI integer.
+   *
+   * ACI indices stay as ByACI so ACI 7 remains foreground and the renderer
+   * can contrast it against the current canvas / layout background.
    */
   private resolveBackgroundFillColor(): AcCmColor {
     const value = this.backgroundFillColor
     const color = new AcCmColor()
     if (value > 0 && value <= 255) {
-      const rgb = AcCmColorUtil.getColorByIndex(value)
-      if (rgb != null) {
-        color.setRGBValue(rgb)
-        return color
-      }
       color.colorIndex = value
       return color
     }
@@ -1288,8 +1302,9 @@ export class AcDbMText extends AcDbEntity {
     filer.writeInt16(73, this.lineSpacingStyle)
     filer.writeDouble(44, this.lineSpacingFactor)
     if (this.backgroundFill) {
-      // DXF group 90: 1 = fill colour, 2 = drawing-window / layout background.
-      filer.writeInt16(90, this.useBackgroundColor ? 2 : 1)
+      // DXF group 90: 1 = fill colour; 2 = window colour; 3 = canvas /
+      // layout background (what AutoCAD writes for "Use drawing background").
+      filer.writeInt16(90, this.useBackgroundColor ? 3 : 1)
       if (!this.useBackgroundColor) {
         const fill = this.backgroundFillColor >>> 0
         if (fill > 0 && fill <= 255) {
@@ -1421,10 +1436,11 @@ export class AcDbMText extends AcDbEntity {
           this.columnAutoHeight = n !== 0
           break
         case 90: {
-          // 0 = off; 1 = colour fill; 2 = drawing-window colour.
+          // 0 = off; 1 = colour fill; 2 = window; 3 = canvas background.
+          // Bit 0x02 covers both 2 and 3 (and combinations with text-frame).
           const flags = n | 0
           this._backgroundFill = flags !== 0
-          this._useBackgroundColor = flags === 2
+          this._useBackgroundColor = (flags & 0x02) !== 0
           break
         }
         case 63:
