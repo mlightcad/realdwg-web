@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.15.22
+
+### Patch Changes
+
+- fix: draws MTEXT background masks and treats flags 3 as the canvas background so paper-space masks no longer hide text; wipeouts paint as solid fills instead of inheriting hatch patterns that broke masking and PDF export; closes DXF read/write gaps against ezdxf and ODA behaviour; and completes entity runtime properties for the inspector
+- Updated dependencies
+  - @mlightcad/data-model@1.15.22
+
 ## 3.15.21
 
 ### Patch Changes
