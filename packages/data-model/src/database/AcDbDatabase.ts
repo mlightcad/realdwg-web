@@ -15,6 +15,7 @@ import {
   acdbAssignWorkingDatabase
 } from '../base/AcDbObject.js'
 import { AcDbOpenMode } from '../base/AcDbOpenMode.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator.js'
 import {
   AcDbConverterType,
@@ -23,6 +24,7 @@ import {
 } from './AcDbDatabaseConverterManager.js'
 import { AcDbEntity } from '../entity/AcDbEntity.js'
 import { AcDbPolyline } from '../entity/AcDbPolyline.js'
+import { AcDbUnknownEntity } from '../entity/AcDbUnknownEntity.js'
 import {
   ACAD_APPID,
   ACDB_COMPAREHATCH_DEFAULT,
@@ -111,6 +113,63 @@ import { AcDbLayout } from '../object/layout/AcDbLayout.js'
 import { AcDbLayoutDictionary } from '../object/layout/AcDbLayoutDictionary.js'
 import { AcDbSymbolTable } from './AcDbSymbolTable.js'
 import { AcDbDatabaseTransactionManager } from './transaction/AcDbDatabaseTransactionManager.js'
+import { acdbDxfObjectRecordName } from '../dxf/AcDbDxfObjectRecordName.js'
+
+/** OBJECTS-section records chosen for one DXF export. */
+interface AcDbDxfObjectsPlan {
+  /** Records in write order; the named object dictionary comes first. */
+  records: Array<{ object: AcDbObject; type: string }>
+  /** XRecords not owned by a written dictionary, listed in MLIGHT_XRECORD. */
+  looseXrecords: AcDbXrecord[]
+  /** Upper-case handles of every OBJECTS record written. */
+  writtenObjectIds: Set<string>
+  /** Re-add ACAD_MLEADERSTYLE to the root dictionary after writing. */
+  restoreMLeaderRoot: boolean
+}
+
+/**
+ * HEADER variables {@link AcDbDatabase.dxfOut} writes from the live model.
+ * Verbatim copies preserved from the source file are never written for these.
+ */
+const DXF_HEADER_NATIVE_VARS = new Set([
+  '$ACADVER',
+  '$HANDSEED',
+  '$DWGCODEPAGE',
+  '$INSUNITS',
+  '$LUNITS',
+  '$LUPREC',
+  '$UNITMODE',
+  '$MEASUREMENT',
+  '$LTSCALE',
+  '$LWDISPLAY',
+  '$CELTSCALE',
+  '$CELWEIGHT',
+  '$CECOLOR',
+  '$TILEMODE',
+  '$PSLTSCALE',
+  '$CLAYER',
+  '$CELTYPE',
+  '$CETRANSPARENCY',
+  '$CMLSTYLE',
+  '$CMLSCALE',
+  '$CMLEADERSTYLE',
+  '$HPCOLOR',
+  '$HPBACKGROUNDCOLOR',
+  '$HPLAYER',
+  '$HPTRANSPARENCY',
+  '$TEXTSTYLE',
+  '$DIMSTYLE',
+  '$ANGBASE',
+  '$ANGDIR',
+  '$AUNITS',
+  '$AUPREC',
+  '$EXTMIN',
+  '$EXTMAX',
+  '$PDMODE',
+  '$PDSIZE',
+  '$OSMODE',
+  '$ORTHOMODE'
+])
 
 /**
  * Event arguments for object events in the dictionary.
@@ -477,6 +536,19 @@ export class AcDbDatabase extends AcDbObject {
    * Raw image bytes (typically BMP/DIB or PNG), or `undefined` when absent.
    */
   private _thumbnailImage?: Uint8Array
+  /**
+   * DXF HEADER variables without a native model, kept verbatim in file order
+   * and re-emitted by {@link dxfOut} (ezdxf keeps the whole HEADER section).
+   */
+  private _dxfHeaderExtras: Array<{ name: string; pairs: AcDbTypedValue[] }> =
+    []
+  /** DWG version value of the file {@link _dxfHeaderExtras} came from. */
+  private _dxfHeaderExtrasVersion = 0
+  /**
+   * OBJECTS-section records without a native class, kept verbatim
+   * ({@link AcDbUnknownObject}) and re-emitted by {@link dxfOut}.
+   */
+  private _dxfUnknownObjects: AcDbObject[] = []
   /**
    * Layer Properties Manager filter tree (`AcLy*` / .NET `LayerFilterTree`).
    * Distinct from {@link objects.layerFilter} (`AcDbLayerFilter` index objects).
@@ -1868,6 +1940,47 @@ export class AcDbDatabase extends AcDbObject {
    *
    * @returns Thumbnail image bytes, or `undefined` when none exist.
    */
+  /**
+   * HEADER variables read from DXF that have no native model, in file order.
+   * @internal
+   */
+  get dxfHeaderExtras(): ReadonlyArray<{
+    name: string
+    pairs: ReadonlyArray<AcDbTypedValue>
+  }> {
+    return this._dxfHeaderExtras
+  }
+
+  /** @internal Used by the DXF HEADER reader. */
+  addDxfHeaderExtra(name: string, pairs: AcDbTypedValue[]) {
+    const index = this._dxfHeaderExtras.findIndex(v => v.name === name)
+    if (index >= 0) {
+      this._dxfHeaderExtras[index] = { name, pairs }
+    } else {
+      this._dxfHeaderExtras.push({ name, pairs })
+    }
+    this._dxfHeaderExtrasVersion = this._version.value
+  }
+
+  /**
+   * OBJECTS records read from DXF without a native class.
+   * @internal
+   */
+  get dxfUnknownObjects(): ReadonlyArray<AcDbObject> {
+    return this._dxfUnknownObjects
+  }
+
+  /** @internal Used by the DXF OBJECTS reader. */
+  addDxfUnknownObject(object: AcDbObject) {
+    this._dxfUnknownObjects.push(object)
+  }
+
+  /** @internal Used by the DXF HEADER reader. */
+  clearDxfHeaderExtras() {
+    this._dxfHeaderExtras = []
+    this._dxfHeaderExtrasVersion = 0
+  }
+
   get thumbnailImage(): Uint8Array | undefined {
     return this._thumbnailImage
   }
@@ -2758,12 +2871,18 @@ export class AcDbDatabase extends AcDbObject {
       outputFormat: options.format
     })
 
+    const objectsPlan = filer.capabilities.supportsObjectsSection
+      ? this.planDxfObjectsSection(filer)
+      : undefined
+    filer.writtenObjectIds = objectsPlan?.writtenObjectIds ?? new Set()
+    this.ensureXDataAppIds(objectsPlan)
+
     this.writeDxfHeaderSection(filer)
     this.writeDxfClassesSection(filer)
     this.writeDxfTablesSection(filer, outVersion)
     this.writeDxfBlocksSection(filer)
     this.writeDxfEntitiesSection(filer)
-    this.writeDxfObjectsSection(filer)
+    this.writeDxfObjectsSection(filer, objectsPlan)
     this.writeDxfThumbnailImageSection(filer, options.saveThumbnailImage)
     filer.writeStart('EOF')
     // `$HANDSEED` is written early in HEADER; patch it now that every handle
@@ -3219,7 +3338,24 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt32(70, this.osmode)
     filer.writeString(9, '$ORTHOMODE')
     filer.writeInt16(70, this.orthomode)
+    this.writeDxfHeaderExtras(filer)
     filer.endSection()
+  }
+
+  /**
+   * Re-emits HEADER variables preserved verbatim from the source DXF.
+   *
+   * Skipped when exporting to an older version than the source, since newer
+   * variables (and their value encodings) may be invalid there.
+   */
+  private writeDxfHeaderExtras(filer: AcDbDxfFiler) {
+    const target = filer.version?.value ?? this.version.value
+    if (target < this._dxfHeaderExtrasVersion) return
+    for (const { name, pairs } of this._dxfHeaderExtras) {
+      if (DXF_HEADER_NATIVE_VARS.has(name)) continue
+      filer.writeString(9, name)
+      filer.writeRawPairs(pairs)
+    }
   }
 
   /**
@@ -3402,30 +3538,27 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
-   * Writes the OBJECTS section for the DXF export.
+   * Decides which OBJECTS-section records a DXF export writes.
    *
-   * @param filer - DXF output writer.
+   * Like ezdxf / ODA, every record reachable from the named object dictionary
+   * and from extension dictionaries (of tables, table records, entities and
+   * objects) is written, including records preserved verbatim
+   * ({@link AcDbUnknownObject}, context data). Only records that are actually
+   * written are listed in their dictionaries, so the output never carries
+   * dangling 350/360 handles.
+   *
+   * Must run before any section is written: {@link AcDbObject} consults the
+   * resulting handle set when it emits extension-dictionary pointers.
    */
-  private writeDxfObjectsSection(filer: AcDbDxfFiler) {
-    if (!filer.capabilities.supportsObjectsSection) {
-      return
-    }
-    filer.startSection('OBJECTS')
+  private planDxfObjectsSection(filer: AcDbDxfFiler): AcDbDxfObjectsPlan {
     const rootDict = this.objects.dictionary
     rootDict.ownerId = '0'
-
-    const writeDictionary = (dict: AcDbDictionary) => {
-      // Dictionary entries (3/350 pairs) are embedded in the DICTIONARY object.
-      filer.writeStart('DICTIONARY')
-      dict.dxfOut(filer, true)
-    }
 
     const ensureRootEntry = (key: string, dict: AcDbDictionary) => {
       if (rootDict.getAt(key) !== dict) {
         rootDict.setAt(key, dict)
       }
     }
-
     const dropRootEntry = (key: string) => {
       if (rootDict.getAt(key)) {
         rootDict.remove(key)
@@ -3441,8 +3574,7 @@ export class AcDbDatabase extends AcDbObject {
       dropRootEntry('ACAD_SORTENTS')
     }
     const hasMLeaderStyles = this.objects.mleaderStyle.numEntries > 0
-    const writeMLeader =
-      filer.capabilities.supportsMLeader && hasMLeaderStyles
+    const writeMLeader = filer.capabilities.supportsMLeader && hasMLeaderStyles
     // When the target DXF version cannot carry MLEADERSTYLE, omit it from
     // this export only — do not permanently strip it from the live root dict.
     const restoreMLeaderRoot =
@@ -3463,86 +3595,243 @@ export class AcDbDatabase extends AcDbObject {
     } else {
       dropRootEntry('ISM_RASTER_IMAGE_DICT')
     }
-    if (this.objects.xrecord.numEntries > 0) {
-      ensureRootEntry('MLIGHT_XRECORD', this.objects.xrecord)
+
+    const norm = (id?: string) => (id ?? '').trim().toUpperCase()
+    const classNames = new Set(
+      this._classes.map(item => (item.name ?? '').toUpperCase())
+    )
+    const records = new Map<string, { object: AcDbObject; type: string }>()
+    // Records replaced by freshly generated ones (Layer Manager filter tree):
+    // neither written nor collected into MLIGHT_XRECORD.
+    const superseded = new Set<string>()
+    const xrecordContainer = this.objects.xrecord
+    const queue: AcDbObject[] = []
+
+    const visit = (object: AcDbObject | undefined) => {
+      if (!object || object === xrecordContainer) return
+      const key = norm(object.objectId)
+      if (!key || records.has(key) || superseded.has(key)) return
+      const type = acdbDxfObjectRecordName(object, classNames)
+      if (!type) return
+      records.set(key, { object, type })
+      queue.push(object)
+    }
+    const visitExtensionDictionary = (owner: AcDbObject) => {
+      const id = owner.extensionDictionary
+      if (id) visit(this.getObjectById(id))
+    }
+    let next = 0
+    const drain = () => {
+      while (next < queue.length) {
+        const object = queue[next++]
+        visitExtensionDictionary(object)
+        if (object instanceof AcDbDictionary) {
+          for (const [, entry] of object.entries()) visit(entry)
+          if (object.defaultId) visit(this.getObjectById(object.defaultId))
+        }
+      }
+    }
+    const markSuperseded = (object: AcDbObject | undefined) => {
+      if (!object) return
+      const key = norm(object.objectId)
+      if (!key || superseded.has(key)) return
+      superseded.add(key)
+      if (object.extensionDictionary) {
+        markSuperseded(this.getObjectById(object.extensionDictionary))
+      }
+      if (object instanceof AcDbDictionary) {
+        for (const [, entry] of object.entries()) markSuperseded(entry)
+      }
+    }
+
+    // The named object dictionary must be the first record of OBJECTS.
+    visit(rootDict)
+    drain()
+
+    // The Layer Manager filter tree is regenerated by
+    // writeAcLyLayerFilterObjects, which also writes the layer table's
+    // extension dictionary. Keep its other entries.
+    const layerTable = this.tables.layerTable
+    const writesLayerFilters =
+      this._layerFilters.root.getNestedFilters().length > 0
+    if (writesLayerFilters && layerTable.extensionDictionary) {
+      const layerExtId = layerTable.extensionDictionary
+      const layerExt = this.getObjectById(layerExtId)
+      superseded.add(norm(layerExtId))
+      if (layerExt instanceof AcDbDictionary) {
+        for (const [key, entry] of layerExt.entries()) {
+          if (key === ACLY_DICTIONARY_NAME || key === ACAD_LAYERFILTERS_NAME) {
+            markSuperseded(entry)
+          } else {
+            visit(entry)
+          }
+        }
+      }
+    }
+
+    for (const table of Object.values(this.tables) as AcDbSymbolTable[]) {
+      visitExtensionDictionary(table)
+      for (const record of table.newIterator() as Iterable<AcDbObject>) {
+        visitExtensionDictionary(record)
+      }
+    }
+    for (const btr of this.tables.blockTable.newIterator()) {
+      for (const entity of btr.newIterator()) {
+        visitExtensionDictionary(entity)
+        const attributes = (
+          entity as { attributeIterator?: () => Iterable<AcDbObject> }
+        ).attributeIterator?.()
+        if (attributes) {
+          for (const attribute of attributes) {
+            visitExtensionDictionary(attribute)
+          }
+        }
+      }
+    }
+    drain()
+
+    // Index objects are not dictionary entries; written as before.
+    for (const [, layerFilter] of this.objects.layerFilter.entries()) {
+      visit(layerFilter)
+    }
+    for (const [, layerIndex] of this.objects.layerIndex.entries()) {
+      visit(layerIndex)
+    }
+    // Preserved records owned by an entity or object rather than a
+    // dictionary (e.g. IMAGEDEF_REACTOR) — kept while their owner exists.
+    for (const object of this._dxfUnknownObjects) {
+      const owner = this.getObjectById(object.ownerId)
+      // Kept while the owner is exported; a removed dictionary entry is not.
+      if (
+        owner instanceof AcDbEntity ||
+        (owner &&
+          !(owner instanceof AcDbDictionary) &&
+          records.has(norm(owner.objectId)))
+      ) {
+        visit(object)
+      }
+    }
+    drain()
+
+    // XRecords not owned by any written dictionary go to MLIGHT_XRECORD.
+    const looseXrecords: AcDbXrecord[] = []
+    for (const [, xrecord] of xrecordContainer.entries()) {
+      const key = norm(xrecord.objectId)
+      if (!key || records.has(key) || superseded.has(key)) continue
+      looseXrecords.push(xrecord)
+    }
+    if (looseXrecords.length > 0) {
+      ensureRootEntry('MLIGHT_XRECORD', xrecordContainer)
     } else {
       dropRootEntry('MLIGHT_XRECORD')
     }
 
-    writeDictionary(rootDict)
-    writeDictionary(this.objects.layout)
-
-    writeDictionary(this.objects.group)
-    if (this.objects.sortentsTable.numEntries > 0) {
-      writeDictionary(this.objects.sortentsTable)
-    }
-    if (writeMLeader) {
-      writeDictionary(this.objects.mleaderStyle)
-    }
-    if (this.objects.mlineStyle.numEntries > 0) {
-      writeDictionary(this.objects.mlineStyle)
-    }
-
-    if (this.objects.imageDefinition.numEntries > 0) {
-      writeDictionary(this.objects.imageDefinition)
-    }
-
-    if (this.objects.xrecord.numEntries > 0) {
-      writeDictionary(this.objects.xrecord)
-    }
-
-    for (const [_, layout] of this.objects.layout.entries()) {
-      filer.writeStart('LAYOUT')
-      layout.dxfOut(filer, true)
-    }
-
-    for (const [key, group] of this.objects.group.entries()) {
-      if (!group.name) group.name = key
-      filer.writeStart('GROUP')
-      group.dxfOut(filer, true)
-    }
-
-    for (const [_, sortents] of this.objects.sortentsTable.entries()) {
-      filer.writeStart('SORTENTSTABLE')
-      sortents.dxfOut(filer, true)
-    }
-
-    for (const [_, imageDef] of this.objects.imageDefinition.entries()) {
-      filer.writeStart('IMAGEDEF')
-      imageDef.dxfOut(filer, true)
-    }
-
-    for (const [_, layerFilter] of this.objects.layerFilter.entries()) {
-      filer.writeStart('LAYER_FILTER')
-      layerFilter.dxfOut(filer, true)
-    }
-
-    for (const [_, layerIndex] of this.objects.layerIndex.entries()) {
-      filer.writeStart('LAYER_INDEX')
-      layerIndex.dxfOut(filer, true)
-    }
-
-    if (writeMLeader) {
-      for (const [_, mleaderStyle] of this.objects.mleaderStyle.entries()) {
-        filer.writeStart('MLEADERSTYLE')
-        mleaderStyle.dxfOut(filer, true)
+    const writtenObjectIds = new Set(records.keys())
+    if (looseXrecords.length > 0) {
+      writtenObjectIds.add(norm(xrecordContainer.objectId))
+      for (const xrecord of looseXrecords) {
+        writtenObjectIds.add(norm(xrecord.objectId))
       }
     }
-    for (const [_, mlineStyle] of this.objects.mlineStyle.entries()) {
-      filer.writeStart('MLINESTYLE')
-      mlineStyle.dxfOut(filer, true)
+    if (writesLayerFilters && layerTable.extensionDictionary) {
+      writtenObjectIds.add(norm(layerTable.extensionDictionary))
     }
 
-    for (const [_, xrecord] of this.objects.xrecord.entries()) {
-      filer.writeStart('XRECORD')
-      xrecord.dxfOut(filer, true)
+    return {
+      records: [...records.values()],
+      looseXrecords,
+      writtenObjectIds,
+      restoreMLeaderRoot
+    }
+  }
+
+  /**
+   * Registers an APPID record for every application whose XData is about to
+   * be written. AutoCAD rejects a DXF whose XData names an unregistered
+   * application (ezdxf's auditor adds the missing records the same way).
+   */
+  private ensureXDataAppIds(plan: AcDbDxfObjectsPlan | undefined) {
+    const appIdTable = this.tables.appIdTable
+    const register = (object: AcDbObject) => {
+      for (const appId of object.xDataAppIds()) {
+        if (appId && !appIdTable.has(appId)) {
+          appIdTable.add(new AcDbRegAppTableRecord(appId))
+        }
+      }
+    }
+    for (const table of Object.values(this.tables) as AcDbSymbolTable[]) {
+      for (const record of table.newIterator() as Iterable<AcDbObject>) {
+        register(record)
+      }
+    }
+    for (const btr of this.tables.blockTable.newIterator()) {
+      for (const entity of btr.newIterator()) {
+        register(entity)
+        const attributes = (
+          entity as { attributeIterator?: () => Iterable<AcDbObject> }
+        ).attributeIterator?.()
+        if (attributes) {
+          for (const attribute of attributes) register(attribute)
+        }
+      }
+    }
+    if (plan) {
+      for (const { object } of plan.records) register(object)
+      for (const xrecord of plan.looseXrecords) register(xrecord)
+    }
+  }
+
+  /**
+   * Writes the OBJECTS section for the DXF export.
+   *
+   * @param filer - DXF output writer.
+   * @param plan - Records chosen by {@link planDxfObjectsSection}.
+   */
+  private writeDxfObjectsSection(
+    filer: AcDbDxfFiler,
+    plan: AcDbDxfObjectsPlan | undefined
+  ) {
+    if (!plan) return
+    filer.startSection('OBJECTS')
+    const isWritten = (object: AcDbObject) =>
+      plan.writtenObjectIds.has((object.objectId ?? '').trim().toUpperCase())
+
+    for (const { object, type } of plan.records) {
+      if (object instanceof AcDbDictionary) {
+        filer.writeStart(type)
+        object.dxfOutFiltered(filer, isWritten)
+        continue
+      }
+      if (object instanceof AcDbGroup && !object.name) {
+        // Keep the group name in sync with its ACAD_GROUP key.
+        for (const [key, group] of this.objects.group.entries()) {
+          if (group === object) object.name = key
+        }
+      }
+      filer.writeStart(type)
+      object.dxfOut(filer, true)
+    }
+
+    if (plan.looseXrecords.length > 0) {
+      const container = this.objects.xrecord
+      container.ownerId = this.objects.dictionary.objectId
+      filer.writeStart('DICTIONARY')
+      container.dxfOutFiltered(filer, isWritten)
+      for (const xrecord of plan.looseXrecords) {
+        xrecord.ownerId = container.objectId
+        filer.writeStart('XRECORD')
+        xrecord.dxfOut(filer, true)
+      }
     }
 
     this.writeAcLyLayerFilterObjects(filer)
     filer.endSection()
 
-    if (restoreMLeaderRoot) {
-      rootDict.setAt('ACAD_MLEADERSTYLE', this.objects.mleaderStyle)
+    if (plan.restoreMLeaderRoot) {
+      this.objects.dictionary.setAt(
+        'ACAD_MLEADERSTYLE',
+        this.objects.mleaderStyle
+      )
     }
   }
 
@@ -3660,6 +3949,11 @@ export class AcDbDatabase extends AcDbObject {
       }
     )
 
+    // Generated here, after planning: register them so the extension
+    // dictionary pointers of the filter XRecords are written.
+    for (const dict of dicts) filer.markObjectIdWritten(dict.handle)
+    for (const item of xrecs) filer.markObjectIdWritten(item.handle)
+
     for (const dict of dicts) {
       filer.writeStart('DICTIONARY')
       filer.writeHandle(5, dict.handle)
@@ -3734,6 +4028,15 @@ export class AcDbDatabase extends AcDbObject {
    * @param entity - Entity to serialize.
    */
   private writeDxfEntity(filer: AcDbDxfFiler, entity: AcDbEntity) {
+    // Preserved tags only fit the layout they were read in: R13+ tags (with
+    // subclass markers) cannot go to R12 and vice versa; ezdxf drops such
+    // entities as well.
+    if (
+      entity instanceof AcDbUnknownEntity &&
+      entity.hasSubclassData !== filer.capabilities.supportsSubclassMarkers
+    ) {
+      return
+    }
     if (
       entity instanceof AcDbPolyline &&
       !filer.capabilities.supportsLwPolyline
@@ -3786,6 +4089,8 @@ export class AcDbDatabase extends AcDbObject {
     this.transactionManager.clearUndoStack()
     // Clear all tables and dictionaries
     this._classes = []
+    this.clearDxfHeaderExtras()
+    this._dxfUnknownObjects = []
     this._tables.blockTable.removeAll()
     this._tables.dimStyleTable.removeAll()
     this._tables.linetypeTable.removeAll()

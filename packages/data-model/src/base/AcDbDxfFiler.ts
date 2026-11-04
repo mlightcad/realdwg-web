@@ -239,6 +239,47 @@ export class AcDbDxfFiler {
     return out
   }
 
+  /**
+   * Upper-case handles of the OBJECTS-section records the current export
+   * writes. When set, an object only emits its extension-dictionary pointer
+   * if the dictionary is among them, so the output has no dangling 360.
+   * Unset for ad-hoc writers (every pointer is written).
+   */
+  writtenObjectIds?: ReadonlySet<string>
+
+  /** True when `id` is (or may be) written; see {@link writtenObjectIds}. */
+  isObjectIdWritten(id?: string) {
+    if (!id) return false
+    const ids = this.writtenObjectIds
+    return !ids || ids.has(id.trim().toUpperCase())
+  }
+
+  /**
+   * Adds a record created while the OBJECTS section is being written (e.g.
+   * the Layer Manager filter tree) to {@link writtenObjectIds}.
+   */
+  markObjectIdWritten(id?: string) {
+    const ids = this.writtenObjectIds
+    if (id && ids instanceof Set) ids.add(id.trim().toUpperCase())
+    return this
+  }
+
+  /**
+   * Writes an extension-dictionary pointer. Per the DXF reference (and
+   * ezdxf / ODA output) the 360 handle is wrapped in `102 {ACAD_XDICTIONARY`
+   * … `102 }` and precedes the owner handle (330); a bare 360 there is read
+   * by AutoCAD as garbage. Skipped when the dictionary is not exported.
+   */
+  writeExtensionDictionary(id?: string) {
+    if (!this.capabilities.supportsHandles || !this.isObjectIdWritten(id)) {
+      return this
+    }
+    this.writeString(102, '{ACAD_XDICTIONARY')
+    this.writeObjectId(360, id)
+    this.writeString(102, '}')
+    return this
+  }
+
   registerHandle(key: string) {
     if (!this._handleMap.has(key)) {
       // If key is already a valid hex handle, preserve it. `$HANDSEED` is
@@ -724,6 +765,39 @@ export class AcDbDxfFiler {
 
   writeResultBuffer(data?: AcDbResultBuffer | null) {
     return this.writeTypedValues(data)
+  }
+
+  /**
+   * Replays tags captured verbatim from a DXF file (unknown entities/objects,
+   * unknown HEADER variables). Unlike {@link writeString}, empty string values
+   * are kept as empty value lines because their presence is significant.
+   */
+  writeRawPairs(pairs: Iterable<AcDbTypedValue>) {
+    for (const pair of pairs) {
+      const code = Number(pair.code)
+      const value = pair.value
+      if (value === '' || value == null) {
+        if (acdbDxfValueType(code) !== 'string') continue
+        this.assertWriteMode()
+        if (this._outputFormat === 'binary') {
+          this.writeBinaryGroup(code, '')
+        } else {
+          this._lines.push(String(Math.trunc(code)), '')
+        }
+        continue
+      }
+      if (
+        this._outputFormat === 'binary' &&
+        acdbDxfValueType(code) === 'binary' &&
+        !(value instanceof Uint8Array)
+      ) {
+        // Tags read from ASCII DXF keep binary chunks as hex text.
+        this.writeGroup(code, acdbCoerceBinaryBytes(value) ?? new Uint8Array())
+        continue
+      }
+      this.writeGroup(code, value)
+    }
+    return this
   }
 
   /**

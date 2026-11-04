@@ -98,6 +98,7 @@ export { AcDbTrace } from './AcDbTrace.js'
 export { AcDbSolid } from './AcDbSolid.js'
 export { AcDbPolyline, acdbOffsetVertexPathAsPolyline } from './AcDbPolyline.js'
 export { AcDbProxyEntity } from './AcDbProxyEntity.js'
+export { AcDbUnknownEntity } from './AcDbUnknownEntity.js'
 export { AcDbPoint } from './AcDbPoint.js'
 export {
   AcDbRasterImage,

@@ -110,7 +110,12 @@ export class AcDbDictionary<
 
     // Commit before assigning ownerId so a handle collision that remints this
     // dictionary leaves the entry pointing at the new dictionary objectId.
-    this.database.commitObjectHandle(value, id => this.hasId(id))
+    // Only another entry with the same handle is a duplicate; an object that
+    // already names this dictionary as owner (DXF import) keeps its handle.
+    this.database.commitObjectHandle(value, id => {
+      const entry = this.getIdAt(id)
+      return entry !== undefined && entry !== value
+    })
     value.ownerId = this.objectId
 
     this._recordsByName.set(key, value)
@@ -358,9 +363,48 @@ export class AcDbDictionary<
     // TODO: Different dictionary may have different value
     filer.writeInt16(280, 1)
     filer.writeInt16(281, 1)
+    const include = this._dxfOutEntryFilter
     for (const [key, value] of this._recordsByName) {
+      if (include && !include(value)) continue
       filer.writeString(3, key)
       filer.writeObjectId(350, value.objectId)
+    }
+    if (this.defaultId && filer.capabilities.supportsSubclassMarkers) {
+      filer.writeSubclassMarker('AcDbDictionaryWithDefault')
+      filer.writeObjectId(340, this.defaultId)
+    }
+    return this
+  }
+
+  /**
+   * Default entry of an `ACDBDICTIONARYWDFLT` dictionary (DXF group 340),
+   * e.g. the `Normal` placeholder of `ACAD_PLOTSTYLENAME`. Undefined for a
+   * plain `DICTIONARY`.
+   */
+  defaultId?: AcDbObjectId
+
+  /** DXF record type name: `ACDBDICTIONARYWDFLT` when {@link defaultId} is set. */
+  get dxfTypeName() {
+    return this.defaultId ? 'ACDBDICTIONARYWDFLT' : 'DICTIONARY'
+  }
+
+  private _dxfOutEntryFilter?: (value: AcDbObject) => boolean
+
+  /**
+   * Writes this dictionary listing only the entries accepted by `include`, so
+   * a DXF export never points at records it does not write.
+   *
+   * @internal Used by {@link AcDbDatabase.dxfOut}.
+   */
+  dxfOutFiltered(
+    filer: AcDbDxfFiler,
+    include: (value: AcDbObject) => boolean
+  ) {
+    this._dxfOutEntryFilter = include
+    try {
+      this.dxfOut(filer, true)
+    } finally {
+      this._dxfOutEntryFilter = undefined
     }
     return this
   }

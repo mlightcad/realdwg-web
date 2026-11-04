@@ -1,5 +1,9 @@
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbObject } from '../base/AcDbObject.js'
+import {
+  type AcDbDxfRawTags,
+  acdbWriteDxfRawTags
+} from '../dxf/AcDbDxfRawTags.js'
 
 /**
  * Base class for per-context representation data
@@ -8,6 +12,47 @@ import { AcDbObject } from '../base/AcDbObject.js'
 export class AcDbObjectContextData extends AcDbObject {
   private _classVersion = 4
   private _isDefault = false
+  private _dxfRecordName?: string
+  private _dxfRawTags?: AcDbDxfRawTags
+
+  /**
+   * DXF record type name this object was read as, e.g.
+   * `ACDB_ALDIMOBJECTCONTEXTDATA_CLASS`. Several record types share one
+   * class, so the name is kept for export.
+   */
+  get dxfRecordName() {
+    return this._dxfRecordName
+  }
+  set dxfRecordName(value: string | undefined) {
+    this._dxfRecordName = value
+  }
+
+  /**
+   * Keeps the tags read from DXF so export reproduces them verbatim, like
+   * ezdxf does for context data. Only part of each context-data subclass is
+   * modeled; rewriting it natively would drop the rest.
+   *
+   * @internal Used by the DXF OBJECTS reader.
+   */
+  setDxfRawTags(tags: AcDbDxfRawTags | undefined) {
+    this._dxfRawTags = tags
+  }
+
+  /** True when export replays the tags read from DXF. @internal */
+  get hasDxfRawTags() {
+    return this._dxfRawTags != null
+  }
+
+  override dxfOut(...args: unknown[]): unknown {
+    const tags = this._dxfRawTags
+    if (!tags) return super.dxfOut(...args)
+    const [filer, allXdata = false] = args as [AcDbDxfFiler, boolean?]
+    acdbWriteDxfRawTags(filer, tags, this)
+    if (allXdata) {
+      this.dxfOutXData(filer)
+    }
+    return this
+  }
 
   get classVersion() {
     return this._classVersion

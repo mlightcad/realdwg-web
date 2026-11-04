@@ -1375,7 +1375,18 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeSubclassMarker('AcDbBlockReference')
+    const isMInsert =
+      this.dxfTypeName === 'INSERT' &&
+      (this.columnCount > 1 || this.rowCount > 1)
+    // MINSERT uses its own subclass marker (ODA / ezdxf output).
+    filer.writeSubclassMarker(
+      isMInsert ? 'AcDbMInsertBlock' : 'AcDbBlockReference'
+    )
+    // 66 = attributes follow: required when ATTRIB … SEQEND is written after
+    // this INSERT, otherwise readers treat the ATTRIBs as stray entities.
+    if (this._attribs.size > 0) {
+      filer.writeInt16(66, 1)
+    }
     filer.writePoint3d(10, this.position)
     filer.writeString(2, this.blockName)
     filer.writeDouble(41, this.scaleFactors.x)
@@ -1400,7 +1411,9 @@ export class AcDbBlockReference extends AcDbEntity {
 
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
-    filer.atSubclassData('AcDbBlockReference')
+    if (!filer.atSubclassData('AcDbBlockReference')) {
+      filer.atSubclassData('AcDbMInsertBlock')
+    }
 
     let x = this.position.x
     let y = this.position.y

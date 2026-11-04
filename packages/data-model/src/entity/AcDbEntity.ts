@@ -20,6 +20,7 @@ import {
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbObject } from '../base/AcDbObject.js'
+import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants.js'
 import { AcDbIntersect } from '../misc/AcDbIntersect.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
@@ -77,6 +78,13 @@ export abstract class AcDbEntity extends AcDbObject {
   private _transparencySet: boolean = false
   /** DXF group 67 paper-space flag captured during dxfIn. */
   private _dxfPaperSpace: boolean = false
+  /**
+   * AcDbEntity groups without a native model — 284 shadow mode, 347 material,
+   * 380/390 plot style — kept for DXF round trip. Allocated only when present.
+   * The 430 color-book name is not kept: it would override a color changed
+   * after reading.
+   */
+  private _dxfCommonExtras?: AcDbTypedValue[]
 
   /**
    * Gets the type name of this entity.
@@ -456,7 +464,32 @@ export abstract class AcDbEntity extends AcDbObject {
     if (owner?.isPaperSapce) {
       filer.writeInt16(67, 1)
     }
+    this.dxfOutCommonExtras(filer)
     return this
+  }
+
+  /** Writes the preserved {@link _dxfCommonExtras} the target can carry. */
+  private dxfOutCommonExtras(filer: AcDbDxfFiler) {
+    const extras = this._dxfCommonExtras
+    if (!extras) return
+    const caps = filer.capabilities
+    for (const item of extras) {
+      const code = Number(item.code)
+      // 380/390 arrived with R2000; 284/347 with R2007.
+      const supported =
+        code === 380 || code === 390
+          ? caps.supportsLineWeight
+          : caps.supportsUtf8CodePage
+      if (!supported) continue
+      // Handles must point at OBJECTS records that this export writes.
+      if (
+        (code === 347 || code === 390) &&
+        !filer.isObjectIdWritten(String(item.value))
+      ) {
+        continue
+      }
+      filer.writeRawPairs([item])
+    }
   }
 
   /**
@@ -534,8 +567,14 @@ export abstract class AcDbEntity extends AcDbObject {
         case 347:
         case 380:
         case 390:
+          // Shadow mode / material / plot style — kept verbatim.
+          ;(this._dxfCommonExtras ??= []).push({
+            code: item.code,
+            value: item.value
+          })
+          break
         case 430:
-          // Shadow mode / material / plot style / color name — optional.
+          // Color-book name — see _dxfCommonExtras.
           break
         default:
           if (!hadEntityMarker) {

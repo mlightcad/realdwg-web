@@ -563,6 +563,25 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
+   * Names of the applications (APPID records) this object carries XData for,
+   * in output order.
+   */
+  xDataAppIds(): string[] {
+    if (this._xDataOrder) return [...this._xDataOrder]
+    const ids: string[] = []
+    const compact = this._importedXData
+    if (compact) {
+      for (let i = 0; i + 1 < compact.length; i += 2) {
+        if (Number(compact[i]) === AcDbDxfCode.ExtendedDataRegAppName) {
+          ids.push(String(compact[i + 1] ?? ''))
+        }
+      }
+    }
+    if (this._xDataMap) ids.push(...this._xDataMap.keys())
+    return ids
+  }
+
+  /**
    * Retrieves the XData associated with this object for a given application ID.
    *
    * Extended Entity Data (XData) allows applications to attach arbitrary,
@@ -1032,14 +1051,22 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
       AcDbObjectId[]?
     ]
     filer.writeHandle(5, this.objectId)
+    this.dxfOutExtensionDictionary(filer)
     filer.writeObjectId(330, this.ownerId)
-    filer.writeObjectId(360, this.extensionDictionary)
     this.dxfOutFields(filer)
 
     if (allXdata) {
       this.dxfOutXData(filer)
     }
     return this
+  }
+
+  /**
+   * Writes the extension-dictionary pointer; see
+   * {@link AcDbDxfFiler.writeExtensionDictionary}.
+   */
+  protected dxfOutExtensionDictionary(filer: AcDbDxfFiler): void {
+    filer.writeExtensionDictionary(this.extensionDictionary)
   }
 
   /** Emit all attached XData buffers (DXF groups 1000–1071). */
