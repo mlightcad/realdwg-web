@@ -133,6 +133,24 @@ import type {
 } from '@mlightcad/libredwg-web'
 
 /**
+ * LibreDWG often returns `(0,0,0)` for the default extrusion. Assigning that
+ * as a normal breaks OCS→WCS mapping; keep the identity Z-axis instead.
+ */
+function isValidExtrusion(
+  v?: { x?: number; y?: number; z?: number } | null
+): v is { x: number; y: number; z: number } {
+  return !!v && Math.hypot(v.x || 0, v.y || 0, v.z || 0) > 1e-9
+}
+
+/** Optional LibreDWG elevation until `@mlightcad/libredwg-web` exposes it. */
+type DwgElevationFields = { elevation?: number }
+
+function readElevation(entity: DwgElevationFields): number | undefined {
+  const elevation = entity.elevation
+  return Number.isFinite(elevation) ? elevation : undefined
+}
+
+/**
  * Arc-aligned text. libredwg-web 0.7.x recognizes `DWG_TYPE_ARCALIGNEDTEXT`
  * but does not decode its fields (the file open reports an unhandled class),
  * so this shape is only produced once that decoder fills the entity.
@@ -442,6 +460,17 @@ export class AcDbEntityConverter {
         vertex.endWidth ?? defaultWidth
       )
     })
+    // Vertices are OCS; without extrusion / elevation they are treated as WCS
+    // and mirrored polylines (normal 0,0,-1) land at negated X coordinates.
+    if (Number.isFinite(polyline.elevation)) {
+      dbEntity.elevation = polyline.elevation
+    }
+    if (Number.isFinite(polyline.thickness)) {
+      dbEntity.thickness = polyline.thickness
+    }
+    if (isValidExtrusion(polyline.extrusionDirection)) {
+      dbEntity.normal = polyline.extrusionDirection
+    }
     return dbEntity
   }
 
@@ -543,7 +572,7 @@ export class AcDbEntityConverter {
         polyline.endWidth,
         bulges
       )
-      if (polyline.extrusionDirection) {
+      if (isValidExtrusion(polyline.extrusionDirection)) {
         dbPolyline.normal = polyline.extrusionDirection
       }
       return dbPolyline
@@ -792,6 +821,17 @@ export class AcDbEntityConverter {
     dbEntity.horizontalMode = text.halign as unknown as AcDbTextHorizontalMode
     dbEntity.verticalMode = text.valign as unknown as AcDbTextVerticalMode
     dbEntity.widthFactor = text.xScale ?? 1
+    // Points are OCS. A missing or zero-length extrusion leaves them as WCS
+    // and slightly tilted normals displace text far from the drawing.
+    if (isValidExtrusion(text.extrusionDirection)) {
+      dbEntity.normal = text.extrusionDirection
+    }
+    // `elevation` is filled by libredwg-web's convertTextBase when present.
+    const elevation = readElevation(text as DwgTextEntity & DwgElevationFields)
+    if (elevation != null) {
+      dbEntity.position.z = elevation
+      dbEntity.alignmentPoint.z = elevation
+    }
     return dbEntity
   }
 
@@ -1565,6 +1605,14 @@ export class AcDbEntityConverter {
     dbAttrib.horizontalMode = text.halign as unknown as AcDbTextHorizontalMode
     dbAttrib.verticalMode = text.valign as unknown as AcDbTextVerticalMode
     dbAttrib.widthFactor = text.xScale ?? 1
+    if (isValidExtrusion(text.extrusionDirection)) {
+      dbAttrib.normal = text.extrusionDirection
+    }
+    const elevation = readElevation(text as DwgElevationFields)
+    if (elevation != null) {
+      dbAttrib.position.z = elevation
+      dbAttrib.alignmentPoint.z = elevation
+    }
     dbAttrib.tag = attrib.tag
     dbAttrib.fieldLength = attrib.fieldLength
     dbAttrib.isInvisible = (attrib.flags & AcDbAttributeFlags.Invisible) !== 0
