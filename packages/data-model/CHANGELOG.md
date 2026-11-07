@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.23
+
+### Patch Changes
+
+- fix: resolves ByLayer MULTILEADER colours against the layer swatch, exports AC1015 VPORT data in a form LibreDWG can read, and applies OCS extrusion when converting LWPOLYLINE, TEXT, and ATTRIB so those entities land in the correct plane
+- Updated dependencies
+  - @mlightcad/common@1.15.23
+  - @mlightcad/emf-converter@1.15.23
+  - @mlightcad/geometry-engine@3.15.23
+  - @mlightcad/graphic-interface@3.15.23
+
 ## 1.15.22
 
 ### Patch Changes
