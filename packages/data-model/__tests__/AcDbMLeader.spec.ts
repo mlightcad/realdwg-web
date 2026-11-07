@@ -303,6 +303,46 @@ describe('AcDbMLeader arrowhead rendering', () => {
     expect(traits.isColorByLayer).toBe(true)
   })
 
+  it('paints ByLayer leader lines with the layer swatch, not white fallback', () => {
+    const db = createWorkingDb()
+    const layer = db.tables.layerTable.getAt('0')!
+    const layerColor = new AcCmColor()
+    layerColor.colorIndex = 3 // green
+    layer.color = layerColor
+
+    const mleader = createSimpleLeader(db)
+    mleader.color = new AcCmColor().setByLayer()
+    // Real DWG payload: component color ByLayer + override bit set, style ByBlock.
+    mleader.leaderLineColor = new AcCmColor().setByLayer()
+    mleader.propertyOverrideFlag = 1 << 1
+    mleader.textLocation = new AcGePoint3d(5, 2, 0)
+
+    const style = new AcDbMLeaderStyle()
+    style.leaderLineColor = new AcCmColor().setByBlock()
+    db.objects.mleaderStyle.setAt(style.objectId, style)
+    mleader.mleaderStyleId = style.objectId
+
+    const renderer = createRenderer()
+    const traits = renderer.subEntityTraits as unknown as AcGiSubEntityTraits
+    const lineRgbLog: number[] = []
+    const lineProvenance: unknown[] = []
+    renderer.lines.mockImplementation((points: unknown[]) => {
+      lineRgbLog.push(
+        renderer.context.resolveSubEntityTraitsRgb(
+          traits as unknown as AcGiSubEntityTraits
+        )
+      )
+      lineProvenance.push(traits.isColorByLayer)
+      return { kind: 'lines', points }
+    })
+
+    mleader.worldDraw(renderer as never)
+
+    // ACI 3 = green. An unresolved ByLayer AcCmColor would fall back to white.
+    expect(lineRgbLog[0]).toBe(0x00ff00)
+    expect(lineProvenance[0]).toBe(true)
+  })
+
   it('forwards the delay flag to nested MText rendering', () => {
     const db = createWorkingDb()
     const mleader = createSimpleLeader(db)
