@@ -29,6 +29,9 @@ export default defineConfig(({ mode }) => {
       },
       minify: 'esbuild',
       rollupOptions: {
+        // Keep upstream emf-converter out of the CJS fat bundle (~2.4MB).
+        // Matches both static and dynamic import('emf-converter').
+        external: ['emf-converter'],
         output: {
           inlineDynamicImports: true,
           compact: true

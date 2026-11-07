@@ -8,7 +8,6 @@ const config: Config = {
   // Node-native ESM WASM round-trips live in *.node.test.ts (tsx --test).
   testPathIgnorePatterns: [
     "/node_modules/",
-    "/packages/emf-converter/",
     "/packages/dwg-converter/",
     "\\.node\\.test\\.ts$",
   ],

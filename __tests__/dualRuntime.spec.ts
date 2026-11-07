@@ -56,7 +56,6 @@ const WORKSPACE_ALIASES: Record<string, string> = {
   '@mlightcad/common': 'packages/common/src/index.ts',
   '@mlightcad/geometry-engine': 'packages/geometry-engine/src/index.ts',
   '@mlightcad/graphic-interface': 'packages/graphic-interface/src/index.ts',
-  '@mlightcad/emf-converter': 'packages/emf-converter/src/index.ts',
   '@mlightcad/data-model': 'packages/data-model/src/index.ts',
   '@mlightcad/libredwg-converter': 'packages/libredwg-converter/src/index.ts'
 }

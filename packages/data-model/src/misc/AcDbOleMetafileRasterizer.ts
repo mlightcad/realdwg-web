@@ -1,27 +1,17 @@
 /**
  * Rasterizes Windows metafile blobs extracted from OLE frames (WMF / EMF)
- * into browser-decodable PNG images via `@mlightcad/emf-converter`.
+ * into browser-decodable PNG images via [`emf-converter`](https://www.npmjs.com/package/emf-converter).
  *
  * AutoCAD Excel OLE previews are typically stored as CF_ENHMETAFILE / WMF
  * presentation streams. Browsers cannot decode those formats natively, so
  * viewers must convert them to PNG (or similar) before texturing.
  *
- * The converter is a static import so the data-model CJS/Vite bundle inlines
- * the (small) `@mlightcad/emf-converter` implementation.
+ * The converter is loaded with a dynamic `import()` so apps that never touch
+ * OLE frames do not pull the ~2.4MB upstream package into the initial graph.
+ * The data-model CJS build also marks `emf-converter` as external.
  */
 
-import {
-  convertEmfToDataUrl,
-  convertWmfToDataUrl
-} from '@mlightcad/emf-converter'
-
-import {
-  ACDB_OLE_METAFILE_EMF_MIME,
-  ACDB_OLE_METAFILE_WMF_MIME,
-  acdbIsOleMetafileMimeType,
-  acdbLooksLikeEmf,
-  acdbLooksLikeWmf
-} from './AcDbOleMetafileDetect.js'
+import { acdbIsOleMetafileMimeType } from './AcDbOleMetafileDetect.js'
 
 /**
  * Default Windows face-name → CSS font-family map for OLE metafile text.
@@ -74,11 +64,6 @@ export async function acdbRasterizeOleMetafile(
     return undefined
   }
 
-  const mime =
-    input instanceof Blob && acdbIsOleMetafileMimeType(input.type)
-      ? input.type
-      : undefined
-
   const convertOptions = {
     maxWidth: options.maxWidth,
     maxHeight: options.maxHeight,
@@ -99,24 +84,15 @@ export async function acdbRasterizeOleMetafile(
     bytes.byteOffset + bytes.byteLength
   ) as ArrayBuffer
 
-  const tryEmfFirst =
-    mime === ACDB_OLE_METAFILE_EMF_MIME ||
-    (mime == null && acdbLooksLikeEmf(bytes) && !acdbLooksLikeWmf(bytes))
-
   let dataUrl: string | null = null
-
-  if (tryEmfFirst) {
-    dataUrl = await convertEmfToDataUrl(buffer, convertOptions)
-    if (!dataUrl && acdbLooksLikeWmf(bytes)) {
-      dataUrl = await convertWmfToDataUrl(buffer, convertOptions)
-    }
-  } else {
-    if (mime === ACDB_OLE_METAFILE_WMF_MIME || acdbLooksLikeWmf(bytes)) {
-      dataUrl = await convertWmfToDataUrl(buffer, convertOptions)
-    }
-    if (!dataUrl && acdbLooksLikeEmf(bytes)) {
-      dataUrl = await convertEmfToDataUrl(buffer, convertOptions)
-    }
+  try {
+    const { convertMetafileToDataUrl } = await import('emf-converter')
+    // Upstream auto-detects EMF then WMF from the file header. OLE extraction
+    // already reassembles WMFC-wrapped Excel EMF into a contiguous EMF stream
+    // and sets image/emf|wmf MIME types before this helper runs.
+    dataUrl = await convertMetafileToDataUrl(buffer, convertOptions)
+  } catch {
+    return undefined
   }
 
   if (!dataUrl) {
