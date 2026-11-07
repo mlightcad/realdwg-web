@@ -36,6 +36,7 @@ describe('AcDbDwgVersion', () => {
         supportsBlockRecordUnitsFlags: boolean
         supportsMLeader: boolean
         supportsHatchHeaderVars: boolean
+        supportsVportExtendedFields: boolean
       }
     }> = [
       {
@@ -53,7 +54,8 @@ describe('AcDbDwgVersion', () => {
           supportsUtf8CodePage: false,
           supportsBlockRecordUnitsFlags: false,
           supportsMLeader: false,
-          supportsHatchHeaderVars: false
+          supportsHatchHeaderVars: false,
+          supportsVportExtendedFields: false
         }
       },
       {
@@ -71,7 +73,8 @@ describe('AcDbDwgVersion', () => {
           supportsUtf8CodePage: false,
           supportsBlockRecordUnitsFlags: false,
           supportsMLeader: false,
-          supportsHatchHeaderVars: false
+          supportsHatchHeaderVars: false,
+          supportsVportExtendedFields: false
         }
       },
       {
@@ -89,7 +92,8 @@ describe('AcDbDwgVersion', () => {
           supportsUtf8CodePage: false,
           supportsBlockRecordUnitsFlags: false,
           supportsMLeader: false,
-          supportsHatchHeaderVars: false
+          supportsHatchHeaderVars: false,
+          supportsVportExtendedFields: false
         }
       },
       {
@@ -107,7 +111,8 @@ describe('AcDbDwgVersion', () => {
           supportsUtf8CodePage: true,
           supportsBlockRecordUnitsFlags: true,
           supportsMLeader: true,
-          supportsHatchHeaderVars: false
+          supportsHatchHeaderVars: false,
+          supportsVportExtendedFields: true
         }
       },
       {
@@ -125,7 +130,8 @@ describe('AcDbDwgVersion', () => {
           supportsUtf8CodePage: true,
           supportsBlockRecordUnitsFlags: true,
           supportsMLeader: true,
-          supportsHatchHeaderVars: true
+          supportsHatchHeaderVars: true,
+          supportsVportExtendedFields: true
         }
       }
     ]
