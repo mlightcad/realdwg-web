@@ -4115,6 +4115,14 @@ export class AcDbMLeader extends AcDbEntity {
   /**
    * Applies color traits while preserving original values for reset.
    *
+   * ByLayer / ByBlock component colors must be resolved to a concrete swatch
+   * before they reach the renderer. Leaving an unresolved ByLayer
+   * {@link AcCmColor} on the traits makes
+   * {@link AcGiContext.resolveSubEntityTraitsRgb} fall back to white, which is
+   * why ByLayer MULTILEADER lines on a green layer (e.g. handles 35F9B /
+   * 24F18) painted ACI 7 instead of the layer color. ByBlock keeps the
+   * entity color already stored by {@link worldDraw}.
+   *
    * @param traits Renderer traits object to mutate.
    * @param color Effective component color to apply.
    * @param originalColor Original trait color value.
@@ -4130,6 +4138,19 @@ export class AcDbMLeader extends AcDbEntity {
     traits.color = originalColor
     traits.isColorByLayer = originalIsColorByLayer
     if (!color) return
+
+    if (color.isByLayer) {
+      const layerColor = this.getLayerColor()?.clone()
+      if (layerColor) {
+        this.applyTraitsColor(traits, layerColor, true)
+      }
+      return
+    }
+
+    if (color.isByBlock) {
+      // Entity color from worldDraw already resolves ByBlock → ACI 7 / owner.
+      return
+    }
 
     this.applyTraitsColor(traits, color)
   }
