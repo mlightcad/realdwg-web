@@ -15,6 +15,7 @@ import {
   AcDbProxyEntity,
   AcDbShape,
   AcDbSolid,
+  AcDbText,
   AcDbTrace,
   acdbHostApplicationServices
 } from '@mlightcad/data-model'
@@ -645,5 +646,105 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(trace.getPointAt(3)).toMatchObject({ x: -1, y: 2, z: 0 })
     expect(trace.normal).toMatchObject({ x: 0, y: 0, z: -1 })
     expect(trace.elevation).toBeCloseTo(-4)
+  })
+
+  it('propagates LWPOLYLINE extrusion, elevation, and thickness (issue #296)', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const polyline = converter.convert({
+      type: 'LWPOLYLINE',
+      flag: 0,
+      elevation: 12.5,
+      thickness: 0.3,
+      extrusionDirection: { x: 0, y: 0, z: -1 },
+      vertices: [
+        { x: 600000, y: 2256000, bulge: 0 },
+        { x: 600010, y: 2256000, bulge: 0 }
+      ]
+    } as any) as AcDbPolyline
+
+    expect(polyline).toBeInstanceOf(AcDbPolyline)
+    expect(polyline.elevation).toBeCloseTo(12.5)
+    expect(polyline.thickness).toBeCloseTo(0.3)
+    expect(polyline.normal).toMatchObject({ x: 0, y: 0, z: -1 })
+    // OCS X is mirrored under (0,0,-1).
+    expect(polyline.getPoint3dAt(0)).toMatchObject({
+      x: -600000,
+      y: 2256000,
+      z: -12.5
+    })
+  })
+
+  it('ignores LibreDWG zero-length LWPOLYLINE extrusion', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const polyline = converter.convert({
+      type: 'LWPOLYLINE',
+      flag: 0,
+      elevation: 0,
+      thickness: 0,
+      extrusionDirection: { x: 0, y: 0, z: 0 },
+      vertices: [{ x: 1, y: 2, bulge: 0 }]
+    } as any) as AcDbPolyline
+
+    expect(polyline.normal).toMatchObject({ x: 0, y: 0, z: 1 })
+    expect(polyline.getPoint3dAt(0)).toMatchObject({ x: 1, y: 2, z: 0 })
+  })
+
+  it('propagates TEXT extrusion and elevation (issue #296)', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const text = converter.convert({
+      type: 'TEXT',
+      text: 'N',
+      styleName: 'STANDARD',
+      textHeight: 2.5,
+      startPoint: { x: 100, y: 200 },
+      endPoint: { x: 0, y: 0 },
+      rotation: 0,
+      thickness: 0,
+      elevation: 7,
+      extrusionDirection: { x: 0, y: 0.019, z: 0.9998 },
+      obliqueAngle: 0,
+      halign: 0,
+      valign: 0,
+      xScale: 1
+    } as any) as AcDbText
+
+    expect(text).toBeInstanceOf(AcDbText)
+    expect(text.normal.x).toBeCloseTo(0)
+    expect(text.normal.y).toBeCloseTo(0.019)
+    expect(text.normal.z).toBeCloseTo(0.9998)
+    expect(text.position.z).toBeCloseTo(7)
+    expect(text.alignmentPoint.z).toBeCloseTo(7)
+  })
+
+  it('propagates ATTRIB extrusion and elevation (issue #296)', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const attrib = converter.convert(
+      baseAttrib({
+        text: {
+          text: 'ROOM-101',
+          styleName: 'STANDARD',
+          textHeight: 2.5,
+          startPoint: { x: 10, y: 20 },
+          endPoint: { x: 0, y: 0 },
+          rotation: 0,
+          obliqueAngle: 0,
+          thickness: 0,
+          elevation: 3,
+          extrusionDirection: { x: 0, y: 0, z: -1 },
+          halign: 0,
+          valign: 0,
+          xScale: 1
+        }
+      }) as any
+    ) as AcDbAttribute
+
+    expect(attrib).toBeInstanceOf(AcDbAttribute)
+    expect(attrib.normal).toMatchObject({ x: 0, y: 0, z: -1 })
+    expect(attrib.position.z).toBeCloseTo(3)
+    expect(attrib.alignmentPoint.z).toBeCloseTo(3)
   })
 })
