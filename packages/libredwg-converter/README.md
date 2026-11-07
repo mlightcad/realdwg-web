@@ -3,7 +3,7 @@
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
 [![npm version](https://img.shields.io/npm/v/@mlightcad/libredwg-converter.svg)](https://www.npmjs.com/package/@mlightcad/libredwg-converter)
 
-The `libredwg-converter` package provides a DWG file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG files into the AutoCAD-like drawing database structure. It is based on the [LibreDWG](https://www.gnu.org/software/libredwg/) library compiled to WebAssembly.
+The `libredwg-converter` package provides a DWG/DXF file converter for the RealDWG-Web ecosystem, enabling reading and conversion of DWG and DXF files into the AutoCAD-like drawing database structure. It is based on the [LibreDWG](https://www.gnu.org/software/libredwg/) library compiled to WebAssembly.
 
 ## Overview
 
@@ -13,7 +13,7 @@ DWG parsing is provided through a dedicated Web Worker bundle (`libredwg-parser-
 
 ## Key Features
 
-- **DWG File Support**: Read and convert DWG files to the drawing database
+- **DWG / DXF File Support**: Read and convert DWG and DXF files to the drawing database (file type is sniffed from the payload; requires `@mlightcad/libredwg-web` ≥ 0.8.6 with DXF import enabled in WASM)
 - **Integration**: Designed to work with the RealDWG-Web data model and converter manager
 - **WebAssembly Powered**: Uses LibreDWG compiled to WASM, loaded in a Web Worker for license isolation
 
@@ -54,8 +54,9 @@ Deploy both `libredwg-parser-worker.js` and its sibling `libredwg-web.wasm` from
 
 This package emits Node-native ESM under `lib/` (TypeScript `module` /
 `moduleResolution`: `NodeNext`, relative imports use `.js` extensions). It
-requires `@mlightcad/libredwg-web` **>= 0.8.2**, whose published `lib/**/*.d.ts`
-uses the same `.js` relative re-exports so NodeNext type resolution works.
+requires `@mlightcad/libredwg-web` **>= 0.8.6**, whose published `lib/**/*.d.ts`
+uses the same `.js` relative re-exports so NodeNext type resolution works, and
+whose WASM build exposes `dxf_read_file` for DXF import.
 
 ## API Documentation
 

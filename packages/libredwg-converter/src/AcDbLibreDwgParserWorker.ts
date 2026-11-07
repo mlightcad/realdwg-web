@@ -3,16 +3,16 @@
 import { AcDbBaseWorker, AcDbParsingTaskResult } from '@mlightcad/data-model'
 import { DwgDatabase } from '@mlightcad/libredwg-web'
 
-import { parseDwg } from './AcDbLibreDwgConverterUtil.js'
+import { parseLibreDwgFile } from './AcDbLibreDwgConverterUtil.js'
 /**
- * DWG parsing worker
+ * DWG/DXF parsing worker (file type is sniffed from the payload).
  */
 class AcDbDwgParserWorker extends AcDbBaseWorker<
   ArrayBuffer,
   AcDbParsingTaskResult<DwgDatabase>
 > {
   protected async executeTask(data: ArrayBuffer) {
-    const result = await parseDwg(data)
+    const result = await parseLibreDwgFile(data)
     return {
       model: result.database,
       data: result.stats

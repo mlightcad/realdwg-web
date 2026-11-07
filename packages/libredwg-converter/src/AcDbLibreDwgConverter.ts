@@ -72,7 +72,9 @@ import {
 const MODEL_SPACE = '*MODEL_SPACE'
 
 /**
- * Database converter for DWG files based on [libredwg-web](https://github.com/mlight-lee/libredwg-web).
+ * Database converter for DWG/DXF files based on
+ * [libredwg-web](https://github.com/mlightcad/libredwg-web).
+ * DXF import requires libredwg-web ≥ 0.8.6 (WASM built with DXF read enabled).
  */
 export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
   constructor(config: AcDbDatabaseConverterConfig = {}) {

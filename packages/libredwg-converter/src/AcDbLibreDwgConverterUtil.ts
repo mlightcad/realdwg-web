@@ -4,7 +4,54 @@ import { acdbEnsureDwgThumbnailImage } from './extractDwgThumbnailImage.js'
 
 type LibreDwgInstance = NonNullable<Awaited<ReturnType<typeof LibreDwg.create>>>
 
-export async function parseDwg(data: string | ArrayBuffer) {
+/**
+ * Detects whether `data` is a DWG or DXF payload.
+ *
+ * - Binary DXF starts with `AutoCAD Binary DXF`
+ * - ASCII DXF is text of group-code pairs (often starting with `0` / `999`)
+ * - DWG starts with an `ACxxxx` version marker
+ */
+export function detectLibreDwgFileType(
+  data: string | ArrayBuffer | Uint8Array
+): Dwg_File_Type {
+  if (typeof data === 'string') {
+    const head = data.slice(0, 64)
+    if (/AutoCAD Binary DXF/i.test(head)) return Dwg_File_Type.DXF
+    // Strings are treated as ASCII DXF (DWG is binary).
+    return Dwg_File_Type.DXF
+  }
+
+  const bytes = data instanceof Uint8Array ? data : new Uint8Array(data)
+  const head = new TextDecoder('latin1').decode(bytes.subarray(0, 22))
+  if (head.startsWith('AutoCAD Binary DXF')) return Dwg_File_Type.DXF
+  if (head.startsWith('AC1') || head.startsWith('AC2')) return Dwg_File_Type.DWG
+
+  // ASCII DXF bytes: leading whitespace + group code 0/999, etc.
+  const asciiHead = new TextDecoder('utf-8').decode(bytes.subarray(0, 64))
+  if (/^\s*(0|999)\b/.test(asciiHead)) return Dwg_File_Type.DXF
+  return Dwg_File_Type.DWG
+}
+
+export async function parseDwg(
+  data: string | ArrayBuffer,
+  fileType: Dwg_File_Type = Dwg_File_Type.DWG
+) {
+  return parseLibreDwgFile(data, fileType)
+}
+
+/** Parses an ASCII or binary DXF file through LibreDWG WASM. */
+export async function parseDxf(data: string | ArrayBuffer) {
+  return parseLibreDwgFile(data, Dwg_File_Type.DXF)
+}
+
+/**
+ * Parses DWG or DXF bytes with LibreDWG. When `fileType` is omitted, the
+ * payload is sniffed via {@link detectLibreDwgFileType}.
+ */
+export async function parseLibreDwgFile(
+  data: string | ArrayBuffer,
+  fileType?: Dwg_File_Type
+) {
   // LibreDwg.create() loads libredwg-web.wasm via the Emscripten glue's
   // `new URL(..., import.meta.url)`. The worker build emits that wasm as a
   // sibling of libredwg-parser-worker.js (not inlined).
@@ -13,9 +60,14 @@ export async function parseDwg(data: string | ArrayBuffer) {
     throw new Error('libredwg is not loaded!')
   }
 
-  const dwgDataPtr = libredwg.dwg_read_data(data, Dwg_File_Type.DWG)
+  const resolvedType = fileType ?? detectLibreDwgFileType(data)
+  const dwgDataPtr = libredwg.dwg_read_data(data, resolvedType)
   if (dwgDataPtr == null) {
-    throw new Error('Failed to read dwg data!')
+    throw new Error(
+      resolvedType === Dwg_File_Type.DXF
+        ? 'Failed to read dxf data!'
+        : 'Failed to read dwg data!'
+    )
   }
   const result = libredwg.convertEx(dwgDataPtr)
   attachDimStyleAnnotationScales(libredwg, dwgDataPtr, result.database)
@@ -23,10 +75,10 @@ export async function parseDwg(data: string | ArrayBuffer) {
 
   // LibreDWG `dwg_bmp` is empty for some drawings that still embed a classic
   // header previewAddress image (e.g. AC1021). Fill from the raw file bytes.
-  const fileBytes =
-    typeof data === 'string' ? undefined : new Uint8Array(data)
-  if (fileBytes) {
-    acdbEnsureDwgThumbnailImage(result.database, fileBytes)
+  // Skip for DXF / string payloads — they do not carry the classic DWG
+  // previewAddress thumbnail stream.
+  if (resolvedType === Dwg_File_Type.DWG && typeof data !== 'string') {
+    acdbEnsureDwgThumbnailImage(result.database, new Uint8Array(data))
   }
 
   return result

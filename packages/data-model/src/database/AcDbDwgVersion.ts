@@ -139,6 +139,12 @@ export interface AcDbDxfVersionCapabilities {
    * `$HPLAYER`, `$HPTRANSPARENCY`).
    */
   supportsHatchHeaderVars: boolean
+  /**
+   * AutoCAD 2007+: VPORT table fields for grid major (61), UCS elevation (146),
+   * shade plot (170), lighting (281/282/292), and visual style / background
+   * handles (332/333/348). LibreDWG rejects these on AC1015 VPORT records.
+   */
+  supportsVportExtendedFields: boolean
 }
 
 export class AcDbDwgVersion {
@@ -210,7 +216,8 @@ export class AcDbDwgVersion {
       supportsUtf8CodePage: value >= 27,
       supportsBlockRecordUnitsFlags: value >= 27,
       supportsMLeader: value >= 27,
-      supportsHatchHeaderVars: value >= 29
+      supportsHatchHeaderVars: value >= 29,
+      supportsVportExtendedFields: value >= 27
     }
   }
 }

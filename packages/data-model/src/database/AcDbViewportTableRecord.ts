@@ -363,7 +363,7 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
    *   rotated by the view twist angle, NOT in WCS
    * - view target in group 17 (`viewTarget`) — in WCS
    * - view twist angle in group 51 (`viewTwistAngle`)
-   * - view height in group 40/45 (`viewHeight`)
+   * - view height in group 40 (`viewHeight`; Autodesk docs wrongly list 45)
    * - aspect ratio in group 41 (`gsView.aspectRatio`) ??the AutoCAD graphics
    *   window width/height at save time, not the model-space view on its own
    *
@@ -539,6 +539,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbViewportTableRecord')
     filer.writeString(2, this.name)
+    // VPORT table view height is DXF group 40 (LibreDWG VIEWSIZE). Autodesk's
+    // online VPORT table docs incorrectly list 45; that code belongs to the
+    // VIEWPORT *entity*. Emitting 45 here makes LibreDWG reject the file
+    // ("Invalid DXF code 45 for VPORT"). See issue #294.
     filer.writeDouble(40, this.gsView.viewHeight)
     if (
       this.gsView.aspectRatio != null &&
@@ -546,7 +550,6 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
     ) {
       filer.writeDouble(41, this.gsView.aspectRatio)
     }
-    filer.writeDouble(45, this.gsView.viewHeight)
     filer.writePoint2d(10, this.lowerLeftCorner)
     filer.writePoint2d(11, this.upperRightCorner)
     filer.writePoint2d(12, this.center)
@@ -560,15 +563,19 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
     filer.writePoint3d(17, this.gsView.viewTarget)
     filer.writeAngle(50, this.snapAngle)
     filer.writeAngle(51, this.gsView.viewTwistAngle)
-    filer.writeInt16(61, this.gridMajor)
-    filer.writeDouble(146, this.ucsElevation)
-    filer.writeInt16(170, this.shadePlotSetting)
-    filer.writeInt16(282, this.defaultLightingType)
-    filer.writeInt16(292, this.isDefaultLightingOn ? 1 : 0)
-    filer.writeInt16(281, this.backgroundObjectId ? 1 : 0)
-    filer.writeObjectId(332, this.backgroundObjectId)
-    filer.writeObjectId(333, this.shadePlotObjectId)
-    filer.writeObjectId(348, this.gsView.visualStyleObjectId)
+    // R2007+ VPORT fields — omit for AC1015/AC1018 so LibreDWG and other
+    // R2000 readers do not reject the table record (see issue #294).
+    if (filer.capabilities.supportsVportExtendedFields) {
+      filer.writeInt16(61, this.gridMajor)
+      filer.writeDouble(146, this.ucsElevation)
+      filer.writeInt16(170, this.shadePlotSetting)
+      filer.writeInt16(282, this.defaultLightingType)
+      filer.writeInt16(292, this.isDefaultLightingOn ? 1 : 0)
+      filer.writeInt16(281, this.backgroundObjectId ? 1 : 0)
+      filer.writeObjectId(332, this.backgroundObjectId)
+      filer.writeObjectId(333, this.shadePlotObjectId)
+      filer.writeObjectId(348, this.gsView.visualStyleObjectId)
+    }
     return this
   }
 

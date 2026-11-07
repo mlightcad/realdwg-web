@@ -5,10 +5,12 @@ const config: Config = {
   preset: "ts-jest",
   testEnvironment: "node",
   // Vitest / private local packages — keep them out of root Jest.
+  // Node-native ESM WASM round-trips live in *.node.test.ts (tsx --test).
   testPathIgnorePatterns: [
     "/node_modules/",
     "/packages/emf-converter/",
     "/packages/dwg-converter/",
+    "\\.node\\.test\\.ts$",
   ],
   moduleNameMapper: {
     // NodeNext sources use .js specifiers; map them back to .ts for ts-jest.

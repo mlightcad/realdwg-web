@@ -51,10 +51,11 @@
     "build:worker": "vite build -c vite.config.worker.ts",
     "verify:build": "node ../../tools/verify-build.mjs verify-build.profile.json",
     "lint": "eslint src/",
-    "lint:fix": "eslint --fix --quiet src/"
+    "lint:fix": "eslint --fix --quiet src/",
+    "test:node": "tsx --test __tests__/dxfExportRoundTrip.node.test.ts"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "0.8.5"
+    "@mlightcad/libredwg-web": "0.8.6"
   },
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",
