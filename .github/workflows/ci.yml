@@ -55,6 +55,9 @@ jobs:
       - name: Run tests
         run: pnpm test
 
+      - name: Run LibreDWG DXF round-trip tests
+        run: pnpm test:node
+
       - name: Build API docs
         run: pnpm doc
 

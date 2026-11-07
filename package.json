@@ -29,6 +29,7 @@
     "sync:versions:check": "node tools/sync-versions.mjs --check",
     "test": "jest",
     "test:coverage": "jest --coverage",
+    "test:node": "pnpm --filter @mlightcad/libredwg-converter test:node",
     "use:dwg-converter": "node tools/use-dwg-converter.mjs"
   },
   "engines": {
@@ -59,6 +60,7 @@
     "rollup-plugin-peer-deps-external": "^2.2.4",
     "rollup-plugin-visualizer": "^5.12.0",
     "ts-jest": "^29.4.14",
+    "tsx": "^4.23.15",
     "typedoc": "^0.27.4",
     "typescript": "^5.5.2",
     "typescript-eslint": "^8.71.0",
