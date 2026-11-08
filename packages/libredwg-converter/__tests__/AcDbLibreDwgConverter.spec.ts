@@ -327,6 +327,6 @@ describe('AcDbLibreDwgConverter', () => {
     expect(group!.name).toBe('MyGroup')
     expect(group!.description).toBe('Door tags')
     expect(group!.entityIds).toEqual(['E1', 'E2'])
-    expect(group!.isSelectable()).toBe(true)
+    expect(group!.selectable).toBe(true)
   })
 })

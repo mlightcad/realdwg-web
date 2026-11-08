@@ -51,15 +51,15 @@ describe('AcDbGroup', () => {
   it('exposes ObjectARX naming and flags', () => {
     const group = new AcDbGroup('Door tags', true)
     expect(group.description).toBe('Door tags')
-    expect(group.isSelectable()).toBe(true)
+    expect(group.selectable).toBe(true)
     expect(group.isAnonymous()).toBe(false)
     expect(group.isNotAccessible()).toBe(false)
 
-    group.setDescription('Updated')
-    group.setSelectable(false)
+    group.description = 'Updated'
+    group.selectable = false
     group.setAnonymous()
     expect(group.description).toBe('Updated')
-    expect(group.isSelectable()).toBe(false)
+    expect(group.selectable).toBe(false)
     expect(group.isAnonymous()).toBe(true)
     expect(group.unnamed).toBe(true)
   })
@@ -161,7 +161,7 @@ describe('AcDbGroup', () => {
     restored.dxfInFields(AcDbDxfFiler.fromString(text))
     expect(restored.description).toBe('Tags')
     expect(restored.isAnonymous()).toBe(true)
-    expect(restored.isSelectable()).toBe(false)
+    expect(restored.selectable).toBe(false)
     expect(restored.entityIds).toEqual(['E1', 'E2'])
   })
 })
