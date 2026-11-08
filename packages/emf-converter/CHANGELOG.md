@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.24
+
+### Patch Changes
+
+- feat: aligns AcDbGroup with ObjectARX naming and member APIs (description vs DXF 300, selectable accessors), registers PICKSTYLE and GROUPDISPLAYMODE sysvars, and fixes LibreDWG GROUP dictionary naming on import so groups round-trip correctly
+
 ## 1.15.23
 
 ### Patch Changes
