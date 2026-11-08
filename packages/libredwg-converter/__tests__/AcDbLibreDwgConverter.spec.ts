@@ -14,6 +14,10 @@ class TestLibreDwgConverter extends AcDbLibreDwgConverter {
   processDimStylesPublic(model: any, db: AcDbDatabase) {
     return this.processDimStyles(model, db)
   }
+
+  processObjectsPublic(model: any, db: AcDbDatabase) {
+    return this.processObjects(model, db)
+  }
 }
 
 describe('AcDbLibreDwgConverter', () => {
@@ -273,5 +277,56 @@ describe('AcDbLibreDwgConverter', () => {
     expect(layer).toBeTruthy()
     expect(layer!.color.isByBlock).toBe(true)
     expect(layer!.color.colorIndex).toBe(0)
+  })
+
+  it('converts GROUP objects and renames from ACAD_GROUP', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processObjectsPublic(
+      {
+        objects: {
+          DICTIONARY: [
+            {
+              handle: 'C',
+              ownerHandle: '0',
+              entries: { ACAD_GROUP: 'D' }
+            },
+            {
+              handle: 'D',
+              ownerHandle: 'C',
+              entries: { MyGroup: 'G1' }
+            }
+          ],
+          GROUP: [
+            {
+              handle: 'G1',
+              ownerHandle: 'D',
+              description: 'Door tags',
+              unnamed: false,
+              selectable: true,
+              objectHandles: ['E1', 'E2']
+            }
+          ],
+          XRECORD: [],
+          LAYOUT: [],
+          IMAGEDEF: [],
+          LAYER_FILTER: [],
+          LAYER_INDEX: [],
+          MLEADERSTYLE: [],
+          SPATIAL_FILTER: []
+        },
+        tables: {
+          BLOCK_RECORD: { entries: [] }
+        }
+      },
+      db
+    )
+
+    const group = db.objects.group.getAt('MyGroup')
+    expect(group).toBeTruthy()
+    expect(group!.name).toBe('MyGroup')
+    expect(group!.description).toBe('Door tags')
+    expect(group!.entityIds).toEqual(['E1', 'E2'])
+    expect(group!.isSelectable()).toBe(true)
   })
 })

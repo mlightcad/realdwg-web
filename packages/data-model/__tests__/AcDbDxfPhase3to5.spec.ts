@@ -348,11 +348,34 @@ describe('DXF Phase 3–5 extensions', () => {
   })
 
   it('reads GROUP and SORTENTSTABLE into object dictionaries', async () => {
+    // GROUP name comes from the ACAD_GROUP dictionary key; DXF 300 is description.
     const dxf = [
       '0',
       'SECTION',
       '2',
       'OBJECTS',
+      '0',
+      'DICTIONARY',
+      '5',
+      'C',
+      '100',
+      'AcDbDictionary',
+      '3',
+      'ACAD_GROUP',
+      '350',
+      'D',
+      '0',
+      'DICTIONARY',
+      '5',
+      'D',
+      '330',
+      'C',
+      '100',
+      'AcDbDictionary',
+      '3',
+      'MyGroup',
+      '350',
+      'G1',
       '0',
       'GROUP',
       '5',
@@ -360,7 +383,7 @@ describe('DXF Phase 3–5 extensions', () => {
       '100',
       'AcDbGroup',
       '300',
-      'MyGroup',
+      'Door tags',
       '70',
       '0',
       '71',
@@ -392,6 +415,8 @@ describe('DXF Phase 3–5 extensions', () => {
 
     const group = db.objects.group.getAt('MyGroup')
     expect(group).toBeInstanceOf(AcDbGroup)
+    expect(group?.name).toBe('MyGroup')
+    expect(group?.description).toBe('Door tags')
     expect(group?.entityIds).toEqual(['E1', 'E2'])
 
     const sortents = db.objects.sortentsTable.getAt('S1')

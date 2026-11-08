@@ -16,6 +16,11 @@ describe('AcDbSysVarManager', () => {
     )
 
     const oldPickbox = manager.getVar(AcDbSystemVariables.PICKBOX, db)
+    const oldPickstyle = manager.getVar(AcDbSystemVariables.PICKSTYLE, db)
+    const oldGroupDisplayMode = manager.getVar(
+      AcDbSystemVariables.GROUPDISPLAYMODE,
+      db
+    )
     const oldGripColor = manager.getVar(AcDbSystemVariables.GRIPCOLOR, db)
     const oldGripHot = manager.getVar(AcDbSystemVariables.GRIPHOT, db)
     const oldGripObjLimit = manager.getVar(AcDbSystemVariables.GRIPOBJLIMIT, db)
@@ -68,6 +73,24 @@ describe('AcDbSysVarManager', () => {
     expect(() => manager.setVar(AcDbSystemVariables.GRIPS, 3, db)).toThrow(
       'Invalid GRIPS value! Valid range is 0 to 2.'
     )
+
+    expect(manager.getVar(AcDbSystemVariables.PICKSTYLE, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.PICKSTYLE, '3', db)
+    expect(manager.getVar(AcDbSystemVariables.PICKSTYLE, db)).toBe(3)
+    manager.setVar(AcDbSystemVariables.PICKSTYLE, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.PICKSTYLE, db)).toBe(0)
+    expect(() => manager.setVar(AcDbSystemVariables.PICKSTYLE, 4, db)).toThrow(
+      'Invalid PICKSTYLE value! Valid range is 0 to 3.'
+    )
+
+    expect(manager.getVar(AcDbSystemVariables.GROUPDISPLAYMODE, db)).toBe(2)
+    manager.setVar(AcDbSystemVariables.GROUPDISPLAYMODE, '1', db)
+    expect(manager.getVar(AcDbSystemVariables.GROUPDISPLAYMODE, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.GROUPDISPLAYMODE, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.GROUPDISPLAYMODE, db)).toBe(0)
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.GROUPDISPLAYMODE, 3, db)
+    ).toThrow('Invalid GROUPDISPLAYMODE value! Valid range is 0 to 2.')
 
     expect(manager.getVar(AcDbSystemVariables.GRIPSIZE, db)).toBe(5)
     manager.setVar(AcDbSystemVariables.GRIPSIZE, '10', db)
@@ -172,6 +195,12 @@ describe('AcDbSysVarManager', () => {
     ).toThrow('Invalid color value!')
 
     manager.setVar(AcDbSystemVariables.PICKBOX, oldPickbox as number, db)
+    manager.setVar(AcDbSystemVariables.PICKSTYLE, oldPickstyle as number, db)
+    manager.setVar(
+      AcDbSystemVariables.GROUPDISPLAYMODE,
+      oldGroupDisplayMode as number,
+      db
+    )
     manager.setVar(AcDbSystemVariables.GRIPCOLOR, oldGripColor as number, db)
     manager.setVar(AcDbSystemVariables.GRIPHOT, oldGripHot as number, db)
     manager.setVar(
@@ -249,6 +278,10 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.GRIPHOT)).toBe(12)
     expect(manager.getDefaultValue(AcDbSystemVariables.GRIPOBJLIMIT)).toBe(100)
     expect(manager.getDefaultValue(AcDbSystemVariables.GRIPS)).toBe(2)
+    expect(manager.getDefaultValue(AcDbSystemVariables.PICKSTYLE)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.GROUPDISPLAYMODE)).toBe(
+      2
+    )
     expect(manager.getDefaultValue(AcDbSystemVariables.GRIPSIZE)).toBe(5)
     expect(manager.getDefaultValue(AcDbSystemVariables.COMPAREHATCH)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.COMPAREPROPS)).toBe(0)
