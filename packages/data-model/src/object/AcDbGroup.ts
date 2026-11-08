@@ -36,8 +36,8 @@ export class AcDbGroup extends AcDbObject {
    */
   constructor(description = '', selectable = true) {
     super()
-    this._description = description
-    this._selectable = selectable
+    this.description = description
+    this.selectable = selectable
   }
 
   /**
@@ -76,7 +76,7 @@ export class AcDbGroup extends AcDbObject {
    * @param value - The new description.
    */
   set description(value: string) {
-    this._description = value
+    this._description = String(value ?? '')
   }
 
   /**
@@ -187,28 +187,6 @@ export class AcDbGroup extends AcDbObject {
   }
 
   /**
-   * Returns whether the group can be selected as a unit.
-   *
-   * Mirrors ObjectARX `AcDbGroup::isSelectable`.
-   *
-   * @returns `true` when the group is selectable.
-   */
-  isSelectable(): boolean {
-    return this._selectable
-  }
-
-  /**
-   * Sets whether the group can be selected as a unit.
-   *
-   * Mirrors ObjectARX `AcDbGroup::setSelectable`.
-   *
-   * @param value - `true` to allow selecting the group as a unit.
-   */
-  setSelectable(value: boolean): void {
-    this._selectable = value
-  }
-
-  /**
    * Returns whether the group is not accessible.
    *
    * Mirrors ObjectARX `AcDbGroup::isNotAccessible`. This port always returns
@@ -265,17 +243,6 @@ export class AcDbGroup extends AcDbObject {
     }
 
     this._name = next
-  }
-
-  /**
-   * Sets the group description (DXF group 300).
-   *
-   * Mirrors ObjectARX `AcDbGroup::setDescription`.
-   *
-   * @param description - The new description.
-   */
-  setDescription(description: string): void {
-    this._description = String(description ?? '')
   }
 
   /**
@@ -652,13 +619,13 @@ export class AcDbGroup extends AcDbObject {
       }
       switch (code) {
         case 300:
-          this._description = String(item.value)
+          this.description = item.value as string
           break
         case 70:
-          this._anonymous = Number(item.value) !== 0
+          this.anonymous = Number(item.value) !== 0
           break
         case 71:
-          this._selectable = Number(item.value) !== 0
+          this.selectable = Number(item.value) !== 0
           break
         case 340:
           this._entityIds.push(String(item.value))
