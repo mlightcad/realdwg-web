@@ -145,7 +145,9 @@ export class AcDbDxfObjectsReader {
       case 'GROUP': {
         const group = new AcDbGroup()
         group.dxfIn(filer)
-        const key = group.name || group.objectId
+        // Key by handle first; ACAD_GROUP dictionary entries supply the
+        // ObjectARX name in finishNamedObjectDictionaries.
+        const key = group.objectId || group.description
         this._db.objects.group.setAt(key, group)
         break
       }
@@ -424,6 +426,29 @@ export class AcDbDxfObjectsReader {
           // matches and a duplicate "Standard" style is created on every open.
           typed.remove(storedKey)
           typed.setAt(entryName, obj)
+          continue
+        }
+        if (
+          typed === this._db.objects.group &&
+          obj instanceof AcDbGroup &&
+          storedKey != null &&
+          storedKey !== entryName &&
+          !typed.getAt(entryName)
+        ) {
+          // GROUP name is the ACAD_GROUP dictionary key (ObjectARX). Files
+          // key groups by handle until the NOD entry renames them.
+          typed.remove(storedKey)
+          typed.setAt(entryName, obj)
+          obj.name = entryName
+          continue
+        }
+        if (
+          typed === this._db.objects.group &&
+          obj instanceof AcDbGroup &&
+          storedKey == null
+        ) {
+          typed.setAt(entryName, obj)
+          obj.name = entryName
           continue
         }
         if (!typed.getAt(entryName) && storedKey == null) {

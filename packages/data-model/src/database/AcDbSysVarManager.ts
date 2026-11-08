@@ -453,8 +453,25 @@ export class AcDbSysVarManager {
       defaultValue: 2
     })
     /**
+     * Controls how grips are displayed when group selection is on and a group
+     * member is selected (`GROUPDISPLAYMODE`):
+     * - 0: grips on all objects in the selected group
+     * - 1: single grip at the center of the grouped objects
+     * - 2: bounding box around the grouped objects, plus a center grip
+     *
+     * Saved in the registry (not in the drawing). AutoCAD initial value is **2**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-1EDF8F98-A769-415C-9FF3-B8C304369094
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.GROUPDISPLAYMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 2
+    })
+    /**
      * Sets the size of the grip box, in device-independent pixels. Valid range
-     * is **1??55**. Saved in the registry (not in the drawing).
+     * is **1–255**. Saved in the registry (not in the drawing).
      *
      * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-5F355F5F-0DDE-49B4-B253-C6BA717BAF8B
      */
@@ -734,6 +751,23 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 10
+    })
+    /**
+     * Controls group selection and associative hatch selection (`PICKSTYLE`):
+     * - 0: no group selection or associative hatch selection
+     * - 1: group selection
+     * - 2: associative hatch selection
+     * - 3: group selection and associative hatch selection
+     *
+     * Saved in the registry (not in the drawing). AutoCAD initial value is **1**.
+     *
+     * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-0F1D2321-E474-48AA-9179-98F17CCCA239
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.PICKSTYLE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 1
     })
     /**
      * Stores additional angles for polar tracking and polar snap.
@@ -1019,6 +1053,22 @@ export class AcDbSysVarManager {
         const intVal = Math.trunc(value as number)
         if (!Number.isFinite(intVal) || intVal < 0 || intVal > 2) {
           throw new Error('Invalid GRIPS value! Valid range is 0 to 2.')
+        }
+        value = intVal
+      }
+      if (name === AcDbSystemVariables.GROUPDISPLAYMODE.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (!Number.isFinite(intVal) || intVal < 0 || intVal > 2) {
+          throw new Error(
+            'Invalid GROUPDISPLAYMODE value! Valid range is 0 to 2.'
+          )
+        }
+        value = intVal
+      }
+      if (name === AcDbSystemVariables.PICKSTYLE.toLowerCase()) {
+        const intVal = Math.trunc(value as number)
+        if (!Number.isFinite(intVal) || intVal < 0 || intVal > 3) {
+          throw new Error('Invalid PICKSTYLE value! Valid range is 0 to 3.')
         }
         value = intVal
       }

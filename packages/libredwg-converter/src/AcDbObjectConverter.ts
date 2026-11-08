@@ -3,6 +3,7 @@ import {
   acdbDecodeMLeaderStyleRawColor,
   AcDbDictionaryVar,
   AcDbDimensionObjectContextData,
+  AcDbGroup,
   AcDbHatchScaleContextData,
   AcDbLayerFilter,
   AcDbLayerIndex,
@@ -21,6 +22,7 @@ import {
 } from '@mlightcad/data-model'
 import {
   DwgCommonObject,
+  DwgGroupObject,
   DwgLayerFilterObject,
   DwgLayerIndexObject,
   DwgMLeaderStyleObject,
@@ -501,6 +503,24 @@ export class AcDbObjectConverter {
         value: group.value
       }))
     )
+    return dbObject
+  }
+
+  /**
+   * Converts a LibreDWG GROUP object to {@link AcDbGroup}.
+   *
+   * LibreDWG's `description` (from `GROUP.name`) maps to ObjectARX
+   * description / DXF 300. The ACAD_GROUP dictionary key supplies the name.
+   */
+  convertGroup(group: DwgGroupObject) {
+    const dbObject = new AcDbGroup()
+    this.processCommonAttrs(group, dbObject)
+    dbObject.description = group.description ?? ''
+    dbObject.anonymous = !!group.unnamed
+    dbObject.selectable = group.selectable !== false
+    for (const handle of group.objectHandles ?? []) {
+      if (handle) dbObject.append(String(handle))
+    }
     return dbObject
   }
 

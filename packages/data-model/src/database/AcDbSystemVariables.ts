@@ -218,6 +218,24 @@ export const AcDbSystemVariables = {
   /** Pickbox half-size, in pixels, used for selection hit testing in the UI. */
   PICKBOX: 'PICKBOX',
   /**
+   * Controls group selection and associative hatch selection.
+   * `0` = neither; `1` = group selection; `2` = associative hatch selection;
+   * `3` = both. Saved in the registry (not in the drawing). AutoCAD initial
+   * value is **1**.
+   *
+   * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-0F1D2321-E474-48AA-9179-98F17CCCA239
+   */
+  PICKSTYLE: 'PICKSTYLE',
+  /**
+   * Controls how grips are displayed when group selection is on and a group
+   * member is selected. `0` = grips on all members; `1` = single center grip;
+   * `2` = bounding box plus center grip. Saved in the registry. AutoCAD
+   * initial value is **2**.
+   *
+   * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-1EDF8F98-A769-415C-9FF3-B8C304369094
+   */
+  GROUPDISPLAYMODE: 'GROUPDISPLAYMODE',
+  /**
    * Additional polar tracking angles, stored as a semicolon-separated list (up to 10).
    * Only effective when POLARMODE bit 4 is set.
    */
