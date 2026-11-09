@@ -1,5 +1,6 @@
 import { Dwg_File_Type, DwgDatabase, LibreDwg } from '@mlightcad/libredwg-web'
 
+import { acdbDropDanglingModelSpaceEntities } from './dropDanglingModelSpaceEntities.js'
 import { acdbEnsureDwgThumbnailImage } from './extractDwgThumbnailImage.js'
 
 type LibreDwgInstance = NonNullable<Awaited<ReturnType<typeof LibreDwg.create>>>
@@ -70,6 +71,10 @@ export async function parseLibreDwgFile(
     )
   }
   const result = libredwg.convertEx(dwgDataPtr)
+  if (resolvedType === Dwg_File_Type.DWG) {
+    // Erased anonymous-block leftovers must stay hidden like in AutoCAD.
+    acdbDropDanglingModelSpaceEntities(libredwg, dwgDataPtr, result.database)
+  }
   attachDimStyleAnnotationScales(libredwg, dwgDataPtr, result.database)
   libredwg.dwg_free(dwgDataPtr)
 
@@ -137,7 +142,9 @@ function dimensionAnnotationScale(
 ): number | undefined {
   const ext = dicts.get(normHandle(ent.ownerDictionaryHardId))
   const manager = dicts.get(normHandle(ext?.entries?.AcDbContextDataManager))
-  const scaleDict = dicts.get(normHandle(manager?.entries?.ACDB_ANNOTATIONSCALES))
+  const scaleDict = dicts.get(
+    normHandle(manager?.entries?.ACDB_ANNOTATIONSCALES)
+  )
   const entries = scaleDict?.entries
   if (!entries) return undefined
 
@@ -183,9 +190,7 @@ function contextScaleFactor(
   try {
     const ref = libredwg.dwg_dynapi_entity_value(tio, 'scale')
     if (!ref?.success || ref.data == null) return undefined
-    const scaleHandle = normHandle(
-      libredwg.dwg_ref_get_id(ref.data as never)
-    )
+    const scaleHandle = normHandle(libredwg.dwg_ref_get_id(ref.data as never))
     if (!scaleHandle) return undefined
     const cached = scaleFactorByHandle.get(scaleHandle)
     if (cached != null) return cached
