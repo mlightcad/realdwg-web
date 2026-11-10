@@ -115,11 +115,13 @@ describe('AcDbHatch', () => {
     expect(hatch.isSolidFill).toBe(false)
     expect(hatch.definitionLines).toHaveLength(1)
     expect(hatch.definitionLines[0].angle).toBeCloseTo(Math.PI / 4)
-    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175)
+    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * Math.SQRT1_2)
 
     hatch.patternScale = 2
     expect(hatch.definitionLines).toHaveLength(1)
-    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 2)
+    expect(hatch.definitionLines[0].offset.y).toBeCloseTo(
+      3.175 * 2 * Math.SQRT1_2
+    )
   })
 
   it('applies hatch system variables when a new hatch is added to a database', () => {
@@ -176,7 +178,9 @@ describe('AcDbHatch', () => {
       expect(hatch.hatchStyle).toBe(AcDbHatchStyle.Ignore)
       expect(hatch.patternDouble).toBe(true)
       expect(hatch.definitionLines).toHaveLength(1)
-      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 2)
+      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(
+        3.175 * 2 * Math.SQRT1_2
+      )
     } finally {
       manager.setVar(AcDbSystemVariables.HPNAME, previousHpName as string, db)
       manager.setVar(AcDbSystemVariables.HPANG, previousHpAng as number, db)
@@ -363,7 +367,9 @@ describe('AcDbHatch', () => {
         definitionLines: hatch.definitionLines
       })
       expect(hatch.definitionLines).toHaveLength(1)
-      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(3.175 * 3)
+      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(
+        3.175 * 3 * Math.SQRT1_2
+      )
     } finally {
       manager.setVar(AcDbSystemVariables.HPNAME, previousHpName as string, db)
       manager.setVar(AcDbSystemVariables.HPANG, previousHpAng as number, db)
@@ -1231,4 +1237,180 @@ describe('AcDbHatch', () => {
     hatch.dxfOutFields(out)
     expect(out.toString()).toContain('\n91\n2\n')
   })
+
+  describe('pattern definition line offsets', () => {
+    /**
+     * Distance between neighbouring pattern lines. DXF group codes 45/46 (and
+     * every renderer) treat `offset` as a world-space vector, so the spacing
+     * is its component perpendicular to the line direction.
+     */
+    const perpendicularSpacing = (line: {
+      angle: number
+      offset: { x: number; y: number }
+    }) =>
+      -Math.sin(line.angle) * line.offset.x +
+      Math.cos(line.angle) * line.offset.y
+
+    const ansi31Dxf = [
+      '0',
+      'HATCH',
+      '5',
+      '173',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbHatch',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '30',
+      '0.0',
+      '210',
+      '0.0',
+      '220',
+      '0.0',
+      '230',
+      '1.0',
+      '2',
+      'ANSI31',
+      '70',
+      '0',
+      '71',
+      '0',
+      '91',
+      '1',
+      '92',
+      '2',
+      '72',
+      '0',
+      '73',
+      '1',
+      '93',
+      '4',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '10',
+      '10.0',
+      '20',
+      '0.0',
+      '10',
+      '10.0',
+      '20',
+      '10.0',
+      '10',
+      '0.0',
+      '20',
+      '10.0',
+      '97',
+      '0',
+      '75',
+      '0',
+      '76',
+      '1',
+      '52',
+      '0.0',
+      '41',
+      '1.0',
+      '77',
+      '0',
+      '78',
+      '1',
+      '53',
+      '45.0',
+      '43',
+      '0.0',
+      '44',
+      '0.0',
+      '45',
+      '-1.122532015133644',
+      '46',
+      '1.122532015133644',
+      '79',
+      '0',
+      '98',
+      '0',
+      '0',
+      'ENDSEC'
+    ].join('\n')
+
+    it('stores predefined PAT offsets as world-space vectors', () => {
+      createWorkingDb()
+      const hatch = new AcDbHatch()
+      hatch.patternName = 'ANSI31'
+
+      const [line] = hatch.definitionLines
+      // acadiso.pat ANSI31: 45, 0,0, 0,3.175 (delta in line-local space).
+      expect(line.offset.x).toBeCloseTo(-3.175 * Math.SQRT1_2)
+      expect(line.offset.y).toBeCloseTo(3.175 * Math.SQRT1_2)
+      expect(perpendicularSpacing(line)).toBeCloseTo(3.175)
+    })
+
+    it('reads only the explicit DXF definition lines of a predefined hatch', () => {
+      const db = createWorkingDb()
+      const hatch = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+      const filer = AcDbDxfFiler.fromString(ansi31Dxf, { database: db })
+      expect(filer.readItem()?.value).toBe('HATCH')
+      hatch.dxfIn(filer)
+
+      expect(hatch.patternName).toBe('ANSI31')
+      expect(hatch.definitionLines).toHaveLength(1)
+      expect(hatch.definitionLines[0].angle).toBeCloseTo(Math.PI / 4)
+      expect(hatch.definitionLines[0].offset.x).toBeCloseTo(-1.122532015133644)
+      expect(hatch.definitionLines[0].offset.y).toBeCloseTo(1.122532015133644)
+      expect(perpendicularSpacing(hatch.definitionLines[0])).toBeCloseTo(
+        1.5875
+      )
+
+      // Explicit DXF lines already carry rotation and scale, and stay put
+      // when drawn.
+      const renderer = {
+        subEntityTraits: {} as Record<string, unknown>,
+        area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+        group: jest.fn()
+      }
+      hatch.subWorldDraw(renderer as never)
+      const fillType = renderer.subEntityTraits.fillType as {
+        patternAngle: number
+        definitionLines: unknown[]
+      }
+      expect(fillType.patternAngle).toBe(0)
+      expect(fillType.definitionLines).toHaveLength(1)
+      expect(hatch.definitionLines).toHaveLength(1)
+    })
+
+    it('writes auto-generated lines with pattern rotation baked in', () => {
+      const db = createWorkingDb()
+      const hatch = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(hatch)
+      hatch.patternName = 'ANSI31'
+      hatch.patternScale = 2
+      hatch.patternAngle = Math.PI / 4
+      hatch.add(createRectLoop(0, 0, 10, 10))
+
+      const out = new AcDbDxfFiler().setVersion(27)
+      hatch.dxfOutFields(out)
+      const dxf = ['0', 'HATCH', '5', '2C', out.toString(), '0', 'ENDSEC'].join(
+        '\n'
+      )
+      const reread = new AcDbHatch()
+      db.tables.blockTable.modelSpace.appendEntity(reread)
+      const inFiler = AcDbDxfFiler.fromString(dxf, { database: db })
+      expect(inFiler.readItem()?.value).toBe('HATCH')
+      reread.dxfIn(inFiler)
+
+      expect(reread.definitionLines).toHaveLength(1)
+      const [line] = reread.definitionLines
+      // ANSI31 at 45° plus a 45° hatch angle is a vertical-ish 90° family.
+      expect(line.angle).toBeCloseTo(Math.PI / 2)
+      expect(perpendicularSpacing(line)).toBeCloseTo(3.175 * 2)
+    })
+  })
 })
+
