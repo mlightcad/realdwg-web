@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.15.25
+
+### Patch Changes
+
+- fix: corrects pattern hatch spacing so HATCH entities read from DXF no longer keep a second, mis-offset family of strokes beside their definition lines, and stores lines expanded from a predefined pattern with world-space offsets that DXF output rotates by the pattern angle. It also bumps `@mlightcad/libredwg-web` to 0.8.8, whose orphan handling skips entities owned by erased blocks, so stale dimension geometry no longer leaks into drawings read from DWG
+- Updated dependencies
+  - @mlightcad/common@1.15.25
+
 ## 3.15.24
 
 ### Patch Changes
