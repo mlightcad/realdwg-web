@@ -2,18 +2,64 @@ import { AcDbObject } from '../../base/index.js'
 import { AcDbDatabase } from '../AcDbDatabase.js'
 import { AcDbSysVarManager } from '../AcDbSysVarManager.js'
 import {
-  acdbAreChangeContainersEqual,
   AcDbChangeContainer,
-  AcDbDatabaseChange} from './AcDbDatabaseChange.js'
+  AcDbDatabaseChange
+} from './AcDbDatabaseChange.js'
+
+type AcDbStructuralChange = Extract<
+  AcDbDatabaseChange,
+  { kind: 'append' | 'remove' }
+>
+
+/**
+ * Builds a lookup key that is equal for two structural changes exactly when
+ * their kind, container (see `acdbAreChangeContainersEqual`) and object ID
+ * all match.
+ */
+function structuralKey(
+  kind: AcDbStructuralChange['kind'],
+  container: AcDbChangeContainer,
+  objectId: string
+): string {
+  let location: string
+  switch (container.type) {
+    case 'blockTableRecord':
+      location = container.ownerId
+      break
+    case 'symbolTable':
+      location = container.tableName
+      break
+    case 'dictionary':
+      location = `${container.dictionaryId}\u0000${container.key}`
+      break
+  }
+  return `${kind}\u0000${container.type}\u0000${location}\u0000${objectId}`
+}
 
 /**
  * Accumulates structured database changes during an active transaction.
  *
  * Append/remove pairs that cancel within the same transaction are coalesced,
  * and duplicate modify/sysvar entries for the same target are ignored.
+ *
+ * Lookups go through indexes rather than scanning {@link getChanges}, so
+ * recording stays linear for transactions with hundreds of thousands of
+ * changes (for example a large file import).
  */
 export class AcDbChangeRecorder {
   private readonly changes: AcDbDatabaseChange[] = []
+  /** First modify entry per object ID. */
+  private readonly modifyById = new Map<string, AcDbDatabaseChange>()
+  /** First sysvar entry per normalized variable name. */
+  private readonly sysvarByName = new Map<string, AcDbDatabaseChange>()
+  /** Live structural entries per {@link structuralKey}, oldest first. */
+  private readonly structuralByKey = new Map<string, AcDbStructuralChange[]>()
+  /**
+   * Entries cancelled since the last compaction. Removing them from
+   * {@link changes} one `splice` at a time would be quadratic, so they are
+   * dropped in one pass by {@link getChanges}.
+   */
+  private readonly cancelled = new Set<AcDbDatabaseChange>()
 
   /**
    * Returns the changes recorded so far in this transaction.
@@ -21,6 +67,7 @@ export class AcDbChangeRecorder {
    * The returned array is the internal store; callers should treat it as read-only.
    */
   getChanges(): AcDbDatabaseChange[] {
+    this.compact()
     return this.changes
   }
 
@@ -29,6 +76,10 @@ export class AcDbChangeRecorder {
    */
   clear(): void {
     this.changes.length = 0
+    this.modifyById.clear()
+    this.sysvarByName.clear()
+    this.structuralByKey.clear()
+    this.cancelled.clear()
   }
 
   /**
@@ -54,13 +105,10 @@ export class AcDbChangeRecorder {
    */
   recordModify(object: AcDbObject): void {
     const objectId = object.objectId
-    const existing = this.changes.find(
-      c => c.kind === 'modify' && c.objectId === objectId
-    )
-    if (existing) {
+    if (this.modifyById.has(objectId)) {
       return
     }
-    this.changes.push({
+    this.addModify({
       kind: 'modify',
       objectId,
       before: object.clonePreservingIdentity()
@@ -77,9 +125,7 @@ export class AcDbChangeRecorder {
    * @param objectId - Object identifier to look up
    */
   hasModify(objectId: string): boolean {
-    return this.changes.some(
-      c => c.kind === 'modify' && c.objectId === objectId
-    )
+    return this.modifyById.has(objectId)
   }
 
   /**
@@ -126,13 +172,10 @@ export class AcDbChangeRecorder {
    */
   recordSysvar(name: string, before: unknown): void {
     const normalizedName = name.toLowerCase()
-    const existing = this.changes.find(
-      c => c.kind === 'sysvar' && c.name === normalizedName
-    )
-    if (existing) {
+    if (this.sysvarByName.has(normalizedName)) {
       return
     }
-    this.changes.push({
+    this.addSysvar({
       kind: 'sysvar',
       name: normalizedName,
       before
@@ -148,7 +191,7 @@ export class AcDbChangeRecorder {
    * @param database - Database used to read live post-commit values
    */
   finalize(database: AcDbDatabase): void {
-    for (const change of this.changes) {
+    for (const change of this.getChanges()) {
       if (change.kind === 'modify') {
         const object = database.getObjectById(change.objectId)
         if (object) {
@@ -165,23 +208,31 @@ export class AcDbChangeRecorder {
    *
    * When an opposite structural change for the same container and object ID
    * already exists in this transaction, both entries cancel and neither is kept.
+   * The oldest matching entry is the one cancelled.
    *
    * @param change - Append or remove entry to merge into the recorder
    */
-  private recordStructuralChange(
-    change: Extract<AcDbDatabaseChange, { kind: 'append' | 'remove' }>
-  ): void {
+  private recordStructuralChange(change: AcDbStructuralChange): void {
+    const objectId = change.object.objectId
     const oppositeKind = change.kind === 'append' ? 'remove' : 'append'
-    const cancelIndex = this.findStructuralChangeIndex(
-      oppositeKind,
-      change.container,
-      change.object.objectId
-    )
-    if (cancelIndex >= 0) {
-      this.changes.splice(cancelIndex, 1)
+    const oppositeKey = structuralKey(oppositeKind, change.container, objectId)
+    const opposites = this.structuralByKey.get(oppositeKey)
+    if (opposites && opposites.length > 0) {
+      const cancelled = opposites.shift()!
+      if (opposites.length === 0) {
+        this.structuralByKey.delete(oppositeKey)
+      }
+      this.cancelled.add(cancelled)
       return
     }
 
+    const key = structuralKey(change.kind, change.container, objectId)
+    const entries = this.structuralByKey.get(key)
+    if (entries) {
+      entries.push(change)
+    } else {
+      this.structuralByKey.set(key, [change])
+    }
     this.changes.push(change)
   }
 
@@ -195,21 +246,15 @@ export class AcDbChangeRecorder {
    */
   private mergeChange(change: AcDbDatabaseChange): void {
     if (change.kind === 'modify') {
-      const existing = this.changes.find(
-        c => c.kind === 'modify' && c.objectId === change.objectId
-      )
-      if (!existing) {
-        this.changes.push(change)
+      if (!this.modifyById.has(change.objectId)) {
+        this.addModify(change)
       }
       return
     }
 
     if (change.kind === 'sysvar') {
-      const existing = this.changes.find(
-        c => c.kind === 'sysvar' && c.name === change.name
-      )
-      if (!existing) {
-        this.changes.push(change)
+      if (!this.sysvarByName.has(change.name)) {
+        this.addSysvar(change)
       }
       return
     }
@@ -217,25 +262,29 @@ export class AcDbChangeRecorder {
     this.recordStructuralChange(change)
   }
 
-  /**
-   * Finds the index of a structural change matching kind, container, and object ID.
-   *
-   * @param kind - Append or remove kind to search for
-   * @param container - Container descriptor that must match exactly
-   * @param objectId - Object identifier of the affected record
-   * @returns Index in {@link changes}, or `-1` when no match exists
-   */
-  private findStructuralChangeIndex(
-    kind: 'append' | 'remove',
-    container: AcDbChangeContainer,
-    objectId: string
-  ): number {
-    return this.changes.findIndex(
-      change =>
-        change.kind === kind &&
-        change.object.objectId === objectId &&
-        acdbAreChangeContainersEqual(change.container, container)
-    )
+  private addModify(change: AcDbDatabaseChange & { kind: 'modify' }) {
+    this.modifyById.set(change.objectId, change)
+    this.changes.push(change)
+  }
+
+  private addSysvar(change: AcDbDatabaseChange & { kind: 'sysvar' }) {
+    this.sysvarByName.set(change.name, change)
+    this.changes.push(change)
+  }
+
+  /** Drops cancelled entries from {@link changes}, keeping order. */
+  private compact(): void {
+    if (this.cancelled.size === 0) {
+      return
+    }
+    let write = 0
+    for (const change of this.changes) {
+      if (!this.cancelled.has(change)) {
+        this.changes[write++] = change
+      }
+    }
+    this.changes.length = write
+    this.cancelled.clear()
   }
 
   /**

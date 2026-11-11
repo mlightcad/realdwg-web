@@ -78,7 +78,10 @@ import {
 import { acdbBytesToHexString } from '../misc/proxyGraphic/index.js'
 import { AcDbBlockTable } from './AcDbBlockTable.js'
 import { AcDbBlockTableRecord } from './AcDbBlockTableRecord.js'
-import { AcDbConversionStage, AcDbStageStatus } from './AcDbDatabaseConverter.js'
+import {
+  AcDbConversionStage,
+  AcDbStageStatus
+} from './AcDbDatabaseConverter.js'
 import type { AcDbConversionProgressCallback } from './AcDbDatabaseConverter.js'
 import { AcDbOpenDatabaseError } from './AcDbOpenDatabaseError.js'
 import { AcDbDimStyleTable } from './AcDbDimStyleTable.js'
@@ -373,6 +376,22 @@ export interface AcDbCreateDefaultDataOptions {
   textStyle?: boolean
   dimStyle?: boolean
   layout?: boolean
+}
+
+/**
+ * Appends one entity or a batch to `target`. Not `push(...items)`: a batch
+ * can hold hundreds of thousands of entities (undoing a large import), which
+ * exceeds the engine's argument limit and throws "Maximum call stack size
+ * exceeded".
+ */
+function appendAll(target: AcDbEntity[], entity: AcDbEntity | AcDbEntity[]) {
+  if (!Array.isArray(entity)) {
+    target.push(entity)
+    return
+  }
+  for (let i = 0; i < entity.length; i++) {
+    target.push(entity[i])
+  }
 }
 
 /**
@@ -1006,8 +1025,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   notifyEntityAppended(entity: AcDbEntity | AcDbEntity[]): void {
     if (this.isEventBatched()) {
-      const items = Array.isArray(entity) ? entity : [entity]
-      this._pendingEntityAppended.push(...items)
+      appendAll(this._pendingEntityAppended, entity)
       return
     }
     this.events.entityAppended.dispatch({
@@ -1023,8 +1041,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   notifyEntityErased(entity: AcDbEntity | AcDbEntity[]): void {
     if (this.isEventBatched()) {
-      const items = Array.isArray(entity) ? entity : [entity]
-      this._pendingEntityErased.push(...items)
+      appendAll(this._pendingEntityErased, entity)
       return
     }
     this.events.entityErased.dispatch({
@@ -3241,8 +3258,7 @@ export class AcDbDatabase extends AcDbObject {
       // Pre-R2007: declare a legacy code page. Non-ASCII text is written as
       // `\U+nnnn` escapes (see AcDbDxfFiler) so the ASCII payload matches.
       const name = this._dwgCodePage
-      const legacy =
-        name && !/^utf-?8$/i.test(name) ? name : 'ANSI_1252'
+      const legacy = name && !/^utf-?8$/i.test(name) ? name : 'ANSI_1252'
       filer.writeString(3, legacy)
     }
     filer.writeString(9, '$INSUNITS')
