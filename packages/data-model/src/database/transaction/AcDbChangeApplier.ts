@@ -12,7 +12,10 @@ import {
 import { AcDbSymbolTable } from '../AcDbSymbolTable.js'
 import { AcDbSymbolTableRecord } from '../AcDbSymbolTableRecord.js'
 import { AcDbSysVarManager } from '../AcDbSysVarManager.js'
-import { AcDbChangeContainer, AcDbDatabaseChange } from './AcDbDatabaseChange.js'
+import {
+  AcDbChangeContainer,
+  AcDbDatabaseChange
+} from './AcDbDatabaseChange.js'
 
 /**
  * Applies forward or inverse database changes for undo/redo operations.
@@ -21,6 +24,15 @@ import { AcDbChangeContainer, AcDbDatabaseChange } from './AcDbDatabaseChange.js
  * are replayed against a live {@link AcDbDatabase} instance.
  */
 export class AcDbChangeApplier {
+  /** Owner of {@link pendingRemoveIds}. */
+  private pendingRemoveOwnerId?: string
+  /**
+   * Consecutive block-table-record removals waiting to run as one
+   * `removeEntity(ids)` call. Removing them one at a time scans the whole
+   * block per entity, which makes undoing a large append quadratic.
+   */
+  private pendingRemoveIds: string[] = []
+
   /**
    * Creates an applier bound to one database.
    *
@@ -36,8 +48,12 @@ export class AcDbChangeApplier {
    * @param changes - Ordered list of changes recorded by {@link AcDbChangeRecorder}
    */
   applyForward(changes: AcDbDatabaseChange[]): void {
-    for (const change of changes) {
-      this.applyChange(change, true)
+    try {
+      for (const change of changes) {
+        this.applyChange(change, true)
+      }
+    } finally {
+      this.flushRemovals()
     }
   }
 
@@ -49,8 +65,12 @@ export class AcDbChangeApplier {
    * @param changes - Ordered list of changes recorded by {@link AcDbChangeRecorder}
    */
   applyInverse(changes: AcDbDatabaseChange[]): void {
-    for (let i = changes.length - 1; i >= 0; i--) {
-      this.applyChange(changes[i], false)
+    try {
+      for (let i = changes.length - 1; i >= 0; i--) {
+        this.applyChange(changes[i], false)
+      }
+    } finally {
+      this.flushRemovals()
     }
   }
 
@@ -61,6 +81,17 @@ export class AcDbChangeApplier {
    * @param forward - When true, replay the original mutation; when false, apply its inverse
    */
   private applyChange(change: AcDbDatabaseChange, forward: boolean): void {
+    if (
+      (change.kind === 'append' || change.kind === 'remove') &&
+      change.container.type === 'blockTableRecord' &&
+      forward === (change.kind === 'remove')
+    ) {
+      this.queueRemoval(change.container.ownerId, change.object.objectId)
+      return
+    }
+    // Anything else may depend on the queued removals having happened.
+    this.flushRemovals()
+
     switch (change.kind) {
       case 'modify':
         this.applyModify(change, forward)
@@ -161,6 +192,36 @@ export class AcDbChangeApplier {
         }
         break
       }
+    }
+  }
+
+  /**
+   * Queues removal of one entity from a block table record. Removals for the
+   * same owner run together in {@link flushRemovals}.
+   *
+   * @param ownerId - Block table record that owns the entity
+   * @param objectId - Entity to remove
+   */
+  private queueRemoval(ownerId: string, objectId: string): void {
+    if (this.pendingRemoveOwnerId !== ownerId) {
+      this.flushRemovals()
+      this.pendingRemoveOwnerId = ownerId
+    }
+    this.pendingRemoveIds.push(objectId)
+  }
+
+  /** Runs the queued block-table-record removals in one pass. */
+  private flushRemovals(): void {
+    const ownerId = this.pendingRemoveOwnerId
+    const ids = this.pendingRemoveIds
+    this.pendingRemoveOwnerId = undefined
+    if (ownerId === undefined || ids.length === 0) {
+      return
+    }
+    this.pendingRemoveIds = []
+    const btr = this.database.tables.blockTable.getIdAt(ownerId)
+    if (btr) {
+      btr.removeEntity(ids)
     }
   }
 
