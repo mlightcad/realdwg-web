@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.26
+
+### Patch Changes
+
+- fix: creates missing layers when entities reference undeclared LAYER table entries so R12-style drawings no longer drop those entities in viewers, and keeps transactions, undo and redo linear for very large edits so undoing a PDF import with hundreds of thousands of entities finishes in seconds instead of timing out or overflowing the call stack
+- Updated dependencies
+  - @mlightcad/data-model@1.15.26
+  - @mlightcad/libredwg-converter@3.15.26
+
 ## 0.15.25
 
 ### Patch Changes
