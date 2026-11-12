@@ -50,6 +50,68 @@ describe('AcGeArea2d', () => {
     expect(tree.children[0].children.length).toBe(1)
   })
 
+  it('does not nest a loop that only touches its neighbour', () => {
+    // cathedral.dwg hatch 698AE: an L-shaped loop and the square in its
+    // notch share edges and the square's first vertex, which lies a hair
+    // (8e-10) inside the L's top edge. The square is filled in AutoCAD and
+    // in PDF export, so it must not become a hole of the L.
+    const l = new AcGePolyline2d(
+      [
+        { x: 363417.6222955187, y: 459464.14434221457 },
+        { x: 362642.62229551823, y: 459464.14434221457 },
+        { x: 362642.62229551823, y: 459074.14434221445 },
+        { x: 362252.6222955187, y: 459074.14434221457 },
+        { x: 362252.6222955187, y: 458297.5989058738 },
+        { x: 363417.6222955187, y: 458297.5989058738 }
+      ],
+      true
+    )
+    const square = new AcGePolyline2d(
+      [
+        { x: 362642.62229551823, y: 459464.1443422138 },
+        { x: 362252.6222955187, y: 459464.1443422138 },
+        { x: 362252.6222955187, y: 459074.14434221457 },
+        { x: 362642.62229551823, y: 459074.14434221445 }
+      ],
+      true
+    )
+    const area = new AcGeArea2d()
+    area.add(l)
+    area.add(square)
+
+    const tree = area.buildHierarchy()
+    expect(tree.children.map(node => node.index).sort()).toEqual([0, 1])
+    expect(tree.children.every(node => node.children.length === 0)).toBe(true)
+  })
+
+  it('still nests an island whose corner touches the outer loop', () => {
+    const outer = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 }
+      ],
+      true
+    )
+    const island = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 4, y: 2 },
+        { x: 4, y: 4 },
+        { x: 2, y: 4 }
+      ],
+      true
+    )
+    const area = new AcGeArea2d()
+    area.add(outer)
+    area.add(island)
+
+    const tree = area.buildHierarchy()
+    expect(tree.children).toHaveLength(1)
+    expect(tree.children[0].children.map(node => node.index)).toEqual([1])
+  })
+
   it('covers area edge paths for empty and degenerate loops', () => {
     const empty = new AcGeArea2d()
     expect(empty.area).toBe(0)

@@ -1,4 +1,9 @@
-import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint2dLike } from '../math/index.js'
+import {
+  AcGeBox2d,
+  AcGeMatrix2d,
+  AcGePoint2d,
+  AcGePoint2dLike
+} from '../math/index.js'
 import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil.js'
 import { AcGeGeometryUtil } from '../util/index.js'
 import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
@@ -137,12 +142,9 @@ export class AcGeArea2d extends AcGeShape2d {
         const boundary2 = pointBoundaries[index2]
         const box2 = boundaryBoxes[index2]
         // Determine whether the boundary is within the boundary2.
-        // Use a deterministic sample (first vertex) — randInt made hatch /
-        // multi-quad wide-polyline nesting non-deterministic across reloads.
-        if (
-          box2.containsBox(box) &&
-          AcGeGeometryUtil.isPointInPolygon(boundary[0], boundary2)
-        ) {
+        // Samples are deterministic (randInt made hatch / multi-quad
+        // wide-polyline nesting non-deterministic across reloads).
+        if (box2.containsBox(box) && isLoopInside(boundary, boundary2, box2)) {
           indexNodeMap
             .get(index2)
             ?.children.push(indexNodeMap.get(index) as AcGeIndexNode)
@@ -222,4 +224,50 @@ export class AcGeArea2d extends AcGeShape2d {
     })
     return indices
   }
+}
+
+/**
+ * Whether loop `inner` lies inside loop `outer`, judged at the first vertex
+ * of `inner` that is not on `outer`'s boundary.
+ *
+ * Neighbouring hatch loops share edges and corners, and float drift puts a
+ * shared vertex a hair to either side of the other loop's edge, which made
+ * a touching loop (such as the square in the notch of an L) a hole. A loop
+ * lying entirely on the other's boundary falls back to its first vertex.
+ */
+function isLoopInside(
+  inner: AcGePoint2dLike[],
+  outer: AcGePoint2dLike[],
+  outerBox: AcGeBox2d
+): boolean {
+  const size = outerBox.size
+  const tol = Math.max(size.width, size.height, 1) * 1e-9
+  for (const p of inner) {
+    if (distanceToBoundary(p, outer) > tol) {
+      return AcGeGeometryUtil.isPointInPolygon(p, outer)
+    }
+  }
+  return inner.length > 0 && AcGeGeometryUtil.isPointInPolygon(inner[0], outer)
+}
+
+/** Distance from `p` to the closed polygon `polygon`. */
+function distanceToBoundary(
+  p: AcGePoint2dLike,
+  polygon: AcGePoint2dLike[]
+): number {
+  let best = Infinity
+  for (let i = 0, j = polygon.length - 1; i < polygon.length; j = i++) {
+    const a = polygon[j]
+    const b = polygon[i]
+    const dx = b.x - a.x
+    const dy = b.y - a.y
+    const len2 = dx * dx + dy * dy
+    let t = len2 > 0 ? ((p.x - a.x) * dx + (p.y - a.y) * dy) / len2 : 0
+    t = Math.max(0, Math.min(1, t))
+    best = Math.min(
+      best,
+      Math.hypot(p.x - (a.x + dx * t), p.y - (a.y + dy * t))
+    )
+  }
+  return best
 }
