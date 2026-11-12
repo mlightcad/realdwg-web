@@ -112,6 +112,68 @@ describe('AcGeArea2d', () => {
     expect(tree.children[0].children.map(node => node.index)).toEqual([1])
   })
 
+  it('skips FLOAT_TOL-scale edge drift on unit-scale touching loops', () => {
+    // Mid-edge sample on the shared top of an L, drifted 5e-7 inside.
+    // Without a FLOAT_TOL floor on the boundary tolerance this vertex would
+    // be treated as interior and the notch square would become a hole.
+    const l = new AcGePolyline2d(
+      [
+        { x: 3, y: 2 },
+        { x: 1, y: 2 },
+        { x: 1, y: 1 },
+        { x: 0, y: 1 },
+        { x: 0, y: 0 },
+        { x: 3, y: 0 }
+      ],
+      true
+    )
+    const square = new AcGePolyline2d(
+      [
+        { x: 2, y: 2 - 5e-7 },
+        { x: 0, y: 2 - 5e-7 },
+        { x: 0, y: 1 },
+        { x: 1, y: 1 }
+      ],
+      true
+    )
+    const area = new AcGeArea2d()
+    area.add(l)
+    area.add(square)
+
+    const tree = area.buildHierarchy()
+    expect(tree.children.map(node => node.index).sort()).toEqual([0, 1])
+    expect(tree.children.every(node => node.children.length === 0)).toBe(true)
+  })
+
+  it('does not nest a loop whose vertices all lie on the outer boundary', () => {
+    const outer = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 4, y: 0 },
+        { x: 4, y: 4 },
+        { x: 0, y: 4 }
+      ],
+      true
+    )
+    // Degenerate "inner" that only traces the outer's bottom edge and back.
+    const onBoundary = new AcGePolyline2d(
+      [
+        { x: 0, y: 0 },
+        { x: 4, y: 0 },
+        { x: 2, y: 0 },
+        { x: 1, y: 0 }
+      ],
+      true
+    )
+    const area = new AcGeArea2d()
+    area.add(outer)
+    area.add(onBoundary)
+
+    const tree = area.buildHierarchy()
+    expect(tree.children.map(node => node.index).sort()).toEqual([0, 1])
+    expect(tree.children.every(node => node.children.length === 0)).toBe(true)
+  })
+
   it('covers area edge paths for empty and degenerate loops', () => {
     const empty = new AcGeArea2d()
     expect(empty.area).toBe(0)

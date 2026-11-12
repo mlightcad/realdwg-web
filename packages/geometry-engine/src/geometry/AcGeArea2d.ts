@@ -5,7 +5,7 @@ import {
   AcGePoint2dLike
 } from '../math/index.js'
 import { acgeSignedPolygonArea2d } from '../util/AcGePolygonAreaUtil.js'
-import { AcGeGeometryUtil } from '../util/index.js'
+import { AcGeGeometryUtil, FLOAT_TOL } from '../util/index.js'
 import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
 import { AcGeLoop2d } from './AcGeLoop2d.js'
 import { AcGePolyline2d } from './AcGePolyline2d.js'
@@ -233,7 +233,10 @@ export class AcGeArea2d extends AcGeShape2d {
  * Neighbouring hatch loops share edges and corners, and float drift puts a
  * shared vertex a hair to either side of the other loop's edge, which made
  * a touching loop (such as the square in the notch of an L) a hole. A loop
- * lying entirely on the other's boundary falls back to its first vertex.
+ * lying entirely on the other's boundary is treated as not inside.
+ *
+ * Tolerance is relative to the outer box, floored at FLOAT_TOL so unit-scale
+ * drawings still skip shared-edge drift in the 1e-9..1e-6 band.
  */
 function isLoopInside(
   inner: AcGePoint2dLike[],
@@ -241,13 +244,18 @@ function isLoopInside(
   outerBox: AcGeBox2d
 ): boolean {
   const size = outerBox.size
-  const tol = Math.max(size.width, size.height, 1) * 1e-9
+  const tol = Math.max(
+    Math.max(size.width, size.height) * 1e-9,
+    FLOAT_TOL
+  )
   for (const p of inner) {
     if (distanceToBoundary(p, outer) > tol) {
       return AcGeGeometryUtil.isPointInPolygon(p, outer)
     }
   }
-  return inner.length > 0 && AcGeGeometryUtil.isPointInPolygon(inner[0], outer)
+  // Degenerate: every vertex sits on outer's boundary. Prefer "not inside"
+  // over inventing a hole from on-boundary ray-cast noise.
+  return false
 }
 
 /** Distance from `p` to the closed polygon `polygon`. */
