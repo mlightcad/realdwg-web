@@ -2971,20 +2971,52 @@ export class AcDbDatabase extends AcDbObject {
   ensureEntityStyleDefaults(entity: AcDbEntity) {
     if (entity.dxfTypeName === 'MLINE') {
       this.ensureMLineStyle(this._cmlstyle || DEFAULT_MLINE_STYLE)
-      return
-    }
-
-    if (entity.dxfTypeName === 'MULTILEADER') {
+    } else if (entity.dxfTypeName === 'MULTILEADER') {
       this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
-      return
-    }
-
-    if (entity.dxfTypeName === 'HATCH') {
+    } else if (entity.dxfTypeName === 'HATCH') {
       const hatch = entity as AcDbEntity & {
         applyPatternDefaultsFromSysVars?: (db: AcDbDatabase) => void
       }
       hatch.applyPatternDefaultsFromSysVars?.(this)
     }
+
+    // Last: reading `entity.layer` materializes CLAYER for entities without an
+    // explicit layer, which must not pre-empt sysvar defaults such as HPLAYER.
+    this.ensureEntityLayer(entity)
+  }
+
+  /**
+   * Creates the layer referenced by one entity when the layer table lacks it.
+   *
+   * AutoCAD creates such layers (color 7, Continuous, on, thawed) when it
+   * loads a drawing whose entities reference undeclared layers, e.g. R12 DXF
+   * files without a TABLES section. Doing it on append, before
+   * `entityAppended` fires, lets viewers create the matching layer group
+   * before they draw the entity (mlightcad/cad-viewer#901).
+   */
+  private ensureEntityLayer(entity: AcDbEntity) {
+    const name = entity.layer
+    if (!name || this.tables.layerTable.has(name)) {
+      return
+    }
+    this.tables.layerTable.add(this.createDefaultLayerRecord(name))
+  }
+
+  /**
+   * Builds a layer record with AutoCAD's defaults for a new layer.
+   */
+  private createDefaultLayerRecord(name: string) {
+    const defaultColor = new AcCmColor()
+    defaultColor.colorIndex = 7
+    return new AcDbLayerTableRecord({
+      name,
+      standardFlags: 0,
+      linetype: DEFAULT_LINE_TYPE,
+      lineWeight: 0,
+      isOff: false,
+      color: defaultColor,
+      isPlottable: true
+    })
   }
 
   /**
@@ -3041,19 +3073,7 @@ export class AcDbDatabase extends AcDbObject {
    */
   private ensureDatabaseDefaults() {
     if (!this.tables.layerTable.has('0')) {
-      const defaultColor = new AcCmColor()
-      defaultColor.colorIndex = 7
-      this.tables.layerTable.add(
-        new AcDbLayerTableRecord({
-          name: '0',
-          standardFlags: 0,
-          linetype: DEFAULT_LINE_TYPE,
-          lineWeight: 0,
-          isOff: false,
-          color: defaultColor,
-          isPlottable: true
-        })
-      )
+      this.tables.layerTable.add(this.createDefaultLayerRecord('0'))
     }
 
     if (!this.tables.linetypeTable.has(ByBlock)) {
