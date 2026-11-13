@@ -1,8 +1,4 @@
-import {
-  AcCmColor,
-  AcCmUiYieldGate,
-  accmYieldToUi
-} from '@mlightcad/common'
+import { AcCmColor, AcCmUiYieldGate, accmYieldToUi } from '@mlightcad/common'
 import { AcGeMatrix3d, AcGeVector3d } from '@mlightcad/geometry-engine'
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -256,6 +252,42 @@ export class AcDbRenderingCache {
       return name
     }
     return this.createKey(name, color)
+  }
+
+  /**
+   * Returns the name a block's templates are cached under for `renderer`.
+   *
+   * Templates are scoped so that graphics are only reused where they are
+   * valid:
+   * - `@<variant>` is appended when the renderer reports a non-empty
+   *   {@link AcGiRenderer.cacheVariant} (for example lineweights forced on for
+   *   a transient preview), so templates built in that state never reach
+   *   regular draws.
+   * - `#<id>` is appended for the database that owns the block, so blocks
+   *   with the same name in different databases (a pasted clipboard database
+   *   and the drawing it is pasted into) never share a template.
+   *
+   * {@link createKey} / {@link createCacheKey} take this scoped name in place
+   * of the bare block name.
+   *
+   * @param renderer - Renderer that draws the block
+   * @param blockTableRecord - Block to draw
+   * @returns Block name followed by its scope suffixes
+   */
+  createScopedName(
+    renderer: AcGiRenderer,
+    blockTableRecord: AcDbBlockTableRecord
+  ) {
+    let name = blockTableRecord.name
+    const databaseId = databaseScopeId(blockTableRecord)
+    if (databaseId !== undefined) {
+      name += `#${databaseId}`
+    }
+    const variant = renderer.cacheVariant
+    if (variant) {
+      name += `@${variant}`
+    }
+    return name
   }
 
   /**
@@ -531,7 +563,11 @@ export class AcDbRenderingCache {
     // large blocks without stalling on many small ones.
     const yieldGate = new AcCmUiYieldGate()
     for (const block of candidates) {
-      const key = this.createCacheKey(block.name, prebuildColor, false)
+      const key = this.createCacheKey(
+        this.createScopedName(renderer, block),
+        prebuildColor,
+        false
+      )
       if (!this.has(key)) {
         this.draw(renderer, block, prebuildColor, [], true)
       }
@@ -592,14 +628,17 @@ export class AcDbRenderingCache {
       if (blockTableRecord != null) {
         const blockRgb = blockColor.RGB ?? 0
         const blockName = blockTableRecord.name
+        const scopedName = blockName
+          ? this.createScopedName(renderer, blockTableRecord)
+          : blockName
         // Resolve cache hits without scanning block entities for ByBlock color.
         // Color-independent templates are keyed by name; ByBlock templates use
         // name+color. Miss path discovers ByBlock while building (one walk).
         let key: string | undefined
-        if (blockName && this.has(blockName)) {
-          key = blockName
-        } else if (blockName) {
-          const colorKey = this.createKey(blockName, blockColor)
+        if (scopedName && this.has(scopedName)) {
+          key = scopedName
+        } else if (scopedName) {
+          const colorKey = this.createKey(scopedName, blockColor)
           if (this.has(colorKey)) {
             key = colorKey
           }
@@ -674,7 +713,7 @@ export class AcDbRenderingCache {
               }
             }
           }
-          key = this.createCacheKey(blockName, blockColor, sawByBlockColor)
+          key = this.createCacheKey(scopedName, blockColor, sawByBlockColor)
           const setCloneBefore = profile ? stats.setCloneMs : 0
           if (block && willCache) {
             prepareCacheTemplate(block)
@@ -788,7 +827,9 @@ export class AcDbRenderingCache {
    * @param blockTableRecord - Block whose entities are scanned.
    * @returns `true` when at least one visible ByBlock-colored entity exists.
    */
-  private blockHasByBlockColor(blockTableRecord: AcDbBlockTableRecord): boolean {
+  private blockHasByBlockColor(
+    blockTableRecord: AcDbBlockTableRecord
+  ): boolean {
     for (const entity of blockTableRecord.newIterator()) {
       if (entity.visibility && entity.color.isByBlock) {
         return true
@@ -944,9 +985,8 @@ function shouldCompactTemplate(
  * @param entity - Block template about to be stored in the cache.
  */
 function prepareCacheTemplate(entity: AcGiEntity): void {
-  const prepare = (
-    entity as AcGiEntity & { prepareCacheTemplate?: () => void }
-  ).prepareCacheTemplate
+  const prepare = (entity as AcGiEntity & { prepareCacheTemplate?: () => void })
+    .prepareCacheTemplate
   if (typeof prepare === 'function') {
     prepare.call(entity)
   }
@@ -959,6 +999,38 @@ function prepareCacheTemplate(entity: AcGiEntity): void {
  * @param entity - Scene-bound clone returned by {@link AcDbRenderingCache.draw}.
  * @param key - Cache key used to store the immutable template.
  */
+/** Scope ids of databases whose blocks were drawn through the cache. */
+const _databaseScopeIds = new WeakMap<object, number>()
+let _nextDatabaseScopeId = 1
+
+/**
+ * Returns a stable id for the database that owns `blockTableRecord`, or
+ * `undefined` when the record is not bound to a database.
+ *
+ * @param blockTableRecord - Block whose database to identify.
+ * @returns Id unique to that database for the lifetime of the page.
+ */
+function databaseScopeId(
+  blockTableRecord: AcDbBlockTableRecord
+): number | undefined {
+  let database: object | undefined
+  try {
+    database = blockTableRecord.database
+  } catch {
+    // Detached record and no working database: nothing to scope by.
+    return undefined
+  }
+  if (database == null || typeof database !== 'object') {
+    return undefined
+  }
+  let id = _databaseScopeIds.get(database)
+  if (id === undefined) {
+    id = _nextDatabaseScopeId++
+    _databaseScopeIds.set(database, id)
+  }
+  return id
+}
+
 function stampBlockCacheKey(entity: AcGiEntity, key: string): void {
   const data = entity.userData as { blockCacheKey?: string }
   data.blockCacheKey = key

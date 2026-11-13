@@ -30,9 +30,7 @@ function createMockGroup(overrides: Record<string, unknown> = {}) {
     addChild: jest.fn(),
     isCompacted: false,
     userData: {} as { blockCacheKey?: string },
-    compactForInstancing: jest.fn(function (this: {
-      isCompacted: boolean
-    }) {
+    compactForInstancing: jest.fn(function (this: { isCompacted: boolean }) {
       this.isCompacted = true
     }),
     prepareCacheTemplate: jest.fn(),
@@ -480,9 +478,9 @@ describe('AcDbRenderingCache', () => {
     >
     expect(clone).not.toBe(template)
     expect(clone.userData.blockCacheKey).toBe('Door')
-    expect((template.userData as { blockCacheKey?: string }).blockCacheKey).toBe(
-      undefined
-    )
+    expect(
+      (template.userData as { blockCacheKey?: string }).blockCacheKey
+    ).toBe(undefined)
   })
 
   it('invokes onCleared when clear runs', () => {
@@ -493,5 +491,90 @@ describe('AcDbRenderingCache', () => {
     cache.clear()
     expect(onCleared).toHaveBeenCalledTimes(1)
     AcDbRenderingCache.onCleared = undefined
+  })
+  describe('template scope', () => {
+    function createBlockRecord(name: string, database?: object) {
+      return {
+        name,
+        database,
+        newIterator: function* () {
+          yield {
+            visibility: true,
+            color: new AcCmColor().setRGBValue(0xffffff),
+            worldDraw: () => ({ id: 'line' })
+          }
+        }
+      }
+    }
+
+    function createRenderer(cacheVariant?: string) {
+      return {
+        cacheVariant,
+        group: jest.fn(() => createMockGroup())
+      }
+    }
+
+    const color = new AcCmColor().setRGBValue(0xff0000)
+
+    it('keeps templates of different renderer variants apart', () => {
+      const cache = new AcDbRenderingCache()
+      const block = createBlockRecord('A4-1')
+      // A transient preview drawn with forced lineweights must not leave its
+      // fat-line template behind for regular draws (mlightcad/cad-viewer).
+      const preview = createRenderer('lw')
+      const regular = createRenderer('')
+
+      cache.draw(preview as never, block as never, color, [], true)
+      cache.draw(regular as never, block as never, color, [], true)
+      cache.draw(regular as never, block as never, color, [], true)
+
+      expect(preview.group).toHaveBeenCalledTimes(1)
+      expect(regular.group).toHaveBeenCalledTimes(1)
+      expect(cache.createScopedName(preview as never, block as never)).toBe(
+        'A4-1@lw'
+      )
+      expect(cache.createScopedName(regular as never, block as never)).toBe(
+        'A4-1'
+      )
+      expect(cache.has('A4-1@lw')).toBe(true)
+      expect(cache.has('A4-1')).toBe(true)
+    })
+
+    it('keeps same-named blocks of different databases apart', () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer()
+      const target = createBlockRecord('A4-1', {})
+      const clipboard = createBlockRecord('A4-1', {})
+      const targetName = cache.createScopedName(
+        renderer as never,
+        target as never
+      )
+      const clipboardName = cache.createScopedName(
+        renderer as never,
+        clipboard as never
+      )
+
+      cache.draw(renderer as never, clipboard as never, color, [], true)
+      cache.draw(renderer as never, target as never, color, [], true)
+      cache.draw(renderer as never, target as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(2)
+      expect(targetName).not.toBe(clipboardName)
+      expect(targetName.startsWith('A4-1#')).toBe(true)
+      expect(cache.has(targetName)).toBe(true)
+      expect(cache.has(clipboardName)).toBe(true)
+    })
+
+    it('prebuilds templates under the scoped name', async () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer('lw')
+      const block = createBlockRecord('WALL')
+
+      await cache.prebuildAll(renderer as never, [block as never])
+      cache.draw(renderer as never, block as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(1)
+      expect(cache.has('WALL@lw')).toBe(true)
+    })
   })
 })
