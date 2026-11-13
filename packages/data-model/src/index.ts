@@ -1,7 +1,10 @@
 export {
+  AcDbCloneDependencies,
+  AcDbDeepCloneType,
   AcDbDxfCode,
   AcDbDxfFiler,
   AcDbDxfFilerStatus,
+  AcDbIdMapping,
   AcDbHostApplicationServices,
   AcDbObject,
   AcDbOpenMode,
@@ -27,6 +30,8 @@ export {
   acdbChunkUtf8ByMaxBytes
 } from './base/index.js'
 export type {
+  AcDbCloneRecordKind,
+  AcDbIdPair,
   AcDbDxfFilerMode,
   AcDbDxfFilerOptions,
   AcDbDxfHeaderInfo,

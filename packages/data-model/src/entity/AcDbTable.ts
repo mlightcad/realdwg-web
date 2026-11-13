@@ -15,6 +15,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
 import { acdbDxfVersionCaps } from '../dxf/AcDbDxfVersionCaps.js'
 import { AcDbBlockReference } from './AcDbBlockReference.js'
@@ -874,6 +878,58 @@ export class AcDbTable extends AcDbBlockReference {
       return cell.textHeight
     }
     return Math.max(rowHeight / 2, 1)
+  }
+
+  /**
+   * Adds the text styles and blocks the cells reference, and the table block.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addId(this.owningBlockRecordId)
+    this._cells.forEach(cell => {
+      if (!cell) return
+      deps.addName('textStyle', cell.textStyle)
+      deps.addId(cell.blockTableRecordId)
+    })
+    this.cellTypeOverrides?.forEach(override =>
+      deps.addName('textStyle', override?.textStyle)
+    )
+  }
+
+  /**
+   * Translates the text styles, blocks and objects referenced by a clone.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this.owningBlockRecordId = idMap.translateReferenceId(
+      this.owningBlockRecordId
+    )
+    this.tableStyleId = idMap.translateReferenceId(this.tableStyleId)
+    this._cells.forEach(cell => {
+      if (!cell) return
+      cell.textStyle = idMap.translateName('textStyle', cell.textStyle)
+      cell.blockTableRecordId = idMap.translateReferenceId(
+        cell.blockTableRecordId
+      )
+      cell.fieldObjetId = idMap.translateReferenceId(cell.fieldObjetId)
+      if (cell.attrDefineId) {
+        cell.attrDefineId = cell.attrDefineId
+          .map(id => idMap.translateReferenceId(id))
+          .filter((id): id is string => !!id)
+      }
+    })
+    this.cellTypeOverrides?.forEach(override => {
+      if (override) {
+        override.textStyle = idMap.translateName(
+          'textStyle',
+          override.textStyle
+        )
+      }
+    })
   }
 
   /**

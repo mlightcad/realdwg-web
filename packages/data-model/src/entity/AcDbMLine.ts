@@ -13,6 +13,10 @@ import {
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import {
   ByBlock,
   ByLayer,
@@ -865,6 +869,28 @@ export class AcDbMLine extends AcDbEntity {
 
     if (entities.length === 0) return undefined
     return entities.length === 1 ? entities[0] : renderer.group(entities)
+  }
+
+  /**
+   * Adds the MLINE style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('mlineStyle', this._styleName)
+  }
+
+  /**
+   * Translates the MLINE style name and style handle of a cloned entity.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._styleName = idMap.translateName('mlineStyle', this._styleName)
+    this._styleObjectHandle =
+      idMap.translateReferenceId(this._styleObjectHandle) ?? ''
   }
 
   /**

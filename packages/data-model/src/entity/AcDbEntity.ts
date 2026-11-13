@@ -19,6 +19,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbObject } from '../base/AcDbObject.js'
 import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import { ByBlock, ByLayer, DEFAULT_LINE_TYPE } from '../misc/AcDbConstants.js'
@@ -839,6 +843,39 @@ export abstract class AcDbEntity extends AcDbObject {
   // @ts-expect-error not use '_' prefix so that typedoc can the correct parameter to generate doc
   transformBy(matrix: AcGeMatrix3d): this {
     return this
+  }
+
+  /**
+   * Adds the layer and linetype this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('layer', this.layer)
+    const lineType = this.lineType
+    if (lineType !== ByLayer && lineType !== ByBlock) {
+      deps.addName('linetype', lineType)
+    }
+  }
+
+  /**
+   * Translates the layer and linetype names of a cloned entity.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    if (this._layer != null) {
+      this._layer = idMap.translateName('layer', this._layer)
+    }
+    if (
+      this._lineType != null &&
+      this._lineType !== ByLayer &&
+      this._lineType !== ByBlock
+    ) {
+      this._lineType = idMap.translateName('linetype', this._lineType)
+    }
   }
 
   /**

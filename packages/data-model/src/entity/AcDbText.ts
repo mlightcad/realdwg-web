@@ -19,6 +19,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import {
   type AcDbAnnotationScaleContext,
   type AcDbAnnotationScaleDrawInfo,
@@ -1278,6 +1282,26 @@ export class AcDbText extends AcDbEntity {
           return AcGiMTextAttachmentPoint.BaselineRight
         return AcGiMTextAttachmentPoint.BaselineLeft
     }
+  }
+
+  /**
+   * Adds the text style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('textStyle', this._styleName)
+  }
+
+  /**
+   * Translates the text style name of a cloned entity.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._styleName = idMap.translateName('textStyle', this._styleName)
   }
 
   /**

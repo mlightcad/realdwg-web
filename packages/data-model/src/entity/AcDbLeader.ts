@@ -15,6 +15,10 @@ import {
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import {
   AcDbBlockTableRecord,
   AcDbDimStyleTableRecord
@@ -1407,6 +1411,36 @@ export class AcDbLeader extends AcDbCurve {
     ) {
       this._splineGeo = new AcGeSpline3d(this._vertices, 'Uniform')
       this._updated = false
+    }
+  }
+
+  /**
+   * Adds the dimension style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('dimStyle', this._dimensionStyle)
+  }
+
+  /**
+   * Translates the dimension style name and the associated annotation of a
+   * cloned entity. The annotation is dropped when it was not cloned along.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    if (this._dimensionStyle) {
+      this.dimensionStyle = idMap.translateName(
+        'dimStyle',
+        this._dimensionStyle
+      )
+    }
+    if (this._associatedAnnotation) {
+      this._associatedAnnotation =
+        idMap.translateId(this._associatedAnnotation) ?? ''
     }
   }
 

@@ -17,6 +17,10 @@ import {
   AcGiRenderer
 } from '@mlightcad/graphic-interface'
 
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../../base/AcDbIdMapping.js'
 import { AcDbObjectId } from '../../base/index.js'
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbDatabase } from '../../database/index.js'
@@ -1236,6 +1240,31 @@ export abstract class AcDbDimension extends AcDbEntity {
    * Subclasses can override this to transform their own definition points.
    */
   protected subTransformBy(_matrix: AcGeMatrix3d) {}
+
+  /**
+   * Adds the dimension style and the dimension block this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('dimStyle', this._dimensionStyleName)
+    deps.addName('block', this._dimBlockId)
+  }
+
+  /**
+   * Translates the dimension style and dimension block names of a clone.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this.dimensionStyleName = idMap.translateName(
+      'dimStyle',
+      this._dimensionStyleName
+    )
+    this.dimBlockId = idMap.translateName('block', this._dimBlockId)
+  }
 
   /**
    * Writes DXF fields for this object.

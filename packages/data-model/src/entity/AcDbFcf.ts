@@ -16,6 +16,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbDimStyleTableRecord } from '../database/index.js'
 import {
   type AcDbAnnotationScaleDrawInfo,
@@ -501,6 +505,31 @@ export class AcDbFcf extends AcDbEntity {
       }
     }
     return drawable
+  }
+
+  /**
+   * Adds the dimension style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('dimStyle', this._dimensionStyle)
+  }
+
+  /**
+   * Translates the dimension style name of a cloned entity.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    if (this._dimensionStyle) {
+      this.dimensionStyle = idMap.translateName(
+        'dimStyle',
+        this._dimensionStyle
+      )
+    }
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

@@ -17,6 +17,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -436,6 +440,77 @@ export class AcDbArcAlignedText extends AcDbEntity {
     return glyphs
   }
 
+  /**
+   * Transforms the arc that the text follows.
+   *
+   * The center and both arc ends are transformed in WCS and expressed in the
+   * OCS of the transformed normal; radius, angles, text size and offsets
+   * follow from them. A mirroring transform keeps the text readable: the arc
+   * ends swap so the arc still runs counter-clockwise, and the left/right
+   * offsets and alignment swap with them.
+   *
+   * @param matrix - Transformation matrix in WCS.
+   * @returns This entity.
+   */
+  override transformBy(matrix: AcGeMatrix3d): this {
+    const toWcs = this.extrusionMatrix()
+    const pointAt = (angle: number) =>
+      new AcGePoint3d(
+        this._center.x + this._radius * Math.cos(angle),
+        this._center.y + this._radius * Math.sin(angle),
+        this._center.z
+      )
+        .applyMatrix4(toWcs)
+        .applyMatrix4(matrix)
+    const center = this._center.clone().applyMatrix4(toWcs).applyMatrix4(matrix)
+    const start = pointAt(this._startAngle)
+    const end = pointAt(this._endAngle)
+
+    // Transform the normal as a plane normal (inverse transpose), so a mirror
+    // within the arc plane keeps it and only flips the arc direction.
+    const mirrored = matrix.determinant() < 0
+    const xAxis = new AcGeVector3d()
+    const yAxis = new AcGeVector3d()
+    toWcs.extractBasis(xAxis, yAxis, new AcGeVector3d())
+    const normal = new AcGeVector3d().crossVectors(
+      xAxis.transformDirection(matrix),
+      yAxis.transformDirection(matrix)
+    )
+    if (mirrored) normal.negate()
+    this._normal.copy(normal.normalize())
+
+    const toOcs = this.extrusionMatrix().invert()
+    center.applyMatrix4(toOcs)
+    start.applyMatrix4(toOcs)
+    end.applyMatrix4(toOcs)
+    const radius = Math.hypot(start.x - center.x, start.y - center.y)
+    const scale = this._radius > 0 ? radius / this._radius : 1
+    let startAngle = Math.atan2(start.y - center.y, start.x - center.x)
+    let endAngle = Math.atan2(end.y - center.y, end.x - center.x)
+    if (mirrored) {
+      ;[startAngle, endAngle] = [endAngle, startAngle]
+      ;[this._leftOffset, this._rightOffset] = [
+        this._rightOffset,
+        this._leftOffset
+      ]
+      if (this._alignment === AcDbArcTextAlignment.Left) {
+        this._alignment = AcDbArcTextAlignment.Right
+      } else if (this._alignment === AcDbArcTextAlignment.Right) {
+        this._alignment = AcDbArcTextAlignment.Left
+      }
+    }
+
+    this._center.copy(center)
+    this._radius = radius
+    this._startAngle = startAngle
+    this._endAngle = endAngle
+    this._textSize *= scale
+    this._offsetFromArc *= scale
+    this._rightOffset *= scale
+    this._leftOffset *= scale
+    return this
+  }
+
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
     const glyphs = this.glyphPlacements()
@@ -795,6 +870,30 @@ export class AcDbArcAlignedText extends AcDbEntity {
     }
     if (entities.length === 1) return entities[0]
     return renderer.group(entities)
+  }
+
+  /**
+   * Adds the text style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('textStyle', this._styleName)
+  }
+
+  /**
+   * Translates the text style name and the source arc of a cloned entity.
+   * The arc is dropped when it was not cloned along.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._styleName = idMap.translateName('textStyle', this._styleName)
+    if (this._arcId) {
+      this._arcId = idMap.translateId(this._arcId) ?? ''
+    }
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

@@ -14,6 +14,7 @@ import {
   acdbJoinAcisPayloadLines
 } from '../acis/index.js'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbIdMapping } from '../base/AcDbIdMapping.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 
@@ -479,6 +480,18 @@ export class AcDb3dSolid extends AcDbEntity {
       0, 4, 1, 5, 2, 6, 3, 7
     ])
     return renderer.lineSegments(buffer, 3, indices)
+  }
+
+  /**
+   * Translates the history object of a cloned solid.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._historyObjectSoftId = idMap.translateReferenceId(
+      this._historyObjectSoftId
+    )
   }
 
   /**
