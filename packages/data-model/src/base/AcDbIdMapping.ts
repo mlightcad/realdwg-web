@@ -210,6 +210,26 @@ export class AcDbIdMapping {
   }
 
   /**
+   * Translates an object id held by a clone.
+   *
+   * Returns the destination id when the object was cloned or mapped onto an
+   * existing destination object. Otherwise the id is kept when cloning within
+   * one database, and dropped when cloning into another database, where the
+   * source id could name an unrelated object.
+   *
+   * @param key - Object id in the source database.
+   * @returns The id to store on the clone, or `undefined` to drop it.
+   */
+  translateReferenceId(key: AcDbObjectId | null | undefined) {
+    if (!key) return undefined
+    const value = this._pairs.get(key)?.value
+    if (value) return value
+    return this.sourceDb != null && this.sourceDb === this.destDb
+      ? key
+      : undefined
+  }
+
+  /**
    * Removes the pair recorded for a source object id.
    *
    * @param key - Object id in the source database.

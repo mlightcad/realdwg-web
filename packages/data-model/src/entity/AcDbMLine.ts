@@ -890,7 +890,7 @@ export class AcDbMLine extends AcDbEntity {
     super.translateClonedReferences(idMap)
     this._styleName = idMap.translateName('mlineStyle', this._styleName)
     this._styleObjectHandle =
-      idMap.translateId(this._styleObjectHandle) ?? this._styleObjectHandle
+      idMap.translateReferenceId(this._styleObjectHandle) ?? ''
   }
 
   /**

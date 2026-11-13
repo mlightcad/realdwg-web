@@ -1425,7 +1425,8 @@ export class AcDbLeader extends AcDbCurve {
   }
 
   /**
-   * Translates the dimension style name of a cloned entity.
+   * Translates the dimension style name and the associated annotation of a
+   * cloned entity. The annotation is dropped when it was not cloned along.
    *
    * @param idMap - Id mapping of the current clone operation.
    */
@@ -1436,6 +1437,10 @@ export class AcDbLeader extends AcDbCurve {
         'dimStyle',
         this._dimensionStyle
       )
+    }
+    if (this._associatedAnnotation) {
+      this._associatedAnnotation =
+        idMap.translateId(this._associatedAnnotation) ?? ''
     }
   }
 

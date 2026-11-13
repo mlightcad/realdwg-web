@@ -1145,7 +1145,7 @@ export class AcDbRasterImage extends AcDbEntity {
    */
   override translateClonedReferences(idMap: AcDbIdMapping): void {
     super.translateClonedReferences(idMap)
-    this._imageDefId = idMap.translateId(this._imageDefId) ?? this._imageDefId
+    this._imageDefId = idMap.translateReferenceId(this._imageDefId) ?? ''
   }
 
   /**

@@ -2267,10 +2267,14 @@ export class AcDbMLeader extends AcDbEntity {
   override collectCloneDependencies(deps: AcDbCloneDependencies): void {
     super.collectCloneDependencies(deps)
     deps.addId(this._mleaderStyleId)
+    deps.addId(this._leaderStyleId)
     deps.addId(this._leaderLineTypeId)
     deps.addId(this._arrowheadId)
     deps.addId(this._textStyleId)
     deps.addId(this._blockContentId)
+    deps.addId(this._blockContent?.blockContentId)
+    deps.addId(this._blockContent?.blockHandle)
+    this._arrowheadOverrides.forEach(override => deps.addId(override.handle))
     deps.addName('textStyle', this._textStyleName)
   }
 
@@ -2281,14 +2285,25 @@ export class AcDbMLeader extends AcDbEntity {
    */
   override translateClonedReferences(idMap: AcDbIdMapping): void {
     super.translateClonedReferences(idMap)
-    this._mleaderStyleId =
-      idMap.translateId(this._mleaderStyleId) ?? this._mleaderStyleId
-    this._leaderLineTypeId =
-      idMap.translateId(this._leaderLineTypeId) ?? this._leaderLineTypeId
-    this._arrowheadId = idMap.translateId(this._arrowheadId) ?? this._arrowheadId
-    this._textStyleId = idMap.translateId(this._textStyleId) ?? this._textStyleId
-    this._blockContentId =
-      idMap.translateId(this._blockContentId) ?? this._blockContentId
+    const translate = (id: string | undefined) => idMap.translateReferenceId(id)
+    this._mleaderStyleId = translate(this._mleaderStyleId) ?? ''
+    this._leaderStyleId = translate(this._leaderStyleId)
+    this._leaderLineTypeId = translate(this._leaderLineTypeId)
+    this._arrowheadId = translate(this._arrowheadId)
+    this._textStyleId = translate(this._textStyleId)
+    this._blockContentId = translate(this._blockContentId)
+    if (this._blockContent) {
+      this._blockContent.blockContentId = translate(
+        this._blockContent.blockContentId
+      )
+      this._blockContent.blockHandle = translate(this._blockContent.blockHandle)
+    }
+    this._arrowheadOverrides.forEach(override => {
+      override.handle = translate(override.handle)
+    })
+    this._blockAttributes.forEach(attribute => {
+      attribute.id = translate(attribute.id)
+    })
     this._textStyleName = idMap.translateName('textStyle', this._textStyleName)
   }
 

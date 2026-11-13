@@ -870,13 +870,10 @@ export class AcDbMLeaderStyle extends AcDbObject {
    */
   override translateClonedReferences(idMap: AcDbIdMapping): void {
     super.translateClonedReferences(idMap)
-    this._leaderLineTypeId =
-      idMap.translateId(this._leaderLineTypeId) ?? this._leaderLineTypeId
-    this._arrowSymbolId =
-      idMap.translateId(this._arrowSymbolId) ?? this._arrowSymbolId
-    this._textStyleId =
-      idMap.translateId(this._textStyleId) ?? this._textStyleId
-    this._blockId = idMap.translateId(this._blockId) ?? this._blockId
+    this._leaderLineTypeId = idMap.translateReferenceId(this._leaderLineTypeId)
+    this._arrowSymbolId = idMap.translateReferenceId(this._arrowSymbolId)
+    this._textStyleId = idMap.translateReferenceId(this._textStyleId)
+    this._blockId = idMap.translateReferenceId(this._blockId)
   }
 
   /**

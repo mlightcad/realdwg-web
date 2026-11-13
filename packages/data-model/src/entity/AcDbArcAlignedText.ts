@@ -443,33 +443,61 @@ export class AcDbArcAlignedText extends AcDbEntity {
   /**
    * Transforms the arc that the text follows.
    *
-   * The center and both arc ends are transformed in the arc's OCS; radius,
-   * angles, text size and offsets follow from them. Mirroring swaps the start
-   * and end angles so the arc keeps running counter-clockwise.
+   * The center and both arc ends are transformed in WCS and expressed in the
+   * OCS of the transformed normal; radius, angles, text size and offsets
+   * follow from them. A mirroring transform keeps the text readable: the arc
+   * ends swap so the arc still runs counter-clockwise, and the left/right
+   * offsets and alignment swap with them.
    *
    * @param matrix - Transformation matrix in WCS.
    * @returns This entity.
    */
   override transformBy(matrix: AcGeMatrix3d): this {
     const toWcs = this.extrusionMatrix()
-    const toOcs = toWcs.clone().invert()
-    const transform = toOcs.multiply(matrix).multiply(toWcs)
     const pointAt = (angle: number) =>
       new AcGePoint3d(
         this._center.x + this._radius * Math.cos(angle),
         this._center.y + this._radius * Math.sin(angle),
         this._center.z
-      ).applyMatrix4(transform)
-
-    const center = this._center.clone().applyMatrix4(transform)
+      )
+        .applyMatrix4(toWcs)
+        .applyMatrix4(matrix)
+    const center = this._center.clone().applyMatrix4(toWcs).applyMatrix4(matrix)
     const start = pointAt(this._startAngle)
     const end = pointAt(this._endAngle)
-    const radius = center.distanceTo(start)
+
+    // Transform the normal as a plane normal (inverse transpose), so a mirror
+    // within the arc plane keeps it and only flips the arc direction.
+    const mirrored = matrix.determinant() < 0
+    const xAxis = new AcGeVector3d()
+    const yAxis = new AcGeVector3d()
+    toWcs.extractBasis(xAxis, yAxis, new AcGeVector3d())
+    const normal = new AcGeVector3d().crossVectors(
+      xAxis.transformDirection(matrix),
+      yAxis.transformDirection(matrix)
+    )
+    if (mirrored) normal.negate()
+    this._normal.copy(normal.normalize())
+
+    const toOcs = this.extrusionMatrix().invert()
+    center.applyMatrix4(toOcs)
+    start.applyMatrix4(toOcs)
+    end.applyMatrix4(toOcs)
+    const radius = Math.hypot(start.x - center.x, start.y - center.y)
     const scale = this._radius > 0 ? radius / this._radius : 1
     let startAngle = Math.atan2(start.y - center.y, start.x - center.x)
     let endAngle = Math.atan2(end.y - center.y, end.x - center.x)
-    if (transform.determinant() < 0) {
+    if (mirrored) {
       ;[startAngle, endAngle] = [endAngle, startAngle]
+      ;[this._leftOffset, this._rightOffset] = [
+        this._rightOffset,
+        this._leftOffset
+      ]
+      if (this._alignment === AcDbArcTextAlignment.Left) {
+        this._alignment = AcDbArcTextAlignment.Right
+      } else if (this._alignment === AcDbArcTextAlignment.Right) {
+        this._alignment = AcDbArcTextAlignment.Left
+      }
     }
 
     this._center.copy(center)
@@ -855,13 +883,17 @@ export class AcDbArcAlignedText extends AcDbEntity {
   }
 
   /**
-   * Translates the text style name of a cloned entity.
+   * Translates the text style name and the source arc of a cloned entity.
+   * The arc is dropped when it was not cloned along.
    *
    * @param idMap - Id mapping of the current clone operation.
    */
   override translateClonedReferences(idMap: AcDbIdMapping): void {
     super.translateClonedReferences(idMap)
     this._styleName = idMap.translateName('textStyle', this._styleName)
+    if (this._arcId) {
+      this._arcId = idMap.translateId(this._arcId) ?? ''
+    }
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

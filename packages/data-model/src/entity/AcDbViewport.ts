@@ -14,6 +14,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -1144,6 +1148,38 @@ export class AcDbViewport extends AcDbEntity {
       ])
     )
     return lines
+  }
+
+  /**
+   * Adds the layers this viewport freezes.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    this._frozenLayerIds.forEach(id => deps.addId(id))
+  }
+
+  /**
+   * Points a cloned viewport at the objects in the destination database.
+   * The clipping boundary is dropped when it was not cloned along.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    const translate = (id: string) => idMap.translateReferenceId(id) ?? ''
+    this._frozenLayerIds = this._frozenLayerIds.map(translate).filter(Boolean)
+    if (this._clippingBoundaryId) {
+      this._clippingBoundaryId =
+        idMap.translateId(this._clippingBoundaryId) ?? ''
+    }
+    this._backgroundId = translate(this._backgroundId)
+    this._shadePlotId = translate(this._shadePlotId)
+    this._ucsId = translate(this._ucsId)
+    this._ucsBaseId = translate(this._ucsBaseId)
+    this._visualStyleId = translate(this._visualStyleId)
+    this._sunId = translate(this._sunId)
   }
 
   /**

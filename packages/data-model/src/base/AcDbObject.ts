@@ -984,8 +984,11 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * the destination database.
    *
    * This is the "translation" phase of an ObjectARX deep clone. It is called
-   * on the clone (not on the source) after every dependency has been cloned
-   * and `idMap` holds the final names and ids. Overrides should call `super`.
+   * on the clone (not on the source) after every dependency and every entity
+   * of the operation has been cloned, so `idMap` holds the final names and
+   * ids, including those of other cloned entities. References to entities
+   * that were not cloned along (the annotation of a leader, ...) should be
+   * dropped, as AutoCAD does. Overrides should call `super`.
    *
    * @param _idMap - Id mapping of the current clone operation.
    */

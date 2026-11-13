@@ -121,9 +121,10 @@ function anonymousBlockPrefix(name: string) {
  *    the duplicate record cloning rule (anonymous blocks always get a fresh
  *    name). Records that resolve to an existing destination record are not
  *    cloned, so their own dependencies are not collected either;
- * 3. clone the dependencies and the primary objects;
+ * 3. clone the dependencies, block contents and primary objects, giving each
+ *    entity clone its final handle;
  * 4. translate references held by the clones through the id mapping, then
- *    append them, which commits real handles and records undo.
+ *    append them, which records undo.
  *
  * @internal
  */
@@ -176,18 +177,28 @@ export class AcDbDatabaseCloner {
     this.owner = owner
     this.collectDependencies(entities)
     this.cloneRecords()
-    this.fillBlocks()
 
+    const blockContents = this.cloneBlockContents()
     const clones = entities.map(entity => this.cloneEntity(entity, owner, true))
+
+    for (const content of blockContents) {
+      content.clones.forEach(clone =>
+        clone.translateClonedReferences(this.idMap)
+      )
+    }
+    clones.forEach(clone => clone.translateClonedReferences(this.idMap))
     if (transform) {
       clones.forEach(clone => clone.transformBy(transform))
+    }
+
+    for (const content of blockContents) {
+      if (content.clones.length > 0) {
+        content.owner.appendEntity(content.clones)
+      }
     }
     if (clones.length > 0) {
       owner.appendEntity(clones)
     }
-    entities.forEach((entity, index) =>
-      this.updatePair(entity.objectId, clones[index].objectId)
-    )
     return clones
   }
 
@@ -452,7 +463,8 @@ export class AcDbDatabaseCloner {
   }
 
   /** Clones the entities of every block definition that was cloned. */
-  private fillBlocks() {
+  private cloneBlockContents() {
+    const contents: { owner: AcDbBlockTableRecord; clones: AcDbEntity[] }[] = []
     for (const ref of this.refs.values()) {
       if (
         ref.kind !== 'block' ||
@@ -462,17 +474,12 @@ export class AcDbDatabaseCloner {
         continue
       }
       const owner = ref.clone
-      const sources = Array.from(ref.source.newIterator())
-      const clones = sources.map(entity =>
+      const clones = Array.from(ref.source.newIterator()).map(entity =>
         this.cloneEntity(entity, owner, false)
       )
-      if (clones.length > 0) {
-        owner.appendEntity(clones)
-      }
-      sources.forEach((entity, index) =>
-        this.updatePair(entity.objectId, clones[index].objectId)
-      )
+      contents.push({ owner, clones })
     }
+    return contents
   }
 
   // ---------------------------------------------------------------------------
@@ -492,14 +499,14 @@ export class AcDbDatabaseCloner {
     // Bind right away so that getters on the clone never fall back to the
     // host's working database while it is detached.
     clone.database = this.dest
-    clone.translateClonedReferences(this.idMap)
-    return clone
-  }
-
-  private updatePair(key: AcDbObjectId, value: AcDbObjectId) {
-    const pair = this.idMap.lookup(key)
+    // Commit the final handle before any reference is translated, so that
+    // references between clones (a leader and its annotation, ...) resolve
+    // in the same pass. Appending keeps a committed handle.
+    this.dest.commitObjectHandle(clone)
+    const pair = this.idMap.lookup(entity.objectId)
     if (pair) {
-      this.idMap.assign({ ...pair, value })
+      this.idMap.assign({ ...pair, value: clone.objectId })
     }
+    return clone
   }
 }

@@ -39,6 +39,44 @@ describe('AcDbArcAlignedText', () => {
     expect(text.center.x).toBeCloseTo(20)
   })
 
+  it('follows a rotation out of the XY plane with transformBy', () => {
+    const text = hydrantLabel()
+    const rotation = new AcGeMatrix3d()
+      .makeTranslation(3, 4, 5)
+      .multiply(new AcGeMatrix3d().makeRotationX(Math.PI / 2))
+    const expected = text
+      .glyphPlacements()
+      .map(glyph => glyph.position.clone().applyMatrix4(rotation))
+
+    text.transformBy(rotation)
+
+    expect(text.normal.x).toBeCloseTo(0)
+    expect(text.normal.y).toBeCloseTo(-1)
+    expect(text.normal.z).toBeCloseTo(0)
+    text.glyphPlacements().forEach((glyph, index) => {
+      expect(glyph.position.distanceTo(expected[index])).toBeCloseTo(0)
+    })
+  })
+
+  it('keeps the text readable when mirrored with transformBy', () => {
+    const text = hydrantLabel()
+    text.alignment = AcDbArcTextAlignment.Left
+    text.leftOffset = 0.1
+    text.rightOffset = 0.3
+    const startAngle = text.startAngle
+    const endAngle = text.endAngle
+
+    text.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expect(text.normal.z).toBeCloseTo(1)
+    expect(text.center.x).toBeCloseTo(0)
+    expect(text.startAngle).toBeCloseTo(Math.PI - endAngle - 2 * Math.PI)
+    expect(text.endAngle).toBeCloseTo(Math.PI - startAngle - 2 * Math.PI)
+    expect(text.alignment).toBe(AcDbArcTextAlignment.Right)
+    expect(text.leftOffset).toBeCloseTo(0.3)
+    expect(text.rightOffset).toBeCloseTo(0.1)
+  })
+
   it('lays HYD out along the bottom of the reference arc', () => {
     const text = hydrantLabel()
     const glyphs = text.glyphPlacements()

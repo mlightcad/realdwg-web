@@ -21,8 +21,10 @@ import {
   AcDbBlockReference,
   AcDbCircle,
   AcDbEntity,
+  AcDbLeader,
   AcDbLine,
   AcDbMLeader,
+  AcDbMText,
   AcDbRasterImage,
   AcDbText
 } from '../src/entity'
@@ -253,6 +255,19 @@ describe('AcDbDatabase cloning', () => {
     expect(targetDef!.sourceFileName).toBe('photo.png')
   })
 
+  it('drops object ids that have no counterpart in the destination', () => {
+    const image = new AcDbRasterImage()
+    image.imageDefId = 'FFFF'
+    source.tables.blockTable.modelSpace.appendEntity(image)
+
+    const target = createDb()
+    const ids = target.insert(new AcGeMatrix3d(), source.wblock())
+
+    expect((target.getObjectById(ids[0]) as AcDbRasterImage).imageDefId).toBe(
+      ''
+    )
+  })
+
   it('records one undo step for an insert', () => {
     const line = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
     line.layer = 'NEW_LAYER'
@@ -357,6 +372,57 @@ describe('AcDbDatabase cloning', () => {
       )
     ).toThrow()
     expect(block.newIterator().count).toBe(0)
+  })
+
+  it('points a copied leader at its copied annotation, also after redo', () => {
+    const mtext = new AcDbMText()
+    mtext.contents = 'note'
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(5, 5, 0))
+    source.tables.blockTable.modelSpace.appendEntity([leader, mtext])
+    leader.associatedAnnotation = mtext.objectId
+    const clip = source.wblock([leader.objectId, mtext.objectId])
+
+    const target = createDb()
+    target.tables.blockTable.modelSpace.appendEntity(
+      Array.from({ length: 20 }, () => new AcDbLine())
+    )
+    let ids: string[] = []
+    target.transactionManager.runUndoable('paste', () => {
+      ids = target.insert(new AcGeMatrix3d(), clip)
+    })
+    const expectAssociated = () => {
+      const pasted = target.getObjectById(ids[0]) as AcDbLeader
+      expect(pasted.associatedAnnotation).toBe(ids[1])
+      expect(target.getObjectById(ids[1])).toBeInstanceOf(AcDbMText)
+    }
+    expectAssociated()
+
+    target.transactionManager.undo()
+    expect(target.getObjectById(ids[0])).toBeUndefined()
+    target.transactionManager.redo()
+    expectAssociated()
+  })
+
+  it('drops the annotation of a leader copied without it', () => {
+    const mtext = new AcDbMText()
+    const leader = new AcDbLeader()
+    leader.appendVertex(new AcGePoint3d(0, 0, 0))
+    leader.appendVertex(new AcGePoint3d(5, 5, 0))
+    source.tables.blockTable.modelSpace.appendEntity([leader, mtext])
+    leader.associatedAnnotation = mtext.objectId
+
+    const [id] = source.deepCloneObjects(
+      [leader.objectId],
+      source.tables.blockTable.modelSpace.objectId,
+      new AcDbIdMapping()
+    )
+
+    expect((source.getObjectById(id) as AcDbLeader).associatedAnnotation).toBe(
+      ''
+    )
+    expect(leader.associatedAnnotation).toBe(mtext.objectId)
   })
 
   it('remaps the references of a cloned MLEADER style', () => {
