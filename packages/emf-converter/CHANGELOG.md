@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.27
+
+### Patch Changes
+
+- feat: adds AutoCAD-style deep cloning with wblock and insert so entities and their referenced styles can be copied within or across databases, scopes block render templates by renderer variant and owning database so preview lineweights no longer stick after commit, and stops hatch loops that only touch from being nested incorrectly
+
 ## 1.15.26
 
 ### Patch Changes
