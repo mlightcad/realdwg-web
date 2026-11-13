@@ -33,7 +33,8 @@ const DICT_KINDS: DictKind[] = ['mlineStyle', 'mleaderStyle', 'imageDefinition']
 /**
  * Order in which dependencies are cloned. Records referenced by other records
  * come first, although name translation does not strictly need it because
- * every destination name is decided before anything is cloned.
+ * every destination name is decided while dependencies are collected, before
+ * anything is cloned.
  */
 const CLONE_ORDER: RefKind[] = [
   'linetype',
@@ -52,7 +53,7 @@ interface DependencyRef {
   /** Record name, or dictionary key for dictionary objects. */
   name: string
   source: AcDbObject
-  /** Destination name chosen by {@link AcDbDatabaseCloner.planRecords}. */
+  /** Destination name chosen by {@link AcDbDatabaseCloner.planRecord}. */
   destName?: string
   /** Existing destination object that is reused instead of cloned. */
   reuse?: AcDbObject
@@ -116,8 +117,10 @@ function anonymousBlockPrefix(name: string) {
  * It follows the ObjectARX deep-clone phases:
  * 1. collect every record and object the primary objects depend on,
  *    transitively (layer → linetype, INSERT → block → nested blocks, ...);
- * 2. decide the destination name of each dependency, applying the duplicate
- *    record cloning rule (anonymous blocks always get a fresh name);
+ * 2. decide the destination name of each dependency as it is found, applying
+ *    the duplicate record cloning rule (anonymous blocks always get a fresh
+ *    name). Records that resolve to an existing destination record are not
+ *    cloned, so their own dependencies are not collected either;
  * 3. clone the dependencies and the primary objects;
  * 4. translate references held by the clones through the id mapping, then
  *    append them, which commits real handles and records undo.
@@ -130,6 +133,8 @@ export class AcDbDatabaseCloner {
   private readonly idMap: AcDbIdMapping
   private readonly refs = new Map<string, DependencyRef>()
   private readonly reservedNames = new Map<RefKind, Set<string>>()
+  /** Block table record that receives the primary clones. */
+  private owner?: AcDbBlockTableRecord
 
   /**
    * @param source - Database that owns the objects to clone.
@@ -168,8 +173,8 @@ export class AcDbDatabaseCloner {
     owner: AcDbBlockTableRecord,
     transform?: AcGeMatrix3d
   ): AcDbEntity[] {
+    this.owner = owner
     this.collectDependencies(entities)
-    this.planRecords()
     this.cloneRecords()
     this.fillBlocks()
 
@@ -195,7 +200,7 @@ export class AcDbDatabaseCloner {
     entities.forEach(entity => entity.collectCloneDependencies(deps))
 
     while (true) {
-      const added = this.addDependencyRefs(deps)
+      const added = this.addDependencyRefs(deps).filter(ref => !ref.reuse)
       if (added.length === 0) break
       deps = new AcDbCloneDependencies()
       added.forEach(ref => ref.source.collectCloneDependencies(deps))
@@ -210,6 +215,7 @@ export class AcDbDatabaseCloner {
       if (this.refs.has(key)) return
       const ref: DependencyRef = { kind, name, source }
       this.refs.set(key, ref)
+      this.planRecord(ref)
       added.push(ref)
     }
 
@@ -263,31 +269,35 @@ export class AcDbDatabaseCloner {
   // Phase 2: destination names
   // ---------------------------------------------------------------------------
 
-  private planRecords() {
-    for (const ref of this.orderedRefs()) {
-      const anonymousPrefix =
-        ref.kind === 'block' ? anonymousBlockPrefix(ref.name) : undefined
+  private planRecord(ref: DependencyRef) {
+    const anonymousPrefix =
+      ref.kind === 'block' ? anonymousBlockPrefix(ref.name) : undefined
 
-      if (anonymousPrefix) {
-        // Anonymous blocks (dimension blocks, dynamic block representations)
-        // belong to the entity that references them, so every copy gets its
-        // own definition, as in AutoCAD.
-        ref.destName = this.nextAnonymousName(anonymousPrefix)
-      } else if (this.sameDatabase) {
-        ref.destName = ref.name
-        ref.reuse = ref.source
-      } else {
-        const existing = this.lookupDest(ref.kind, ref.name)
-        if (!existing) {
-          ref.destName = ref.name
-        } else {
-          this.planDuplicate(ref, existing)
-        }
+    if (anonymousPrefix) {
+      // Anonymous blocks (dimension blocks, dynamic block representations)
+      // belong to the entity that references them, so every copy gets its
+      // own definition, as in AutoCAD.
+      ref.destName = this.nextAnonymousName(anonymousPrefix)
+    } else if (this.sameDatabase) {
+      if (ref.source === this.owner) {
+        throw new Error(`Block '${ref.name}' cannot reference itself.`)
       }
-
-      this.reserve(ref.kind, ref.destName!)
-      this.assignRefName(ref)
+      ref.destName = ref.name
+      ref.reuse = ref.source
+    } else {
+      const existing = this.lookupDest(ref.kind, ref.name)
+      if (!existing) {
+        ref.destName = ref.name
+      } else if (existing === this.owner) {
+        // Reusing the receiving block would make it reference itself.
+        ref.destName = this.mangledName(ref.kind, ref.name)
+      } else {
+        this.planDuplicate(ref, existing)
+      }
     }
+
+    this.reserve(ref.kind, ref.destName!)
+    this.assignRefName(ref)
   }
 
   private planDuplicate(ref: DependencyRef, existing: AcDbObject) {

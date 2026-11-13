@@ -1,7 +1,16 @@
 import { AcCmColor } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbObject } from '../base/AcDbObject.js'
+
+function isByLayerOrByBlock(lineType: string) {
+  const name = lineType.toUpperCase()
+  return name === 'BYLAYER' || name === 'BYBLOCK'
+}
 
 /**
  * One element definition in an MLINE style.
@@ -126,6 +135,35 @@ export class AcDbMlineStyle extends AcDbObject {
     this._elements.splice(index, 1)
   }
 
+  /**
+   * Adds the linetypes of the style elements.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    this._elements.forEach(element => {
+      if (element.lineType && !isByLayerOrByBlock(element.lineType)) {
+        deps.addName('linetype', element.lineType)
+      }
+    })
+  }
+
+  /**
+   * Translates the style name and element linetype names of a cloned style.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._styleName = idMap.translateName('mlineStyle', this._styleName)
+    this._elements.forEach(element => {
+      if (element.lineType && !isByLayerOrByBlock(element.lineType)) {
+        element.lineType = idMap.translateName('linetype', element.lineType)
+      }
+    })
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
     filer.writeSubclassMarker('AcDbMlineStyle')
@@ -236,4 +274,3 @@ export class AcDbMlineStyle extends AcDbObject {
     })
   }
 }
-

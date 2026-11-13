@@ -2,6 +2,10 @@ import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import { AcGeVector3d, AcGeVector3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbObject } from '../base/AcDbObject.js'
 import {
   acdbDecodeMLeaderStyleRawColor,
@@ -846,6 +850,36 @@ export class AcDbMLeaderStyle extends AcDbObject {
   }
 
   /**
+   * Adds the linetype, arrow block, text style and content block this style
+   * references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addId(this._leaderLineTypeId)
+    deps.addId(this._arrowSymbolId)
+    deps.addId(this._textStyleId)
+    deps.addId(this._blockId)
+  }
+
+  /**
+   * Points a cloned style at the objects in the destination database.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._leaderLineTypeId =
+      idMap.translateId(this._leaderLineTypeId) ?? this._leaderLineTypeId
+    this._arrowSymbolId =
+      idMap.translateId(this._arrowSymbolId) ?? this._arrowSymbolId
+    this._textStyleId =
+      idMap.translateId(this._textStyleId) ?? this._textStyleId
+    this._blockId = idMap.translateId(this._blockId) ?? this._blockId
+  }
+
+  /**
    * Writes this MLeaderStyle object to DXF fields.
    *
    * @param filer DXF filer that receives serialized group codes.
@@ -1061,4 +1095,3 @@ export class AcDbMLeaderStyle extends AcDbObject {
     return this
   }
 }
-

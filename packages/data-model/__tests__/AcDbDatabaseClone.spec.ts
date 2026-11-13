@@ -22,10 +22,11 @@ import {
   AcDbCircle,
   AcDbEntity,
   AcDbLine,
+  AcDbMLeader,
   AcDbRasterImage,
   AcDbText
 } from '../src/entity'
-import { AcDbRasterImageDef } from '../src/object'
+import { AcDbMLeaderStyle, AcDbRasterImageDef } from '../src/object'
 
 const createDb = () => {
   const db = new AcDbDatabase()
@@ -281,5 +282,103 @@ describe('AcDbDatabase cloning', () => {
     expect(block.name).toBe('A$C1')
     expect(block.newIterator().count).toBe(1)
     expect(() => target.insert('A$C1', source)).toThrow()
+  })
+
+  it('does not copy anonymous blocks of a shared block definition', () => {
+    addBlock(source, '*D1', [
+      new AcDbLine(new AcGePoint3d(), new AcGePoint3d(10, 0, 0))
+    ])
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0),
+      new AcGePoint3d(5, 5, 0)
+    )
+    dim.dimBlockId = '*D1'
+    addBlock(source, 'B', [dim])
+    const ref = new AcDbBlockReference('B')
+    source.tables.blockTable.modelSpace.appendEntity(ref)
+    const blockCount = source.tables.blockTable.numEntries
+
+    source.deepCloneObjects(
+      [ref.objectId],
+      source.tables.blockTable.modelSpace.objectId,
+      new AcDbIdMapping()
+    )
+
+    expect(source.tables.blockTable.numEntries).toBe(blockCount)
+  })
+
+  it('does not import dependencies of an ignored block definition', () => {
+    addLayer(source, 'INNER_ONLY', 1)
+    const inner = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
+    inner.layer = 'INNER_ONLY'
+    addBlock(source, 'B', [inner])
+    const ref = new AcDbBlockReference('B')
+    source.tables.blockTable.modelSpace.appendEntity(ref)
+    const clip = source.wblock([ref.objectId])
+
+    const target = createDb()
+    addBlock(target, 'B', [
+      new AcDbLine(new AcGePoint3d(), new AcGePoint3d(2, 0, 0))
+    ])
+    target.insert(new AcGeMatrix3d(), clip)
+
+    expect(target.tables.layerTable.has('INNER_ONLY')).toBe(false)
+    expect(target.tables.blockTable.getAt('B')?.newIterator().count).toBe(1)
+  })
+
+  it('insert as a block renames a source block with the same name', () => {
+    addBlock(source, 'X', [
+      new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
+    ])
+    source.tables.blockTable.modelSpace.appendEntity(
+      new AcDbBlockReference('X')
+    )
+
+    const target = createDb()
+    const blockId = target.insert('X', source)
+
+    const block = target.getObjectById(blockId) as AcDbBlockTableRecord
+    const [inner] = Array.from(block.newIterator()) as AcDbBlockReference[]
+    expect(inner.blockName).toBe('$0$X')
+    expect(target.tables.blockTable.getAt('$0$X')?.newIterator().count).toBe(1)
+  })
+
+  it('rejects a same-database clone of a block reference into its own block', () => {
+    const block = addBlock(source, 'B', [])
+    const ref = new AcDbBlockReference('B')
+    source.tables.blockTable.modelSpace.appendEntity(ref)
+
+    expect(() =>
+      source.deepCloneObjects(
+        [ref.objectId],
+        block.objectId,
+        new AcDbIdMapping()
+      )
+    ).toThrow()
+    expect(block.newIterator().count).toBe(0)
+  })
+
+  it('remaps the references of a cloned MLEADER style', () => {
+    const textStyle = new AcDbTextStyleTableRecord({ name: 'NOTES' })
+    source.tables.textStyleTable.add(textStyle)
+    const style = new AcDbMLeaderStyle()
+    style.textStyleId = textStyle.objectId
+    source.objects.mleaderStyle.setAt('CUSTOM', style)
+    const mleader = new AcDbMLeader()
+    mleader.mleaderStyleId = style.objectId
+    source.tables.blockTable.modelSpace.appendEntity(mleader)
+
+    const target = createDb()
+    target.tables.blockTable.modelSpace.appendEntity(
+      Array.from({ length: 20 }, () => new AcDbLine())
+    )
+    target.insert(new AcGeMatrix3d(), source.wblock([mleader.objectId]))
+
+    const targetStyle = target.objects.mleaderStyle.getAt('CUSTOM')
+    const targetTextStyle = target.tables.textStyleTable.getAt('NOTES')
+    expect(targetStyle).toBeDefined()
+    expect(targetTextStyle).toBeDefined()
+    expect(targetStyle!.textStyleId).toBe(targetTextStyle!.objectId)
   })
 })
