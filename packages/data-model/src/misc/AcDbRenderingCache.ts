@@ -267,25 +267,30 @@ export class AcDbRenderingCache {
    *   with the same name in different databases (a pasted clipboard database
    *   and the drawing it is pasted into) never share a template.
    *
+   * `%`, `#`, `@` and `_` are legal in block names, so the block name and the
+   * variant are percent-escaped (for example `A_1` becomes `A%5F1`). No two
+   * blocks, databases, variants or colors then map to the same cache key,
+   * including the `_<color>` suffix added by {@link createKey}.
+   *
    * {@link createKey} / {@link createCacheKey} take this scoped name in place
    * of the bare block name.
    *
    * @param renderer - Renderer that draws the block
    * @param blockTableRecord - Block to draw
-   * @returns Block name followed by its scope suffixes
+   * @returns Escaped block name followed by its scope suffixes
    */
   createScopedName(
     renderer: AcGiRenderer,
     blockTableRecord: AcDbBlockTableRecord
   ) {
-    let name = blockTableRecord.name
+    let name = escapeScopeComponent(blockTableRecord.name)
     const databaseId = databaseScopeId(blockTableRecord)
     if (databaseId !== undefined) {
       name += `#${databaseId}`
     }
     const variant = renderer.cacheVariant
     if (variant) {
-      name += `@${variant}`
+      name += `@${escapeScopeComponent(variant)}`
     }
     return name
   }
@@ -990,6 +995,22 @@ function prepareCacheTemplate(entity: AcGiEntity): void {
   if (typeof prepare === 'function') {
     prepare.call(entity)
   }
+}
+
+/** Characters that delimit the parts of a block cache key. */
+const _scopeReservedChars = /[%#@_]/g
+
+/**
+ * Percent-escapes the cache key delimiters in `value`.
+ *
+ * @param value - Block name or renderer cache variant.
+ * @returns `value` with `%`, `#`, `@` and `_` replaced by `%XX` escapes.
+ */
+function escapeScopeComponent(value: string): string {
+  return value.replace(
+    _scopeReservedChars,
+    char => `%${char.charCodeAt(0).toString(16).toUpperCase()}`
+  )
 }
 
 /** Scope ids of databases whose blocks were drawn through the cache. */

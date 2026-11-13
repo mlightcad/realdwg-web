@@ -577,5 +577,51 @@ describe('AcDbRenderingCache', () => {
       expect(renderer.group).toHaveBeenCalledTimes(1)
       expect(cache.has('WALL@lw')).toBe(true)
     })
+
+    it('escapes key delimiters in block names and variants', () => {
+      const cache = new AcDbRenderingCache()
+      const scoped = (name: string, variant?: string, database?: object) =>
+        cache.createScopedName(
+          createRenderer(variant) as never,
+          createBlockRecord(name, database) as never
+        )
+
+      expect(scoped('A_1#2@x%')).toBe('A%5F1%232%40x%25')
+      expect(scoped('X@lw')).not.toBe(scoped('X', 'lw'))
+      expect(scoped('X', 'a#1')).toBe('X@a%231')
+
+      const database = {}
+      const id = scoped('X', undefined, database).slice('X#'.length)
+      expect(scoped(`X#${id}`)).not.toBe(scoped('X', undefined, database))
+    })
+
+    it('keeps a block named like a color key apart from a ByBlock key', () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer()
+      const plain = createBlockRecord('A_RGB:255,0,0')
+      const byBlock = {
+        name: 'A',
+        newIterator: function* () {
+          yield {
+            visibility: true,
+            color: new AcCmColor().setByBlock(),
+            worldDraw: () => ({ id: 'line' })
+          }
+        }
+      }
+
+      cache.draw(renderer as never, byBlock as never, color, [], true)
+      cache.draw(renderer as never, plain as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(2)
+      const byBlockKey = cache.createKey(
+        cache.createScopedName(renderer as never, byBlock as never),
+        color
+      )
+      const plainKey = cache.createScopedName(renderer as never, plain as never)
+      expect(byBlockKey).not.toBe(plainKey)
+      expect(cache.has(byBlockKey)).toBe(true)
+      expect(cache.has(plainKey)).toBe(true)
+    })
   })
 })
