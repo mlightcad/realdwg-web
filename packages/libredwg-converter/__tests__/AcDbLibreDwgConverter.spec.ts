@@ -1,4 +1,8 @@
-import { AcCmColorMethod, AcDbDatabase } from '@mlightcad/data-model'
+import {
+  AcCmColorMethod,
+  AcDbBlockTableRecord,
+  AcDbDatabase
+} from '@mlightcad/data-model'
 
 import { AcDbLibreDwgConverter } from '../src/AcDbLibreDwgConverter'
 
@@ -240,6 +244,180 @@ describe('AcDbLibreDwgConverter', () => {
     expect(grass!.color.colorIndex).toBe(70)
   })
 
+  it('treats all layers as plottable for pre-R2000 DWGs (no DXF 290)', () => {
+    // LibreDWG leaves LAYER.plotflag at 0 for R14; that must not hide the
+    // drawing when the host opens with drawNoPlotLayers: false.
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    converter.processLayersPublic(
+      {
+        header: { ACADVER: 'AC1014' },
+        tables: {
+          LAYER: {
+            entries: [
+              {
+                name: '0',
+                handle: '1',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 7,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 0
+              },
+              {
+                name: 'AXES',
+                handle: '2',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 1,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 0
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    expect(db.tables.layerTable.getAt('0')!.isPlottable).toBe(true)
+    expect(db.tables.layerTable.getAt('AXES')!.isPlottable).toBe(true)
+  })
+
+  it('does not treat pre-R13 ACADVER strings as R2000+', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    converter.processLayersPublic(
+      {
+        header: { ACADVER: 'AC2.10' },
+        tables: {
+          LAYER: {
+            entries: [
+              {
+                name: '0',
+                handle: '1',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 7,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 0
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    expect(db.tables.layerTable.getAt('0')!.isPlottable).toBe(true)
+  })
+
+  it('treats all-zero plotFlags as missing when ACADVER is absent', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    converter.processLayersPublic(
+      {
+        header: {},
+        tables: {
+          LAYER: {
+            entries: [
+              {
+                name: '0',
+                handle: '1',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 7,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 0
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    expect(db.tables.layerTable.getAt('0')!.isPlottable).toBe(true)
+  })
+
+  it('honors plotFlag for R2000+ DWGs', () => {
+    const db = new AcDbDatabase()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    converter.processLayersPublic(
+      {
+        header: { ACADVER: 'AC1015' },
+        tables: {
+          LAYER: {
+            entries: [
+              {
+                name: '0',
+                handle: '1',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 7,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 1
+              },
+              {
+                name: 'DEFPOINTS',
+                handle: '2',
+                ownerHandle: '0',
+                standardFlag: 0,
+                colorIndex: 7,
+                color: 0xffffff,
+                lineType: 'Continuous',
+                lineweight: -1,
+                frozen: false,
+                off: false,
+                frozenInNew: false,
+                locked: false,
+                plotFlag: 0
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    expect(db.tables.layerTable.getAt('0')!.isPlottable).toBe(true)
+    expect(db.tables.layerTable.getAt('DEFPOINTS')!.isPlottable).toBe(false)
+  })
+
   it('keeps ByBlock when colorIndex is 0 even if color defaults to white', () => {
     // libredwg convertLayer defaults color to 0xffffff; the 0xc3/ByBlock path
     // only sets colorIndex=0 and leaves that default rgb in place.
@@ -277,6 +455,116 @@ describe('AcDbLibreDwgConverter', () => {
     expect(layer).toBeTruthy()
     expect(layer!.color.isByBlock).toBe(true)
     expect(layer!.color.colorIndex).toBe(0)
+  })
+
+  it('links paper layouts via paperSpaceTableId when BLOCK_RECORD.layout is empty', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    const paper = db.tables.blockTable.getAt(
+      AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+    )
+    expect(paper).toBeTruthy()
+    paper!.objectId = '15'
+    paper!.layoutId = ''
+
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processObjectsPublic(
+      {
+        objects: {
+          DICTIONARY: [],
+          GROUP: [],
+          XRECORD: [],
+          LAYOUT: [
+            {
+              handle: '6D',
+              ownerHandle: '6B',
+              layoutName: 'Model',
+              tabOrder: 0,
+              minLimit: { x: 0, y: 0 },
+              maxLimit: { x: 12, y: 9 },
+              minExtent: { x: 0, y: 0, z: 0 },
+              maxExtent: { x: 0, y: 0, z: 0 },
+              paperSpaceTableId: '18',
+              viewportId: ''
+            },
+            {
+              handle: '6E',
+              ownerHandle: '6B',
+              layoutName: 'Layout1',
+              tabOrder: 1,
+              minLimit: { x: 0, y: 0 },
+              maxLimit: { x: 420, y: 297 },
+              minExtent: { x: 0, y: 0, z: 0 },
+              maxExtent: { x: 1, y: 1, z: 0 },
+              paperSpaceTableId: '15',
+              viewportId: ''
+            }
+          ],
+          IMAGEDEF: [],
+          LAYER_FILTER: [],
+          LAYER_INDEX: [],
+          MLEADERSTYLE: [],
+          SPATIAL_FILTER: []
+        },
+        tables: {
+          BLOCK_RECORD: { entries: [] }
+        }
+      },
+      db
+    )
+
+    const layout1 = db.objects.layout.getAt('Layout1')
+    expect(layout1?.blockTableRecordId).toBe('15')
+    expect(paper!.layoutId).toBe(layout1!.objectId)
+  })
+
+  it('ignores paperSpaceTableId that points at a non-paper-space BTR', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    const modelSpace = db.tables.blockTable.modelSpace
+    const paper = db.tables.blockTable.getAt(
+      AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+    )
+    expect(paper).toBeTruthy()
+    paper!.layoutId = ''
+
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    converter.processObjectsPublic(
+      {
+        objects: {
+          DICTIONARY: [],
+          GROUP: [],
+          XRECORD: [],
+          LAYOUT: [
+            {
+              handle: '6E',
+              ownerHandle: '6B',
+              layoutName: 'Layout1',
+              tabOrder: 1,
+              minLimit: { x: 0, y: 0 },
+              maxLimit: { x: 420, y: 297 },
+              minExtent: { x: 0, y: 0, z: 0 },
+              maxExtent: { x: 1, y: 1, z: 0 },
+              paperSpaceTableId: modelSpace.objectId,
+              viewportId: ''
+            }
+          ],
+          IMAGEDEF: [],
+          LAYER_FILTER: [],
+          LAYER_INDEX: [],
+          MLEADERSTYLE: [],
+          SPATIAL_FILTER: []
+        },
+        tables: {
+          BLOCK_RECORD: { entries: [] }
+        }
+      },
+      db
+    )
+
+    const layout1 = db.objects.layout.getAt('Layout1')
+    expect(layout1?.blockTableRecordId).toBe(paper!.objectId)
+    expect(paper!.layoutId).toBe(layout1!.objectId)
   })
 
   it('converts GROUP objects and renames from ACAD_GROUP', () => {

@@ -309,6 +309,10 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
   protected processLayers(model: DwgDatabase, db: AcDbDatabase) {
     const layers = model.tables.LAYER.entries
+    // LAYER.plotflag (DXF 290) exists only since R2000 (AC1015). LibreDWG
+    // leaves the bit at 0 for R13/R14, which would mark every layer
+    // non-plottable and hide the drawing when drawNoPlotLayers is false.
+    const layerPlotFlagSupported = this.isLayerPlotFlagSupported(model)
     layers.forEach(item => {
       const color = new AcCmColor()
       this.applyLibreLayerColor(color, item)
@@ -319,11 +323,35 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
         lineWeight: item.lineweight,
         isOff: item.off,
         color: color,
-        isPlottable: item.plotFlag != 0
+        isPlottable: layerPlotFlagSupported ? item.plotFlag != 0 : true
       })
       this.processCommonTableEntryAttrs(item, record)
       db.tables.layerTable.add(record)
     })
+  }
+
+  /**
+   * True when the drawing database version can carry LAYER plot flags.
+   *
+   * Pre-R2000 DWGs have no no-plot concept; treating LibreDWG's zeroed
+   * `plotflag` as non-plottable blanks the canvas under the editor's default
+   * `drawNoPlotLayers: false` policy.
+   */
+  private isLayerPlotFlagSupported(model: DwgDatabase): boolean {
+    const acadver = model.header?.ACADVER
+    const match =
+      typeof acadver === 'string' ? /^AC(\d{4})$/.exec(acadver.trim()) : null
+    if (match) {
+      // AC1014 = R14, AC1015 = AutoCAD 2000.
+      return Number(match[1]) >= 1015
+    }
+    // ACADVER can be missing from some parse paths. LibreDWG zeros every
+    // plotflag for pre-R2000; real R2000+ drawings always have at least one
+    // plottable layer (typically layer "0"), so an all-zero table means the
+    // field was never authored.
+    const layers = model.tables?.LAYER?.entries ?? []
+    if (layers.length === 0) return true
+    return layers.some(layer => layer.plotFlag != 0)
   }
 
   /**
@@ -827,24 +855,42 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       dbLayout.layoutName = layout.layoutName
       dbLayout.tabOrder = layout.tabOrder
 
-      // layout.paperSpaceTableId doesn't point to the block table record asscicated with
-      // this layout. So let's get the assocated block table record id from block table.
-      const btrs = db.tables.blockTable.newIterator()
+      // Prefer BLOCK_RECORD.layoutId (same rule as the DXF reader). Model must
+      // always track the live *Model_Space BTR — matching Model by layoutId
+      // alone can latch onto a stale handle after bootstrap / handle-collision
+      // rewrites. When layoutId is empty (common on R14 DWGs), fall back to
+      // LAYOUT.paperSpaceTableId and then to an unbound *Paper_Space* BTR.
       dbLayout.objectId = layout.handle
-      for (const btr of btrs) {
-        // Because the type of layout id (number) block table record and layout id (BingInt)
-        // in layout dictionary are different, so the converted data are used to compare.
-        // In the future, we will use BigInt type for object id.
-        if (btr.layoutId === dbLayout.objectId) {
-          dbLayout.blockTableRecordId = btr.objectId
-          break
+      if (layout.layoutName === 'Model') {
+        const modelSpace = db.tables.blockTable.modelSpace
+        dbLayout.blockTableRecordId = modelSpace.objectId
+        modelSpace.layoutId = dbLayout.objectId
+      } else {
+        for (const btr of db.tables.blockTable.newIterator()) {
+          // layoutId types can differ (number vs string hex); compare as string.
+          if (String(btr.layoutId) === String(dbLayout.objectId)) {
+            dbLayout.blockTableRecordId = btr.objectId
+            break
+          }
         }
-      }
-      // If the layout is not found in the block table due to some unknow reason,
-      // let's set the model space block table record id.
-      if (!dbLayout.blockTableRecordId) {
-        if (layout.layoutName === 'Model') {
-          dbLayout.blockTableRecordId = db.tables.blockTable.modelSpace.objectId
+        if (!dbLayout.blockTableRecordId && layout.paperSpaceTableId) {
+          const btr = db.tables.blockTable.getIdAt(
+            String(layout.paperSpaceTableId)
+          )
+          // paperSpaceTableId is not always reliable, so only accept a paper
+          // space BTR that is not already bound to another layout.
+          if (btr?.isPaperSapce && !btr.layoutId) {
+            dbLayout.blockTableRecordId = btr.objectId
+            btr.layoutId = dbLayout.objectId
+          }
+        }
+        if (!dbLayout.blockTableRecordId) {
+          for (const btr of db.tables.blockTable.newIterator()) {
+            if (!btr.isPaperSapce || btr.layoutId) continue
+            dbLayout.blockTableRecordId = btr.objectId
+            btr.layoutId = dbLayout.objectId
+            break
+          }
         }
       }
       dbLayout.limits.min.copy(layout.minLimit)

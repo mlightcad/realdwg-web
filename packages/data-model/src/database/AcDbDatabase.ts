@@ -3323,7 +3323,8 @@ export class AcDbDatabase extends AcDbObject {
     this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
 
     const modelSpace = this.tables.blockTable.modelSpace
-    if (!this.objects.layout.getAt('Model')) {
+    const modelLayout = this.objects.layout.getAt('Model')
+    if (!modelLayout) {
       const layout = new AcDbLayout()
       layout.layoutName = 'Model'
       layout.tabOrder = 0
@@ -3334,6 +3335,16 @@ export class AcDbDatabase extends AcDbObject {
       layout.extents.max.copy({ x: 1000000, y: 1000000, z: 0 })
       this.objects.layout.setAt(layout.layoutName, layout)
       modelSpace.layoutId = layout.objectId
+    } else {
+      // Converters can leave Model.blockTableRecordId on a stale handle while
+      // *Model_Space (and entity ownerIds) use a different id. Relink so open
+      // framing / layout tabs activate the space that actually has geometry.
+      if (modelLayout.blockTableRecordId !== modelSpace.objectId) {
+        modelLayout.blockTableRecordId = modelSpace.objectId
+      }
+      if (modelSpace.layoutId !== modelLayout.objectId) {
+        modelSpace.layoutId = modelLayout.objectId
+      }
     }
     this.ensureDefaultPaperSpaceLayout()
     if (!this.tables.appIdTable.has(ACAD_APPID)) {
