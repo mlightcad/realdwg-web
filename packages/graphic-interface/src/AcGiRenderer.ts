@@ -35,6 +35,16 @@ export interface AcGiRenderer<T extends AcGiEntity = AcGiEntity> {
   get context(): AcGiContext
 
   /**
+   * Identifies renderer state that changes the graphics produced for the
+   * same entities, such as lineweights forced on for transient previews.
+   *
+   * Block templates cached by `AcDbRenderingCache` are kept apart per
+   * variant, so graphics drawn in one state are never reused in another.
+   * Leave it `undefined` or empty when output does not depend on such state.
+   */
+  readonly cacheVariant?: string
+
+  /**
    * Create one group
    * @param entities Input entities to group together
    * @returns Return created group

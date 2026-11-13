@@ -30,9 +30,7 @@ function createMockGroup(overrides: Record<string, unknown> = {}) {
     addChild: jest.fn(),
     isCompacted: false,
     userData: {} as { blockCacheKey?: string },
-    compactForInstancing: jest.fn(function (this: {
-      isCompacted: boolean
-    }) {
+    compactForInstancing: jest.fn(function (this: { isCompacted: boolean }) {
       this.isCompacted = true
     }),
     prepareCacheTemplate: jest.fn(),
@@ -480,9 +478,9 @@ describe('AcDbRenderingCache', () => {
     >
     expect(clone).not.toBe(template)
     expect(clone.userData.blockCacheKey).toBe('Door')
-    expect((template.userData as { blockCacheKey?: string }).blockCacheKey).toBe(
-      undefined
-    )
+    expect(
+      (template.userData as { blockCacheKey?: string }).blockCacheKey
+    ).toBe(undefined)
   })
 
   it('invokes onCleared when clear runs', () => {
@@ -493,5 +491,137 @@ describe('AcDbRenderingCache', () => {
     cache.clear()
     expect(onCleared).toHaveBeenCalledTimes(1)
     AcDbRenderingCache.onCleared = undefined
+  })
+
+  describe('template scope', () => {
+    function createBlockRecord(name: string, database?: object) {
+      return {
+        name,
+        database,
+        newIterator: function* () {
+          yield {
+            visibility: true,
+            color: new AcCmColor().setRGBValue(0xffffff),
+            worldDraw: () => ({ id: 'line' })
+          }
+        }
+      }
+    }
+
+    function createRenderer(cacheVariant?: string) {
+      return {
+        cacheVariant,
+        group: jest.fn(() => createMockGroup())
+      }
+    }
+
+    const color = new AcCmColor().setRGBValue(0xff0000)
+
+    it('keeps templates of different renderer variants apart', () => {
+      const cache = new AcDbRenderingCache()
+      const block = createBlockRecord('A4-1')
+      // A transient preview drawn with forced lineweights must not leave its
+      // fat-line template behind for regular draws (mlightcad/cad-viewer).
+      const preview = createRenderer('lw')
+      const regular = createRenderer('')
+
+      cache.draw(preview as never, block as never, color, [], true)
+      cache.draw(regular as never, block as never, color, [], true)
+      cache.draw(regular as never, block as never, color, [], true)
+
+      expect(preview.group).toHaveBeenCalledTimes(1)
+      expect(regular.group).toHaveBeenCalledTimes(1)
+      expect(cache.createScopedName(preview as never, block as never)).toBe(
+        'A4-1@lw'
+      )
+      expect(cache.createScopedName(regular as never, block as never)).toBe(
+        'A4-1'
+      )
+      expect(cache.has('A4-1@lw')).toBe(true)
+      expect(cache.has('A4-1')).toBe(true)
+    })
+
+    it('keeps same-named blocks of different databases apart', () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer()
+      const target = createBlockRecord('A4-1', {})
+      const clipboard = createBlockRecord('A4-1', {})
+      const targetName = cache.createScopedName(
+        renderer as never,
+        target as never
+      )
+      const clipboardName = cache.createScopedName(
+        renderer as never,
+        clipboard as never
+      )
+
+      cache.draw(renderer as never, clipboard as never, color, [], true)
+      cache.draw(renderer as never, target as never, color, [], true)
+      cache.draw(renderer as never, target as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(2)
+      expect(targetName).not.toBe(clipboardName)
+      expect(targetName.startsWith('A4-1#')).toBe(true)
+      expect(cache.has(targetName)).toBe(true)
+      expect(cache.has(clipboardName)).toBe(true)
+    })
+
+    it('prebuilds templates under the scoped name', async () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer('lw')
+      const block = createBlockRecord('WALL')
+
+      await cache.prebuildAll(renderer as never, [block as never])
+      cache.draw(renderer as never, block as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(1)
+      expect(cache.has('WALL@lw')).toBe(true)
+    })
+
+    it('escapes key delimiters in block names and variants', () => {
+      const cache = new AcDbRenderingCache()
+      const scoped = (name: string, variant?: string, database?: object) =>
+        cache.createScopedName(
+          createRenderer(variant) as never,
+          createBlockRecord(name, database) as never
+        )
+
+      expect(scoped('A_1#2@x%')).toBe('A%5F1%232%40x%25')
+      expect(scoped('X@lw')).not.toBe(scoped('X', 'lw'))
+      expect(scoped('X', 'a#1')).toBe('X@a%231')
+
+      const database = {}
+      const id = scoped('X', undefined, database).slice('X#'.length)
+      expect(scoped(`X#${id}`)).not.toBe(scoped('X', undefined, database))
+    })
+
+    it('keeps a block named like a color key apart from a ByBlock key', () => {
+      const cache = new AcDbRenderingCache()
+      const renderer = createRenderer()
+      const plain = createBlockRecord('A_RGB:255,0,0')
+      const byBlock = {
+        name: 'A',
+        newIterator: function* () {
+          yield {
+            visibility: true,
+            color: new AcCmColor().setByBlock(),
+            worldDraw: () => ({ id: 'line' })
+          }
+        }
+      }
+
+      cache.draw(renderer as never, byBlock as never, color, [], true)
+      cache.draw(renderer as never, plain as never, color, [], true)
+
+      expect(renderer.group).toHaveBeenCalledTimes(2)
+      const byBlockKey = cache.createKey(
+        cache.createScopedName(renderer as never, byBlock as never),
+        color
+      )
+      const plainKey = cache.createScopedName(renderer as never, plain as never)
+      expect(byBlockKey).not.toBe(plainKey)
+      expect(cache.has(byBlockKey)).toBe(true)
+      expect(cache.has(plainKey)).toBe(true)
+    })
   })
 })
