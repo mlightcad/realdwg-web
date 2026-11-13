@@ -992,23 +992,19 @@ function prepareCacheTemplate(entity: AcGiEntity): void {
   }
 }
 
-/**
- * Stamps the cache key onto a per-INSERT clone so three-renderer can bake
- * static glyphs once on the template and share them across instances.
- *
- * @param entity - Scene-bound clone returned by {@link AcDbRenderingCache.draw}.
- * @param key - Cache key used to store the immutable template.
- */
 /** Scope ids of databases whose blocks were drawn through the cache. */
 const _databaseScopeIds = new WeakMap<object, number>()
 let _nextDatabaseScopeId = 1
 
 /**
- * Returns a stable id for the database that owns `blockTableRecord`, or
- * `undefined` when the record is not bound to a database.
+ * Returns a stable id for the database that owns `blockTableRecord`.
+ *
+ * Records not added to a database resolve to the working database (see
+ * `AcDbObject.database`), so this is only `undefined` when neither exists.
  *
  * @param blockTableRecord - Block whose database to identify.
- * @returns Id unique to that database for the lifetime of the page.
+ * @returns Id unique to that database for the lifetime of the page, or
+ *   `undefined` when no database can be resolved.
  */
 function databaseScopeId(
   blockTableRecord: AcDbBlockTableRecord
@@ -1031,6 +1027,13 @@ function databaseScopeId(
   return id
 }
 
+/**
+ * Stamps the cache key onto a per-INSERT clone so three-renderer can bake
+ * static glyphs once on the template and share them across instances.
+ *
+ * @param entity - Scene-bound clone returned by {@link AcDbRenderingCache.draw}.
+ * @param key - Cache key used to store the immutable template.
+ */
 function stampBlockCacheKey(entity: AcGiEntity, key: string): void {
   const data = entity.userData as { blockCacheKey?: string }
   data.blockCacheKey = key

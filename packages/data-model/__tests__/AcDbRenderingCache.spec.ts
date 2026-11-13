@@ -492,6 +492,7 @@ describe('AcDbRenderingCache', () => {
     expect(onCleared).toHaveBeenCalledTimes(1)
     AcDbRenderingCache.onCleared = undefined
   })
+
   describe('template scope', () => {
     function createBlockRecord(name: string, database?: object) {
       return {
