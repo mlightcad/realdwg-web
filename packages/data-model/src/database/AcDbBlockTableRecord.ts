@@ -2,6 +2,7 @@ import { defaults } from '@mlightcad/common'
 import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbCloneDependencies } from '../base/AcDbIdMapping.js'
 import { AcDbObjectId } from '../base/AcDbObject.js'
 import { AcDbEntity } from '../entity/AcDbEntity.js'
 import {
@@ -568,6 +569,37 @@ export class AcDbBlockTableRecord extends AcDbSymbolTableRecord<AcDbBlockTableRe
    */
   newIterator(): AcDbObjectIterator<AcDbEntity> {
     return new AcDbObjectIterator(this._entities)
+  }
+
+  /**
+   * Adds everything the entities of this block definition reference.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    for (const entity of this._entities) {
+      entity.collectCloneDependencies(deps)
+    }
+  }
+
+  /**
+   * Clones this block table record without its entities.
+   *
+   * The generic {@link AcDbObject.clone} would deep-copy the entity list too,
+   * with owner ids that still point at this record. The clone engine clones
+   * the entities one by one instead and appends them to the new record.
+   *
+   * @internal
+   */
+  cloneEmptyRecord(): this {
+    const entities = this._entities
+    this._entities = []
+    try {
+      return this.clone()
+    } finally {
+      this._entities = entities
+    }
   }
 
   /**

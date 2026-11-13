@@ -17,6 +17,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
@@ -436,6 +440,49 @@ export class AcDbArcAlignedText extends AcDbEntity {
     return glyphs
   }
 
+  /**
+   * Transforms the arc that the text follows.
+   *
+   * The center and both arc ends are transformed in the arc's OCS; radius,
+   * angles, text size and offsets follow from them. Mirroring swaps the start
+   * and end angles so the arc keeps running counter-clockwise.
+   *
+   * @param matrix - Transformation matrix in WCS.
+   * @returns This entity.
+   */
+  override transformBy(matrix: AcGeMatrix3d): this {
+    const toWcs = this.extrusionMatrix()
+    const toOcs = toWcs.clone().invert()
+    const transform = toOcs.multiply(matrix).multiply(toWcs)
+    const pointAt = (angle: number) =>
+      new AcGePoint3d(
+        this._center.x + this._radius * Math.cos(angle),
+        this._center.y + this._radius * Math.sin(angle),
+        this._center.z
+      ).applyMatrix4(transform)
+
+    const center = this._center.clone().applyMatrix4(transform)
+    const start = pointAt(this._startAngle)
+    const end = pointAt(this._endAngle)
+    const radius = center.distanceTo(start)
+    const scale = this._radius > 0 ? radius / this._radius : 1
+    let startAngle = Math.atan2(start.y - center.y, start.x - center.x)
+    let endAngle = Math.atan2(end.y - center.y, end.x - center.x)
+    if (transform.determinant() < 0) {
+      ;[startAngle, endAngle] = [endAngle, startAngle]
+    }
+
+    this._center.copy(center)
+    this._radius = radius
+    this._startAngle = startAngle
+    this._endAngle = endAngle
+    this._textSize *= scale
+    this._offsetFromArc *= scale
+    this._rightOffset *= scale
+    this._leftOffset *= scale
+    return this
+  }
+
   get geometricExtents(): AcGeBox3d {
     const box = new AcGeBox3d()
     const glyphs = this.glyphPlacements()
@@ -795,6 +842,26 @@ export class AcDbArcAlignedText extends AcDbEntity {
     }
     if (entities.length === 1) return entities[0]
     return renderer.group(entities)
+  }
+
+  /**
+   * Adds the text style this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('textStyle', this._styleName)
+  }
+
+  /**
+   * Translates the text style name of a cloned entity.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._styleName = idMap.translateName('textStyle', this._styleName)
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

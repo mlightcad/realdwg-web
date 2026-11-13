@@ -15,6 +15,9 @@ import {
   acdbAssignWorkingDatabase
 } from '../base/AcDbObject.js'
 import { AcDbOpenMode } from '../base/AcDbOpenMode.js'
+import { AcDbDuplicateRecordCloning } from '../base/AcDbDuplicateRecordCloning.js'
+import { AcDbDeepCloneType, AcDbIdMapping } from '../base/AcDbIdMapping.js'
+import { AcDbDatabaseCloner } from './AcDbDatabaseCloner.js'
 import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import { AcDbRegenerator } from '../converter/AcDbRegenerator.js'
 import {
@@ -102,6 +105,7 @@ import { AcDbViewportTableRecord } from './AcDbViewportTableRecord.js'
 import {
   AcGeBox3d,
   AcGeCircArc2d,
+  AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike
 } from '@mlightcad/geometry-engine'
@@ -2958,6 +2962,197 @@ export class AcDbDatabase extends AcDbObject {
     if (options.layout) {
       generator.createDefaultLayout()
     }
+  }
+
+  /**
+   * Clones objects within this database.
+   *
+   * Mirrors `AcDbDatabase::deepCloneObjects()` in ObjectARX. Every entity in
+   * `objectIds` is cloned and appended to the block table record `ownerId`.
+   * Records the entities reference by name (layers, linetypes, styles, blocks)
+   * are shared with the originals, except anonymous blocks such as dimension
+   * blocks, which are copied so each clone owns its own definition.
+   *
+   * @param objectIds - Ids of the entities to clone.
+   * @param ownerId - Id of the block table record that receives the clones.
+   * @param idMap - Receives the source-to-clone id pairs.
+   * @param _deferXlation - Accepted for ObjectARX compatibility; translation
+   * always runs before this method returns.
+   * @returns Ids of the clones, in the order of `objectIds`.
+   * @throws Error when `ownerId` is not a block table record of this database.
+   */
+  deepCloneObjects(
+    objectIds: AcDbObjectId[],
+    ownerId: AcDbObjectId,
+    idMap: AcDbIdMapping,
+    _deferXlation = false
+  ): AcDbObjectId[] {
+    idMap.destDb ??= this
+    if (idMap.deepCloneContext === AcDbDeepCloneType.kDcNone) {
+      idMap.deepCloneContext = AcDbDeepCloneType.kDcObjects
+    }
+    return this.cloneObjectsInto(this, objectIds, ownerId, idMap)
+  }
+
+  /**
+   * Clones objects from this database into another database.
+   *
+   * Mirrors `AcDbDatabase::wblockCloneObjects()` in ObjectARX: it is called on
+   * the source database, `idMap.destDb` names the destination and `ownerId` is
+   * a block table record of the destination. Every layer, linetype, text
+   * style, dimension style, block definition (recursively), MLINE/MLEADER
+   * style and image definition the entities need is cloned too. When the
+   * destination already has a record with the same name, `drc` decides what
+   * happens (see {@link AcDbDuplicateRecordCloning}).
+   *
+   * @param objectIds - Ids of the entities to clone.
+   * @param ownerId - Id of the destination block table record.
+   * @param idMap - Id mapping; `idMap.destDb` must be set.
+   * @param drc - Duplicate record handling.
+   * @param _deferXlation - Accepted for ObjectARX compatibility; translation
+   * always runs before this method returns.
+   * @returns Ids of the clones in the destination, in the order of `objectIds`.
+   * @throws Error when `idMap.destDb` is missing or `ownerId` is not a block
+   * table record of the destination.
+   */
+  wblockCloneObjects(
+    objectIds: AcDbObjectId[],
+    ownerId: AcDbObjectId,
+    idMap: AcDbIdMapping,
+    drc: AcDbDuplicateRecordCloning,
+    _deferXlation = false
+  ): AcDbObjectId[] {
+    const dest = idMap.destDb
+    if (!dest) {
+      throw new Error('wblockCloneObjects requires idMap.destDb to be set.')
+    }
+    idMap.duplicateRecordCloning = drc
+    if (idMap.deepCloneContext === AcDbDeepCloneType.kDcNone) {
+      idMap.deepCloneContext = AcDbDeepCloneType.kDcWblkObjects
+    }
+    return this.cloneObjectsInto(dest, objectIds, ownerId, idMap)
+  }
+
+  /**
+   * Writes the given entities, and everything they depend on, into a new
+   * database.
+   *
+   * Mirrors the `AcDbDatabase::wblock(pOutputDb, outObjIds, basePoint)`
+   * overload in ObjectARX, which COPYCLIP uses to fill the clipboard. The new
+   * database gets default data (layer 0, Continuous, Standard styles) and the
+   * entities keep their coordinates. The new database has no INSBASE header
+   * variable, so callers that need a base point keep it themselves.
+   *
+   * @param objectIds - Ids of the entities to write. Defaults to all of model space.
+   * @returns The new database.
+   */
+  wblock(objectIds?: AcDbObjectId[]): AcDbDatabase {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    db.insunits = this.insunits
+    db.ltscale = this.ltscale
+    const ids =
+      objectIds ??
+      Array.from(this.tables.blockTable.modelSpace.newIterator()).map(
+        entity => entity.objectId
+      )
+    const idMap = new AcDbIdMapping(db, AcDbDeepCloneType.kDcWblkObjects)
+    this.wblockCloneObjects(
+      ids,
+      db.tables.blockTable.modelSpace.objectId,
+      idMap,
+      AcDbDuplicateRecordCloning.Ignore
+    )
+    return db
+  }
+
+  /**
+   * Inserts the model space of `sourceDb` into this database.
+   *
+   * Mirrors the `AcDbDatabase::insert()` overloads in ObjectARX, which
+   * PASTECLIP and PASTEBLOCK use:
+   * - With a transform, the model space entities of `sourceDb` are cloned into
+   *   this model space and transformed. Returns the ids of the new entities.
+   * - With a block name, a new block definition with that name is created
+   *   from the model space of `sourceDb`. Returns the id of the new block
+   *   table record.
+   *
+   * Records with a name this database already has are not imported: the
+   * existing definition wins (`DRC_Ignore`), as in AutoCAD.
+   *
+   * @param transformOrBlockName - Transform to apply, or the name of the block to create.
+   * @param sourceDb - Database to insert.
+   * @param _preserveSourceDb - Accepted for ObjectARX compatibility; the
+   * source database is never modified.
+   * @throws Error when a block with `blockName` already exists.
+   */
+  insert(
+    transform: AcGeMatrix3d,
+    sourceDb: AcDbDatabase,
+    preserveSourceDb?: boolean
+  ): AcDbObjectId[]
+  insert(
+    blockName: string,
+    sourceDb: AcDbDatabase,
+    preserveSourceDb?: boolean
+  ): AcDbObjectId
+  insert(
+    transformOrBlockName: AcGeMatrix3d | string,
+    sourceDb: AcDbDatabase,
+    _preserveSourceDb = true
+  ): AcDbObjectId[] | AcDbObjectId {
+    const entities = Array.from(
+      sourceDb.tables.blockTable.modelSpace.newIterator()
+    )
+    const idMap = new AcDbIdMapping(
+      this,
+      AcDbDeepCloneType.kDcInsert,
+      AcDbDuplicateRecordCloning.Ignore
+    )
+
+    if (typeof transformOrBlockName === 'string') {
+      const blockTable = this.tables.blockTable
+      if (blockTable.has(transformOrBlockName)) {
+        throw new Error(`Block '${transformOrBlockName}' already exists.`)
+      }
+      const block = new AcDbBlockTableRecord({ name: transformOrBlockName })
+      blockTable.add(block)
+      new AcDbDatabaseCloner(sourceDb, this, idMap).cloneEntities(
+        entities,
+        block
+      )
+      return block.objectId
+    }
+
+    const clones = new AcDbDatabaseCloner(sourceDb, this, idMap).cloneEntities(
+      entities,
+      this.tables.blockTable.modelSpace,
+      transformOrBlockName
+    )
+    return clones.map(clone => clone.objectId)
+  }
+
+  /** Shared implementation of deep and wblock object cloning. */
+  private cloneObjectsInto(
+    dest: AcDbDatabase,
+    objectIds: AcDbObjectId[],
+    ownerId: AcDbObjectId,
+    idMap: AcDbIdMapping
+  ): AcDbObjectId[] {
+    const owner = dest.getObjectById(ownerId)
+    if (!(owner instanceof AcDbBlockTableRecord)) {
+      throw new Error(
+        `Owner '${ownerId}' is not a block table record of the destination database.`
+      )
+    }
+    const entities = objectIds
+      .map(id => this.getObjectById(id))
+      .filter((object): object is AcDbEntity => object instanceof AcDbEntity)
+    const clones = new AcDbDatabaseCloner(this, dest, idMap).cloneEntities(
+      entities,
+      owner
+    )
+    return clones.map(clone => clone.objectId)
   }
 
   /**

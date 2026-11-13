@@ -12,6 +12,10 @@ import {
 import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbObjectId } from '../base/AcDbObject.js'
 import {
   type AcDbAnnotationScaleContext,
@@ -1365,6 +1369,38 @@ export class AcDbBlockReference extends AcDbEntity {
   private getFullInsertionTransform() {
     const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
     return new AcGeMatrix3d().multiplyMatrices(extrusion, this.blockTransform)
+  }
+
+  /**
+   * Adds the referenced block definition and everything the attached
+   * attributes reference.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('block', this._blockName)
+    this._attribs.forEach(attrib => attrib.collectCloneDependencies(deps))
+  }
+
+  /**
+   * Translates the block name of a clone and the references of its
+   * attributes.
+   *
+   * The attributes were already copied by {@link AcDbObject.clone}; they are
+   * re-keyed and get real handles when the clone is appended (see
+   * {@link syncAttributeDatabases}).
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._blockName = idMap.translateName('block', this._blockName)
+    this._attribs.forEach(attrib => {
+      attrib.database = this.database
+      attrib.extensionDictionary = undefined
+      attrib.translateClonedReferences(idMap)
+    })
   }
 
   /**

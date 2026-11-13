@@ -19,6 +19,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import { AcDbObjectId } from '../base/AcDbObject.js'
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame.js'
@@ -1122,6 +1126,26 @@ export class AcDbRasterImage extends AcDbEntity {
     }
 
     return points
+  }
+
+  /**
+   * Adds the image definition object this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addId(this._imageDefId)
+  }
+
+  /**
+   * Points a cloned image at the image definition in the destination database.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._imageDefId = idMap.translateId(this._imageDefId) ?? this._imageDefId
   }
 
   /**

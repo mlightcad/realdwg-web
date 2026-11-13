@@ -1,4 +1,4 @@
-import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import {
   AcDbArcAlignedText,
@@ -24,6 +24,20 @@ describe('AcDbArcAlignedText', () => {
     text.textPosition = AcDbArcTextPosition.OnConvexSide
     return text
   }
+
+  it('moves and scales the arc with transformBy', () => {
+    const text = hydrantLabel()
+    const startAngle = text.startAngle
+    text.transformBy(new AcGeMatrix3d().makeTranslation(10, 5, 0))
+    expect(text.center.x).toBeCloseTo(10)
+    expect(text.center.y).toBeCloseTo(5.4256743291778875)
+    expect(text.startAngle).toBeCloseTo(startAngle)
+
+    text.transformBy(new AcGeMatrix3d().makeScale(2, 2, 2))
+    expect(text.radius).toBeCloseTo(0.9506306524048814 * 2)
+    expect(text.textSize).toBeCloseTo(1.4)
+    expect(text.center.x).toBeCloseTo(20)
+  })
 
   it('lays HYD out along the bottom of the reference arc', () => {
     const text = hydrantLabel()

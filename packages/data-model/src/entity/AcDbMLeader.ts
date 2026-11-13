@@ -22,6 +22,10 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import type { AcDbTypedValue } from '../base/AcDbTypedValue.js'
 import {
   type AcDbAnnotationScaleContext,
@@ -2252,6 +2256,40 @@ export class AcDbMLeader extends AcDbEntity {
       userData.annotationScale = info
     }
     return drawable
+  }
+
+  /**
+   * Adds the MLEADER style, linetype, arrow block, text style and block
+   * content this entity references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addId(this._mleaderStyleId)
+    deps.addId(this._leaderLineTypeId)
+    deps.addId(this._arrowheadId)
+    deps.addId(this._textStyleId)
+    deps.addId(this._blockContentId)
+    deps.addName('textStyle', this._textStyleName)
+  }
+
+  /**
+   * Points a cloned MLEADER at the objects in the destination database.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._mleaderStyleId =
+      idMap.translateId(this._mleaderStyleId) ?? this._mleaderStyleId
+    this._leaderLineTypeId =
+      idMap.translateId(this._leaderLineTypeId) ?? this._leaderLineTypeId
+    this._arrowheadId = idMap.translateId(this._arrowheadId) ?? this._arrowheadId
+    this._textStyleId = idMap.translateId(this._textStyleId) ?? this._textStyleId
+    this._blockContentId =
+      idMap.translateId(this._blockContentId) ?? this._blockContentId
+    this._textStyleName = idMap.translateName('textStyle', this._textStyleName)
   }
 
   /**

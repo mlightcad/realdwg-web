@@ -1,3 +1,4 @@
+export { AcDbDuplicateRecordCloning } from './AcDbDuplicateRecordCloning.js'
 export { AcDbDxfCode } from './AcDbDxfCode.js'
 export {
   AcDbDxfFiler,
@@ -47,6 +48,12 @@ export {
   acdbHostApplicationServices,
   acdbSetLayoutManagerFactory
 } from './AcDbHostApplicationServices.js'
+export {
+  AcDbCloneDependencies,
+  AcDbDeepCloneType,
+  AcDbIdMapping
+} from './AcDbIdMapping.js'
+export type { AcDbCloneRecordKind, AcDbIdPair } from './AcDbIdMapping.js'
 export {
   AcDbObject,
   TEMP_OBJECT_ID_PREFIX,

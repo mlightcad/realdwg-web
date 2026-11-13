@@ -2,6 +2,10 @@ import { AcCmColor, AcCmTransparency, defaults } from '@mlightcad/common'
 import { AcGiLineStyle, AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
@@ -390,6 +394,31 @@ export class AcDbLayerTableRecord extends AcDbSymbolTableRecord<AcDbLayerTableRe
   }
   set materialId(value: string) {
     this.setAttr('materialId', value)
+  }
+
+  /**
+   * Adds the linetype this layer references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('linetype', this.getAttrWithoutException('linetype'))
+  }
+
+  /**
+   * Translates the linetype name of a cloned layer.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    const linetype = this.getAttrWithoutException('linetype')
+    if (linetype) {
+      this.attrs.set('linetype', idMap.translateName('linetype', linetype), {
+        silent: true
+      })
+    }
   }
 
   /**

@@ -1,6 +1,10 @@
 import { defaults } from '@mlightcad/common'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type {
+  AcDbCloneDependencies,
+  AcDbIdMapping
+} from '../base/AcDbIdMapping.js'
 import {
   acdbGetAnnotative,
   acdbSetAnnotative
@@ -10,6 +14,14 @@ import {
   AcDbSymbolTableRecord,
   AcDbSymbolTableRecordAttrs
 } from './AcDbSymbolTableRecord.js'
+
+/** Dimension style attributes that hold arrow block names. */
+const DIMSTYLE_BLOCK_ATTRS = [
+  'dimblk',
+  'dimblk1',
+  'dimblk2',
+  'dimldrblk'
+] as const
 
 /**
  * Controls the horizontal positioning of dimension text relative to the dimension line.
@@ -1304,6 +1316,42 @@ export class AcDbDimStyleTableRecord extends AcDbSymbolTableRecord<AcDbDimStyleT
       this.dxfOutXData(filer)
     }
     return this
+  }
+
+  /**
+   * Adds the text style and arrow blocks this dimension style references.
+   *
+   * @param deps - Dependency collector.
+   */
+  override collectCloneDependencies(deps: AcDbCloneDependencies): void {
+    super.collectCloneDependencies(deps)
+    deps.addName('textStyle', this.getAttrWithoutException('dimtxsty'))
+    for (const key of DIMSTYLE_BLOCK_ATTRS) {
+      deps.addName('block', this.getAttrWithoutException(key))
+    }
+  }
+
+  /**
+   * Translates the text style and arrow block names of a cloned style.
+   *
+   * @param idMap - Id mapping of the current clone operation.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    const textStyle = this.getAttrWithoutException('dimtxsty')
+    if (textStyle) {
+      this.attrs.set('dimtxsty', idMap.translateName('textStyle', textStyle), {
+        silent: true
+      })
+    }
+    for (const key of DIMSTYLE_BLOCK_ATTRS) {
+      const blockName = this.getAttrWithoutException(key)
+      if (blockName) {
+        this.attrs.set(key, idMap.translateName('block', blockName), {
+          silent: true
+        })
+      }
+    }
   }
 
   /**

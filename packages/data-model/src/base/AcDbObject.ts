@@ -4,6 +4,7 @@ import { uid } from 'uid'
 import type { AcDbDatabase } from '../database/AcDbDatabase.js'
 import { AcDbDxfCode } from './AcDbDxfCode.js'
 import { AcDbDxfFiler } from './AcDbDxfFiler.js'
+import type { AcDbCloneDependencies, AcDbIdMapping } from './AcDbIdMapping.js'
 import { AcDbResultBuffer } from './AcDbResultBuffer.js'
 import type { AcDbTypedValue } from './AcDbTypedValue.js'
 
@@ -902,6 +903,93 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     }
     return cloned
   }
+
+  /**
+   * Clones this object for {@link AcDbDatabase.deepCloneObjects}.
+   *
+   * Mirrors `AcDbObject::deepClone()` in ObjectARX. The returned object is a
+   * detached copy with a temporary id; the caller appends it to its owner,
+   * which assigns the real handle. The pair `this.objectId -> clone.objectId`
+   * is recorded in `idMap`, and is updated by the clone engine once the clone
+   * has a committed handle.
+   *
+   * The clone does not share this object's extension dictionary: AutoCAD
+   * would clone it too, but extension dictionaries are not cloned yet, so the
+   * clone simply drops it instead of pointing into the source database.
+   *
+   * Subclasses that own other objects override this to clone them as well.
+   *
+   * @param ownerObject - The object that will own the clone, if known.
+   * @param idMap - Id mapping of the current clone operation.
+   * @param isPrimary - True when this object was explicitly asked to be cloned.
+   * @returns The detached clone.
+   */
+  deepClone(
+    ownerObject: AcDbObject | undefined,
+    idMap: AcDbIdMapping,
+    isPrimary = true
+  ): AcDbObject {
+    const cloned = this.clone()
+    cloned._attrs.set('extensionDictionary', undefined, {
+      unset: true,
+      silent: true
+    })
+    if (ownerObject) {
+      cloned._attrs.set('ownerId', ownerObject.objectId)
+    }
+    idMap.assign({
+      key: this.objectId,
+      value: cloned.objectId,
+      isCloned: true,
+      isPrimary,
+      isOwnerXlated: !!ownerObject
+    })
+    return cloned
+  }
+
+  /**
+   * Clones this object for {@link AcDbDatabase.wblockCloneObjects}.
+   *
+   * Mirrors `AcDbObject::wblockClone()` in ObjectARX. The default
+   * implementation is the same as {@link deepClone}; the difference between
+   * the two operations (cross-database record handling) lives in the clone
+   * engine.
+   *
+   * @param ownerObject - The object that will own the clone, if known.
+   * @param idMap - Id mapping of the current clone operation.
+   * @param isPrimary - True when this object was explicitly asked to be cloned.
+   * @returns The detached clone.
+   */
+  wblockClone(
+    ownerObject: AcDbObject | undefined,
+    idMap: AcDbIdMapping,
+    isPrimary = true
+  ): AcDbObject {
+    return this.deepClone(ownerObject, idMap, isPrimary)
+  }
+
+  /**
+   * Adds the records and objects this object references to `deps`.
+   *
+   * Used by the clone engine to bring every layer, linetype, style, block
+   * definition and style object that a cloned object needs into the
+   * destination database. Overrides should call `super`.
+   *
+   * @param _deps - Dependency collector.
+   */
+  collectCloneDependencies(_deps: AcDbCloneDependencies): void {}
+
+  /**
+   * Rewrites references held by a freshly cloned object so that they point at
+   * the destination database.
+   *
+   * This is the "translation" phase of an ObjectARX deep clone. It is called
+   * on the clone (not on the source) after every dependency has been cloned
+   * and `idMap` holds the final names and ids. Overrides should call `super`.
+   *
+   * @param _idMap - Id mapping of the current clone operation.
+   */
+  translateClonedReferences(_idMap: AcDbIdMapping): void {}
 
   /**
    * Restores internal state from a detached clone while preserving identity fields.
