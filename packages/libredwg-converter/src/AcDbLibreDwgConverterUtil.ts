@@ -70,6 +70,7 @@ export async function parseLibreDwgFile(
     )
   }
   const result = libredwg.convertEx(dwgDataPtr)
+  attachAcadVersion(libredwg, dwgDataPtr, result.database)
   attachDimStyleAnnotationScales(libredwg, dwgDataPtr, result.database)
   libredwg.dwg_free(dwgDataPtr)
 
@@ -82,6 +83,30 @@ export async function parseLibreDwgFile(
   }
 
   return result
+}
+
+/**
+ * LibreDWG's DWG header struct has no ACADVER variable, so the converted
+ * header never carries it. Version-gated conversions (e.g. LAYER plot flags,
+ * which exist only since R2000) need it, so fill it from the parsed file.
+ */
+function attachAcadVersion(
+  libredwg: LibreDwgInstance,
+  ptr: number,
+  database: DwgDatabase
+) {
+  if (!database.header) return
+  if (typeof database.header.ACADVER === 'string' && database.header.ACADVER) {
+    return
+  }
+  try {
+    const version = libredwg.dwg_get_version_type(ptr)
+    if (version?.hdr && version.type !== 'invalid') {
+      database.header.ACADVER = version.hdr
+    }
+  } catch {
+    // Leave ACADVER unset; consumers fall back to their own heuristics.
+  }
 }
 
 /**

@@ -121,3 +121,25 @@ test(
     assert.ok(active.viewHeight > 0)
   }
 )
+
+test('R2000+ keeps no-plot layers even when every layer is no-plot', async () => {
+  const source = new AcDbDatabase()
+  acdbHostApplicationServices().workingDatabase = source
+  source.createDefaultData()
+  for (const layer of source.tables.layerTable.newIterator()) {
+    layer.isPlottable = false
+  }
+
+  const dxf = source.dxfOut(undefined, 6, 'AC1015') as string
+
+  const parsed = await parseDxf(dxf)
+  assert.equal(parsed.database.header.ACADVER, 'AC1015')
+
+  const target = new AcDbDatabase()
+  const converter = new AcDbLibreDwgMainThreadConverter({ useWorker: false })
+  await converter.read(asciiDxfToBuffer(dxf), target)
+
+  const layer0 = target.tables.layerTable.getAt('0')
+  assert.ok(layer0)
+  assert.equal(layer0.isPlottable, false)
+})
