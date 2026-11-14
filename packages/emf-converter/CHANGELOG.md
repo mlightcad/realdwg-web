@@ -1,5 +1,11 @@
 # @mlightcad/emf-converter
 
+## 1.15.28
+
+### Patch Changes
+
+- fix: improves legacy DWG fidelity so R14 drawings display and link their layouts even without BLOCK_RECORD layout pointers, R13/R14 viewport cameras are read from ACAD/MVIEW xdata, and VIEWPORT view direction comes from the entity body. Layout and block record soft-pointers now stay in sync when handles are reminted, and filling ACADVER keeps all-no-plot R2000+ layers marked as no-plot
+
 ## 1.15.27
 
 ### Patch Changes
