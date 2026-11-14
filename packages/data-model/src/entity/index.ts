@@ -57,6 +57,7 @@ export {
   AcDbMLeaderContentType,
   AcDbMLeaderDirectionType,
   AcDbMLeaderLineType,
+  AcDbMLeaderPropertyOverrideFlag,
   AcDbMLeaderTextAttachmentDirection
 } from './AcDbMLeader.js'
 export type {

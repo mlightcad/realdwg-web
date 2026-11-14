@@ -208,6 +208,7 @@ export {
   AcDbMLeaderContentType,
   AcDbMLeaderDirectionType,
   AcDbMLeaderLineType,
+  AcDbMLeaderPropertyOverrideFlag,
   AcDbMLeaderTextAttachmentDirection,
   AcDbMLine,
   AcDbMLineFlags,
