@@ -7,6 +7,7 @@ import {
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
+import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
 import {
   acdbAngleOfPoints,
   acdbArrowScaleFromStyle,
@@ -228,6 +229,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
   protected override subTransformBy(matrix: AcGeMatrix3d) {
     this._chordPoint.applyMatrix4(matrix)
     this._farChordPoint.applyMatrix4(matrix)
+    this._leaderLength *= acdbUniformScaleFactor(matrix)
   }
 
   /** @inheritdoc */

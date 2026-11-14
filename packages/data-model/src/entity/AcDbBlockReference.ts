@@ -45,6 +45,7 @@ import {
   acdbParseGsMark,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
+import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 /**
  * Represents a block reference entity in AutoCAD.
@@ -662,21 +663,36 @@ export class AcDbBlockReference extends AcDbEntity {
     const yAxis = new AcGeVector3d(yAxisPoint).sub(origin)
     const zAxis = new AcGeVector3d(zAxisPoint).sub(origin)
 
-    let normal = new AcGeVector3d().crossVectors(xAxis, yAxis)
-    if (normal.lengthSq() === 0) {
-      normal = this._normal.clone().transformDirection(matrix)
-    } else {
-      normal.normalize()
-    }
-
-    const extrusionMatrix = new AcGeMatrix3d().setFromExtrusionDirection(normal)
-    const ocsInverse = extrusionMatrix.clone().invert()
+    // The extrusion follows the plane (inverse transpose), so a mirror inside
+    // the XY plane keeps +Z and shows up as a negative scale factor instead,
+    // the way AutoCAD stores mirrored inserts.
+    const normal = acdbTransformNormal(this._normal, matrix)
+    const ocsInverse = new AcGeMatrix3d()
+      .setFromExtrusionDirection(normal)
+      .invert()
     const localXAxis = xAxis.clone().applyMatrix4(ocsInverse)
+    const localYAxis = yAxis.clone().applyMatrix4(ocsInverse)
+    const localZAxis = zAxis.clone().applyMatrix4(ocsInverse)
+
+    // Keep the sign of the X scale factor so a MOVE / ROTATE / SCALE never
+    // rewrites a mirrored insert as `rotation + PI` with a flipped Y scale.
+    const xSign = this._scaleFactors.x < 0 ? -1 : 1
+    const newRotation = Math.atan2(xSign * localXAxis.y, xSign * localXAxis.x)
+    // Y scale sign: which side of the X axis the transformed Y axis lies on.
+    const yDot =
+      -Math.sin(newRotation) * localYAxis.x +
+      Math.cos(newRotation) * localYAxis.y
+    const ySign = yDot < 0 ? -1 : 1
+    const zSign = localZAxis.z < 0 ? -1 : 1
 
     this._position.copy(origin)
     this._normal.copy(normal)
-    this._rotation = Math.atan2(localXAxis.y, localXAxis.x)
-    this._scaleFactors.set(xAxis.length(), yAxis.length(), zAxis.length())
+    this._rotation = newRotation
+    this._scaleFactors.set(
+      xSign * xAxis.length(),
+      ySign * yAxis.length(),
+      zSign * zAxis.length()
+    )
 
     this._attribs.forEach(attrib => attrib.transformBy(matrix))
     return this

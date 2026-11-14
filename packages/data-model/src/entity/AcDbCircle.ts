@@ -20,6 +20,10 @@ import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
+import {
+  acdbScaleAlongNormal,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
 const _dxfInNormal = /*@__PURE__*/ new AcGeVector3d()
@@ -493,7 +497,22 @@ export class AcDbCircle extends AcDbCurve {
    * ```
    */
   transformBy(matrix: AcGeMatrix3d) {
-    this._geo.transform(matrix)
+    const geo = this._geo
+    const center = geo.center.clone().applyMatrix4(matrix)
+    const start = geo.startPoint.clone().applyMatrix4(matrix)
+    // Keep the OCS invariant (refVec = OCS X axis of the normal) so the
+    // circle stays representable as DXF CIRCLE; a mirror inside the plane
+    // keeps the normal, like AutoCAD.
+    const normal = acdbTransformNormal(geo.normal, matrix)
+    this._thickness *= acdbScaleAlongNormal(geo.normal, matrix)
+    this._geo = new AcGeCircArc3d(
+      center,
+      center.distanceTo(start),
+      0,
+      TAU,
+      normal,
+      acgeGetOcsReferenceVector(normal)
+    )
     return this
   }
 

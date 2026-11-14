@@ -18,6 +18,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { AcDbPolyline } from './AcDbPolyline.js'
+import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 function resolveSplineKnotParameterization(
   flag: number
@@ -803,6 +804,7 @@ export class AcDbSpline extends AcDbCurve {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._geo.transform(matrix)
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
     return this
   }
 

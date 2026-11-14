@@ -58,6 +58,11 @@ import {
   acdbCollectMTextOrientedCorners,
   acdbResolveMTextLayoutMetrics
 } from './AcDbTextExtentsHelpers.js'
+import {
+  acdbTransformNormal,
+  acdbTransformVector,
+  acdbUniformScaleFactor
+} from './AcDbTransformHelpers.js'
 
 /**
  * Defines the type of leader line used by a multileader.
@@ -1891,50 +1896,119 @@ export class AcDbMLeader extends AcDbEntity {
   /**
    * Applies a transformation matrix to this entity.
    *
+   * Points are transformed and direction vectors stay unit vectors. Like
+   * AutoCAD SCALE on a MULTILEADER, a scale also scales the whole annotation:
+   * text height, arrowhead size, landing gap, dogleg length, text column
+   * sizes and the block content scale are multiplied by the uniform scale
+   * factor of the matrix.
+   *
    * @param matrix Transformation matrix applied to all geometry and vectors.
    * @returns The current entity instance for chaining.
    */
   transformBy(matrix: AcGeMatrix3d) {
+    const scale = acdbUniformScaleFactor(matrix)
+    // Resolve style-driven sizes before any vector changes.
+    if (Math.abs(scale - 1) > 1e-12) this.scaleSizes(scale)
+
+    // Some points may be shared between fields; transform each object once.
+    const transformed = new Set<AcGePoint3d>()
+    const transformPoint = (point: AcGePoint3d | undefined) => {
+      if (!point || transformed.has(point)) return
+      point.applyMatrix4(matrix)
+      transformed.add(point)
+    }
+    const transformDirection = (vector: AcGeVector3d | undefined) => {
+      if (!vector) return
+      vector.copy(acdbTransformVector(vector, matrix))
+      if (vector.lengthSq() > 0) vector.normalize()
+    }
+
     this._leaders.forEach(leader => {
-      leader.lastLeaderLinePoint?.applyMatrix4(matrix)
-      leader.landingPoint?.applyMatrix4(matrix)
-      if (leader.doglegVector) {
-        this.transformVector(leader.doglegVector, matrix)
-      }
+      transformPoint(leader.lastLeaderLinePoint)
+      transformPoint(leader.landingPoint)
+      transformDirection(leader.doglegVector)
       leader.breaks.forEach(item => {
-        item.start.applyMatrix4(matrix)
-        item.end.applyMatrix4(matrix)
+        transformPoint(item.start)
+        transformPoint(item.end)
       })
       leader.leaderLines.forEach(line => {
-        line.vertices.forEach(point => point.applyMatrix4(matrix))
+        line.vertices.forEach(transformPoint)
         line.breaks.forEach(item => {
-          item.start.applyMatrix4(matrix)
-          item.end.applyMatrix4(matrix)
+          transformPoint(item.start)
+          transformPoint(item.end)
         })
       })
     })
-    this._landingPoint?.applyMatrix4(matrix)
-    this.contentBasePosition?.applyMatrix4(matrix)
-    this.transformVector(this._doglegVector, matrix)
-    this.transformVector(this._normal, matrix)
-    this.textAnchor?.applyMatrix4(matrix)
-    this._mtextContent?.anchorPoint.applyMatrix4(matrix)
-    this.transformVector(this._textDirection, matrix)
-    this._blockContent?.position?.applyMatrix4(matrix)
-    if (this._blockContent?.normal) {
-      this.transformVector(this._blockContent.normal, matrix)
+    transformPoint(this._landingPoint)
+    transformPoint(this.contentBasePosition)
+    transformDirection(this._doglegVector)
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
+    transformPoint(this.textAnchor)
+    transformPoint(this._mtextContent?.anchorPoint)
+    transformDirection(this._textDirection)
+
+    const xAxis = acdbTransformVector(AcGeVector3d.X_AXIS, matrix)
+    const rotation = Math.atan2(xAxis.y, xAxis.x)
+    this._textRotation += rotation
+    const blockContent = this._blockContent
+    if (blockContent) {
+      transformPoint(blockContent.position)
+      if (blockContent.normal) {
+        blockContent.normal.copy(
+          acdbTransformNormal(blockContent.normal, matrix)
+        )
+      }
+      blockContent.rotation += rotation
+      // DXF 47: the block content transform, premultiplied like the content.
+      if (blockContent.transformationMatrix.length === 16) {
+        blockContent.transformationMatrix = new AcGeMatrix3d()
+          .fromArray(blockContent.transformationMatrix)
+          .premultiply(matrix)
+          .toArray()
+      }
     }
-    if (this.blockContentScale) {
-      this.transformVector(this.blockContentScale, matrix)
+    if (this._blockContentRotation != null) {
+      this._blockContentRotation += rotation
     }
-    this.planeOrigin?.applyMatrix4(matrix)
-    if (this.planeXAxisDirection) {
-      this.transformVector(this.planeXAxisDirection, matrix)
-    }
-    if (this.planeYAxisDirection) {
-      this.transformVector(this.planeYAxisDirection, matrix)
-    }
+    transformPoint(this.planeOrigin)
+    transformDirection(this.planeXAxisDirection)
+    transformDirection(this.planeYAxisDirection)
     return this
+  }
+
+  /**
+   * Multiplies every size of the annotation by `scale` (AutoCAD SCALE).
+   *
+   * Sizes that currently come from the multileader style are stored on the
+   * entity (and the dogleg-length override flag is set) so the scaled value
+   * is the one that is drawn.
+   *
+   * @param scale Uniform scale factor.
+   */
+  private scaleSizes(scale: number) {
+    const style = this.getMLeaderStyle()
+    this._textHeight = this.getBaseTextHeight() * scale
+    this._arrowheadSize = this.getBaseArrowheadSize() * scale
+    const landingGap = this._landingGap ?? style?.landingGap
+    if (landingGap != null) this._landingGap = landingGap * scale
+    const doglegLength = this.getResolvedDoglegLength()
+    if (doglegLength != null) {
+      this._doglegLength = doglegLength * scale
+      this._propertyOverrideFlag =
+        (this._propertyOverrideFlag ?? 0) | MLEADER_OVERRIDE_DOGLEG_LENGTH
+    }
+    this._leaders.forEach(leader => {
+      if (leader.doglegLength != null) leader.doglegLength *= scale
+    })
+    if (this._contentScale != null) this._contentScale *= scale
+    this._textWidth *= scale
+    if (this._textColumnWidth != null) this._textColumnWidth *= scale
+    if (this._textColumnGutterWidth != null) {
+      this._textColumnGutterWidth *= scale
+    }
+    if (this._textColumnHeight != null) this._textColumnHeight *= scale
+    this._blockContent?.scale.multiplyScalar(scale)
+    this._blockContentScale?.multiplyScalar(scale)
   }
 
   get properties(): AcDbEntityProperties {
@@ -4497,25 +4571,6 @@ export class AcDbMLeader extends AcDbEntity {
    */
   private getMTextRenderWidth(_text: string, _textHeight: number) {
     return this._textWidth > 0 ? this._textWidth : 0
-  }
-
-  /**
-   * Transforms a direction vector with an affine matrix.
-   *
-   * @param vector Vector to mutate.
-   * @param matrix Transformation matrix.
-   * @returns `void`.
-   */
-  private transformVector(vector: AcGeVector3d, matrix: AcGeMatrix3d) {
-    const origin = new AcGePoint3d()
-    const endpoint = new AcGePoint3d(vector.x, vector.y, vector.z)
-    origin.applyMatrix4(matrix)
-    endpoint.applyMatrix4(matrix)
-    vector.set(
-      endpoint.x - origin.x,
-      endpoint.y - origin.y,
-      endpoint.z - origin.z
-    )
   }
 
   /**

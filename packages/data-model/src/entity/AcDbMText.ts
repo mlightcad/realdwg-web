@@ -44,6 +44,7 @@ import {
   acdbMTextBackgroundMaskPadding,
   acdbResolveMTextLayoutMetrics
 } from './AcDbTextExtentsHelpers.js'
+import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.
@@ -692,10 +693,14 @@ export class AcDbMText extends AcDbEntity {
       if (this._extentsWidth > 0) {
         this._extentsWidth *= xScale
       }
+      this._columnWidth *= xScale
+      this._columnGutter *= xScale
     }
     if (yScale > 0) {
       this._height *= yScale
+      this._annotationHeight *= yScale
     }
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
     return this
   }
 

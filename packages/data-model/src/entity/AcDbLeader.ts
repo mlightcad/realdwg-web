@@ -53,6 +53,10 @@ import {
   acdbStripMTextControlCodes
 } from './AcDbTextExtentsHelpers.js'
 import {
+  acdbTransformNormal,
+  acdbUniformScaleFactor
+} from './AcDbTransformHelpers.js'
+import {
   acdbEnsureDimArrowBlocks,
   acdbResolveArrowBlockName,
   CLOSED_FILLED_ARROW_BLOCK
@@ -809,8 +813,16 @@ export class AcDbLeader extends AcDbCurve {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._vertices.forEach(point => point.applyMatrix4(matrix))
-    this.transformVector(this._normal, matrix)
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
+    // Directions stay unit vectors; only the offsets carry a length.
     this.transformVector(this._horizontalDirection, matrix)
+    if (this._horizontalDirection.lengthSq() > 0) {
+      this._horizontalDirection.normalize()
+    }
+    // Annotation size (DXF 40/41) follows the scale like AutoCAD SCALE.
+    const scale = acdbUniformScaleFactor(matrix)
+    this._textHeight *= scale
+    this._textWidth *= scale
     if (this._offsetFromBlock)
       this.transformVector(this._offsetFromBlock, matrix)
     if (this._offsetFromAnnotation) {

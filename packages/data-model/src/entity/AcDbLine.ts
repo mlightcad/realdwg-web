@@ -15,6 +15,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import {
+  acdbScaleAlongNormal,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
 const _dxfInPointA = /*@__PURE__*/ new AcGePoint3d()
@@ -507,6 +511,11 @@ export class AcDbLine extends AcDbCurve {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._geo.transform(matrix)
+    if (this._thickness !== 0 || this._normal != null) {
+      const normal = this.normal
+      this._thickness *= acdbScaleAlongNormal(normal, matrix)
+      normal.copy(acdbTransformNormal(normal, matrix))
+    }
     return this
   }
 

@@ -52,6 +52,7 @@ import {
 } from '../AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from '../AcDbGripHelpers.js'
 import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers.js'
+import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
 import {
   acdbAllocateDimBlockName,
   acdbDisposeDimBlock
@@ -152,6 +153,15 @@ export abstract class AcDbDimension extends AcDbEntity {
    */
   private _dimBlockRotation: number
   /**
+   * Additional uniform scale applied when placing the anonymous dimension
+   * block. Accumulates the scale of {@link transformBy} so cached block
+   * geometry stays on the scaled definition points until
+   * {@link recomputeDimBlock} regenerates it (which resets it to 1, keeping
+   * text height and arrow size at their dimension-style values like
+   * AutoCAD SCALE).
+   */
+  private _dimBlockScale: number
+  /**
    * Set by {@link recomputeDimBlock}: {@link dimBlockId} was regenerated from
    * the definition points and wins over annotative scale-context blocks.
    */
@@ -187,6 +197,7 @@ export abstract class AcDbDimension extends AcDbEntity {
     this._dxfVersion = 0
     this._normal = new AcGeVector3d(0, 0, 1)
     this._dimBlockRotation = 0
+    this._dimBlockScale = 1
     this._dimBlockRegenerated = false
   }
 
@@ -546,7 +557,19 @@ export abstract class AcDbDimension extends AcDbEntity {
       this._textRotation = Math.atan2(rotationVector.y, rotationVector.x)
     }
 
+    const scale = acdbUniformScaleFactor(matrix)
+    this._dimBlockScale = (this._dimBlockScale ?? 1) * scale
+
     this.subTransformBy(matrix)
+
+    // A scale changes the measured value; keep the cached measurement (used
+    // for the property palette and DXF group 42) in sync with the points.
+    if (this._measurement != null && Math.abs(scale - 1) > 1e-12) {
+      const measured = this.computeMeasurement()
+      if (measured != null && Number.isFinite(measured)) {
+        this._measurement = measured
+      }
+    }
     return this
   }
 
@@ -921,6 +944,7 @@ export abstract class AcDbDimension extends AcDbEntity {
     // offset or rotation accumulated by earlier MOVE/ROTATE edits.
     this._dimBlockPosition.set(0, 0, 0)
     this._dimBlockRotation = 0
+    this._dimBlockScale = 1
 
     db.tables.blockTable.add(this.createDimBlock(name))
     this.dimBlockId = name
@@ -1362,6 +1386,12 @@ export abstract class AcDbDimension extends AcDbEntity {
     )
 
     const mRot = new AcGeMatrix3d().makeRotationZ(this._dimBlockRotation)
+    const blockScale = this._dimBlockScale ?? 1
+    if (blockScale !== 1) {
+      mRot.multiply(
+        new AcGeMatrix3d().makeScale(blockScale, blockScale, blockScale)
+      )
+    }
 
     // ------------------------------------------------------------
     // Final matrix (OCS space only):

@@ -12,6 +12,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import {
+  acdbIsMirroring,
+  acdbUniformScaleFactor
+} from './AcDbTransformHelpers.js'
 
 export enum AcDb2dVertexType {
   /**
@@ -324,6 +328,12 @@ export class AcDb2dVertex extends AcDbEntity {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._position.applyMatrix4(matrix)
+    // Segment widths follow the scale like AutoCAD SCALE; a mirror reverses
+    // the arc direction of the bulge.
+    const widthScale = acdbUniformScaleFactor(matrix)
+    this._startWidth *= widthScale
+    this._endWidth *= widthScale
+    if (acdbIsMirroring(matrix)) this._bulge = -this._bulge
     return this
   }
 
