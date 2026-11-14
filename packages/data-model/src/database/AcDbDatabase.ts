@@ -1355,6 +1355,24 @@ export class AcDbDatabase extends AcDbObject {
             entity.ownerId = handle
           }
         }
+        // Keep AcDbLayout.blockTableRecordId in sync. Default Model/Layout1
+        // BTRs often receive low generated handles; later ENTITIES with those
+        // same handles displace the BTR and leave layouts pointing at the
+        // usurping entity (setCurrentLayoutBtrId then throws).
+        for (const layout of this._objects.layout.newIterator()) {
+          if (layout.blockTableRecordId === oldId) {
+            layout.blockTableRecordId = handle
+          }
+        }
+      }
+      // When a layout is reminted, keep BTR.layoutId soft-pointers current so
+      // heal / paper-space binding still recognizes the owning layout.
+      if (object instanceof AcDbLayout) {
+        for (const btr of this._tables.blockTable.newIterator()) {
+          if (btr.layoutId === oldId) {
+            btr.layoutId = handle
+          }
+        }
       }
       // Same for symbol tables / dictionaries: getIdAt requires ownerId ===
       // the container's objectId. A DXF *Model_Space with handle "2" displaces
