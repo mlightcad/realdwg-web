@@ -147,6 +147,16 @@ function isValidExtrusion(
   return !!v && Math.hypot(v.x || 0, v.y || 0, v.z || 0) > 1e-9
 }
 
+/**
+ * LibreDWG returns `(0,0,0)` for VIEWPORT view direction when the entity body
+ * has no camera (R13/R14). A zero vector is not a valid view direction.
+ */
+function isValidViewDirection(
+  v?: { x?: number; y?: number; z?: number } | null
+): v is { x: number; y: number; z: number } {
+  return !!v && Math.hypot(v.x || 0, v.y || 0, v.z || 0) > 1e-9
+}
+
 /** Optional LibreDWG elevation until `@mlightcad/libredwg-web` exposes it. */
 type DwgElevationFields = { elevation?: number }
 
@@ -1534,6 +1544,9 @@ export class AcDbEntityConverter {
     if (viewport.targetPoint) {
       dbViewport.viewTarget.copy(viewport.targetPoint)
     }
+    if (isValidViewDirection(viewport.viewDirection)) {
+      dbViewport.viewDirection = viewport.viewDirection
+    }
     if (viewport.viewTwistAngle != null) {
       dbViewport.viewTwistAngle = viewport.viewTwistAngle
     }
@@ -1543,9 +1556,8 @@ export class AcDbEntityConverter {
       const mview = parseAcadMviewXdata(viewport.xdata)
       if (mview) {
         dbViewport.viewTarget.copy(mview.viewTarget)
-        const dir = mview.viewDirection
-        if (dir.x !== 0 || dir.y !== 0 || dir.z !== 0) {
-          dbViewport.viewDirection = dir
+        if (isValidViewDirection(mview.viewDirection)) {
+          dbViewport.viewDirection = mview.viewDirection
         }
         dbViewport.viewCenter.copy({
           x: mview.viewCenter.x,

@@ -69,7 +69,7 @@ describe('needsAcadMviewViewportFallback', () => {
   })
 })
 
-describe('AcDbEntityConverter VIEWPORT MVIEW fallback', () => {
+describe('AcDbEntityConverter VIEWPORT camera', () => {
   const baseViewport = (overrides: Record<string, unknown> = {}) => ({
     type: 'VIEWPORT',
     handle: 'V1',
@@ -80,6 +80,7 @@ describe('AcDbEntityConverter VIEWPORT MVIEW fallback', () => {
     height: 200,
     displayCenter: { x: 0, y: 0 },
     targetPoint: { x: 0, y: 0, z: 0 },
+    viewDirection: { x: 0, y: 0, z: 0 },
     viewHeight: 0,
     viewTwistAngle: 0,
     xdata: [{ appName: 'ACAD', value: cameraEntries }],
@@ -107,12 +108,27 @@ describe('AcDbEntityConverter VIEWPORT MVIEW fallback', () => {
     const vp = converter.convert(
       baseViewport({
         viewHeight: 120,
-        displayCenter: { x: 10, y: 20 }
+        displayCenter: { x: 10, y: 20 },
+        viewDirection: { x: 1, y: -1, z: 1 }
       }) as never
     ) as AcDbViewport
 
     expect(vp.viewHeight).toBe(120)
     expect(vp.viewCenter).toMatchObject({ x: 10, y: 20 })
     expect(vp.viewTarget).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(vp.viewDirection).toMatchObject({ x: 1, y: -1, z: 1 })
+  })
+
+  it('keeps the default view direction when the body direction is zero', () => {
+    const converter = new AcDbEntityConverter()
+    const vp = converter.convert(
+      baseViewport({
+        viewHeight: 120,
+        viewDirection: { x: 0, y: 0, z: 0 },
+        xdata: undefined
+      }) as never
+    ) as AcDbViewport
+
+    expect(vp.viewDirection).toMatchObject({ x: 0, y: 0, z: 1 })
   })
 })
