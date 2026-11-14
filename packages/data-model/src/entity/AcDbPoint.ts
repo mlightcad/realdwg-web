@@ -14,6 +14,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import {
+  acdbScaleAlongNormal,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /**
  * Represents a point entity in AutoCAD.
@@ -318,6 +322,8 @@ export class AcDbPoint extends AcDbEntity {
    */
   transformBy(matrix: AcGeMatrix3d) {
     this._geo.applyMatrix4(matrix)
+    this._thickness *= acdbScaleAlongNormal(this._normal, matrix)
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
     return this
   }
 

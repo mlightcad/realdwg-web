@@ -34,6 +34,12 @@ import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
+import {
+  acdbIsMirroring,
+  acdbScaleAlongNormal,
+  acdbTransformNormal,
+  acdbUniformScaleFactor
+} from './AcDbTransformHelpers.js'
 
 /** Reused across dxfIn to avoid per-vertex temporaries (parse is sequential). */
 const _dxfInVertex = /*@__PURE__*/ new AcGePoint2d()
@@ -560,24 +566,34 @@ export class AcDbPolyline extends AcDbCurve {
    * transform each vertex in 3D and then write the projected XY values back.
    */
   transformBy(matrix: AcGeMatrix3d) {
-    const flipBulge = matrix.determinant() < 0
-    let elevation = this._elevation
+    const flipBulge = acdbIsMirroring(matrix)
+    const normal = acdbTransformNormal(this._normal, matrix)
+    const wcsToOcs = new AcGeMatrix3d()
+      .setFromExtrusionDirection(normal)
+      .invert()
+    // Vertices are OCS points: map them to WCS, transform, and express them
+    // in the OCS of the transformed normal.
+    const toNewOcs = (x: number, y: number) =>
+      this.ocsPointToWcs(x, y).applyMatrix4(matrix).applyMatrix4(wcsToOcs)
+    let elevation = toNewOcs(0, 0).z
+    const widthScale = acdbUniformScaleFactor(matrix)
 
     this._geo.vertices.forEach(vertex => {
-      const transformedPoint = new AcGePoint3d(
-        vertex.x,
-        vertex.y,
-        this._elevation
-      ).applyMatrix4(matrix)
+      const transformedPoint = toNewOcs(vertex.x, vertex.y)
       vertex.x = transformedPoint.x
       vertex.y = transformedPoint.y
       elevation = transformedPoint.z
       if (flipBulge && vertex.bulge != null) {
         vertex.bulge = -vertex.bulge
       }
+      // Segment widths follow the scale like AutoCAD SCALE.
+      if (vertex.startWidth != null) vertex.startWidth *= widthScale
+      if (vertex.endWidth != null) vertex.endWidth *= widthScale
     })
 
     this._elevation = elevation
+    this._thickness *= acdbScaleAlongNormal(this._normal, matrix)
+    this._normal.copy(normal)
     ;(
       this._geo as AcGePolyline2d<AcDbPolylineVertex> & {
         _boundingBoxNeedsUpdate: boolean

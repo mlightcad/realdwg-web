@@ -1080,48 +1080,40 @@ export class AcDbRasterImage extends AcDbEntity {
 
   protected boundaryPath() {
     const points: AcGePoint3d[] = []
+    // Image-local offsets are rotated about the insertion point, so any
+    // rotation (including the negative angles transformBy produces) works.
+    const cos = Math.cos(this._rotation)
+    const sin = Math.sin(this._rotation)
+    const toWcs = (u: number, v: number) =>
+      new AcGePoint3d(
+        this._position.x + u * cos - v * sin,
+        this._position.y + u * sin + v * cos,
+        this._position.z
+      )
     if (this.isClipped && this._clipBoundary.length > 3) {
       const wcsWidth = this._width
       const wcsHeight = this._height
 
-      // The left-bottom corner of the boundary is mapped to the insertion point of the image.
-      // So calcuate the translation based on those two points.
+      // The left-bottom corner of the boundary is mapped to the insertion
+      // point of the image.
       const ocsBox = new AcGeBox2d()
       ocsBox.setFromPoints(this._clipBoundary)
-      const translation = new AcGePoint2d()
-      translation.setX(this._position.x - ocsBox.min.x * wcsWidth)
-      translation.setY(this._position.y - ocsBox.min.y * wcsHeight)
 
       this._clipBoundary.forEach(point => {
         // Clip boundary vertices are in image pixel coordinates. So we need to convert their coordniates
         // from the image pixel coordinate system to the world coordinate system.
-        const x = point.x * wcsWidth + translation.x
-        const y = point.y * wcsHeight + translation.y
-        points.push(new AcGePoint3d(x, y, this._position.z))
+        points.push(
+          toWcs(
+            (point.x - ocsBox.min.x) * wcsWidth,
+            (point.y - ocsBox.min.y) * wcsHeight
+          )
+        )
       })
     } else {
       points.push(this._position)
-      points.push(this._position.clone().setX(this._position.x + this._width))
-      points.push(
-        this._position
-          .clone()
-          .set(
-            this._position.x + this._width,
-            this._position.y + this._height,
-            this._position.z
-          )
-      )
-      points.push(this._position.clone().setY(this._position.y + this._height))
-
-      if (this._rotation > 0) {
-        _point1.copy(points[1])
-        for (let index = 1; index < 4; index++) {
-          _point2.copy(points[index])
-          _point2.rotateAround(_point1, this._rotation)
-          points[index].setX(_point2.x)
-          points[index].setY(_point2.y)
-        }
-      }
+      points.push(toWcs(this._width, 0))
+      points.push(toWcs(this._width, this._height))
+      points.push(toWcs(0, this._height))
       points.push(points[0])
     }
 
@@ -1351,6 +1343,3 @@ export class AcDbRasterImage extends AcDbEntity {
     }
   }
 }
-
-const _point1 = /*@__PURE__*/ new AcGePoint2d()
-const _point2 = /*@__PURE__*/ new AcGePoint2d()

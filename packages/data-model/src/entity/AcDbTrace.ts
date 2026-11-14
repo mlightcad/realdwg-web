@@ -22,6 +22,10 @@ import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
 import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
+import {
+  acdbScaleAlongNormal,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /**
  * Represents a trace entity in AutoCAD.
@@ -434,6 +438,8 @@ export class AcDbTrace extends AcDbCurve {
   transformBy(matrix: AcGeMatrix3d) {
     this._vertices.forEach(vertex => vertex.applyMatrix4(matrix))
     this._elevation = this._vertices[0].z
+    this._thickness *= acdbScaleAlongNormal(this._normal, matrix)
+    this._normal.copy(acdbTransformNormal(this._normal, matrix))
     return this
   }
 

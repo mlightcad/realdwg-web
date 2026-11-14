@@ -20,6 +20,11 @@ import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
+import {
+  acdbIsMirroring,
+  acdbScaleAlongNormal,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /** Reused across dxfIn to avoid per-entity temporaries (parse is sequential). */
 const _dxfInNormal = /*@__PURE__*/ new AcGeVector3d()
@@ -661,7 +666,26 @@ export class AcDbArc extends AcDbCurve {
    * ```
    */
   transformBy(matrix: AcGeMatrix3d) {
-    this._geo.transform(matrix)
+    const geo = this._geo
+    const center = geo.center.clone().applyMatrix4(matrix)
+    let start = geo.startPoint.clone().applyMatrix4(matrix)
+    let end = geo.endPoint.clone().applyMatrix4(matrix)
+    // The normal follows the plane (a mirror inside the plane keeps it, like
+    // AutoCAD MIRROR), so a mirror reverses the sweep: swap the ends to keep
+    // the arc counter-clockwise about the normal.
+    if (acdbIsMirroring(matrix)) [start, end] = [end, start]
+    const normal = acdbTransformNormal(geo.normal, matrix)
+    this._thickness *= acdbScaleAlongNormal(geo.normal, matrix)
+    // Angles stay measured from the OCS X axis (as stored in DXF), so a
+    // uniform scale or a move leaves them unchanged.
+    this._geo = new AcGeCircArc3d(
+      center,
+      center.distanceTo(start),
+      acgeGetOcsAngle(center, start, normal),
+      acgeGetOcsAngle(center, end, normal),
+      normal,
+      acgeGetOcsReferenceVector(normal)
+    )
     return this
   }
 

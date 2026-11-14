@@ -29,6 +29,7 @@ import {
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
 import { AcDbPolyline } from './AcDbPolyline.js'
+import { acdbIsMirroring, acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 /**
  * Represents the curve/spline-fit type for one 2d polyline.
@@ -370,15 +371,19 @@ export class AcDb2dPolyline extends AcDbCurve {
    * Transforms this legacy 2D polyline by the specified matrix.
    */
   transformBy(matrix: AcGeMatrix3d) {
-    const flipBulge = matrix.determinant() < 0
-    let elevation = this._elevation
+    const flipBulge = acdbIsMirroring(matrix)
+    const normal = acdbTransformNormal(this._normal, matrix)
+    const wcsToOcs = new AcGeMatrix3d()
+      .setFromExtrusionDirection(normal)
+      .invert()
+    // Vertices are OCS points: map them to WCS, transform, and express them
+    // in the OCS of the transformed normal.
+    const toNewOcs = (x: number, y: number) =>
+      this.ocsPointToWcs(x, y).applyMatrix4(matrix).applyMatrix4(wcsToOcs)
+    let elevation = toNewOcs(0, 0).z
 
     this._geo.vertices.forEach(vertex => {
-      const transformedPoint = new AcGePoint3d(
-        vertex.x,
-        vertex.y,
-        this._elevation
-      ).applyMatrix4(matrix)
+      const transformedPoint = toNewOcs(vertex.x, vertex.y)
       vertex.x = transformedPoint.x
       vertex.y = transformedPoint.y
       elevation = transformedPoint.z
@@ -388,10 +393,7 @@ export class AcDb2dPolyline extends AcDbCurve {
     })
 
     this._elevation = elevation
-    this._normal.transformDirection(matrix)
-    if (this._normal.lengthSq() > 0) {
-      this._normal.normalize()
-    }
+    this._normal.copy(normal)
     ;(
       this._geo as AcGePolyline2d<AcGePolyline2dVertex> & {
         _boundingBoxNeedsUpdate: boolean
