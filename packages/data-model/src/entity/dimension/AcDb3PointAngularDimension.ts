@@ -1,13 +1,15 @@
 import {
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePointLike
+  AcGePointLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base/index.js'
 import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
 import {
   acdbAngleOfPoints,
+  acdbAppendLeaderToText,
   acdbArrowScaleFromStyle,
   acdbBuildAnnotationText,
   acdbCreateDimArcEntity,
@@ -17,6 +19,7 @@ import {
   acdbCreateEmptyDimBlock,
   acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
+  acdbMoveArcPointUnderText,
   acdbPointAt,
   acdbResolveAngularSweep,
   acdbResolveArrowBlockName
@@ -204,14 +207,39 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
     ])
   }
 
-  protected override getMeasurementPropertyValue() {
-    if (this.measurement != null) return this.measurement
+  /** @inheritdoc */
+  protected override computeMeasurement() {
     return acdbResolveAngularSweep({
       center: this.centerPoint,
       xLine1: this.xLine1Point,
       xLine2: this.xLine2Point,
       arcPoint: this.arcPoint
     }).sweep
+  }
+
+  /** Distance from the dimension arc to the default text center. */
+  private get textRadialOffset() {
+    const style = this.dimensionStyle
+    const scale = acdbDimFeatureScale(style, this)
+    return (style.dimgap + style.dimtxt) * scale
+  }
+
+  /**
+   * DIMTMOVE 0 moves the dimension arc with the text (and to the side of the
+   * angle the text was dragged to); otherwise only the text moves.
+   *
+   * @inheritdoc
+   */
+  protected override moveTextGrip(offset: AcGeVector3dLike) {
+    super.moveTextGrip(offset)
+    if (this.textMovement === 0) {
+      acdbMoveArcPointUnderText(
+        this.centerPoint,
+        this._arcPoint,
+        this.textPosition,
+        this.textRadialOffset
+      )
+    }
   }
 
   createDimBlock(blockName: string) {
@@ -284,18 +312,27 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
       scale,
       arrow1
     )
-    const aEnd = acdbCreateDimArrowInsert(pEnd, end + Math.PI / 2, scale, arrow2)
+    const aEnd = acdbCreateDimArrowInsert(
+      pEnd,
+      end + Math.PI / 2,
+      scale,
+      arrow2
+    )
     if (aStart) block.appendEntity(aStart)
     if (aEnd) block.appendEntity(aEnd)
 
-    const textPos = acdbPointAt(
-      this.centerPoint,
-      midAngle,
-      radius +
-        style.dimgap * acdbDimFeatureScale(style, this) +
-        style.dimtxt * acdbDimFeatureScale(style, this)
+    const textPos = this.resolveBlockTextPosition(
+      acdbPointAt(this.centerPoint, midAngle, radius + this.textRadialOffset)
     )
-    this.textPosition = textPos
+    if (!this.isUsingDefaultTextPosition && this.textMovement === 1) {
+      acdbAppendLeaderToText(
+        block,
+        acdbPointAt(this.centerPoint, midAngle, radius),
+        textPos,
+        style,
+        this
+      )
+    }
     const measured = this.getMeasurementPropertyValue() ?? sweep
     const contents = acdbBuildAnnotationText(
       measured,

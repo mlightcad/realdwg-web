@@ -1,7 +1,8 @@
 import {
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike
+  AcGePoint3dLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base/index.js'
@@ -16,10 +17,12 @@ import {
   acdbCreateEmptyDimBlock,
   acdbDimFeatureScale,
   acdbEnsureDimArrowBlocks,
+  acdbLeaderLengthToText,
   acdbMidPoint,
   acdbOffsetTextAlongNormal,
   acdbPointAt,
-  acdbResolveArrowBlockName
+  acdbResolveArrowBlockName,
+  acdbRotatePointAroundCenter
 } from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
 
@@ -227,8 +230,50 @@ export class AcDbDiametricDimension extends AcDbDimension {
     this._farChordPoint.applyMatrix4(matrix)
   }
 
-  protected override getMeasurementPropertyValue() {
-    return this.measurement ?? this.chordPoint.distanceTo(this.farChordPoint)
+  /** @inheritdoc */
+  protected override computeMeasurement() {
+    return this.chordPoint.distanceTo(this.farChordPoint)
+  }
+
+  /**
+   * Either chord grip swings the diameter around the circle center; the
+   * opposite point follows so the measured diameter is kept.
+   *
+   * @inheritdoc
+   */
+  protected override moveDefinitionGripAt(
+    index: number,
+    offset: AcGeVector3dLike
+  ) {
+    if (index !== 0 && index !== 1) return
+    const moved = index === 0 ? this._chordPoint : this._farChordPoint
+    const other = index === 0 ? this._farChordPoint : this._chordPoint
+    const center = acdbMidPoint(this._chordPoint, this._farChordPoint)
+    acdbRotatePointAroundCenter(center, moved, moved.clone().add(offset))
+    other.copy(center).multiplyScalar(2).sub(moved)
+  }
+
+  /**
+   * Like AutoCAD, dragging the text swings the diameter so it points at the
+   * text; text outside the circle gets a leader whose length follows the drag
+   * distance.
+   *
+   * @inheritdoc
+   */
+  protected override moveTextGrip(offset: AcGeVector3dLike) {
+    const target = this.textPosition.clone().add(offset)
+    const center = acdbMidPoint(this._chordPoint, this._farChordPoint)
+    const radius = center.distanceTo(this._chordPoint)
+    acdbRotatePointAroundCenter(center, this._chordPoint, target)
+    this._farChordPoint.copy(center).multiplyScalar(2).sub(this._chordPoint)
+    this.leaderLength = acdbLeaderLengthToText(
+      center.distanceTo(target),
+      radius,
+      this.dimensionStyle,
+      this
+    )
+    this.textPosition = target
+    this.isUsingDefaultTextPosition = true
   }
 
   createDimBlock(blockName: string) {
@@ -269,8 +314,7 @@ export class AcDbDiametricDimension extends AcDbDimension {
     let textAnchor = acdbMidPoint(this.chordPoint, this.farChordPoint)
     let textRotation = angle
     if (leaderLen > 0) {
-      const doglegLen =
-        style.dimasz * acdbDimFeatureScale(style, this) * 2
+      const doglegLen = style.dimasz * acdbDimFeatureScale(style, this) * 2
       const doglegEnd = new AcGePoint3d(
         outer.x + (Math.cos(angle) >= 0 ? doglegLen : -doglegLen),
         outer.y,

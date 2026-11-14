@@ -199,11 +199,12 @@ describe('AcDbAlignedDimension', () => {
 
     const grips = dim.subGetGripPoints()
 
-    expect(grips).toHaveLength(4)
+    expect(grips).toHaveLength(5)
     expect(grips[0]).toBe(dim.xLine1Point)
     expect(grips[1]).toBe(dim.xLine2Point)
-    expect(grips[2]).toBe(dim.dimLinePoint)
-    expect(grips[3]).toBe(dim.textPosition)
+    expect(grips[2]).toMatchObject({ x: 0, y: 1, z: 0 })
+    expect(grips[3]).toMatchObject({ x: 5, y: 1, z: 0 })
+    expect(grips[4]).toBe(dim.textPosition)
   })
 
   it('moves definition and text grip points', () => {
@@ -214,7 +215,7 @@ describe('AcDbAlignedDimension', () => {
     )
     dim.textPosition = new AcGePoint3d(3, 4, 0)
 
-    dim.subMoveGripPointsAt([0, 3], new AcGeVector3d(1, 2, 0))
+    dim.subMoveGripPointsAt([0, 4], new AcGeVector3d(1, 2, 0))
 
     expect(dim.xLine1Point).toMatchObject({ x: 1, y: 2, z: 0 })
     expect(dim.textPosition).toMatchObject({ x: 4, y: 6, z: 0 })
