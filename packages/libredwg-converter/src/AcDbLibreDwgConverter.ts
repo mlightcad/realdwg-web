@@ -345,10 +345,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       // AC1014 = R14, AC1015 = AutoCAD 2000.
       return Number(match[1]) >= 1015
     }
-    // ACADVER can be missing from some parse paths. LibreDWG zeros every
-    // plotflag for pre-R2000; real R2000+ drawings always have at least one
-    // plottable layer (typically layer "0"), so an all-zero table means the
-    // field was never authored.
+    // parseLibreDwgFile fills ACADVER from the parsed file, so this guess only
+    // applies when the version is unknown. LibreDWG zeros every plotflag for
+    // pre-R2000, so an all-zero table most likely means the field was never
+    // authored. An R2000+ drawing whose layers are all genuinely no-plot is
+    // misread here.
     const layers = model.tables?.LAYER?.entries ?? []
     if (layers.length === 0) return true
     return layers.some(layer => layer.plotFlag != 0)
