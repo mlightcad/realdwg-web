@@ -236,9 +236,27 @@ export class AcDbDiametricDimension extends AcDbDimension {
   }
 
   /**
-   * Either chord grip swings the diameter around the circle center; the
-   * opposite point follows so the measured diameter is kept.
+   * Stretching both chord grips together translates the diameter. A single
+   * chord grip swings around the circle center; the opposite point follows
+   * so the measured diameter is kept.
    *
+   * @inheritdoc
+   */
+  override subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const moveBothChords = indices.includes(0) && indices.includes(1)
+    if (!moveBothChords) {
+      return super.subMoveGripPointsAt(indices, offset)
+    }
+    this._chordPoint.add(offset)
+    this._farChordPoint.add(offset)
+    if (indices.includes(2)) {
+      // Whole-dimension stretch: keep text relative without swinging.
+      this.textPosition.add(offset)
+    }
+    return this
+  }
+
+  /**
    * @inheritdoc
    */
   protected override moveDefinitionGripAt(

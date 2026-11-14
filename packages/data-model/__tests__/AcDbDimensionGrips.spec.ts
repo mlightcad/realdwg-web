@@ -165,6 +165,12 @@ describe('Rotated (linear) dimension grips', () => {
     expect(dim.xLine1Point).toMatchObject({ x: 0, y: 0 })
   })
 
+  it('applies the dim-line move once when both end grips are stretched', () => {
+    const dim = create(createDb())
+    dim.subMoveGripPointsAt([2, 3], v(0, 2))
+    expect(dim.dimLinePoint.y).toBeCloseTo(8)
+  })
+
   it('DIMTMOVE 0: text drags the dimension line with it', () => {
     const db = createDb(0)
     const dim = create(db)
@@ -348,6 +354,37 @@ describe('Radius, diameter and ordinate grips', () => {
     expect(dim.measurement).toBeCloseTo(10)
   })
 
+  it('diameter: stretching both chord grips translates the diameter', () => {
+    const db = createDb()
+    const dim = addDim(
+      db,
+      new AcDbDiametricDimension(
+        new AcGePoint3d(5, 0, 0),
+        new AcGePoint3d(-5, 0, 0)
+      )
+    )
+    dim.subMoveGripPointsAt([0, 1], v(2, 3))
+    expect(dim.chordPoint).toMatchObject({ x: 7, y: 3 })
+    expect(dim.farChordPoint).toMatchObject({ x: -3, y: 3 })
+    expect(dim.chordPoint.distanceTo(dim.farChordPoint)).toBeCloseTo(10)
+  })
+
+  it('radius: stretching center and chord translates the dimension', () => {
+    const db = createDb()
+    const dim = addDim(
+      db,
+      new AcDbRadialDimension(
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(5, 0, 0),
+        0
+      )
+    )
+    dim.subMoveGripPointsAt([0, 1], v(2, 3))
+    expect(dim.center).toMatchObject({ x: 2, y: 3 })
+    expect(dim.chordPoint).toMatchObject({ x: 7, y: 3 })
+    expect(dim.center.distanceTo(dim.chordPoint)).toBeCloseTo(5)
+  })
+
   it('ordinate: feature grip remeasures, text grip moves the leader end', () => {
     const db = createDb()
     const dim = new AcDbOrdinateDimension(
@@ -357,9 +394,14 @@ describe('Radius, diameter and ordinate grips', () => {
     dim.useXAxis = true
     addDim(db, dim)
     expect(dim.measurement).toBeCloseTo(4)
+    const textBefore = dim.textPosition.clone()
     dim.subMoveGripPointsAt([0], v(3, 0))
     dim.subMoveGripPointsAt([2], v(1, 1))
     expect(dim.leaderEndPoint).toMatchObject({ x: 5, y: 9 })
+    expect(dim.textPosition).toMatchObject({
+      x: textBefore.x + 1,
+      y: textBefore.y + 1
+    })
     dim.recomputeDimBlock()
     expect(dim.measurement).toBeCloseTo(7)
   })

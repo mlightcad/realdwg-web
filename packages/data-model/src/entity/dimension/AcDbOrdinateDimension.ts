@@ -202,12 +202,14 @@ export class AcDbOrdinateDimension extends AcDbDimension {
 
   /**
    * The text sits at the leader end, so dragging it moves the leader end
-   * point (AutoCAD's ordinate text grip).
+   * point (AutoCAD's ordinate text grip). Keep {@link textPosition} in sync
+   * so the text grip tracks the drag before the block is rebuilt.
    *
    * @inheritdoc
    */
   protected override moveTextGrip(offset: AcGeVector3dLike) {
     this._leaderEndPoint.add(offset)
+    this.textPosition.add(offset)
     this.isUsingDefaultTextPosition = true
   }
 

@@ -372,6 +372,26 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   /**
+   * Both dimension-line end grips control the same line. When a stretch
+   * selects both, apply the normal move once so the line does not jump
+   * twice as far as the drag.
+   *
+   * @inheritdoc
+   */
+  override subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    let sawDimLineGrip = false
+    const filtered: number[] = []
+    for (const index of indices) {
+      if (index === 2 || index === 3) {
+        if (sawDimLineGrip) continue
+        sawDimLineGrip = true
+      }
+      filtered.push(index)
+    }
+    return super.subMoveGripPointsAt(filtered, offset)
+  }
+
+  /**
    * - Extension line origin grips move the measured point. A rotated
    *   dimension keeps its dimension line; an aligned dimension keeps the
    *   dimension line's distance from the measured points.

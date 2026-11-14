@@ -345,9 +345,27 @@ export class AcDbRadialDimension extends AcDbDimension {
   }
 
   /**
-   * The center grip moves the center; the chord point grip slides around the
-   * circle so the measured radius is kept.
+   * Stretching center and chord together translates the radius dimension. A
+   * single chord grip slides around the circle; the center grip alone moves
+   * the center (changing the measured radius).
    *
+   * @inheritdoc
+   */
+  override subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const moveBoth = indices.includes(0) && indices.includes(1)
+    if (!moveBoth) {
+      return super.subMoveGripPointsAt(indices, offset)
+    }
+    this._center.add(offset)
+    this._chordPoint.add(offset)
+    if (indices.includes(2)) {
+      // Whole-dimension stretch: keep text relative without swinging.
+      this.textPosition.add(offset)
+    }
+    return this
+  }
+
+  /**
    * @inheritdoc
    */
   protected override moveDefinitionGripAt(
