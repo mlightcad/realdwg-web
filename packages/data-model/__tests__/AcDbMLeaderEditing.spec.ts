@@ -93,6 +93,22 @@ describe('AcDbMLeader style application', () => {
     expect(mleader.landingGap).toBe(3)
     expect(mleader.textStyleId).toBe(style.textStyleId)
     expect(mleader.resolveAnnotativePresentation().textHeight).toBe(8)
+    // Scaled dogleg must win over the unscaled style length when drawing.
+    mleader.addLeader({
+      lastLeaderLinePoint: { x: 0, y: 0, z: 0 },
+      lastLeaderLinePointSet: true,
+      doglegVector: { x: 1, y: 0, z: 0 },
+      doglegVectorSet: true,
+      leaderLines: [{ vertices: [{ x: -10, y: 0, z: 0 }] }]
+    })
+    const renderer = createRenderer()
+    mleader.subWorldDraw(renderer as never)
+    expect(renderer.lines).toHaveBeenCalledWith(
+      expect.arrayContaining([
+        expect.objectContaining({ x: 0, y: 0 }),
+        expect.objectContaining({ x: 12, y: 0 })
+      ])
+    )
   })
 
   it('scales annotative styles by the annotation scale instead', () => {
@@ -108,6 +124,49 @@ describe('AcDbMLeader style application', () => {
 
     expect(mleader.textHeight).toBe(125)
     expect(mleader.annotative).toBe(true)
+  })
+
+  it('disables the landing when the style has enableLanding off', () => {
+    const db = createDb()
+    const style = standardStyle(db)
+    style.enableLanding = false
+    style.enableDogleg = true
+    style.doglegLength = 8
+
+    const mleader = new AcDbMLeader()
+    db.tables.blockTable.modelSpace.appendEntity(mleader)
+    mleader.applyMLeaderStyle(style)
+    mleader.addLeader({
+      lastLeaderLinePoint: { x: 0, y: 0, z: 0 },
+      lastLeaderLinePointSet: true,
+      doglegVector: { x: 1, y: 0, z: 0 },
+      doglegVectorSet: true,
+      doglegLength: 8,
+      leaderLines: [{ vertices: [{ x: -10, y: 0, z: 0 }] }]
+    })
+
+    expect(mleader.doglegEnabled).toBe(false)
+    const renderer = createRenderer()
+    mleader.subWorldDraw(renderer as never)
+    // Leader line still draws tip→connection; no landing segment past it.
+    const segments = renderer.lines.mock.calls.map(([points]) => points)
+    expect(segments).toEqual(
+      expect.arrayContaining([
+        [
+          expect.objectContaining({ x: -10, y: 0 }),
+          expect.objectContaining({ x: 0, y: 0 })
+        ]
+      ])
+    )
+    expect(
+      segments.some(
+        points =>
+          points.length === 2 &&
+          points[0].x === 0 &&
+          points[0].y === 0 &&
+          points[1].x === 8
+      )
+    ).toBe(false)
   })
 })
 
@@ -252,11 +311,18 @@ describe('AcDbMLeader grips', () => {
     })
 
     const leader = mleader.leaders[0]
-    expect(mleader.textLocation!.x).toBeCloseTo(text.x - 60)
+    const draggedLeftEdge = text.x - 60
+    // Attachment moves to the opposite glyph edge so the text stays put;
+    // only flipping the attachment point in place would jump glyphs left.
     expect(mleader.textAttachmentPoint).toBe(AcGiMTextAttachmentPoint.TopRight)
+    expect(mleader.textLocation!.x).toBeGreaterThan(draggedLeftEdge + 1)
+    expect(mleader.contentBasePosition!.x).toBeCloseTo(
+      mleader.textLocation!.x + gap
+    )
     expect(leader.doglegVector!.x).toBeCloseTo(-1)
-    expect(mleader.contentBasePosition!.x).toBeCloseTo(text.x - 60 + gap)
-    expect(leader.lastLeaderLinePoint!.x).toBeCloseTo(text.x - 60 + gap + 8)
+    expect(leader.lastLeaderLinePoint!.x).toBeCloseTo(
+      mleader.contentBasePosition!.x + 8
+    )
     expect(leader.lastLeaderLinePoint!.y).toBeCloseTo(10)
     expect(leader.directionType).toBe(AcDbMLeaderDirectionType.Right)
   })

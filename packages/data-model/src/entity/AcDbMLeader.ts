@@ -159,30 +159,6 @@ interface AcDbMLeaderGrip {
 }
 
 /**
- * Swaps a left MText attachment for the matching right one and vice versa.
- */
-function acdbMirrorMTextAttachmentSide(
-  attachment: AcGiMTextAttachmentPoint
-): AcGiMTextAttachmentPoint {
-  switch (attachment) {
-    case AcGiMTextAttachmentPoint.TopLeft:
-      return AcGiMTextAttachmentPoint.TopRight
-    case AcGiMTextAttachmentPoint.TopRight:
-      return AcGiMTextAttachmentPoint.TopLeft
-    case AcGiMTextAttachmentPoint.MiddleLeft:
-      return AcGiMTextAttachmentPoint.MiddleRight
-    case AcGiMTextAttachmentPoint.MiddleRight:
-      return AcGiMTextAttachmentPoint.MiddleLeft
-    case AcGiMTextAttachmentPoint.BottomLeft:
-      return AcGiMTextAttachmentPoint.BottomRight
-    case AcGiMTextAttachmentPoint.BottomRight:
-      return AcGiMTextAttachmentPoint.BottomLeft
-    default:
-      return attachment
-  }
-}
-
-/**
  * Vertical placement of MLeader text for an AutoCAD left / right text
  * attachment type (MLEADERSTYLE "Left attachment" / "Right attachment").
  *
@@ -1563,11 +1539,17 @@ export class AcDbMLeader extends AcDbEntity {
         ? style.scale
         : 1
     if (style.objectId) this.mleaderStyleId = style.objectId
-    // No property overrides: everything not stored below follows the style.
-    this.propertyOverrideFlag = 0
+    // Stamp scaled landing size/enable onto the entity and mark those bits as
+    // overrides so resolvers use them. With flag 0, getResolvedDoglegLength
+    // would prefer the unscaled style length, and getResolvedDoglegEnabled
+    // would follow style.doglegEnabled (enableDogleg only, ignoring
+    // enableLanding). Everything else not stored below still follows the style.
     this.leaderLineType = style.leaderLineType as AcDbMLeaderLineType
     this.doglegEnabled = style.enableLanding && style.enableDogleg
     this.doglegLength = style.doglegLength * scale
+    this.propertyOverrideFlag =
+      AcDbMLeaderPropertyOverrideFlag.DoglegEnabled |
+      AcDbMLeaderPropertyOverrideFlag.DoglegLength
     this.landingGap = style.landingGap * scale
     this.arrowheadSize = style.arrowSize * scale
     this.textHeight = style.textHeight * scale
@@ -4002,36 +3984,66 @@ export class AcDbMLeader extends AcDbEntity {
     // side without crossing the other, so keep the current layout.
     if (directions.size > 1) return
 
-    const anchor = this.getContentGripPoint()
-    if (!anchor) return
     this._leaders.forEach(leader => {
       const connection = this.getLeaderConnectionPoint(leader)
       const unit = this.getLandingDirection(leader)
       if (!connection || !unit) return
-      const previous = this.getVertexBeforeConnection(leader, connection)
-      if (!previous) return
-      const along = unit.dot(
-        new AcGeVector3d().subVectors(connection, previous)
-      )
-      if (along >= 0) return
+      if (!this.isLandingApproachedFromBehind(leader, connection, unit)) {
+        return
+      }
 
       const dogleg = this.getDoglegPoints(leader)
       const end = dogleg ? dogleg[1].clone() : connection.clone()
       const length = dogleg ? dogleg[0].distanceTo(dogleg[1]) : 0
-      const toAnchor = unit.dot(new AcGeVector3d().subVectors(anchor, end))
-      // Mirror the landing end about the content location along the landing.
-      // For side-attached MText the location is the attached edge, so the
-      // mirrored end sits exactly one landing gap past it on the other side.
-      const newEnd = end.clone().add(unit.clone().multiplyScalar(2 * toAnchor))
-      if (
-        this.getTextAttachmentSide() !== 0 &&
-        Math.abs(unit.x) >= Math.abs(unit.y)
-      ) {
-        // Keep the text where it is but attach it by its other side.
-        this.textAttachmentPoint = acdbMirrorMTextAttachmentSide(
-          this.textAttachmentPoint
+      const style = this.getMLeaderStyle()
+      const gap = this.landingGap ?? style?.landingGap ?? 0
+      const side = this.getTextAttachmentSide()
+      const horizontal = Math.abs(unit.x) >= Math.abs(unit.y)
+      let newEnd: AcGePoint3d
+
+      if (side !== 0 && horizontal && this._mtextContent) {
+        // Move the attachment to the opposite glyph edge so the text stays
+        // put, then place the landing one gap past that edge. Only flipping
+        // textAttachmentPoint in place would reinterpret the same world
+        // point as the other edge and jump the glyphs by the text width.
+        const bounds = this.getMTextBounds()
+        const newSide = -side
+        const type =
+          newSide > 0
+            ? (this.textLeftAttachmentType ?? style?.textLeftAttachmentType)
+            : (this.textRightAttachmentType ?? style?.textRightAttachmentType)
+        const height = this.getBaseTextHeight()
+        const { row, offsetY } = acdbMLeaderTextVerticalPlacement(
+          type ?? 1,
+          height,
+          gap
         )
+        if (bounds && bounds.length > 0) {
+          const minX = Math.min(...bounds.map(corner => corner.x))
+          const maxX = Math.max(...bounds.map(corner => corner.x))
+          this._mtextContent.anchorPoint.x = newSide > 0 ? minX : maxX
+        }
+        this._mtextContent.anchorPoint.y = end.y + offsetY
+        if (this.textAnchor) {
+          this.textAnchor.copy(this._mtextContent.anchorPoint)
+        }
+        this.textAttachmentPoint = (row +
+          (newSide > 0 ? 0 : 2)) as AcGiMTextAttachmentPoint
+        // Landing end sits one gap past the new attachment, outward along
+        // the old unit (the approach side after the dogleg is negated).
+        newEnd = this._mtextContent.anchorPoint
+          .clone()
+          .add(unit.clone().multiplyScalar(gap))
+        newEnd.y = end.y
+        newEnd.z = end.z
+      } else {
+        const anchor = this.getContentGripPoint()
+        if (!anchor) return
+        const toAnchor = unit.dot(new AcGeVector3d().subVectors(anchor, end))
+        // Mirror the landing end about the content location along the landing.
+        newEnd = end.clone().add(unit.clone().multiplyScalar(2 * toAnchor))
       }
+
       const newConnection = newEnd
         .clone()
         .add(unit.clone().multiplyScalar(length))
@@ -4048,18 +4060,25 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
-   * Last leader vertex before the landing of a branch.
+   * True when at least one leader line of the branch approaches the landing
+   * from the content side (content has crossed that tip).
    */
-  private getVertexBeforeConnection(
+  private isLandingApproachedFromBehind(
     leader: AcDbMLeaderLeader,
-    connection: AcGePoint3d
+    connection: AcGePoint3d,
+    unit: AcGeVector3d
   ) {
     for (const line of leader.leaderLines) {
       for (let i = line.vertices.length - 1; i >= 0; i--) {
-        if (!line.vertices[i].equals(connection)) return line.vertices[i]
+        if (line.vertices[i].equals(connection)) continue
+        const along = unit.dot(
+          new AcGeVector3d().subVectors(connection, line.vertices[i])
+        )
+        if (along < 0) return true
+        break
       }
     }
-    return undefined
+    return false
   }
 
   /**
@@ -4713,7 +4732,12 @@ export class AcDbMLeader extends AcDbEntity {
    * @returns Effective dogleg-enabled state.
    */
   private getResolvedDoglegEnabled() {
-    const styleEnabled = this.getMLeaderStyle()?.doglegEnabled
+    const style = this.getMLeaderStyle()
+    // Style landing drawing requires both enableLanding and enableDogleg;
+    // style.doglegEnabled is only an alias for enableDogleg.
+    const styleEnabled = style
+      ? style.enableLanding && style.enableDogleg
+      : undefined
     return this.getResolvedStyleDrivenValue(
       this.doglegEnabled,
       styleEnabled,
