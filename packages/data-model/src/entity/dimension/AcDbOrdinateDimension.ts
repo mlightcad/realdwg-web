@@ -1,7 +1,8 @@
 import {
   AcGeMatrix3d,
   AcGePoint3d,
-  AcGePoint3dLike
+  AcGePoint3dLike,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../../base/index.js'
@@ -199,8 +200,21 @@ export class AcDbOrdinateDimension extends AcDbDimension {
     return 0
   }
 
-  protected override getMeasurementPropertyValue() {
-    if (this.measurement != null) return this.measurement
+  /**
+   * The text sits at the leader end, so dragging it moves the leader end
+   * point (AutoCAD's ordinate text grip). Keep {@link textPosition} in sync
+   * so the text grip tracks the drag before the block is rebuilt.
+   *
+   * @inheritdoc
+   */
+  protected override moveTextGrip(offset: AcGeVector3dLike) {
+    this._leaderEndPoint.add(offset)
+    this.textPosition.add(offset)
+    this.isUsingDefaultTextPosition = true
+  }
+
+  /** @inheritdoc */
+  protected override computeMeasurement() {
     return this.useXAxis
       ? this.definingPoint.x - this.origin.x
       : this.definingPoint.y - this.origin.y

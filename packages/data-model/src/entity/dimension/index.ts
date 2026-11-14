@@ -4,7 +4,9 @@ export { AcDbArcDimension } from './AcDbArcDimension.js'
 export { AcDbDiametricDimension } from './AcDbDiametricDimension.js'
 export {
   CLOSED_FILLED_ARROW_BLOCK,
+  acdbAllocateDimBlockName,
   acdbDimFeatureScale,
+  acdbDisposeDimBlock,
   acdbEnsureDimArrowBlocks,
   acdbResolveArrowBlockName
 } from './AcDbDimBlockBuilder.js'

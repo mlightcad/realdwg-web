@@ -19,8 +19,10 @@ import {
   acdbCreateEmptyDimBlock,
   acdbEnsureDimArrowBlocks,
   acdbExtendLineByDimDle,
+  acdbLeaderEndBeforeText,
   acdbMidPoint,
   acdbOffsetTextAlongNormal,
+  acdbReadableTextAngle,
   acdbResolveArrowBlockName
 } from './AcDbDimBlockBuilder.js'
 import { AcDbDimension } from './AcDbDimension.js'
@@ -311,27 +313,164 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   /**
+   * Angle (radians) of the dimension line direction.
+   *
+   * An aligned dimension measures along the chord between the extension line
+   * origins; {@link AcDbRotatedDimension} overrides this with its fixed
+   * {@link rotation}.
+   */
+  protected get dimLineAngle(): number {
+    const dx = this._xLine2Point.x - this._xLine1Point.x
+    const dy = this._xLine2Point.y - this._xLine1Point.y
+    if (Math.abs(dx) < 1e-12 && Math.abs(dy) < 1e-12) return this._rotation
+    return Math.atan2(dy, dx)
+  }
+
+  /**
+   * Whether grip edits keep the dimension line direction. `false` for aligned
+   * dimensions (the line follows the extension line origins), `true` for
+   * rotated (linear) dimensions.
+   */
+  protected get hasFixedDimLineAngle(): boolean {
+    return false
+  }
+
+  /** Unit vector along the dimension line. */
+  private dimLineDirection() {
+    const angle = this.dimLineAngle
+    return new AcGeVector3d(Math.cos(angle), Math.sin(angle), 0)
+  }
+
+  /** Unit normal of the dimension line (direction of the extension lines). */
+  private dimLineNormal() {
+    const angle = this.dimLineAngle
+    return new AcGeVector3d(-Math.sin(angle), Math.cos(angle), 0)
+  }
+
+  /** Projects `point` onto the dimension line along the extension direction. */
+  private projectOntoDimLine(point: AcGePoint3d) {
+    const normal = this.dimLineNormal()
+    const distance = new AcGeVector3d()
+      .subVectors(this._dimLinePoint, point)
+      .dot(normal)
+    return point.clone().add(normal.multiplyScalar(distance))
+  }
+
+  /**
+   * Grips match AutoCAD: both extension line origins, both dimension line
+   * ends (where the arrows sit), then the text grip added by the base class.
+   *
    * @inheritdoc
    */
   protected override collectDimensionDefinitionGripPoints() {
-    return [this.xLine1Point, this.xLine2Point, this.dimLinePoint]
+    return [
+      this.xLine1Point,
+      this.xLine2Point,
+      this.projectOntoDimLine(this._xLine1Point),
+      this.projectOntoDimLine(this._xLine2Point)
+    ]
   }
 
-  /** @inheritdoc */
+  /**
+   * Both dimension-line end grips control the same line. When a stretch
+   * selects both, apply the normal move once so the line does not jump
+   * twice as far as the drag.
+   *
+   * @inheritdoc
+   */
   override subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
-    super.subMoveGripPointsAt(indices, offset)
-    this.calculateRotation()
-    return this
+    let sawDimLineGrip = false
+    const filtered: number[] = []
+    for (const index of indices) {
+      if (index === 2 || index === 3) {
+        if (sawDimLineGrip) continue
+        sawDimLineGrip = true
+      }
+      filtered.push(index)
+    }
+    return super.subMoveGripPointsAt(filtered, offset)
+  }
+
+  /**
+   * - Extension line origin grips move the measured point. A rotated
+   *   dimension keeps its dimension line; an aligned dimension keeps the
+   *   dimension line's distance from the measured points.
+   * - Dimension line grips only move the line along its normal.
+   *
+   * @inheritdoc
+   */
+  protected override moveDefinitionGripAt(
+    index: number,
+    offset: AcGeVector3dLike
+  ) {
+    if (index === 0 || index === 1) {
+      const lineOffset = new AcGeVector3d()
+        .subVectors(this._dimLinePoint, this._xLine1Point)
+        .dot(this.dimLineNormal())
+      const moved = index === 0 ? this._xLine1Point : this._xLine2Point
+      moved.add(offset)
+      if (!this.hasFixedDimLineAngle) {
+        this.calculateRotation()
+        this._dimLinePoint.copy(
+          this._xLine1Point
+            .clone()
+            .add(this.dimLineNormal().multiplyScalar(lineOffset))
+        )
+      }
+    } else if (index === 2 || index === 3) {
+      this.moveDimLineAlongNormal(offset)
+    }
+    this.normalizeDimLinePoint()
+  }
+
+  /**
+   * DIMTMOVE 0 moves the dimension line with the text; otherwise only the
+   * text moves.
+   *
+   * @inheritdoc
+   */
+  protected override moveTextGrip(offset: AcGeVector3dLike) {
+    if (this.textMovement === 0) {
+      this.moveDimLineAlongNormal(offset)
+      this.normalizeDimLinePoint()
+    }
+    super.moveTextGrip(offset)
+  }
+
+  private moveDimLineAlongNormal(offset: AcGeVector3dLike) {
+    const normal = this.dimLineNormal()
+    const distance = normal.dot(new AcGeVector3d().copy(offset))
+    this._dimLinePoint.add(normal.multiplyScalar(distance))
+  }
+
+  /**
+   * Keeps the dimension line point where AutoCAD stores it (DXF group 10):
+   * on the dimension line, at the second extension line.
+   */
+  private normalizeDimLinePoint() {
+    this._dimLinePoint.copy(this.projectOntoDimLine(this._xLine2Point))
   }
 
   /**
    * @inheritdoc
    */
   protected override subTransformBy(matrix: AcGeMatrix3d) {
+    const direction = new AcGeVector3d(
+      Math.cos(this._rotation),
+      Math.sin(this._rotation),
+      0
+    ).transformDirection(matrix)
     this._dimLinePoint.applyMatrix4(matrix)
     this._xLine1Point.applyMatrix4(matrix)
     this._xLine2Point.applyMatrix4(matrix)
-    this.calculateRotation()
+    if (direction.lengthSq() > 0) {
+      this._rotation = Math.atan2(direction.y, direction.x)
+    }
+  }
+
+  /** @inheritdoc */
+  protected override computeMeasurement() {
+    return this.xLine1Point.distanceTo(this.xLine2Point)
   }
 
   /**
@@ -376,7 +515,9 @@ export class AcDbAlignedDimension extends AcDbDimension {
         )
       }
       if (style.dimsd2 === 0) {
-        block.appendEntity(acdbCreateDimLineEntity(mid, dimLine.endPoint, style))
+        block.appendEntity(
+          acdbCreateDimLineEntity(mid, dimLine.endPoint, style)
+        )
       }
     }
 
@@ -408,32 +549,28 @@ export class AcDbAlignedDimension extends AcDbDimension {
     const arrow2 = acdbResolveArrowBlockName(
       style.dimsah === 0 ? style.dimblk : style.dimblk2
     )
+    const angle = this.dimLineAngle
     if (style.dimtsz <= 0) {
       const a1 = acdbCreateDimArrowInsert(
         arrowStart,
-        this.rotation + Math.PI,
+        angle + Math.PI,
         scale,
         arrow1
       )
-      const a2 = acdbCreateDimArrowInsert(
-        arrowEnd,
-        this.rotation,
-        scale,
-        arrow2
-      )
+      const a2 = acdbCreateDimArrowInsert(arrowEnd, angle, scale, arrow2)
       if (a1) block.appendEntity(a1)
       if (a2) block.appendEntity(a2)
     } else {
       // Architectural tick: short oblique strokes at each end
       const tick = acdbCreateDimArrowInsert(
         arrowStart,
-        this.rotation + Math.PI / 4,
+        angle + Math.PI / 4,
         scale,
         '_ARCHTICK'
       )
       const tick2 = acdbCreateDimArrowInsert(
         arrowEnd,
-        this.rotation + Math.PI / 4,
+        angle + Math.PI / 4,
         scale,
         '_ARCHTICK'
       )
@@ -441,31 +578,76 @@ export class AcDbAlignedDimension extends AcDbDimension {
       if (tick2) block.appendEntity(tick2)
     }
 
-    const measured =
-      this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
+    const measured = this.measurement ?? this.computeMeasurement()
     const contents = acdbBuildAnnotationText(
       measured,
       this.dimensionText,
       style,
       'linear'
     )
-    const textPos = acdbOffsetTextAlongNormal(
-      acdbMidPoint(dimLine.startPoint, dimLine.endPoint),
-      this.rotation,
-      style,
-      this
+    const textAngle = acdbReadableTextAngle(angle)
+    const dimLineMid = acdbMidPoint(arrowStart, arrowEnd)
+    const textPos = this.resolveBlockTextPosition(
+      acdbOffsetTextAlongNormal(dimLineMid, textAngle, style, this)
     )
-    this.textPosition = textPos
+    if (!this.isUsingDefaultTextPosition) {
+      this.appendUserTextGeometry(block, arrowStart, arrowEnd, textPos)
+    }
     const mtext = acdbCreateDimMText({
       contents,
       position: textPos,
-      rotation: this.rotation,
+      rotation: textAngle,
       style,
       entity: this
     })
     if (mtext) block.appendEntity(mtext)
 
     return block
+  }
+
+  /**
+   * Adds the geometry AutoCAD draws for text moved off its home position:
+   * with DIMTMOVE 0 the dimension line extends under text placed beyond the
+   * extension lines; with DIMTMOVE 1 a leader joins the dimension line to
+   * text moved away from it.
+   */
+  private appendUserTextGeometry(
+    block: ReturnType<typeof acdbCreateEmptyDimBlock>,
+    arrowStart: AcGePoint3d,
+    arrowEnd: AcGePoint3d,
+    textPos: AcGePoint3d
+  ) {
+    const style = this.dimensionStyle
+    const direction = this.dimLineDirection()
+    const length = arrowStart.distanceTo(arrowEnd)
+    const along = new AcGeVector3d()
+      .subVectors(textPos, arrowStart)
+      .dot(direction)
+    if (this.textMovement === 0) {
+      if (along < 0 || along > length) {
+        const from = along < 0 ? arrowStart : arrowEnd
+        const to = arrowStart
+          .clone()
+          .add(direction.clone().multiplyScalar(along))
+        block.appendEntity(acdbCreateDimLineEntity(from, to, style))
+      }
+      return
+    }
+    if (this.textMovement === 1) {
+      const mid = acdbMidPoint(arrowStart, arrowEnd)
+      const distance = Math.abs(
+        new AcGeVector3d().subVectors(textPos, mid).dot(this.dimLineNormal())
+      )
+      if (distance > acdbArrowScaleFromStyle(style, this)) {
+        block.appendEntity(
+          acdbCreateDimLineEntity(
+            mid,
+            acdbLeaderEndBeforeText(mid, textPos, style, this),
+            style
+          )
+        )
+      }
+    }
   }
 
   /**
@@ -505,7 +687,7 @@ export class AcDbAlignedDimension extends AcDbDimension {
   }
 
   private createExtensionLine(point: AcGePoint3d) {
-    const angle = this.rotation + Math.PI / 2
+    const angle = this.dimLineAngle + Math.PI / 2
     const anotherPoint = this.findPointOnLine2(point, angle, 100)
     return new AcGeLine3d(point, { ...anotherPoint, z: point.z })
   }
@@ -553,10 +735,6 @@ export class AcDbAlignedDimension extends AcDbDimension {
    */
   protected get dxfSubclassMarker() {
     return 'AcDbAlignedDimension'
-  }
-
-  protected override getMeasurementPropertyValue() {
-    return this.measurement ?? this.xLine1Point.distanceTo(this.xLine2Point)
   }
 
   /**
