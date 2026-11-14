@@ -132,6 +132,11 @@ import type {
   DwgXlineEntity
 } from '@mlightcad/libredwg-web'
 
+import {
+  needsAcadMviewViewportFallback,
+  parseAcadMviewXdata
+} from './parseAcadMviewXdata.js'
+
 /**
  * LibreDWG often returns `(0,0,0)` for the default extrusion. Assigning that
  * as a normal breaks OCS→WCS mapping; keep the identity Z-axis instead.
@@ -1531,6 +1536,25 @@ export class AcDbEntityConverter {
     }
     if (viewport.viewTwistAngle != null) {
       dbViewport.viewTwistAngle = viewport.viewTwistAngle
+    }
+
+    // R13/R14 keep the model camera in ACAD/MVIEW xdata only.
+    if (needsAcadMviewViewportFallback(viewport.viewHeight)) {
+      const mview = parseAcadMviewXdata(viewport.xdata)
+      if (mview) {
+        dbViewport.viewTarget.copy(mview.viewTarget)
+        const dir = mview.viewDirection
+        if (dir.x !== 0 || dir.y !== 0 || dir.z !== 0) {
+          dbViewport.viewDirection = dir
+        }
+        dbViewport.viewCenter.copy({
+          x: mview.viewCenter.x,
+          y: mview.viewCenter.y,
+          z: 0
+        })
+        dbViewport.viewHeight = mview.viewHeight
+        dbViewport.viewTwistAngle = mview.twistAngle
+      }
     }
 
     // LibreDWG sometimes leaves the default paper-space viewport's paper
