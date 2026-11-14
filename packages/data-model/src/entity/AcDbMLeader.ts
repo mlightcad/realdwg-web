@@ -7,6 +7,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
+  AcGeSpline3d,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -53,6 +54,10 @@ import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
+import {
+  acdbCollectMTextOrientedCorners,
+  acdbResolveMTextLayoutMetrics
+} from './AcDbTextExtentsHelpers.js'
 
 /**
  * Defines the type of leader line used by a multileader.
@@ -106,13 +111,116 @@ export enum AcDbMLeaderDirectionType {
   Bottom = 4
 }
 
-const MLEADER_OVERRIDE_LEADER_LINE_TYPE = 1 << 0
-const MLEADER_OVERRIDE_LEADER_LINE_COLOR = 1 << 1
-const MLEADER_OVERRIDE_LEADER_LINE_TYPE_ID = 1 << 2
-const MLEADER_OVERRIDE_LEADER_LINE_WEIGHT = 1 << 3
-const MLEADER_OVERRIDE_DOGLEG_ENABLED = 1 << 6
-const MLEADER_OVERRIDE_DOGLEG_LENGTH = 1 << 7
-const MLEADER_OVERRIDE_TEXT_COLOR = 1 << 15
+/**
+ * Bits of {@link AcDbMLeader.propertyOverrideFlag} (DXF group 90). A set bit
+ * means the entity value wins over its multileader style.
+ */
+export enum AcDbMLeaderPropertyOverrideFlag {
+  /** Leader line type (straight / spline / none). */
+  LeaderLineType = 1 << 0,
+  /** Leader line color. */
+  LeaderLineColor = 1 << 1,
+  /** Leader linetype. */
+  LeaderLineTypeId = 1 << 2,
+  /** Leader lineweight. */
+  LeaderLineWeight = 1 << 3,
+  /** Landing (dogleg) on/off. */
+  DoglegEnabled = 1 << 6,
+  /** Landing (dogleg) length. */
+  DoglegLength = 1 << 7,
+  /** Text color. */
+  TextColor = 1 << 15
+}
+
+const MLEADER_OVERRIDE_LEADER_LINE_TYPE =
+  AcDbMLeaderPropertyOverrideFlag.LeaderLineType
+const MLEADER_OVERRIDE_LEADER_LINE_COLOR =
+  AcDbMLeaderPropertyOverrideFlag.LeaderLineColor
+const MLEADER_OVERRIDE_LEADER_LINE_TYPE_ID =
+  AcDbMLeaderPropertyOverrideFlag.LeaderLineTypeId
+const MLEADER_OVERRIDE_LEADER_LINE_WEIGHT =
+  AcDbMLeaderPropertyOverrideFlag.LeaderLineWeight
+const MLEADER_OVERRIDE_DOGLEG_ENABLED =
+  AcDbMLeaderPropertyOverrideFlag.DoglegEnabled
+const MLEADER_OVERRIDE_DOGLEG_LENGTH =
+  AcDbMLeaderPropertyOverrideFlag.DoglegLength
+const MLEADER_OVERRIDE_TEXT_COLOR = AcDbMLeaderPropertyOverrideFlag.TextColor
+
+/** Kind of an AutoCAD-style multileader grip. */
+type AcDbMLeaderGripKind = 'vertex' | 'landing' | 'doglegEnd' | 'content'
+
+/** One grip exposed by {@link AcDbMLeader.subGetGripPoints}. */
+interface AcDbMLeaderGrip {
+  kind: AcDbMLeaderGripKind
+  point: AcGePoint3d
+  leaderIndex: number
+  lineIndex: number
+  vertexIndex: number
+}
+
+/**
+ * Swaps a left MText attachment for the matching right one and vice versa.
+ */
+function acdbMirrorMTextAttachmentSide(
+  attachment: AcGiMTextAttachmentPoint
+): AcGiMTextAttachmentPoint {
+  switch (attachment) {
+    case AcGiMTextAttachmentPoint.TopLeft:
+      return AcGiMTextAttachmentPoint.TopRight
+    case AcGiMTextAttachmentPoint.TopRight:
+      return AcGiMTextAttachmentPoint.TopLeft
+    case AcGiMTextAttachmentPoint.MiddleLeft:
+      return AcGiMTextAttachmentPoint.MiddleRight
+    case AcGiMTextAttachmentPoint.MiddleRight:
+      return AcGiMTextAttachmentPoint.MiddleLeft
+    case AcGiMTextAttachmentPoint.BottomLeft:
+      return AcGiMTextAttachmentPoint.BottomRight
+    case AcGiMTextAttachmentPoint.BottomRight:
+      return AcGiMTextAttachmentPoint.BottomLeft
+    default:
+      return attachment
+  }
+}
+
+/**
+ * Vertical placement of MLeader text for an AutoCAD left / right text
+ * attachment type (MLEADERSTYLE "Left attachment" / "Right attachment").
+ *
+ * @param type Attachment type: 0 top of top line, 1 middle of top line,
+ *   2 middle of text, 3 middle of bottom line, 4 bottom of bottom line,
+ *   5 bottom line underlined, 6 bottom of top line underlined, 7 bottom of
+ *   top line, 8 bottom of top line with all text underlined.
+ * @param height Text height.
+ * @param gap Landing gap.
+ * @returns Left-side MText attachment row and the Y offset of the text
+ *   location from the landing.
+ */
+function acdbMLeaderTextVerticalPlacement(
+  type: number,
+  height: number,
+  gap: number
+): { row: AcGiMTextAttachmentPoint; offsetY: number } {
+  switch (type) {
+    case 0:
+      return { row: AcGiMTextAttachmentPoint.TopLeft, offsetY: 0 }
+    case 2:
+      return { row: AcGiMTextAttachmentPoint.MiddleLeft, offsetY: 0 }
+    case 3:
+      return { row: AcGiMTextAttachmentPoint.BottomLeft, offsetY: -height / 2 }
+    case 4:
+      return { row: AcGiMTextAttachmentPoint.BottomLeft, offsetY: 0 }
+    case 5:
+      return { row: AcGiMTextAttachmentPoint.BottomLeft, offsetY: gap }
+    case 6:
+    case 8:
+      return { row: AcGiMTextAttachmentPoint.TopLeft, offsetY: height + gap }
+    case 7:
+      return { row: AcGiMTextAttachmentPoint.TopLeft, offsetY: height }
+    case 1:
+    default:
+      return { row: AcGiMTextAttachmentPoint.TopLeft, offsetY: height / 2 }
+  }
+}
 
 /**
  * Represents a leader break segment input using point-like values.
@@ -742,9 +850,7 @@ export class AcDbMLeader extends AcDbEntity {
    * Whether this multileader is annotative (XDATA/contexts or scale-enabled flag).
    */
   get annotative() {
-    return (
-      this._annotativeScaleEnabled === true || acdbGetAnnotative(this)
-    )
+    return this._annotativeScaleEnabled === true || acdbGetAnnotative(this)
   }
   set annotative(value: boolean) {
     this._annotativeScaleEnabled = value
@@ -1437,6 +1543,229 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
+   * Applies a multileader style the way AutoCAD does for a new MLEADER: the
+   * entity references the style and receives its sizes (scaled by the
+   * style's overall scale, or by `annotationScale` for annotative styles),
+   * landing, leader type, text style and text attachment settings.
+   *
+   * @param style Multileader style to apply.
+   * @param annotationScale Current annotation scale factor (drawing units per
+   *   paper unit, e.g. `50` for CANNOSCALE `1:50`); only used when the style
+   *   is annotative.
+   * @returns The current entity instance for chaining.
+   */
+  applyMLeaderStyle(style: AcDbMLeaderStyle, annotationScale = 1) {
+    const scale = style.annotative
+      ? annotationScale > 0
+        ? annotationScale
+        : 1
+      : style.scale > 0
+        ? style.scale
+        : 1
+    if (style.objectId) this.mleaderStyleId = style.objectId
+    // No property overrides: everything not stored below follows the style.
+    this.propertyOverrideFlag = 0
+    this.leaderLineType = style.leaderLineType as AcDbMLeaderLineType
+    this.doglegEnabled = style.enableLanding && style.enableDogleg
+    this.doglegLength = style.doglegLength * scale
+    this.landingGap = style.landingGap * scale
+    this.arrowheadSize = style.arrowSize * scale
+    this.textHeight = style.textHeight * scale
+    this.contentScale = scale
+    this.textStyleId = style.textStyleId
+    this.textLeftAttachmentType = style.textLeftAttachmentType
+    this.textRightAttachmentType = style.textRightAttachmentType
+    this.textAttachmentDirection =
+      style.textAttachmentDirection as AcDbMLeaderTextAttachmentDirection
+    this.textAngleType = style.textAngleType
+    this.textAlignmentType = style.textAlignmentType
+    this.textFrameEnabled = style.enableFrameText
+    if (style.annotative) this.annotative = true
+    return this
+  }
+
+  /**
+   * Places the content next to a landing like AutoCAD: MText is attached by
+   * its left side when the landing points right (by its right side
+   * otherwise), one landing gap past the landing end, at the height given by
+   * the left / right text attachment type. Block content is inserted at the
+   * landing end. Also stores the landing end as
+   * {@link contentBasePosition}.
+   *
+   * @param leaderIndex Branch whose landing the content attaches to.
+   * @returns The current entity instance for chaining.
+   */
+  attachContentToLanding(leaderIndex = 0) {
+    const leader = this._leaders[leaderIndex]
+    const connection = leader
+      ? this.getLeaderConnectionPoint(leader)
+      : this._landingPoint
+    if (!connection) return this
+    const unit = leader
+      ? this.getLandingDirection(leader)
+      : this._doglegVector.lengthSq() > 0
+        ? this._doglegVector.clone().normalize()
+        : undefined
+    if (!unit) return this
+
+    const length = this.getResolvedDoglegEnabled()
+      ? (leader?.doglegLength ?? this.getResolvedDoglegLength() ?? 0)
+      : 0
+    const end = connection.clone().add(unit.clone().multiplyScalar(length))
+    this.contentBasePosition = end.clone()
+
+    if (this._contentType === AcDbMLeaderContentType.BlockContent) {
+      if (this._blockContent) {
+        const old = this._blockContent.position?.clone() ?? new AcGePoint3d(end)
+        this.translateContent(
+          new AcGeVector3d().subVectors(end, old),
+          new Set([this.contentBasePosition])
+        )
+        if (!this._blockContent.position) {
+          this._blockContent.position = end.clone()
+        }
+      }
+      return this
+    }
+    if (!this._mtextContent) return this
+
+    const style = this.getMLeaderStyle()
+    const gap = this.landingGap ?? style?.landingGap ?? 0
+    const height = this.getBaseTextHeight()
+    const anchor = end.clone()
+    if (Math.abs(unit.x) >= Math.abs(unit.y)) {
+      const side = unit.x >= 0 ? 1 : -1
+      const type =
+        side > 0
+          ? (this.textLeftAttachmentType ?? style?.textLeftAttachmentType)
+          : (this.textRightAttachmentType ?? style?.textRightAttachmentType)
+      const { row, offsetY } = acdbMLeaderTextVerticalPlacement(
+        type ?? 1,
+        height,
+        gap
+      )
+      anchor.x += side * gap
+      anchor.y += offsetY
+      this.textAttachmentPoint = (row +
+        (side > 0 ? 0 : 2)) as AcGiMTextAttachmentPoint
+    } else {
+      // Vertical landing: text sits centered above or below its end.
+      const side = unit.y >= 0 ? 1 : -1
+      anchor.y += side * gap
+      this.textAttachmentPoint =
+        side > 0
+          ? AcGiMTextAttachmentPoint.BottomCenter
+          : AcGiMTextAttachmentPoint.TopCenter
+    }
+    this._mtextContent.anchorPoint.copy(anchor)
+    if (this.textAnchor) this.textAnchor.copy(anchor)
+    return this
+  }
+
+  /**
+   * Adds a leader line whose arrowhead is at `point`, like AutoCAD's
+   * `AcDbMLeader::addLeaderLine(point)` and MLEADEREDIT *Add leader*: the
+   * line joins the existing landing on the side of the content facing
+   * `point`; when no landing faces it, a new landing is created on that side
+   * of the content (one landing gap past its far edge).
+   *
+   * @param point Arrowhead location of the new leader line.
+   * @returns Indices of the branch and of the new line in that branch.
+   */
+  addLeaderLineAtPoint(point: AcGePoint3dLike): {
+    leaderIndex: number
+    leaderLineIndex: number
+  } {
+    const tip = this.createPoint(point)
+    const center = this.getContentCenter()
+
+    // 1. An existing landing facing the new arrowhead.
+    let bestIndex = -1
+    let bestDistance = Number.POSITIVE_INFINITY
+    this._leaders.forEach((leader, index) => {
+      const connection = this.getLeaderConnectionPoint(leader)
+      const unit = this.getLandingDirection(leader)
+      if (!connection || !unit) return
+      const reference = center ?? connection
+      const facing =
+        unit.dot(new AcGeVector3d().subVectors(tip, reference)) < 0 || !center
+      if (!facing) return
+      const distance = connection.distanceTo(tip)
+      if (distance < bestDistance) {
+        bestDistance = distance
+        bestIndex = index
+      }
+    })
+    if (bestIndex >= 0) {
+      const lineIndex = this.addLeaderLine(bestIndex, [tip])
+      return { leaderIndex: bestIndex, leaderLineIndex: lineIndex }
+    }
+
+    // 2. New landing on the other side of the content.
+    const reference = this._leaders.find(
+      leader =>
+        this.getLeaderConnectionPoint(leader) &&
+        this.getLandingDirection(leader)
+    )
+    if (!reference) {
+      const anchor =
+        this.contentBasePosition ?? this.getContentGripPoint() ?? tip
+      const leaderIndex = this.addLeader({
+        lastLeaderLinePoint: anchor,
+        lastLeaderLinePointSet: true,
+        doglegVector: { x: tip.x <= anchor.x ? 1 : -1, y: 0, z: 0 },
+        doglegVectorSet: true,
+        doglegLength: 0,
+        leaderLines: [{ vertices: [tip] }]
+      })
+      return { leaderIndex, leaderLineIndex: 0 }
+    }
+
+    const connection = this.getLeaderConnectionPoint(reference)!
+    const unit = this.getLandingDirection(reference)!
+    const dogleg = this.getDoglegPoints(reference)
+    const end = dogleg ? dogleg[1].clone() : connection.clone()
+    const length = dogleg ? dogleg[0].distanceTo(dogleg[1]) : 0
+    const style = this.getMLeaderStyle()
+    const gap = this.landingGap ?? style?.landingGap ?? 0
+    const endAlong = unit.dot(end)
+
+    let farAlong: number | undefined
+    const bounds = this.getMTextBounds()
+    if (bounds && this.getTextAttachmentSide() !== 0) {
+      farAlong = Math.max(...bounds.map(corner => unit.dot(corner))) + gap
+    } else {
+      const anchor = this.getContentGripPoint()
+      // Centered content: mirror the existing landing end about it.
+      if (anchor) farAlong = 2 * unit.dot(anchor) - endAlong
+    }
+    if (farAlong == null) farAlong = endAlong
+
+    const newEnd = end
+      .clone()
+      .add(unit.clone().multiplyScalar(farAlong - endAlong))
+    const newConnection = newEnd
+      .clone()
+      .add(unit.clone().multiplyScalar(length))
+    const directionType =
+      reference.directionType === AcDbMLeaderDirectionType.Left
+        ? AcDbMLeaderDirectionType.Right
+        : reference.directionType === AcDbMLeaderDirectionType.Right
+          ? AcDbMLeaderDirectionType.Left
+          : reference.directionType
+    const leaderIndex = this.addLeader({
+      lastLeaderLinePoint: newConnection,
+      lastLeaderLinePointSet: true,
+      doglegVector: unit.clone().negate(),
+      doglegVectorSet: true,
+      doglegLength: length,
+      directionType,
+      leaderLines: [{ vertices: [tip] }]
+    })
+    return { leaderIndex, leaderLineIndex: 0 }
+  }
+
+  /**
    * Gets the axis-aligned extents computed from all geometry points.
    */
 
@@ -1453,7 +1782,10 @@ export class AcDbMLeader extends AcDbEntity {
     this._leaders.forEach(leader => {
       leader.leaderLines.forEach(line => {
         primitives.push(
-          ...acdbIntersectPrimitivesFromPointPath(line.vertices, false)
+          ...acdbIntersectPrimitivesFromPointPath(
+            this.getLeaderLineDrawPoints(leader, line),
+            false
+          )
         )
       })
     })
@@ -1463,17 +1795,55 @@ export class AcDbMLeader extends AcDbEntity {
   /**
    * Gets grip points used for interactive editing.
    *
-   * @returns Cloned grip points derived from renderable geometry.
+   * Mirrors AutoCAD's MLEADER grips: one grip per leader-line vertex
+   * (arrowhead tip and intermediate vertices), one landing grip where the
+   * leader lines meet the landing, one grip at the far end of the landing
+   * (lengthen landing) and one content grip (text / block location).
+   * Coincident internal points are never exposed as separate grips, so a
+   * drag always edits the whole multileader consistently.
+   *
+   * @returns Grip points in the same order {@link subMoveGripPointsAt} uses.
    */
   subGetGripPoints() {
-    return this.collectGeometryPoints().map(point => point.clone())
+    return this.collectGrips().map(grip => grip.point)
   }
 
-  /** @inheritdoc */
+  /**
+   * Moves grips returned by {@link subGetGripPoints}.
+   *
+   * - Vertex grips stretch that vertex only.
+   * - The landing grip and the content grip move the content together with
+   *   every landing (leader tips stay), flipping a landing to the other side
+   *   of the content when the content crosses its leader (AutoCAD *Stretch*).
+   * - The landing-end grip lengthens the landing along its direction and keeps
+   *   the content attached (AutoCAD *Lengthen Landing*).
+   *
+   * @param indices Grip indices to move.
+   * @param offset Displacement applied to the grips.
+   * @returns The current entity instance for chaining.
+   */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const grips = this.collectGrips()
+    const selected: AcDbMLeaderGrip[] = []
     acdbForEachGripIndex(indices, index => {
-      this.moveGeometryGripPointAt(index, offset)
+      const grip = grips[index]
+      if (grip) selected.push(grip)
     })
+    // Landing and content grips both move the whole content; apply that once.
+    let contentMoved = false
+    for (const grip of selected) {
+      if (grip.kind === 'vertex') {
+        const line =
+          this._leaders[grip.leaderIndex]?.leaderLines[grip.lineIndex]
+        line?.vertices[grip.vertexIndex]?.add(offset)
+      } else if (grip.kind === 'doglegEnd') {
+        this.lengthenLanding(grip.leaderIndex, offset)
+      } else if (!contentMoved) {
+        contentMoved = true
+        this.moveContentAndLandings(offset)
+        this.reorientLandings()
+      }
+    }
     return this
   }
 
@@ -2112,10 +2482,7 @@ export class AcDbMLeader extends AcDbEntity {
 
     if (isAnnotative && contexts.length > 0) {
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
@@ -2656,8 +3023,7 @@ export class AcDbMLeader extends AcDbEntity {
           }
           break
         case 271:
-          this.textAttachmentDirection =
-            n as AcDbMLeaderTextAttachmentDirection
+          this.textAttachmentDirection = n as AcDbMLeaderTextAttachmentDirection
           break
         case 272:
           this.bottomTextAttachmentDirection = n
@@ -2806,7 +3172,9 @@ export class AcDbMLeader extends AcDbEntity {
 
     // Resolve text style handle → name so font collection / renderer can find it.
     if (!this.textStyleName && this.textStyleId) {
-      const record = this.database.tables.textStyleTable.getIdAt(this.textStyleId)
+      const record = this.database.tables.textStyleTable.getIdAt(
+        this.textStyleId
+      )
       if (record?.name) this.textStyleName = record.name
     }
 
@@ -2821,7 +3189,11 @@ export class AcDbMLeader extends AcDbEntity {
       if (!contentTypeSet) {
         this.contentType = AcDbMLeaderContentType.MTextContent
       }
-    } else if ((hasMTextContent || this.hasMText) && textContent != null && !anchor) {
+    } else if (
+      (hasMTextContent || this.hasMText) &&
+      textContent != null &&
+      !anchor
+    ) {
       if (!contentTypeSet) {
         this.contentType = AcDbMLeaderContentType.MTextContent
       }
@@ -3390,84 +3762,329 @@ export class AcDbMLeader extends AcDbEntity {
   }
 
   /**
-   * Moves one geometry grip point using the same index order as
-   * {@link collectGeometryPoints}.
+   * Estimated world corners of the MText content, or `undefined` when the
+   * multileader has no MText content.
    */
-  private moveGeometryGripPointAt(gripIndex: number, offset: AcGeVector3dLike) {
-    let currentIndex = 0
-
-    const visit = (point: AcGePoint3d | undefined, onComputed?: () => void) => {
-      if (point) {
-        if (currentIndex === gripIndex) {
-          point.add(offset)
-        }
-        currentIndex++
-        return
-      }
-      if (onComputed) {
-        if (currentIndex === gripIndex) {
-          onComputed()
-        }
-        currentIndex++
-      }
+  private getMTextBounds() {
+    if (
+      !this._mtextContent ||
+      this._contentType === AcDbMLeaderContentType.BlockContent
+    ) {
+      return undefined
     }
-
-    this._leaders.forEach(leader => {
-      visit(leader.lastLeaderLinePoint)
-      visit(leader.landingPoint)
-      leader.breaks.forEach(item => {
-        visit(item.start)
-        visit(item.end)
-      })
-      leader.leaderLines.forEach(line => {
-        line.vertices.forEach(vertex => visit(vertex))
-        line.breaks.forEach(item => {
-          visit(item.start)
-          visit(item.end)
-        })
-      })
-      const doglegPoints = this.getDoglegPoints(leader)
-      if (doglegPoints) {
-        visit(doglegPoints[0])
-        visit(undefined, () => {
-          const start = doglegPoints[0]
-          const end = doglegPoints[1]
-          if (!start || !end) return
-          const newLength = start.distanceTo({
-            x: end.x + offset.x,
-            y: end.y + offset.y,
-            z: (end.z ?? 0) + (offset.z ?? 0)
-          })
-          if (leader.doglegLength != null || leader.doglegVectorSet) {
-            leader.doglegLength = newLength
-          } else {
-            this._doglegLength = newLength
-          }
-        })
-      }
-      leader.leaderLines.forEach(line => {
-        const drawPoints = this.getLeaderLineDrawPoints(leader, line)
-        const arrowPoints = this.getArrowheadPoints(drawPoints)
-        if (!arrowPoints) return
-        arrowPoints.forEach((_, arrowIndex) => {
-          if (arrowIndex === 0 || arrowIndex === arrowPoints.length - 1) {
-            visit(drawPoints[0])
-          } else {
-            visit(undefined)
-          }
-        })
-      })
+    const layout = acdbResolveMTextLayoutMetrics({
+      contents: this._mtextContent.text,
+      height: this.getBaseTextHeight(),
+      width: this._textWidth,
+      extentsWidth: 0,
+      lineSpacingFactor: this.textLineSpacingFactor,
+      lineSpacingStyle: this.textLineSpacingStyle,
+      attachmentPoint: this.textAttachmentPoint,
+      rotation: this.textRotation,
+      direction: new AcGeVector3d(this.textDirection),
+      location: this._mtextContent.anchorPoint
     })
-    visit(this._landingPoint)
-    visit(this.contentBasePosition)
-    visit(this.textAnchor)
-    if (this._mtextContent) {
-      visit(this._mtextContent.anchorPoint)
+    return acdbCollectMTextOrientedCorners(layout)
+  }
+
+  /**
+   * Center of the content used to decide which side a new leader joins.
+   */
+  private getContentCenter() {
+    const bounds = this.getMTextBounds()
+    if (bounds && bounds.length > 0) {
+      return new AcGeBox3d().setFromPoints(bounds).getCenter(new AcGePoint3d())
     }
-    if (this._blockContent?.position) {
-      visit(this._blockContent.position)
+    return this.getContentGripPoint()?.clone()
+  }
+
+  /**
+   * Builds the AutoCAD-style grip list shared by {@link subGetGripPoints} and
+   * {@link subMoveGripPointsAt}.
+   */
+  private collectGrips(): AcDbMLeaderGrip[] {
+    const grips: AcDbMLeaderGrip[] = []
+    const hasGrip = (kind: AcDbMLeaderGripKind, point: AcGePoint3d) =>
+      grips.some(grip => grip.kind === kind && grip.point.equals(point))
+
+    this._leaders.forEach((leader, leaderIndex) => {
+      const connection = this.getLeaderConnectionPoint(leader)
+      leader.leaderLines.forEach((line, lineIndex) => {
+        line.vertices.forEach((vertex, vertexIndex) => {
+          // Lines written by older code store the landing point as their last
+          // vertex; the landing grip already represents it.
+          if (connection && vertex.equals(connection)) return
+          grips.push({
+            kind: 'vertex',
+            point: vertex.clone(),
+            leaderIndex,
+            lineIndex,
+            vertexIndex
+          })
+        })
+      })
+      if (connection && !hasGrip('landing', connection)) {
+        grips.push({
+          kind: 'landing',
+          point: connection.clone(),
+          leaderIndex,
+          lineIndex: -1,
+          vertexIndex: -1
+        })
+      }
+      const dogleg = this.getDoglegPoints(leader)
+      if (
+        dogleg &&
+        !dogleg[1].equals(dogleg[0]) &&
+        !hasGrip('doglegEnd', dogleg[1])
+      ) {
+        grips.push({
+          kind: 'doglegEnd',
+          point: dogleg[1].clone(),
+          leaderIndex,
+          lineIndex: -1,
+          vertexIndex: -1
+        })
+      }
+    })
+
+    // Added last so its handle sits on top when it coincides with a landing.
+    const content = this.getContentGripPoint()
+    if (content) {
+      grips.push({
+        kind: 'content',
+        point: content.clone(),
+        leaderIndex: -1,
+        lineIndex: -1,
+        vertexIndex: -1
+      })
     }
-    visit(this.planeOrigin)
+    return grips
+  }
+
+  /**
+   * Point where the leader lines of one branch meet its landing.
+   */
+  private getLeaderConnectionPoint(leader: AcDbMLeaderLeader) {
+    return (
+      leader.lastLeaderLinePoint ?? leader.landingPoint ?? this._landingPoint
+    )
+  }
+
+  /**
+   * Location of the content grip: MText location or block position.
+   */
+  private getContentGripPoint() {
+    if (this._contentType === AcDbMLeaderContentType.BlockContent) {
+      return this._blockContent?.position ?? this.contentBasePosition
+    }
+    return this._mtextContent?.anchorPoint
+  }
+
+  /**
+   * Unit landing direction of one branch (from the leader towards content).
+   */
+  private getLandingDirection(leader: AcDbMLeaderLeader) {
+    const vector = (leader.doglegVector ?? this._doglegVector).clone()
+    if (vector.lengthSq() === 0) return undefined
+    return vector.normalize()
+  }
+
+  /**
+   * Translates the content (text / block and their stored anchors).
+   */
+  private translateContent(offset: AcGeVector3dLike, moved: Set<AcGePoint3d>) {
+    const move = (point: AcGePoint3d | undefined) => {
+      if (!point || moved.has(point)) return
+      point.add(offset)
+      moved.add(point)
+    }
+    move(this.contentBasePosition)
+    move(this.textAnchor)
+    move(this._mtextContent?.anchorPoint)
+    if (this._blockContent) {
+      move(this._blockContent.position)
+      const matrix = this._blockContent.transformationMatrix
+      if (matrix.length === 16) {
+        matrix[12] += offset.x
+        matrix[13] += offset.y
+        matrix[14] += offset.z ?? 0
+      }
+    }
+  }
+
+  /**
+   * Moves one branch's landing (connection point) and any leader-line
+   * vertex stored on top of it.
+   */
+  private translateLanding(
+    leader: AcDbMLeaderLeader,
+    offset: AcGeVector3dLike,
+    moved: Set<AcGePoint3d>
+  ) {
+    const old = this.getLeaderConnectionPoint(leader)?.clone()
+    const move = (point: AcGePoint3d | undefined) => {
+      if (!point || moved.has(point)) return
+      point.add(offset)
+      moved.add(point)
+    }
+    move(leader.lastLeaderLinePoint)
+    move(leader.landingPoint)
+    if (!leader.lastLeaderLinePoint && !leader.landingPoint) {
+      move(this._landingPoint)
+    }
+    if (!old) return
+    leader.leaderLines.forEach(line => {
+      const last = line.vertices[line.vertices.length - 1]
+      if (line.vertices.length > 1 && last.equals(old)) move(last)
+    })
+  }
+
+  /**
+   * Rigidly moves the content and every landing; leader vertices stay.
+   */
+  private moveContentAndLandings(offset: AcGeVector3dLike) {
+    const moved = new Set<AcGePoint3d>()
+    this._leaders.forEach(leader =>
+      this.translateLanding(leader, offset, moved)
+    )
+    this.translateContent(offset, moved)
+  }
+
+  /**
+   * Lengthens (or shortens) the landing of one branch and keeps the content
+   * and the other landings attached to it.
+   */
+  private lengthenLanding(leaderIndex: number, offset: AcGeVector3dLike) {
+    const leader = this._leaders[leaderIndex]
+    if (!leader) return
+    const dogleg = this.getDoglegPoints(leader)
+    const unit = this.getLandingDirection(leader)
+    if (!dogleg || !unit) return
+
+    const length = dogleg[0].distanceTo(dogleg[1])
+    const delta = unit.dot(new AcGeVector3d(offset))
+    const newLength = Math.max(0, length + delta)
+    const shift = unit.clone().multiplyScalar(newLength - length)
+    const connection = dogleg[0].clone()
+
+    const moved = new Set<AcGePoint3d>()
+    this._leaders.forEach(other => {
+      const otherConnection = this.getLeaderConnectionPoint(other)
+      const otherUnit = this.getLandingDirection(other)
+      const sharesLanding =
+        other === leader ||
+        (!!otherConnection &&
+          otherConnection.equals(connection) &&
+          !!otherUnit &&
+          otherUnit.dot(unit) > 0)
+      if (sharesLanding) {
+        other.doglegLength = newLength
+      } else {
+        this.translateLanding(other, shift, moved)
+      }
+    })
+    this.translateContent(shift, moved)
+  }
+
+  /**
+   * Flips landings whose leader now arrives from the content side, so the
+   * landing always points from the leader towards the content (AutoCAD
+   * switches the landing to the other side of the text in that case).
+   */
+  private reorientLandings() {
+    const directions = new Set<string>()
+    this._leaders.forEach(leader => {
+      const unit = this.getLandingDirection(leader)
+      if (unit) directions.add(`${Math.round(unit.x)},${Math.round(unit.y)}`)
+    })
+    // Leaders on both sides of the content: the content cannot cross one
+    // side without crossing the other, so keep the current layout.
+    if (directions.size > 1) return
+
+    const anchor = this.getContentGripPoint()
+    if (!anchor) return
+    this._leaders.forEach(leader => {
+      const connection = this.getLeaderConnectionPoint(leader)
+      const unit = this.getLandingDirection(leader)
+      if (!connection || !unit) return
+      const previous = this.getVertexBeforeConnection(leader, connection)
+      if (!previous) return
+      const along = unit.dot(
+        new AcGeVector3d().subVectors(connection, previous)
+      )
+      if (along >= 0) return
+
+      const dogleg = this.getDoglegPoints(leader)
+      const end = dogleg ? dogleg[1].clone() : connection.clone()
+      const length = dogleg ? dogleg[0].distanceTo(dogleg[1]) : 0
+      const toAnchor = unit.dot(new AcGeVector3d().subVectors(anchor, end))
+      // Mirror the landing end about the content location along the landing.
+      // For side-attached MText the location is the attached edge, so the
+      // mirrored end sits exactly one landing gap past it on the other side.
+      const newEnd = end.clone().add(unit.clone().multiplyScalar(2 * toAnchor))
+      if (
+        this.getTextAttachmentSide() !== 0 &&
+        Math.abs(unit.x) >= Math.abs(unit.y)
+      ) {
+        // Keep the text where it is but attach it by its other side.
+        this.textAttachmentPoint = acdbMirrorMTextAttachmentSide(
+          this.textAttachmentPoint
+        )
+      }
+      const newConnection = newEnd
+        .clone()
+        .add(unit.clone().multiplyScalar(length))
+      const delta = new AcGeVector3d().subVectors(newConnection, connection)
+      this.translateLanding(leader, delta, new Set())
+      leader.doglegVector = unit.clone().negate()
+      if (leader.directionType === AcDbMLeaderDirectionType.Left) {
+        leader.directionType = AcDbMLeaderDirectionType.Right
+      } else if (leader.directionType === AcDbMLeaderDirectionType.Right) {
+        leader.directionType = AcDbMLeaderDirectionType.Left
+      }
+      if (this.contentBasePosition) this.contentBasePosition.copy(newEnd)
+    })
+  }
+
+  /**
+   * Last leader vertex before the landing of a branch.
+   */
+  private getVertexBeforeConnection(
+    leader: AcDbMLeaderLeader,
+    connection: AcGePoint3d
+  ) {
+    for (const line of leader.leaderLines) {
+      for (let i = line.vertices.length - 1; i >= 0; i--) {
+        if (!line.vertices[i].equals(connection)) return line.vertices[i]
+      }
+    }
+    return undefined
+  }
+
+  /**
+   * Horizontal side the MText is attached by: `1` left, `-1` right, `0`
+   * centered or not MText.
+   */
+  private getTextAttachmentSide() {
+    if (
+      !this._mtextContent ||
+      this._contentType === AcDbMLeaderContentType.BlockContent
+    ) {
+      return 0
+    }
+    switch (this.textAttachmentPoint) {
+      case AcGiMTextAttachmentPoint.TopLeft:
+      case AcGiMTextAttachmentPoint.MiddleLeft:
+      case AcGiMTextAttachmentPoint.BottomLeft:
+        return 1
+      case AcGiMTextAttachmentPoint.TopRight:
+      case AcGiMTextAttachmentPoint.MiddleRight:
+      case AcGiMTextAttachmentPoint.BottomRight:
+        return -1
+      default:
+        return 0
+    }
   }
 
   /**
@@ -3481,16 +4098,18 @@ export class AcDbMLeader extends AcDbEntity {
     leader: AcDbMLeaderLeader,
     line: AcDbMLeaderLine
   ) {
-    if (line.vertices.length >= 2) return line.vertices
     if (line.vertices.length === 0) return []
 
+    // AutoCAD stores only the arrowhead and intermediate vertices; the line
+    // always ends where the branch meets its landing.
     const end =
       leader.lastLeaderLinePoint ??
       leader.landingPoint ??
       this._landingPoint ??
       this.contentBasePosition
-    if (!end || line.vertices[0].equals(end)) return line.vertices
-    return [line.vertices[0], end]
+    const last = line.vertices[line.vertices.length - 1]
+    if (!end || last.equals(end)) return line.vertices
+    return [...line.vertices, end]
   }
 
   /**
@@ -3511,12 +4130,21 @@ export class AcDbMLeader extends AcDbEntity {
       leader.lastLeaderLinePoint ?? leader.landingPoint ?? this._landingPoint
     if (!start) return undefined
 
+    const vector = leader.doglegVector ?? this._doglegVector
     const contentBase = this.contentBasePosition
     if (contentBase && !contentBase.equals(start)) {
-      return [start, contentBase.clone()]
+      // A content base on the other side of the content belongs to another
+      // landing (leaders on both sides); only reuse it along this landing.
+      if (vector.lengthSq() === 0) return [start, contentBase.clone()]
+      const unit = vector.clone().normalize()
+      const delta = new AcGeVector3d().subVectors(contentBase, start)
+      const along = unit.dot(delta)
+      const across = delta.sub(unit.clone().multiplyScalar(along)).length()
+      if (along > 0 && across <= Math.max(along, 1) * 1e-6) {
+        return [start, contentBase.clone()]
+      }
     }
 
-    const vector = leader.doglegVector ?? this._doglegVector
     const length = leader.doglegLength ?? this.getResolvedDoglegLength()
     if (length == null || length === 0 || vector.lengthSq() === 0) {
       return undefined
@@ -3576,7 +4204,18 @@ export class AcDbMLeader extends AcDbEntity {
   private drawLeaderLine(renderer: AcGiRenderer, points: AcGePoint3d[]) {
     const entities: AcGiEntity[] = []
     const linePoints = this.getLeaderLinePointsForDraw(points)
-    if (linePoints.length >= 2) {
+    if (
+      linePoints.length >= 3 &&
+      this.getResolvedLeaderLineType() === AcDbMLeaderLineType.SplineLeader
+    ) {
+      // Spline leaders pass through their vertices, like AutoCAD.
+      const spline = new AcGeSpline3d(
+        linePoints,
+        'Uniform',
+        Math.min(3, linePoints.length - 1)
+      )
+      entities.push(renderer.lines(spline.getPoints(64)))
+    } else if (linePoints.length >= 2) {
       entities.push(renderer.lines(linePoints))
     }
     const arrow = this.drawArrowhead(renderer, points)
@@ -3866,7 +4505,14 @@ export class AcDbMLeader extends AcDbEntity {
    * @returns Resolved style object or `undefined` when not available.
    */
   private getMLeaderStyle(): AcDbMLeaderStyle | undefined {
-    const dictionary = this.database.objects.mleaderStyle
+    let database
+    try {
+      database = this.database
+    } catch {
+      // Detached entity without a working database: no style to resolve.
+      return undefined
+    }
+    const dictionary = database.objects.mleaderStyle
     const styleId = (this.mleaderStyleId || this.leaderStyleId)?.trim()
     if (styleId) {
       const style = dictionary.getIdAt(styleId)
@@ -3881,7 +4527,7 @@ export class AcDbMLeader extends AcDbEntity {
         }
       }
 
-      const byDb = this.database.getObjectById(styleId)
+      const byDb = database.getObjectById(styleId)
       if (byDb instanceof AcDbMLeaderStyle) return byDb
     }
 
@@ -4229,4 +4875,3 @@ export class AcDbMLeader extends AcDbEntity {
     }
   }
 }
-
