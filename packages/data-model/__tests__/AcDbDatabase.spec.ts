@@ -119,6 +119,59 @@ describe('AcDbDatabase', () => {
     expect(db.tables.blockTable.getIdAt(attDef.ownerId)).toBe(block)
   })
 
+  it('rewires layout soft-pointers when default paper-space handles are displaced', () => {
+    // LibreDWG drawings with empty LAYOUT objects fall back to
+    // createDefaultData({ layout: true }), which assigns low handles to
+    // *Paper_Space / Layout1. Later ENTITIES reclaiming those handles must
+    // not leave Layout1.blockTableRecordId pointing at a LINE.
+    const db = new AcDbDatabase()
+    db.createDefaultData({ layout: true })
+    acdbHostApplicationServices().workingDatabase = db
+
+    const paperSpace = db.tables.blockTable.getAt(
+      AcDbBlockTableRecord.PAPER_SPACE_NAME_PREFIX
+    )
+    expect(paperSpace).toBeDefined()
+    const layout1 = db.objects.layout.getAt('Layout1')
+    expect(layout1).toBeDefined()
+    expect(layout1!.blockTableRecordId).toBe(paperSpace!.objectId)
+    expect(paperSpace!.layoutId).toBe(layout1!.objectId)
+
+    const paperHandle = paperSpace!.objectId
+    const layoutHandle = layout1!.objectId
+    const modelSpace = db.tables.blockTable.modelSpace
+
+    const lineOnPaperHandle = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(1, 0, 0)
+    )
+    lineOnPaperHandle.objectId = paperHandle
+    modelSpace.appendEntity(lineOnPaperHandle)
+
+    expect(lineOnPaperHandle.objectId).toBe(paperHandle)
+    expect(paperSpace!.objectId).not.toBe(paperHandle)
+    expect(layout1!.blockTableRecordId).toBe(paperSpace!.objectId)
+    expect(db.tables.blockTable.getIdAt(layout1!.blockTableRecordId)).toBe(
+      paperSpace
+    )
+
+    const lineOnLayoutHandle = new AcDbLine(
+      new AcGePoint3d(0, 1, 0),
+      new AcGePoint3d(1, 1, 0)
+    )
+    lineOnLayoutHandle.objectId = layoutHandle
+    modelSpace.appendEntity(lineOnLayoutHandle)
+
+    expect(lineOnLayoutHandle.objectId).toBe(layoutHandle)
+    expect(layout1!.objectId).not.toBe(layoutHandle)
+    expect(paperSpace!.layoutId).toBe(layout1!.objectId)
+
+    expect(() => {
+      db.currentSpaceId = layout1!.blockTableRecordId
+    }).not.toThrow()
+    expect(db.currentSpaceId).toBe(paperSpace!.objectId)
+  })
+
   it('initializes handle seed from hexadecimal HANDSEED values', () => {
     const db = new AcDbDatabase()
     db.initializeHandleSeed('FFFF')
