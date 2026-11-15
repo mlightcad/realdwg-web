@@ -528,7 +528,11 @@ function createTypedAnnotScaleContext(
     (hasMtext || template instanceof AcDbMTextAttributeObjectContextData)
   ) {
     const ctx = new AcDbMTextAttributeObjectContextData()
-    seedMTextContext(ctx, (object as { mtext?: AcDbObject }).mtext ?? object, template)
+    seedMTextContext(
+      ctx,
+      (object as { mtext?: AcDbObject }).mtext ?? object,
+      template
+    )
     return ctx
   }
 
@@ -553,10 +557,10 @@ function createTypedAnnotScaleContext(
     } else {
       const dim = object as {
         dimBlockId?: string | null
-        dimBlockPosition?: AcGePoint3d
+        textPosition?: AcGePoint3d
       }
       if (dim.dimBlockId) ctx.blockName = dim.dimBlockId
-      if (dim.dimBlockPosition) ctx.definitionPoint = dim.dimBlockPosition
+      if (dim.textPosition) ctx.definitionPoint = dim.textPosition
     }
     return ctx
   }
@@ -667,11 +671,7 @@ export function acdbAddAnnotationScaleToObject(
   }
 
   const scalesDict = ensureAnnotationScalesDict(db, object)
-  const ctx = createTypedAnnotScaleContext(
-    object,
-    existing,
-    scale.scaleFactor
-  )
+  const ctx = createTypedAnnotScaleContext(object, existing, scale.scaleFactor)
   ctx.database = db
   ctx.scaleId = scale.objectId
   ctx.isDefault = existing.length === 0
@@ -733,9 +733,7 @@ export function acdbRemoveAnnotationScaleFromObject(
  * Resolves annotation draw metadata for an annotative object at the database
  * CANNOSCALE (or the default context when unmatched).
  */
-export function acdbResolveAnnotationScaleDrawInfo(
-  object: AcDbObject
-): {
+export function acdbResolveAnnotationScaleDrawInfo(object: AcDbObject): {
   contexts: AcDbAnnotationScaleContext[]
   preferred?: AcDbAnnotationScaleContext
   annotationScale?: AcDbAnnotationScaleDrawInfo
@@ -745,10 +743,7 @@ export function acdbResolveAnnotationScaleDrawInfo(
     return { contexts }
   }
   const preferred =
-    acdbMatchAnnotationScaleContext(
-      contexts,
-      object.database?.cannoscale
-    ) ??
+    acdbMatchAnnotationScaleContext(contexts, object.database?.cannoscale) ??
     contexts.find(c => c.isDefault) ??
     contexts[0]
   return {

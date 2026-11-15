@@ -112,13 +112,16 @@ describe('annotation scale OBJECTSCALE helpers', () => {
     )
     dim.dimBlockId = '*D1'
     dim.dimBlockPosition = new AcGePoint3d(1, 2, 0)
+    dim.textPosition = new AcGePoint3d(3, 7, 0)
     db.tables.blockTable.modelSpace.appendEntity(dim)
     expect(acdbAddAnnotationScaleToObject(dim, '1:100')).toBe(true)
     const dimCtx = acdbGetAnnotationScaleContexts(dim)[0]
       .contextData as AcDbDimensionObjectContextData
     expect(dimCtx).toBeInstanceOf(AcDbDimensionObjectContextData)
     expect(dimCtx.blockName).toBe('*D1')
-    expect(dimCtx.definitionPoint.x).toBeCloseTo(1, 6)
+    // DXF 10 of a dimension context is the default text location.
+    expect(dimCtx.definitionPoint.x).toBeCloseTo(3, 6)
+    expect(dimCtx.definitionPoint.y).toBeCloseTo(7, 6)
 
     const blockRef = new AcDbBlockReference('AnnoBlock')
     blockRef.position = new AcGePoint3d(3, 4, 0)

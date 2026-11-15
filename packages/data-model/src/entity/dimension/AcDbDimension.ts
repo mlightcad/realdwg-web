@@ -650,7 +650,12 @@ export abstract class AcDbDimension extends AcDbEntity {
     const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let dimBlockId = this.dimBlockId
-    let blockPosition = this._dimBlockPosition.clone()
+    // Every per-scale `*D` block is stored in WCS like the main one, so all
+    // of them are inserted at the dimension's own block position (DXF 12).
+    // The context's `definitionPoint` is the default text location (DWG
+    // `def_pt`), not an insertion offset: using it shifted the dimension by
+    // its text position (e.g. above the title frame in exported PDFs).
+    const blockPosition = this._dimBlockPosition.clone()
     let preferred: AcDbAnnotationScaleContext | undefined
     let annotationScale: AcDbAnnotationScaleDrawInfo | undefined
     let contextData: AcDbDimensionObjectContextData | undefined
@@ -669,7 +674,6 @@ export abstract class AcDbDimension extends AcDbEntity {
       if (ctx instanceof AcDbDimensionObjectContextData) {
         contextData = ctx
         if (ctx.blockName) dimBlockId = ctx.blockName
-        blockPosition = ctx.definitionPoint.clone()
       }
     } else {
       const resolved = acdbResolveAnnotationScaleDrawInfo(this)
