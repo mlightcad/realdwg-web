@@ -523,6 +523,72 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(leader.horizontalDirection).toMatchObject({ x: 1, y: 0, z: 0 })
   })
 
+  /** LEADER carrying one `ACAD`/`DSTYLE` override with a 1005 handle value. */
+  const leaderWithDimStyleHandle = (handle: bigint) => ({
+    type: 'LEADER',
+    styleName: '1-40-4',
+    isArrowheadEnabled: true,
+    isSpline: false,
+    leaderCreationFlag: 3,
+    isHooklineSameDirection: true,
+    isHooklineExists: false,
+    vertices: [
+      { x: 0, y: 0, z: 0 },
+      { x: 10, y: 0, z: 0 }
+    ],
+    xdata: [
+      {
+        appName: 'ACAD',
+        value: [
+          { code: 1000, value: 'DSTYLE' },
+          { code: 1002, value: '{' },
+          { code: 1070, value: 41 },
+          { code: 1040, value: 0.08 },
+          { code: 1070, value: 341 },
+          { code: 1005, value: handle },
+          { code: 1002, value: '}' }
+        ]
+      }
+    ]
+  })
+
+  it('keeps DSTYLE DIMLDRBLK handle 0 when LibreDWG emits bigint 1005', () => {
+    // LibreDWG WASM exposes EED group 1005 as bigint, and dropping the value
+    // cleared `(1070 . 341) (1005 . 0)`. That left leaders on the style's
+    // custom Dot block — huge filled circles instead of the closed-filled
+    // arrow AutoCAD draws for that override.
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const result = converter.convert(leaderWithDimStyleHandle(BigInt(0)) as any)
+
+    expect(result).toBeInstanceOf(AcDbLeader)
+    const leader = result as AcDbLeader
+    const acad = [...leader.iterateXData('ACAD')]
+    expect(acad).toEqual(
+      expect.arrayContaining([
+        { code: 1070, value: 341 },
+        { code: 1005, value: '0' }
+      ])
+    )
+  })
+
+  it('encodes a nonzero bigint 1005 handle as uppercase hex, not decimal', () => {
+    // Handle 0 cannot tell hex from decimal apart (both are "0"), so a
+    // decimal-encoded handle would silently point at the wrong object. 0x77A
+    // would become "1914" if the bigint were stringified directly.
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const result = converter.convert(
+      leaderWithDimStyleHandle(BigInt(0x77a)) as any
+    )
+
+    expect(result).toBeInstanceOf(AcDbLeader)
+    const acad = [...(result as AcDbLeader).iterateXData('ACAD')]
+    expect(acad).toEqual(expect.arrayContaining([{ code: 1005, value: '77A' }]))
+  })
+
   it('converts MTEXT extentsWidth from libredwg entities', () => {
     acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
     const converter = new AcDbEntityConverter()
