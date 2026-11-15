@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.15.29
+
+### Patch Changes
+
+- fix: aligns dimension, multileader and transform editing with AutoCAD, so grip edits rebuild anonymous dimension blocks with the right layout and SCALE keeps linear, diameter and radius dimensions intact. transformBy now scales hatch pattern lines, thickness, polyline widths and annotation sizes across every entity type, DSTYLE overrides that reference a block by handle import from DWG, and bulged polyline area is computed exactly instead of by tessellation, so circle and DONUT centerlines report their true area.
+- Updated dependencies
+  - @mlightcad/common@1.15.29
+  - @mlightcad/emf-converter@1.15.29
+  - @mlightcad/geometry-engine@3.15.29
+  - @mlightcad/graphic-interface@3.15.29
+
 ## 1.15.28
 
 ### Patch Changes
