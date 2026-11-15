@@ -1964,6 +1964,24 @@ export class AcDbEntityConverter {
     ) {
       return value
     }
+    // LibreDWG WASM reports XData group 1005 (an entity handle) as a bigint.
+    // Handles carry no numeric meaning, so store the uppercase hex form the
+    // rest of data-model expects. Dropping the value lost DSTYLE overrides
+    // such as `(1070 . 341) (1005 . 0)`, which clear DIMLDRBLK.
+    if (typeof value === 'bigint') {
+      if (code === AcDbDxfCode.ExtendedDataHandle) {
+        return value.toString(16).toUpperCase()
+      }
+      // The other integer XData codes (1070/1071) are 16/32-bit, so keep the
+      // plain JS number the import path uses elsewhere.
+      if (
+        value >= BigInt(Number.MIN_SAFE_INTEGER) &&
+        value <= BigInt(Number.MAX_SAFE_INTEGER)
+      ) {
+        return Number(value)
+      }
+      return value.toString()
+    }
     if (value instanceof Uint8Array) return value
     if (this.isPointLike(value)) {
       return {

@@ -175,8 +175,8 @@ importers:
   packages/libredwg-converter:
     dependencies:
       '@mlightcad/libredwg-web':
-        specifier: 0.8.8
-        version: 0.8.8
+        specifier: 0.8.9
+        version: 0.8.9
     devDependencies:
       '@mlightcad/data-model':
         specifier: workspace:*
@@ -2077,8 +2077,8 @@ packages:
   '@manypkg/get-packages@1.1.3':
     resolution: {integrity: sha512-fo+QhuU3qE/2TQMQmbVMqaQ6EWbMhi4ABWP+O4AM1NqPBuy0OrApV5LO6BrrgnhtAHS2NH6RrVk9OL181tTi8A==}
 
-  '@mlightcad/libredwg-web@0.8.8':
-    resolution: {integrity: sha512-z003e0GpS01Kc4ee6InhxrDyA66OgmKrUfyHkZYkDRiCTbY3plQk/6N0J0lIti08bVHhknKh4WO95UotSk+prQ==}
+  '@mlightcad/libredwg-web@0.8.9':
+    resolution: {integrity: sha512-1PuP47FAJeEEtv2WLwTS3ZT7sX7Qw8Y8dcfK64HZe1ygV8ZIzow0E6NkhL0NI5uW9TYl+CXGNWHzvWas4i4i9A==}
     engines: {node: '>=20'}
 
   '@napi-rs/wasm-runtime@1.2.4':
@@ -7730,7 +7730,7 @@ snapshots:
       globby: 11.1.0
       read-yaml-file: 1.1.0
 
-  '@mlightcad/libredwg-web@0.8.8': {}
+  '@mlightcad/libredwg-web@0.8.9': {}
 
   '@napi-rs/wasm-runtime@1.2.4(@emnapi/core@1.10.0)(@emnapi/runtime@1.10.0)':
     dependencies:
