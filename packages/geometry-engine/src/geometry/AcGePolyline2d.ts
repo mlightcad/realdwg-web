@@ -1,9 +1,9 @@
 import { AcGeBox2d, AcGeMatrix2d, AcGePoint2d, AcGePoint3d } from '../math/index.js'
-import { acgeClosedPolygonArea2d } from '../util/AcGePolygonAreaUtil.js'
 import { FLOAT_TOL } from '../util/index.js'
 import { AcGeCircArc2d } from './AcGeCircArc2d.js'
 import { AcGeCurve2d } from './AcGeCurve2d.js'
 import type { AcGeTessellateOptions } from './AcGeCurveTessellate.js'
+import { acgeBulgedPolylineArea2d } from './AcGePolyline2dArea.js'
 import { acgeOffsetPolyline2d } from './AcGePolyline2dOffset.js'
 
 /**
@@ -119,11 +119,13 @@ export class AcGePolyline2d<
 
   /**
    * The area enclosed by this polyline. Open polylines return `0`.
+   *
+   * Bulged segments are measured exactly instead of being tessellated, so a
+   * closed two-vertex polyline with `bulge = 1` on both vertices (a circle or
+   * a `DONUT` centerline) returns `PI * r * r`.
    */
   get area(): number {
-    if (!this._closed || this._vertices.length < 3) return 0
-    const points = this.getPoints(128) as AcGePoint2d[]
-    return acgeClosedPolygonArea2d(points)
+    return acgeBulgedPolylineArea2d(this._vertices, this._closed)
   }
 
   /**

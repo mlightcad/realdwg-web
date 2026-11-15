@@ -928,6 +928,20 @@ describe('AcDbPolyline', () => {
     expect(polyline.area).toBe(0)
   })
 
+  it('reports the area of a closed 2-vertex bulged polyline (DONUT)', () => {
+    // A closed LWPOLYLINE with bulge = 1 on both vertices is how DWG/DXF store
+    // a circle or a DONUT centerline; its area must be PI * r^2, not 0.
+    const donut = new AcDbPolyline()
+    donut.closed = true
+    donut.addVertexAt(0, new AcGePoint2d(0, 0), 1)
+    donut.addVertexAt(1, new AcGePoint2d(10, 0), 1)
+    expect(donut.area).toBeCloseTo(25 * Math.PI, 10)
+
+    // The same geometry left open encloses nothing.
+    donut.closed = false
+    expect(donut.area).toBe(0)
+  })
+
   it('maps OCS vertices to WCS for extrusion (0,0,-1)', () => {
     const polyline = new AcDbPolyline()
     polyline.normal = new AcGeVector3d(0, 0, -1)

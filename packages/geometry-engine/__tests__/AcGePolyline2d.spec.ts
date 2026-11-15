@@ -240,6 +240,141 @@ describe('Test AcGePolyline2d', () => {
     expect(result.numberOfVertices).toBeGreaterThanOrEqual(4)
   })
 
+  it('computes exact area for closed bulged polylines', () => {
+    // Closed 2-vertex polyline with bulge = 1 on both segments: a circle of
+    // diameter 10, i.e. the centerline of a DONUT.
+    const circle = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: 1 },
+        { x: 10, y: 0, bulge: 1 }
+      ],
+      true
+    )
+    expect(circle.area).toBeCloseTo(25 * Math.PI, 10)
+
+    // Closed 2-vertex semicircle: bulged arc plus a straight closing chord.
+    const semicircle = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: 1 },
+        { x: 10, y: 0 }
+      ],
+      true
+    )
+    expect(semicircle.area).toBeCloseTo(12.5 * Math.PI, 10)
+
+    // Reversing the winding must not change the enclosed area.
+    const reversed = new AcGePolyline2d(
+      [
+        { x: 10, y: 0, bulge: 1 },
+        { x: 0, y: 0, bulge: 1 }
+      ],
+      true
+    )
+    expect(reversed.area).toBeCloseTo(25 * Math.PI, 10)
+  })
+
+  it('adds and subtracts bulged segment areas on mixed polylines', () => {
+    // CCW square whose first edge bulges outwards (below y = 0): the
+    // semicircle of radius 5 hangs outside, so it is added to the 10x10 square.
+    const bulgedOut = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: 1 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 }
+      ],
+      true
+    )
+    expect(bulgedOut.area).toBeCloseTo(100 + 12.5 * Math.PI, 10)
+
+    // The same square with the semicircle cut out of it: 100 - PI * 5^2 / 2.
+    const bulgedIn = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: -1 },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 }
+      ],
+      true
+    )
+    expect(bulgedIn.area).toBeCloseTo(100 - 12.5 * Math.PI, 10)
+
+    // A quarter-circle bulge (bulge = tan(22.5deg)) on the same edge stays
+    // exact, so the area cannot silently fall back to tessellation. The 90deg
+    // sweep over a chord of 10 has radius 10 / sqrt(2), hence r^2 = 50.
+    const quarter = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: Math.tan(Math.PI / 8) },
+        { x: 10, y: 0 },
+        { x: 10, y: 10 },
+        { x: 0, y: 10 }
+      ],
+      true
+    )
+    const segmentArea = 0.5 * 50 * (Math.PI / 2 - Math.sin(Math.PI / 2))
+    expect(quarter.area).toBeCloseTo(100 + segmentArea, 10)
+  })
+
+  it('keeps short-arc bulges and large coordinates numerically exact', () => {
+    // A tiny bulge is a very short arc of a huge circle. The circular-segment
+    // area is chord^2 * theta / 12 to leading order, which must not be lost to
+    // cancellation between the radius^2 * theta and radius^2 * sin(theta) terms.
+    const tinyBulge = 1e-6
+    const tiny = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: tinyBulge },
+        { x: 10, y: 0 }
+      ],
+      true
+    )
+    const sweep = 4 * Math.atan(tinyBulge)
+    const radius = 10 / (2 * Math.sin(sweep / 2))
+    const squared = sweep * sweep
+    const series =
+      ((sweep * squared) / 6) * (1 - (squared / 20) * (1 - squared / 42))
+    expect(tiny.area).toBeCloseTo(0.5 * radius * radius * series, 12)
+    expect(tiny.area).toBeGreaterThan(0)
+
+    // The area must not depend on where the polyline sits in the drawing: a
+    // circle at a survey-scale offset has to match the circle at the origin.
+    const offset = 4000000
+    const farCircle = new AcGePolyline2d(
+      [
+        { x: offset, y: offset, bulge: 1 },
+        { x: offset + 10, y: offset, bulge: 1 }
+      ],
+      true
+    )
+    expect(farCircle.area).toBeCloseTo(25 * Math.PI, 10)
+  })
+
+  it('returns 0 area for open and degenerate bulged polylines', () => {
+    const open = new AcGePolyline2d(
+      [
+        { x: 0, y: 0, bulge: 1 },
+        { x: 10, y: 0, bulge: 1 }
+      ],
+      false
+    )
+    expect(open.area).toBe(0)
+
+    const empty = new AcGePolyline2d([], true)
+    expect(empty.area).toBe(0)
+
+    const single = new AcGePolyline2d([{ x: 1, y: 2, bulge: 1 }], true)
+    expect(single.area).toBe(0)
+
+    // Coincident vertices have no chord, so the bulge cannot form an arc.
+    const coincident = new AcGePolyline2d(
+      [
+        { x: 3, y: 4, bulge: 1 },
+        { x: 3, y: 4 }
+      ],
+      true
+    )
+    expect(coincident.area).toBe(0)
+  })
+
   it('computes area for closed polyline and returns 0 when open', () => {
     const open = new AcGePolyline2d(
       [
