@@ -166,6 +166,27 @@ function readElevation(entity: DwgElevationFields): number | undefined {
 }
 
 /**
+ * Dimension line angle of a linear (rotated) dimension.
+ *
+ * libredwg-web fills `rotationAngle` from the block insert rotation
+ * (`ins_rotation`) instead of the dimension rotation (`dim_rotation`, DXF
+ * group 50), so the angle is recovered from the definition points: AutoCAD
+ * stores the definition point where extension line 2 meets the dimension
+ * line, and without an oblique angle that extension line is perpendicular to
+ * the dimension line.
+ */
+function linearDimensionRotation(entity: DwgAlignedDimensionEntity) {
+  const xLine2 = entity.subDefinitionPoint2
+  const dimLine = entity.definitionPoint
+  if (xLine2 && dimLine && !entity.obliqueAngle) {
+    const dx = dimLine.x - xLine2.x
+    const dy = dimLine.y - xLine2.y
+    if (Math.hypot(dx, dy) > 1e-9) return Math.atan2(dy, dx) - Math.PI / 2
+  }
+  return entity.rotationAngle ?? 0
+}
+
+/**
  * Arc-aligned text. libredwg-web 0.7.x recognizes `DWG_TYPE_ARCALIGNEDTEXT`
  * but does not decode its fields (the file open reports an unhandled class),
  * so this shape is only produced once that decoder fills the entity.
@@ -1346,13 +1367,29 @@ export class AcDbEntityConverter {
   }
 
   private convertDimension(dimension: DwgDimensionEntityCommon) {
-    if (dimension.subclassMarker == 'AcDbAlignedDimension') {
+    if (
+      dimension.subclassMarker == 'AcDbAlignedDimension' ||
+      dimension.subclassMarker == 'AcDbRotatedDimension'
+    ) {
       const entity = dimension as DwgAlignedDimensionEntity
-      const dbEntity = new AcDbAlignedDimension(
-        entity.subDefinitionPoint1,
-        entity.subDefinitionPoint2,
-        entity.definitionPoint
-      )
+      // libredwg-web reports DIMENSION_LINEAR with the AcDbAlignedDimension
+      // marker too, so the dimension kind (group 70 low bits: 0 = rotated,
+      // 1 = aligned) decides the class. A linear dimension read as aligned is
+      // regenerated (SCALE, grip edits) along the slanted chord instead.
+      const isRotated =
+        dimension.subclassMarker == 'AcDbRotatedDimension' ||
+        (entity.dimensionType != null && (entity.dimensionType & 0x07) === 0)
+      const dbEntity = isRotated
+        ? new AcDbRotatedDimension(
+            entity.subDefinitionPoint1,
+            entity.subDefinitionPoint2,
+            entity.definitionPoint
+          )
+        : new AcDbAlignedDimension(
+            entity.subDefinitionPoint1,
+            entity.subDefinitionPoint2,
+            entity.definitionPoint
+          )
       if (entity.insertionPoint) {
         dbEntity.dimBlockPosition = {
           x: entity.insertionPoint.x,
@@ -1360,24 +1397,9 @@ export class AcDbEntityConverter {
           z: 0
         }
       }
-      dbEntity.rotation = entity.rotationAngle
-      this.processDimensionCommonAttrs(dimension, dbEntity)
-      return dbEntity
-    } else if (dimension.subclassMarker == 'AcDbRotatedDimension') {
-      const entity = dimension as DwgAlignedDimensionEntity
-      const dbEntity = new AcDbRotatedDimension(
-        entity.subDefinitionPoint1,
-        entity.subDefinitionPoint2,
-        entity.definitionPoint
-      )
-      if (entity.insertionPoint) {
-        dbEntity.dimBlockPosition = {
-          x: entity.insertionPoint.x,
-          y: entity.insertionPoint.y,
-          z: 0
-        }
-      }
-      dbEntity.rotation = entity.rotationAngle
+      dbEntity.rotation = isRotated
+        ? linearDimensionRotation(entity)
+        : (entity.rotationAngle ?? 0)
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
     } else if (dimension.subclassMarker == 'AcDb3PointAngularDimension') {
@@ -1884,8 +1906,7 @@ export class AcDbEntityConverter {
       if (
         Array.isArray(value) &&
         value.every(
-          (n) =>
-            typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 255
+          n => typeof n === 'number' && Number.isFinite(n) && n >= 0 && n <= 255
         )
       ) {
         return Uint8Array.from(value as number[])

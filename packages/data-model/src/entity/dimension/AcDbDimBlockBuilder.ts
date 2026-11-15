@@ -3,7 +3,8 @@ import {
   AcGeLine3d,
   AcGePoint3d,
   AcGePoint3dLike,
-  AcGeVector3d
+  AcGeVector3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import {
   AcGiArrowType,
@@ -472,6 +473,48 @@ export function acdbAppendLeaderToText(
       style
     )
   )
+}
+
+/**
+ * Appends the dimension line AutoCAD draws for radius and diameter text kept
+ * at a user position as horizontal text (DIMTIH / DIMTOH): from the arrowhead
+ * along the dimension line to the knee level with the text, then a
+ * horizontal landing one arrow size long toward the text.
+ *
+ * @param block - Dimension block receiving the lines.
+ * @param arrowPoint - Arrowhead tip on the measured curve.
+ * @param direction - Direction of the dimension line through `arrowPoint`.
+ * @param text - User text position.
+ * @param style - Effective dimension style.
+ * @param entity - Dimension owning the block (annotation scale lookup).
+ */
+export function acdbAppendRadialTextLanding(
+  block: AcDbBlockTableRecord,
+  arrowPoint: AcGePoint3dLike,
+  direction: AcGeVector3dLike,
+  text: AcGePoint3dLike,
+  style: AcDbDimStyleTableRecord,
+  entity?: AcDbObject
+) {
+  const start = new AcGePoint3d().copy(arrowPoint)
+  const dir = new AcGeVector3d(direction.x, direction.y, 0)
+  if (dir.lengthSq() < 1e-18) return
+  dir.normalize()
+  const offset = new AcGeVector3d(text.x - start.x, text.y - start.y, 0)
+  // A near-horizontal dimension line never reaches the text height, so the
+  // knee falls back to the text projected onto the line.
+  const along = Math.abs(dir.y) > 1e-6 ? offset.y / dir.y : offset.dot(dir)
+  const knee = start.clone().add(dir.multiplyScalar(along))
+  if (start.distanceTo(knee) > 1e-9) {
+    block.appendEntity(acdbCreateDimLineEntity(start, knee, style))
+  }
+  const landing = style.dimasz * acdbDimFeatureScale(style, entity)
+  const end = new AcGePoint3d(
+    knee.x + (text.x >= knee.x ? landing : -landing),
+    knee.y,
+    knee.z
+  )
+  block.appendEntity(acdbCreateDimLineEntity(knee, end, style))
 }
 
 /**

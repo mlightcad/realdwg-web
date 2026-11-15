@@ -1,5 +1,6 @@
 import {
   AcDb3PointAngularDimension,
+  AcDbAlignedDimension,
   AcDbArc,
   AcDbAttribute,
   AcDbBlockReference,
@@ -13,6 +14,7 @@ import {
   AcDbOrdinateDimension,
   AcDbPolyline,
   AcDbProxyEntity,
+  AcDbRotatedDimension,
   AcDbShape,
   AcDbSolid,
   AcDbText,
@@ -384,6 +386,65 @@ describe('libredwg AcDbEntityConverter', () => {
     expect(dim.definingPoint).toMatchObject({ x: 12, y: 7, z: 0 })
     expect(dim.useXAxis).toBe(true)
     expect(dim.dimensionType & 0x40).toBe(0x40)
+  })
+
+  // libredwg-web reports DIMENSION_LINEAR with the aligned subclass marker and
+  // the block insert rotation instead of the dimension rotation.
+  const linearDimension = (overrides: Record<string, unknown>) => ({
+    type: 'DIMENSION',
+    subclassMarker: 'AcDbAlignedDimension',
+    handle: '1729F',
+    ownerBlockRecordSoftId: '18',
+    layer: '0',
+    name: '*D380',
+    styleName: 'STANDARD',
+    text: '',
+    textPoint: { x: 6177.03, y: 608.04, z: 0 },
+    measurement: 334.07,
+    dimensionType: 32,
+    rotationAngle: 0,
+    obliqueAngle: 0,
+    subDefinitionPoint1: { x: 6135.7, y: 775.07, z: 0 },
+    subDefinitionPoint2: { x: 6135.7, y: 441, z: 0 },
+    definitionPoint: { x: 6184.03, y: 441, z: 0 },
+    ...overrides
+  })
+
+  it('converts linear dimensions reported as aligned into rotated dimensions', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+
+    const vertical = converter.convert(linearDimension({}) as any)
+    expect(vertical).toBeInstanceOf(AcDbRotatedDimension)
+    expect(
+      Math.abs(Math.sin((vertical as AcDbRotatedDimension).rotation))
+    ).toBe(1)
+
+    // Horizontal 150 dimension whose extension line origins are not level:
+    // as an aligned dimension it would measure the slanted 224.5 chord.
+    const horizontal = converter.convert(
+      linearDimension({
+        handle: '172FD',
+        measurement: 150,
+        dimensionType: 160,
+        subDefinitionPoint1: { x: 5985.7, y: 608.04, z: 0 },
+        subDefinitionPoint2: { x: 6135.7, y: 775.07, z: 0 },
+        definitionPoint: { x: 6135.7, y: 796.16, z: 0 }
+      }) as any
+    ) as AcDbRotatedDimension
+    expect(horizontal).toBeInstanceOf(AcDbRotatedDimension)
+    expect(Math.sin(horizontal.rotation)).toBeCloseTo(0, 9)
+    expect(horizontal.isUsingDefaultTextPosition).toBe(false)
+  })
+
+  it('keeps aligned dimensions aligned', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const aligned = converter.convert(
+      linearDimension({ dimensionType: 33 }) as any
+    )
+    expect(aligned).toBeInstanceOf(AcDbAlignedDimension)
+    expect(aligned).not.toBeInstanceOf(AcDbRotatedDimension)
   })
 
   it('converts LEADER hook-line metadata from libredwg entities', () => {
