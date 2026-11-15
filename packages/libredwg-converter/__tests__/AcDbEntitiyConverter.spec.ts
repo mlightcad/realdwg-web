@@ -414,11 +414,13 @@ describe('libredwg AcDbEntityConverter', () => {
     acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
     const converter = new AcDbEntityConverter()
 
-    const vertical = converter.convert(linearDimension({}) as any)
+    const vertical = converter.convert(
+      linearDimension({}) as any
+    ) as AcDbRotatedDimension
     expect(vertical).toBeInstanceOf(AcDbRotatedDimension)
-    expect(
-      Math.abs(Math.sin((vertical as AcDbRotatedDimension).rotation))
-    ).toBe(1)
+    expect(Math.abs(Math.sin(vertical.rotation))).toBeCloseTo(1, 9)
+    expect(Math.abs(Math.cos(vertical.rotation))).toBeCloseTo(0, 9)
+    expect(vertical.measurement).toBeCloseTo(334.07, 1)
 
     // Horizontal 150 dimension whose extension line origins are not level:
     // as an aligned dimension it would measure the slanted 224.5 chord.
@@ -433,7 +435,8 @@ describe('libredwg AcDbEntityConverter', () => {
       }) as any
     ) as AcDbRotatedDimension
     expect(horizontal).toBeInstanceOf(AcDbRotatedDimension)
-    expect(Math.sin(horizontal.rotation)).toBeCloseTo(0, 9)
+    expect(horizontal.rotation).toBeCloseTo(0, 9)
+    expect(horizontal.measurement).toBeCloseTo(150, 1)
     expect(horizontal.isUsingDefaultTextPosition).toBe(false)
   })
 
@@ -445,6 +448,50 @@ describe('libredwg AcDbEntityConverter', () => {
     )
     expect(aligned).toBeInstanceOf(AcDbAlignedDimension)
     expect(aligned).not.toBeInstanceOf(AcDbRotatedDimension)
+  })
+
+  it('classifies linear dimensions without dimensionType when measurement differs from chord', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    const horizontal = converter.convert(
+      linearDimension({
+        handle: '172FD',
+        measurement: 150,
+        dimensionType: undefined,
+        subDefinitionPoint1: { x: 5985.7, y: 608.04, z: 0 },
+        subDefinitionPoint2: { x: 6135.7, y: 775.07, z: 0 },
+        definitionPoint: { x: 6135.7, y: 796.16, z: 0 }
+      }) as any
+    ) as AcDbRotatedDimension
+    expect(horizontal).toBeInstanceOf(AcDbRotatedDimension)
+    expect(horizontal.measurement).toBeCloseTo(150, 1)
+  })
+
+  it('imports oblique and derives rotation from the extension for oblique linears', () => {
+    acdbHostApplicationServices().workingDatabase = new AcDbDatabase()
+    const converter = new AcDbEntityConverter()
+    // Vertical linear (rotation −π/2): without oblique the extension is +X;
+    // with oblique θ the extension angle is rotation + π/2 + θ.
+    const oblique = Math.PI / 6
+    const extLen = 50
+    const extAngle = -Math.PI / 2 + Math.PI / 2 + oblique
+    const dim = converter.convert(
+      linearDimension({
+        measurement: 334.07,
+        obliqueAngle: oblique,
+        subDefinitionPoint1: { x: 6135.7, y: 775.07, z: 0 },
+        subDefinitionPoint2: { x: 6135.7, y: 441, z: 0 },
+        definitionPoint: {
+          x: 6135.7 + Math.cos(extAngle) * extLen,
+          y: 441 + Math.sin(extAngle) * extLen,
+          z: 0
+        }
+      }) as any
+    ) as AcDbRotatedDimension
+    expect(dim).toBeInstanceOf(AcDbRotatedDimension)
+    expect(dim.oblique).toBeCloseTo(oblique, 9)
+    expect(dim.rotation).toBeCloseTo(-Math.PI / 2, 6)
+    expect(dim.measurement).toBeCloseTo(334.07, 1)
   })
 
   it('converts LEADER hook-line metadata from libredwg entities', () => {

@@ -172,18 +172,59 @@ function readElevation(entity: DwgElevationFields): number | undefined {
  * (`ins_rotation`) instead of the dimension rotation (`dim_rotation`, DXF
  * group 50), so the angle is recovered from the definition points: AutoCAD
  * stores the definition point where extension line 2 meets the dimension
- * line, and without an oblique angle that extension line is perpendicular to
- * the dimension line.
+ * line. That extension is perpendicular to the dimension line when there is
+ * no oblique; with an oblique angle it is offset by that amount, so
+ * rotation = atan2(ext) − π/2 − oblique.
  */
 function linearDimensionRotation(entity: DwgAlignedDimensionEntity) {
+  const oblique = entity.obliqueAngle ?? 0
   const xLine2 = entity.subDefinitionPoint2
   const dimLine = entity.definitionPoint
-  if (xLine2 && dimLine && !entity.obliqueAngle) {
+  if (xLine2 && dimLine) {
     const dx = dimLine.x - xLine2.x
     const dy = dimLine.y - xLine2.y
-    if (Math.hypot(dx, dy) > 1e-9) return Math.atan2(dy, dx) - Math.PI / 2
+    if (Math.hypot(dx, dy) > 1e-9) {
+      return Math.atan2(dy, dx) - Math.PI / 2 - oblique
+    }
+  }
+  // Degenerate extension (definition point on xLine2): fall back to the
+  // direction from xLine1 to the definition point as the dimension line.
+  const xLine1 = entity.subDefinitionPoint1
+  if (xLine1 && dimLine) {
+    const dx = dimLine.x - xLine1.x
+    const dy = dimLine.y - xLine1.y
+    if (Math.hypot(dx, dy) > 1e-9) return Math.atan2(dy, dx)
   }
   return entity.rotationAngle ?? 0
+}
+
+/**
+ * Whether a linear dimension reported with the aligned subclass marker is
+ * actually a rotated (DIMENSION_LINEAR) dimension.
+ *
+ * Prefer DXF group 70 low bits (0 = rotated, 1 = aligned). When
+ * `dimensionType` is missing, treat a reported measurement that differs from
+ * the chord between the extension origins as rotated — that is the case that
+ * breaks SCALE when misclassified as aligned.
+ */
+function isRotatedLinearDimension(
+  entity: DwgAlignedDimensionEntity,
+  subclassMarker: string | undefined
+) {
+  if (subclassMarker == 'AcDbRotatedDimension') return true
+  if (entity.dimensionType != null) return (entity.dimensionType & 0x07) === 0
+
+  const p1 = entity.subDefinitionPoint1
+  const p2 = entity.subDefinitionPoint2
+  const measured = entity.measurement
+  if (p1 && p2 && measured != null && Number.isFinite(measured)) {
+    const chord = Math.hypot(p2.x - p1.x, p2.y - p1.y)
+    if (chord > 1e-9) {
+      const tol = Math.max(1e-3, chord * 1e-6)
+      if (Math.abs(measured - chord) > tol) return true
+    }
+  }
+  return false
 }
 
 /**
@@ -1376,9 +1417,10 @@ export class AcDbEntityConverter {
       // marker too, so the dimension kind (group 70 low bits: 0 = rotated,
       // 1 = aligned) decides the class. A linear dimension read as aligned is
       // regenerated (SCALE, grip edits) along the slanted chord instead.
-      const isRotated =
-        dimension.subclassMarker == 'AcDbRotatedDimension' ||
-        (entity.dimensionType != null && (entity.dimensionType & 0x07) === 0)
+      const isRotated = isRotatedLinearDimension(
+        entity,
+        dimension.subclassMarker
+      )
       const dbEntity = isRotated
         ? new AcDbRotatedDimension(
             entity.subDefinitionPoint1,
@@ -1400,6 +1442,7 @@ export class AcDbEntityConverter {
       dbEntity.rotation = isRotated
         ? linearDimensionRotation(entity)
         : (entity.rotationAngle ?? 0)
+      dbEntity.oblique = entity.obliqueAngle ?? 0
       this.processDimensionCommonAttrs(dimension, dbEntity)
       return dbEntity
     } else if (dimension.subclassMarker == 'AcDb3PointAngularDimension') {

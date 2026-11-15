@@ -501,9 +501,17 @@ export function acdbAppendRadialTextLanding(
   if (dir.lengthSq() < 1e-18) return
   dir.normalize()
   const offset = new AcGeVector3d(text.x - start.x, text.y - start.y, 0)
-  // A near-horizontal dimension line never reaches the text height, so the
-  // knee falls back to the text projected onto the line.
-  const along = Math.abs(dir.y) > 1e-6 ? offset.y / dir.y : offset.dot(dir)
+  // Horizontal text: knee is where the dimension line meets the text height.
+  // Near-horizontal lines never reach a different Y, and a tiny dir.y makes
+  // offset.y / dir.y explode, so fall back to the orthogonal projection.
+  const projected = offset.dot(dir)
+  let along = projected
+  if (Math.abs(dir.y) > 1e-3) {
+    const alongY = offset.y / dir.y
+    if (Number.isFinite(alongY) && Math.abs(alongY - projected) < 1e6) {
+      along = alongY
+    }
+  }
   const knee = start.clone().add(dir.multiplyScalar(along))
   if (start.distanceTo(knee) > 1e-9) {
     block.appendEntity(acdbCreateDimLineEntity(start, knee, style))

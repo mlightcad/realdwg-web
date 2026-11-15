@@ -353,4 +353,27 @@ describe('AcDbDimBlockBuilder / radius and diameter user text', () => {
     const text = block.find(e => e instanceof AcDbMText) as AcDbMText
     expect(text.location).toMatchObject({ x: 2, y: 3 })
   })
+
+  it('radial with near-horizontal chord still draws a finite landing', () => {
+    const db = createStyledDb()
+    const dim = new AcDbRadialDimension(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0.005, 0),
+      0,
+      null,
+      'UserText'
+    )
+    dim.textPosition = new AcGePoint3d(4, 1, 0)
+    dim.isUsingDefaultTextPosition = false
+    db.tables.blockTable.modelSpace.appendEntity(dim)
+
+    const block = [...dim.createDimBlock('*DU3').newIterator()]
+    const lines = linesOf(block)
+    expect(lines.length).toBeGreaterThanOrEqual(1)
+    for (const line of lines) {
+      expect(Number.isFinite(line.startPoint.x)).toBe(true)
+      expect(Number.isFinite(line.endPoint.x)).toBe(true)
+      expect(line.startPoint.distanceTo(line.endPoint)).toBeLessThan(100)
+    }
+  })
 })
