@@ -1,5 +1,21 @@
 # @mlightcad/data-model
 
+## 1.15.30
+
+### Patch Changes
+
+- 5778f57: Keep annotative dimensions in place when their DWG carries per-scale context data (e.g. read by `@mlightcad/dwg-converter`).
+
+  - data-model: `AcDbDimension.resolveAnnotativePresentation()` no longer uses the context's `definitionPoint` as the block insertion point. Per-scale `*D` blocks are already in WCS, and that point is the default text location (DWG `def_pt`, DXF 10), so dimensions were shifted by their text position (e.g. drawn far above the title frame in exported PDFs). Every per-scale block is now inserted at the dimension's own block position (DXF 12).
+  - data-model: adding an annotation scale to a dimension now seeds the new context's `definitionPoint` with the dimension's text position instead of its block position.
+
+- fix: keeps annotative dimensions in place when DWG files carry per-scale context data. Per-scale dimension blocks are now inserted at the dimension's own block position instead of its text location, so dimensions no longer drift away from their geometry in views and exported PDFs, and newly added annotation scales seed the correct text position
+- Updated dependencies
+  - @mlightcad/common@1.15.30
+  - @mlightcad/emf-converter@1.15.30
+  - @mlightcad/geometry-engine@3.15.30
+  - @mlightcad/graphic-interface@3.15.30
+
 ## 1.15.29
 
 ### Patch Changes

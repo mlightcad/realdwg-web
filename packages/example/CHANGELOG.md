@@ -1,5 +1,15 @@
 # @mlightcad/realdwg-web-example
 
+## 0.15.30
+
+### Patch Changes
+
+- fix: keeps annotative dimensions in place when DWG files carry per-scale context data. Per-scale dimension blocks are now inserted at the dimension's own block position instead of its text location, so dimensions no longer drift away from their geometry in views and exported PDFs, and newly added annotation scales seed the correct text position
+- Updated dependencies [5778f57]
+- Updated dependencies
+  - @mlightcad/data-model@1.15.30
+  - @mlightcad/libredwg-converter@3.15.30
+
 ## 0.15.29
 
 ### Patch Changes
