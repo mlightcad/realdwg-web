@@ -9,7 +9,8 @@ import { AcDbAnnotScaleObjectContextData } from './AcDbAnnotScaleObjectContextDa
  *
  * Critical fields for viewing:
  * - {@link blockName} — anonymous dim block for this scale (DXF 2)
- * - {@link definitionPoint} — OCS definition / insertion point (DXF 10)
+ * - {@link definitionPoint} — default text location for this scale (DXF 10);
+ *   not a block insertion offset, the `*D` block is drawn in WCS
  * - {@link dimLinePoint} — common subclass point (DXF 11), e.g. aligned dim line
  */
 export class AcDbDimensionObjectContextData extends AcDbAnnotScaleObjectContextData {
@@ -38,7 +39,10 @@ export class AcDbDimensionObjectContextData extends AcDbAnnotScaleObjectContextD
     this._blockName = value
   }
 
-  /** Definition / insertion point for this scale (DXF 10). */
+  /**
+   * Default text location for this scale (DXF 10, DWG `def_pt`). The scale's
+   * `*D` block is already in WCS, so this is not an insertion offset.
+   */
   get definitionPoint() {
     return this._definitionPoint
   }

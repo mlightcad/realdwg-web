@@ -2,6 +2,7 @@ import { AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbBlockTableRecord } from '../src/database/AcDbBlockTableRecord'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
+import { AcDbLine } from '../src/entity/AcDbLine'
 import { AcDbAlignedDimension } from '../src/entity/dimension/AcDbAlignedDimension'
 import { acdbDimFeatureScale } from '../src/entity/dimension/AcDbDimFeatureScale'
 import {
@@ -62,7 +63,7 @@ function wireAnnotativeContexts(
 }
 
 describe('annotative dimension object-level contexts', () => {
-  it('picks per-scale dim block and definition point at CANNOSCALE', () => {
+  it('picks the per-scale dim block at CANNOSCALE', () => {
     const db = createDb()
     const scale50 = createScale(db, '1:50', 50)
     const scale100 = createScale(db, '1:100', 100)
@@ -115,8 +116,10 @@ describe('annotative dimension object-level contexts', () => {
 
     const presentation = dim.resolveAnnotativePresentation()
     expect(presentation.dimBlockId).toBe('*D100')
-    expect(presentation.blockPosition.x).toBeCloseTo(20, 6)
-    expect(presentation.blockPosition.y).toBeCloseTo(30, 6)
+    // Per-scale blocks are in WCS: the insert stays at the dimension's own
+    // block position, not at the context's definition point.
+    expect(presentation.blockPosition.x).toBeCloseTo(10, 6)
+    expect(presentation.blockPosition.y).toBeCloseTo(10, 6)
     expect(presentation.annotationScale).toMatchObject({
       drawnScaleFactor: 100,
       drawnScaleName: '1:100',
@@ -129,5 +132,54 @@ describe('annotative dimension object-level contexts', () => {
     const at50 = dim.resolveAnnotativePresentation()
     expect(at50.dimBlockId).toBe('*D50')
     expect(at50.featureScale).toBe(50)
+  })
+
+  it('keeps DWG dims in place when the context stores the text location', () => {
+    // Mirrors a DWG read by the commercial parser: the default context
+    // repeats the main *D block (already in WCS) and its def point is the
+    // dimension text position, not a block insertion offset.
+    const db = createDb()
+    const scale = createScale(db, '1:1', 1)
+    db.cannoscale = '1:1'
+
+    const btr = new AcDbBlockTableRecord()
+    btr.name = '*D20'
+    db.tables.blockTable.add(btr)
+    btr.appendEntity(
+      new AcDbLine(
+        new AcGePoint3d(2305, 8511, 0),
+        new AcGePoint3d(3965, 8511, 0)
+      )
+    )
+
+    const dim = new AcDbAlignedDimension(
+      new AcGePoint3d(2305, 8361, 0),
+      new AcGePoint3d(3965, 8361, 0),
+      new AcGePoint3d(3965, 8511, 0)
+    )
+    dim.dimBlockId = '*D20'
+    dim.textPosition = new AcGePoint3d(3126, 8511, 0)
+    db.tables.blockTable.modelSpace.appendEntity(dim)
+    dim.annotative = true
+
+    wireAnnotativeContexts(db, dim, [
+      {
+        scale,
+        blockName: '*D20',
+        defPt: new AcGePoint3d(3126, 8511, 0),
+        isDefault: true
+      }
+    ])
+
+    const presentation = dim.resolveAnnotativePresentation()
+    expect(presentation.dimBlockId).toBe('*D20')
+    expect(presentation.blockPosition.x).toBeCloseTo(0, 6)
+    expect(presentation.blockPosition.y).toBeCloseTo(0, 6)
+
+    const extents = dim.geometricExtents
+    expect(extents.min.x).toBeCloseTo(2305, 6)
+    expect(extents.max.x).toBeCloseTo(3965, 6)
+    expect(extents.min.y).toBeCloseTo(8511, 6)
+    expect(extents.max.y).toBeCloseTo(8511, 6)
   })
 })
