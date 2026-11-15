@@ -2,6 +2,7 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
@@ -11,6 +12,7 @@ import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
 import {
   acdbAngleOfPoints,
   acdbAppendCenterMark,
+  acdbAppendRadialTextLanding,
   acdbArrowScaleFromStyle,
   acdbBuildAnnotationText,
   acdbCreateDimArrowInsert,
@@ -22,6 +24,7 @@ import {
   acdbLeaderLengthToText,
   acdbOffsetTextAlongNormal,
   acdbPointAt,
+  acdbReadableTextAngle,
   acdbResolveArrowBlockName,
   acdbRotatePointAroundCenter
 } from './AcDbDimBlockBuilder.js'
@@ -415,6 +418,12 @@ export class AcDbRadialDimension extends AcDbDimension {
     const angle = acdbAngleOfPoints(this.center, this.chordPoint)
     const leaderLen = this.leaderLength
 
+    if (!this.isUsingDefaultTextPosition) {
+      this.appendUserTextGeometry(block, radius, angle)
+      acdbAppendCenterMark(block, this.center, style, this)
+      return block
+    }
+
     // Dimension line from center through chord, optionally extended by leader
     const outer =
       leaderLen > 0
@@ -486,6 +495,68 @@ export class AcDbRadialDimension extends AcDbDimension {
 
     acdbAppendCenterMark(block, this.center, style, this)
     return block
+  }
+
+  /**
+   * Builds the graphics for text kept at a user position (DWG/DXF text not
+   * at its home location), like AutoCAD: horizontal text (DIMTIH inside the
+   * circle, DIMTOH outside) gets a dimension line from the arrowhead to the
+   * text height and a short horizontal landing; aligned text keeps the line
+   * from the center to the chord point.
+   */
+  private appendUserTextGeometry(
+    block: ReturnType<typeof acdbCreateEmptyDimBlock>,
+    radius: number,
+    angle: number
+  ) {
+    const style = this.dimensionStyle
+    const text = this.textPosition.clone()
+    const inside = this.center.distanceTo(text) <= radius
+    const horizontal = (inside ? style.dimtih : style.dimtoh) === 1
+
+    if (horizontal) {
+      // Inside text: the line runs in toward the text; outside text: out.
+      const direction = inside
+        ? new AcGeVector3d().subVectors(this.center, this.chordPoint)
+        : new AcGeVector3d().subVectors(this.chordPoint, this.center)
+      acdbAppendRadialTextLanding(
+        block,
+        this.chordPoint,
+        direction,
+        text,
+        style,
+        this
+      )
+    } else {
+      block.appendEntity(
+        acdbCreateDimLineEntity(this.center, this.chordPoint, style)
+      )
+    }
+
+    const arrow = acdbCreateDimArrowInsert(
+      this.chordPoint,
+      inside ? angle : angle + Math.PI,
+      acdbArrowScaleFromStyle(style, this),
+      acdbResolveArrowBlockName(
+        style.dimsah === 0 ? style.dimblk : style.dimblk2
+      )
+    )
+    if (arrow) block.appendEntity(arrow)
+
+    const contents = acdbBuildAnnotationText(
+      this.measurement ?? radius,
+      this.dimensionText,
+      style,
+      'radial'
+    )
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: text,
+      rotation: horizontal ? 0 : acdbReadableTextAngle(angle),
+      style,
+      entity: this
+    })
+    if (mtext) block.appendEntity(mtext)
   }
 
   /**

@@ -2,6 +2,7 @@ import {
   AcGeMatrix3d,
   AcGePoint3d,
   AcGePoint3dLike,
+  AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 
@@ -10,6 +11,7 @@ import { AcDbEntityProperties } from '../AcDbEntityProperties.js'
 import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
 import {
   acdbAngleOfPoints,
+  acdbAppendRadialTextLanding,
   acdbArrowScaleFromStyle,
   acdbBuildAnnotationText,
   acdbCreateDimArrowInsert,
@@ -22,6 +24,7 @@ import {
   acdbMidPoint,
   acdbOffsetTextAlongNormal,
   acdbPointAt,
+  acdbReadableTextAngle,
   acdbResolveArrowBlockName,
   acdbRotatePointAroundCenter
 } from './AcDbDimBlockBuilder.js'
@@ -304,6 +307,25 @@ export class AcDbDiametricDimension extends AcDbDimension {
     const diameter = this.chordPoint.distanceTo(this.farChordPoint)
     const angle = acdbAngleOfPoints(this.farChordPoint, this.chordPoint)
     const leaderLen = this.leaderLength
+    const contents = acdbBuildAnnotationText(
+      this.measurement ?? diameter,
+      this.dimensionText,
+      style,
+      'diametric'
+    )
+
+    const scale = acdbArrowScaleFromStyle(style, this)
+    const arrow1 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk1
+    )
+    const arrow2 = acdbResolveArrowBlockName(
+      style.dimsah === 0 ? style.dimblk : style.dimblk2
+    )
+
+    if (!this.isUsingDefaultTextPosition) {
+      this.appendUserTextGeometry(block, contents, angle, arrow1, arrow2)
+      return block
+    }
 
     const outer =
       leaderLen > 0
@@ -314,13 +336,6 @@ export class AcDbDiametricDimension extends AcDbDimension {
       acdbCreateDimLineEntity(this.farChordPoint, outer, style)
     )
 
-    const scale = acdbArrowScaleFromStyle(style, this)
-    const arrow1 = acdbResolveArrowBlockName(
-      style.dimsah === 0 ? style.dimblk : style.dimblk1
-    )
-    const arrow2 = acdbResolveArrowBlockName(
-      style.dimsah === 0 ? style.dimblk : style.dimblk2
-    )
     const a1 = acdbCreateDimArrowInsert(
       this.farChordPoint,
       angle + Math.PI,
@@ -352,12 +367,6 @@ export class AcDbDiametricDimension extends AcDbDimension {
       this
     )
     this.textPosition = textPos
-    const contents = acdbBuildAnnotationText(
-      this.measurement ?? diameter,
-      this.dimensionText,
-      style,
-      'diametric'
-    )
     const mtext = acdbCreateDimMText({
       contents,
       position: textPos,
@@ -368,6 +377,73 @@ export class AcDbDiametricDimension extends AcDbDimension {
     if (mtext) block.appendEntity(mtext)
 
     return block
+  }
+
+  /**
+   * Builds the graphics for text kept at a user position (DWG/DXF text not
+   * at its home location), like AutoCAD: horizontal text (DIMTIH inside the
+   * circle, DIMTOH outside) gets one arrowhead on the chord point nearer the
+   * text and a dimension line that runs to the text height before a short
+   * horizontal landing; aligned text keeps the full diameter line.
+   */
+  private appendUserTextGeometry(
+    block: ReturnType<typeof acdbCreateEmptyDimBlock>,
+    contents: string,
+    angle: number,
+    arrow1: string,
+    arrow2: string
+  ) {
+    const style = this.dimensionStyle
+    const scale = acdbArrowScaleFromStyle(style, this)
+    const text = this.textPosition.clone()
+    const center = acdbMidPoint(this.chordPoint, this.farChordPoint)
+    const radius = center.distanceTo(this.chordPoint)
+    const inside = center.distanceTo(text) <= radius
+    const horizontal = (inside ? style.dimtih : style.dimtoh) === 1
+    let textRotation = acdbReadableTextAngle(angle)
+
+    if (horizontal) {
+      const nearChord =
+        text.distanceTo(this.chordPoint) <= text.distanceTo(this.farChordPoint)
+      const end = nearChord ? this.chordPoint : this.farChordPoint
+      const outward = acdbAngleOfPoints(center, end)
+      // Inside text: the arrowhead points out at the curve and the line runs
+      // in toward the text; outside text: it points in and the line runs out.
+      const arrow = acdbCreateDimArrowInsert(
+        end,
+        inside ? outward : outward + Math.PI,
+        scale,
+        nearChord ? arrow2 : arrow1
+      )
+      if (arrow) block.appendEntity(arrow)
+      const direction = inside
+        ? new AcGeVector3d().subVectors(center, end)
+        : new AcGeVector3d().subVectors(end, center)
+      acdbAppendRadialTextLanding(block, end, direction, text, style, this)
+      textRotation = 0
+    } else {
+      block.appendEntity(
+        acdbCreateDimLineEntity(this.farChordPoint, this.chordPoint, style)
+      )
+      const a1 = acdbCreateDimArrowInsert(
+        this.farChordPoint,
+        angle + Math.PI,
+        scale,
+        arrow1
+      )
+      const a2 = acdbCreateDimArrowInsert(this.chordPoint, angle, scale, arrow2)
+      if (a1) block.appendEntity(a1)
+      if (a2) block.appendEntity(a2)
+    }
+
+    const mtext = acdbCreateDimMText({
+      contents,
+      position: text,
+      rotation: textRotation,
+      style,
+      entity: this
+    })
+    if (mtext) block.appendEntity(mtext)
   }
 
   /**
