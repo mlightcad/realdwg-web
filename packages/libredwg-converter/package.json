@@ -55,7 +55,7 @@
     "test:node": "tsx --test __tests__/dxfExportRoundTrip.node.test.ts"
   },
   "dependencies": {
-    "@mlightcad/libredwg-web": "0.8.9"
+    "@mlightcad/libredwg-web": "0.9.1"
   },
   "devDependencies": {
     "@mlightcad/data-model": "workspace:*",
