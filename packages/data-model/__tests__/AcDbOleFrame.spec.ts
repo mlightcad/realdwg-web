@@ -25,8 +25,8 @@ describe('AcDbOleFrame', () => {
     )
     expect(byName.oleVersion.accessor.get()).toBe(1)
 
-    byName.oleVersion.accessor.set?.(2)
-    expect(ole.oleVersion).toBe(2)
-    expect(byName.oleVersion.accessor.get()).toBe(2)
+    // The OLE version describes the stored data and is read-only.
+    expect(byName.oleVersion.editable).toBe(false)
+    expect(byName.oleVersion.accessor.set).toBeUndefined()
   })
 })

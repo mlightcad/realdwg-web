@@ -77,6 +77,9 @@ describe('AcDbXline', () => {
       'basePointX',
       'basePointY',
       'basePointZ',
+      'secondPointX',
+      'secondPointY',
+      'secondPointZ',
       'unitDirX',
       'unitDirY',
       'unitDirZ'
@@ -98,16 +101,23 @@ describe('AcDbXline', () => {
     basePointX?.accessor.set?.(-1.25)
     basePointY?.accessor.set?.(2.5)
     basePointZ?.accessor.set?.(3.75)
-    unitDirX?.accessor.set?.(4.25)
-    unitDirY?.accessor.set?.(-5.5)
-    unitDirZ?.accessor.set?.(6.75)
+    // The unit direction is read-only; it is edited through the second point.
+    expect(unitDirX?.accessor.set).toBeUndefined()
+    expect(unitDirY?.editable).toBe(false)
+    expect(unitDirZ?.editable).toBe(false)
+    const secondPointY = geometryGroup?.properties.find(
+      p => p.name === 'secondPointY'
+    )
+    secondPointY?.accessor.set?.(2.5 + 10)
 
     expect(basePointX?.accessor.get()).toBe(-1.25)
     expect(basePointY?.accessor.get()).toBe(2.5)
     expect(basePointZ?.accessor.get()).toBe(3.75)
-    expect(unitDirX?.accessor.get()).toBe(4.25)
-    expect(unitDirY?.accessor.get()).toBe(-5.5)
-    expect(unitDirZ?.accessor.get()).toBe(6.75)
+    // The second point moved 10 along +Y from the base point.
+    expect(unitDirX?.accessor.get()).toBeCloseTo(0, 10)
+    expect(unitDirY?.accessor.get()).toBeCloseTo(1, 10)
+    expect(unitDirZ?.accessor.get()).toBeCloseTo(0, 10)
+    expect(secondPointY?.accessor.get()).toBeCloseTo(3.5, 10)
   })
 
   it('returns basePoint as the only grip point', () => {

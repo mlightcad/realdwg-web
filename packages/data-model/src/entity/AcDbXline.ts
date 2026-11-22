@@ -7,13 +7,18 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGeVector3d,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 
 /**
@@ -202,72 +207,25 @@ export class AcDbXline extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'basePointX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.basePoint.x,
-                set: (v: number) => {
-                  this.basePoint.x = v
-                }
+            ...acdbPoint3dProperties(
+              'basePoint',
+              () => this.basePoint,
+              value => {
+                this.basePoint = value
               }
-            },
-            {
-              name: 'basePointY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.basePoint.y,
-                set: (v: number) => {
-                  this.basePoint.y = v
-                }
+            ),
+            // AutoCAD edits the direction through a second point one unit
+            // along the ray; the unit vector itself is read-only.
+            ...acdbPoint3dProperties(
+              'secondPoint',
+              () => new AcGePoint3d(this.basePoint).add(this.unitDir),
+              value => {
+                const direction = new AcGeVector3d(value).sub(this.basePoint)
+                if (direction.lengthSq() === 0) return
+                this.unitDir = new AcGePoint3d(direction.normalize())
               }
-            },
-            {
-              name: 'basePointZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.basePoint.z,
-                set: (v: number) => {
-                  this.basePoint.z = v
-                }
-              }
-            },
-            {
-              name: 'unitDirX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.unitDir.x,
-                set: (v: number) => {
-                  this.unitDir.x = v
-                }
-              }
-            },
-            {
-              name: 'unitDirY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.unitDir.y,
-                set: (v: number) => {
-                  this.unitDir.y = v
-                }
-              }
-            },
-            {
-              name: 'unitDirZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.unitDir.z,
-                set: (v: number) => {
-                  this.unitDir.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('unitDir', () => this.unitDir)
           ]
         }
       ]
@@ -476,4 +434,3 @@ export class AcDbXline extends AcDbCurve {
     return xline
   }
 }
-

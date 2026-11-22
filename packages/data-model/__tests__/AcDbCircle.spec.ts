@@ -214,24 +214,50 @@ describe('AcDbCircle', () => {
     byName.get('centerY')!.accessor.set!(20)
     byName.get('centerZ')!.accessor.set!(30)
     byName.get('radius')!.accessor.set!(5)
-    byName.get('normalX')!.accessor.set!(0)
-    byName.get('normalY')!.accessor.set!(1)
-    byName.get('normalZ')!.accessor.set!(0)
 
     expect(byName.get('centerX')!.accessor.get()).toBe(10)
     expect(byName.get('centerY')!.accessor.get()).toBe(20)
     expect(byName.get('centerZ')!.accessor.get()).toBe(30)
     expect(byName.get('radius')!.accessor.get()).toBe(5)
-    expect(byName.get('normalX')!.accessor.get()).toBe(0)
-    expect(byName.get('normalY')!.accessor.get()).toBe(1)
-    expect(byName.get('normalZ')!.accessor.get()).toBe(0)
     expect(circle.center).toMatchObject({ x: 10, y: 20, z: 30 })
     expect(circle.radius).toBe(5)
-    expect(circle.normal).toMatchObject({ x: 0, y: 1, z: 0 })
-    expect(byName.get('diameter')!.editable).toBe(false)
+    // The normal is shown read-only, like AutoCAD.
+    for (const name of ['normalX', 'normalY', 'normalZ']) {
+      expect(byName.get(name)!.editable).toBe(false)
+      expect(byName.get(name)!.accessor.set).toBeUndefined()
+    }
+    expect(circle.normal).toMatchObject({ x: 0, y: 0, z: 1 })
     expect(byName.get('diameter')!.accessor.get()).toBeCloseTo(10, 8)
     expect(byName.get('perimeter')!.accessor.get()).toBeCloseTo(Math.PI * 10, 8)
     expect(byName.get('area')!.accessor.get()).toBeCloseTo(Math.PI * 25, 8)
+  })
+
+  it('resizes from diameter, perimeter and area like AutoCAD', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(1, 2, 0), 4)
+    const byName = new Map(
+      circle.properties.groups
+        .find(group => group.groupName === 'geometry')!
+        .properties.map(property => [property.name, property])
+    )
+    byName.get('diameter')!.accessor.set!(6)
+    expect(circle.radius).toBeCloseTo(3, 10)
+    byName.get('perimeter')!.accessor.set!(Math.PI * 4)
+    expect(circle.radius).toBeCloseTo(2, 10)
+    byName.get('area')!.accessor.set!(Math.PI * 49)
+    expect(circle.radius).toBeCloseTo(7, 10)
+    byName.get('area')!.accessor.set!(-1)
+    expect(circle.radius).toBeCloseTo(7, 10)
+    expect(circle.center).toMatchObject({ x: 1, y: 2, z: 0 })
+  })
+
+  it('updates extents when the center is edited through properties', () => {
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 1)
+    expect(circle.geometricExtents.max.x).toBeCloseTo(1, 10)
+    const centerX = circle.properties.groups
+      .find(group => group.groupName === 'geometry')!
+      .properties.find(property => property.name === 'centerX')!
+    centerX.accessor.set!(10)
+    expect(circle.geometricExtents.max.x).toBeCloseTo(11, 10)
   })
 
   it('transforms by matrix and returns itself', () => {

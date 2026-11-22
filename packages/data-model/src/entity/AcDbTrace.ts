@@ -11,17 +11,22 @@ import {
   acgeTransformOcsPointToWcs,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPointArrayProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
+import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
 import {
   acdbScaleAlongNormal,
   acdbTransformNormal
@@ -331,38 +336,14 @@ export class AcDbTrace extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'z',
-                    type: 'float',
-                    editable: false
-                  }
-                ]
-              },
-              accessor: {
-                get: () => [
-                  this.getPointAt(0),
-                  this.getPointAt(1),
-                  this.getPointAt(2),
-                  this.getPointAt(3)
-                ]
+            acdbPointArrayProperty(
+              'vertices',
+              3,
+              () => [0, 1, 2, 3].map(index => this.getPointAt(index)),
+              points => {
+                points.forEach((point, index) => this.setPointAt(index, point))
               }
-            },
+            ),
             {
               name: 'elevation',
               type: 'float',
@@ -393,39 +374,7 @@ export class AcDbTrace extends AcDbCurve {
                 get: () => this.area
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -493,10 +442,22 @@ export class AcDbTrace extends AcDbCurve {
     if (this.thickness !== 0) {
       filer.writeDouble(39, this.thickness)
     }
-    filer.writePoint3d(10, acgeTransformWcsPointToOcs(this.getPointAt(0), this.normal))
-    filer.writePoint3d(11, acgeTransformWcsPointToOcs(this.getPointAt(1), this.normal))
-    filer.writePoint3d(12, acgeTransformWcsPointToOcs(this.getPointAt(2), this.normal))
-    filer.writePoint3d(13, acgeTransformWcsPointToOcs(this.getPointAt(3), this.normal))
+    filer.writePoint3d(
+      10,
+      acgeTransformWcsPointToOcs(this.getPointAt(0), this.normal)
+    )
+    filer.writePoint3d(
+      11,
+      acgeTransformWcsPointToOcs(this.getPointAt(1), this.normal)
+    )
+    filer.writePoint3d(
+      12,
+      acgeTransformWcsPointToOcs(this.getPointAt(2), this.normal)
+    )
+    filer.writePoint3d(
+      13,
+      acgeTransformWcsPointToOcs(this.getPointAt(3), this.normal)
+    )
     filer.writeVector3d(210, this.normal)
     return this
   }
@@ -506,10 +467,26 @@ export class AcDbTrace extends AcDbCurve {
     filer.atSubclassData('AcDbTrace')
 
     const pts = [
-      { x: this.getPointAt(0).x, y: this.getPointAt(0).y, z: this.getPointAt(0).z },
-      { x: this.getPointAt(1).x, y: this.getPointAt(1).y, z: this.getPointAt(1).z },
-      { x: this.getPointAt(2).x, y: this.getPointAt(2).y, z: this.getPointAt(2).z },
-      { x: this.getPointAt(3).x, y: this.getPointAt(3).y, z: this.getPointAt(3).z }
+      {
+        x: this.getPointAt(0).x,
+        y: this.getPointAt(0).y,
+        z: this.getPointAt(0).z
+      },
+      {
+        x: this.getPointAt(1).x,
+        y: this.getPointAt(1).y,
+        z: this.getPointAt(1).z
+      },
+      {
+        x: this.getPointAt(2).x,
+        y: this.getPointAt(2).y,
+        z: this.getPointAt(2).z
+      },
+      {
+        x: this.getPointAt(3).x,
+        y: this.getPointAt(3).y,
+        z: this.getPointAt(3).z
+      }
     ]
     let nx = this.normal.x
     let ny = this.normal.y
@@ -630,4 +607,3 @@ export class AcDbTrace extends AcDbCurve {
     ]
   }
 }
-

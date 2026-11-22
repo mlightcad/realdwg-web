@@ -355,11 +355,11 @@ describe('AcDbEllipse', () => {
     const majorAxisProp = geometryGroup!.properties.find(
       prop => prop.name === 'majorAxisRadius'
     )
-    const originalMajorRadius = ellipse.majorAxisRadius
-    majorAxisProp?.accessor.set?.(99)
-    expect(ellipse.center.x).toBeCloseTo(99)
-    expect(ellipse.majorAxisRadius).toBeCloseTo(originalMajorRadius)
-    expect(majorAxisProp?.accessor.get()).toBeCloseTo(originalMajorRadius)
+    const centerX = ellipse.center.x
+    majorAxisProp?.accessor.set?.(9)
+    expect(ellipse.majorAxisRadius).toBeCloseTo(9)
+    expect(majorAxisProp?.accessor.get()).toBeCloseTo(9)
+    expect(ellipse.center.x).toBeCloseTo(centerX)
 
     const lengthProp = geometryGroup!.properties.find(
       prop => prop.name === 'length'

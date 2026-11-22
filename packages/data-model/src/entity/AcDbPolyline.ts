@@ -26,6 +26,10 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
+  acdbCreateProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
+import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers.js'
@@ -43,6 +47,17 @@ import {
 
 /** Reused across dxfIn to avoid per-vertex temporaries (parse is sequential). */
 const _dxfInVertex = /*@__PURE__*/ new AcGePoint2d()
+
+/**
+ * One vertex as shown and edited by the property palette.
+ */
+interface AcDbPolylineVertexProperty {
+  x: number
+  y: number
+  bulge?: number
+  startWidth?: number
+  endWidth?: number
+}
 
 /**
  * Represents one vertex of a polyline entity in AutoCAD.
@@ -622,108 +637,104 @@ export class AcDbPolyline extends AcDbCurve {
             {
               name: 'vertices',
               type: 'array',
-              editable: false,
+              editable: true,
               itemSchema: {
                 properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: true
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: true
-                  }
+                  { name: 'x', type: 'float', editable: true },
+                  { name: 'y', type: 'float', editable: true },
+                  { name: 'bulge', type: 'float', editable: true },
+                  { name: 'startWidth', type: 'float', editable: true },
+                  { name: 'endWidth', type: 'float', editable: true }
                 ]
               },
               accessor: {
-                get: () => this._geo.vertices
-              }
-            },
-            {
-              name: 'elevation',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.elevation,
-                set: (v: number) => {
-                  this.elevation = v
+                get: () =>
+                  this._geo.vertices.map(vertex => ({
+                    x: vertex.x,
+                    y: vertex.y,
+                    bulge: vertex.bulge ?? 0,
+                    startWidth: vertex.startWidth ?? 0,
+                    endWidth: vertex.endWidth ?? 0
+                  })),
+                set: (items: AcDbPolylineVertexProperty[]) => {
+                  this.setVerticesFromProperties(items)
                 }
               }
             },
-            {
-              name: 'length',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.length
+            acdbCreateProperty(
+              'constantWidth',
+              'float',
+              () => this.resolveConstantWidth() ?? 0,
+              (value: number) => {
+                if (!Number.isFinite(value) || value < 0) return
+                this.setVerticesFromProperties(
+                  this._geo.vertices.map(vertex => ({
+                    ...vertex,
+                    startWidth: value,
+                    endWidth: value
+                  }))
+                )
               }
-            },
-            {
-              name: 'thickness',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.thickness,
-                set: (v: number) => {
-                  this.thickness = v
-                }
+            ),
+            acdbCreateProperty(
+              'elevation',
+              'float',
+              () => this.elevation,
+              (value: number) => {
+                this.elevation = value
               }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
+            ),
+            acdbCreateProperty('length', 'float', () => this._geo.length),
+            acdbCreateProperty('area', 'float', () => this.area),
+            acdbCreateProperty(
+              'thickness',
+              'float',
+              () => this.thickness,
+              (value: number) => {
+                this.thickness = value
               }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         },
         {
           groupName: 'others',
           properties: [
-            {
-              name: 'closed',
-              type: 'boolean',
-              editable: true,
-              accessor: {
-                get: () => this.closed,
-                set: (v: boolean) => {
-                  this.closed = v
-                }
+            acdbCreateProperty(
+              'closed',
+              'boolean',
+              () => this.closed,
+              (value: boolean) => {
+                this.closed = value
               }
-            }
+            )
           ]
         }
       ]
     }
+  }
+
+  /**
+   * Replaces all vertices with the edited values from the property palette.
+   * The vertex count must not change; mismatched input is ignored.
+   */
+  private setVerticesFromProperties(items: AcDbPolylineVertexProperty[]) {
+    const current = this._geo.vertices
+    if (items.length !== current.length) return
+    const vertices = items.map((item, index) => {
+      const width = (value: number | undefined) =>
+        value != null && Number.isFinite(value) && value > 0 ? value : undefined
+      return {
+        x: item.x,
+        y: item.y,
+        bulge: item.bulge ?? 0,
+        startWidth: width(item.startWidth),
+        endWidth: width(item.endWidth),
+        identifier: current[index].identifier
+      }
+    })
+    this._geo.reset(false)
+    vertices.forEach((vertex, index) => this._geo.addVertexAt(index, vertex))
   }
 
   /**
@@ -821,11 +832,7 @@ export class AcDbPolyline extends AcDbCurve {
    * Full 3D tipping of area fills is not supported by {@link AcGeArea2d}.
    */
   private mapAreaLoopsToWcs(area: AcGeArea2d) {
-    if (
-      this._normal.x === 0 &&
-      this._normal.y === 0 &&
-      this._normal.z === 1
-    ) {
+    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
       return
     }
     for (const loop of area.loops) {
@@ -1607,7 +1614,12 @@ function addOpenWidePolylineBand(
     const leftEnd = left[i + 1]
     const rightStart = right[i]
     const rightEnd = right[i + 1]
-    if (leftStart == null || leftEnd == null || rightStart == null || rightEnd == null) {
+    if (
+      leftStart == null ||
+      leftEnd == null ||
+      rightStart == null ||
+      rightEnd == null
+    ) {
       continue
     }
     if (
@@ -1633,7 +1645,9 @@ function countBoundaryPoints(boundary: (AcGePolyline2dVertex | null)[]) {
 }
 
 function compactBoundaryLoop(boundary: (AcGePolyline2dVertex | null)[]) {
-  return boundary.filter((point): point is AcGePolyline2dVertex => point != null)
+  return boundary.filter(
+    (point): point is AcGePolyline2dVertex => point != null
+  )
 }
 
 /**
@@ -1793,4 +1807,3 @@ function isRenderableLoop(points: AcGePolyline2dVertex[]) {
 function lerp(start: number, end: number, t: number) {
   return start + (end - start) * t
 }
-

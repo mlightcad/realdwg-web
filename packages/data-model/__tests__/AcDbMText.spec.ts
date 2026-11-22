@@ -274,9 +274,12 @@ describe('AcDbMText', () => {
     expect(mtext.drawingDirection).toBe(AcGiMTextFlowDirection.BY_STYLE)
     expect(mtext.height).toBeCloseTo(3.2)
     expect(mtext.rotation).toBeCloseTo(Math.PI / 4)
+    // Rotation keeps the direction vector (which drawing prefers) in sync;
+    // the direction itself is read-only.
+    expect(mtext.direction.x).toBeCloseTo(Math.SQRT1_2)
+    expect(mtext.direction.y).toBeCloseTo(Math.SQRT1_2)
     expect(mtext.lineSpacingFactor).toBeCloseTo(1.1)
     expect(mtext.width).toBeCloseTo(16)
-    expect(mtext.direction).toMatchObject({ x: 4, y: 5, z: 6 })
     expect(mtext.location).toMatchObject({ x: 7, y: 8, z: 9 })
   })
 
@@ -604,7 +607,11 @@ describe('AcDbMText', () => {
     const traits: {
       color: unknown
       isColorByLayer: boolean
-      fillType: { solidFill: boolean; patternAngle: number; definitionLines: unknown[] }
+      fillType: {
+        solidFill: boolean
+        patternAngle: number
+        definitionLines: unknown[]
+      }
       isBackgroundFill: boolean
       drawOrder: number
     } = {

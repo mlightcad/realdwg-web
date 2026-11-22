@@ -150,12 +150,9 @@ export class AcDbOleFrame extends AcDbFrame {
         {
           name: 'oleVersion',
           type: 'int',
-          editable: true,
+          editable: false,
           accessor: {
-            get: () => this.oleVersion,
-            set: (v: number) => {
-              this.oleVersion = v
-            }
+            get: () => this.oleVersion
           }
         }
       ]

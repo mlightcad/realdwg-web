@@ -653,7 +653,7 @@ export class AcDbOle2Frame extends AcDbOleFrame {
             {
               name: 'oleObjectType',
               type: 'enum',
-              editable: true,
+              editable: false,
               options: [
                 {
                   label: AcDbOleObjectType[AcDbOleObjectType.Link],
@@ -669,10 +669,7 @@ export class AcDbOle2Frame extends AcDbOleFrame {
                 }
               ],
               accessor: {
-                get: () => this.oleObjectType,
-                set: (v: AcDbOleObjectType) => {
-                  this.oleObjectType = v
-                }
+                get: () => this.oleObjectType
               }
             },
             {

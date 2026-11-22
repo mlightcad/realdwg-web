@@ -28,6 +28,10 @@ import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
+  acdbPointArrayProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
+import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
 } from './AcDbGripHelpers.js'
@@ -573,12 +577,9 @@ export class AcDbMLine extends AcDbEntity {
             {
               name: 'styleName',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.styleName,
-                set: (value: string) => {
-                  this.styleName = value
-                }
+                get: () => this.styleName
               }
             },
             {
@@ -639,12 +640,9 @@ export class AcDbMLine extends AcDbEntity {
             {
               name: 'styleObjectHandle',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.styleObjectHandle,
-                set: (value: string) => {
-                  this.styleObjectHandle = value
-                }
+                get: () => this.styleObjectHandle
               }
             },
             {
@@ -674,72 +672,24 @@ export class AcDbMLine extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'startPositionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPosition.x,
-                set: (value: number) => {
-                  this.startPosition.x = value
-                }
+            // The reference path is edited like grips so segment directions
+            // stay consistent with the moved vertices.
+            acdbPointArrayProperty(
+              'vertices',
+              3,
+              () => this.subGetGripPoints(),
+              points => {
+                const current = this.subGetGripPoints()
+                if (points.length !== current.length) return
+                points.forEach((point, index) => {
+                  const offset = new AcGeVector3d(point).sub(current[index])
+                  if (offset.lengthSq() > 0) {
+                    this.subMoveGripPointsAt([index], offset)
+                  }
+                })
               }
-            },
-            {
-              name: 'startPositionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPosition.y,
-                set: (value: number) => {
-                  this.startPosition.y = value
-                }
-              }
-            },
-            {
-              name: 'startPositionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPosition.z,
-                set: (value: number) => {
-                  this.startPosition.z = value
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (value: number) => {
-                  this.normal.x = value
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (value: number) => {
-                  this.normal.y = value
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (value: number) => {
-                  this.normal.z = value
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -2250,4 +2200,3 @@ export class AcDbMLine extends AcDbEntity {
     }
   }
 }
-

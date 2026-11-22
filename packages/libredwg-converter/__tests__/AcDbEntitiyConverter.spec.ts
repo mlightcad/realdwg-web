@@ -10,6 +10,7 @@ import {
   AcDbHatch,
   AcDbLeader,
   AcDbLeaderAnnotationType,
+  AcDbMInsertBlock,
   AcDbMText,
   AcDbOrdinateDimension,
   AcDbPolyline,
@@ -140,7 +141,7 @@ describe('libredwg AcDbEntityConverter', () => {
       expect(attr.height).toBe(2.5)
     })
 
-    it('copies MINSERT column/row/spacing onto AcDbBlockReference', () => {
+    it('converts MINSERT into AcDbMInsertBlock', () => {
       const converter = new AcDbEntityConverter()
       const dbInsert = converter.convert({
         type: 'INSERT',
@@ -158,13 +159,39 @@ describe('libredwg AcDbEntityConverter', () => {
         rowSpacing: 800,
         extrusionDirection: { x: 0, y: 0, z: 1 },
         attribs: []
-      } as any) as AcDbBlockReference
+      } as any) as AcDbMInsertBlock
 
-      expect(dbInsert).toBeInstanceOf(AcDbBlockReference)
-      expect(dbInsert.columnCount).toBe(4)
-      expect(dbInsert.rowCount).toBe(3)
+      expect(dbInsert).toBeInstanceOf(AcDbMInsertBlock)
+      expect(dbInsert.blockName).toBe('CHAIR')
+      expect(dbInsert.position).toMatchObject({ x: 10, y: 20, z: 0 })
+      expect(dbInsert.columns).toBe(4)
+      expect(dbInsert.rows).toBe(3)
       expect(dbInsert.columnSpacing).toBe(1200)
       expect(dbInsert.rowSpacing).toBe(800)
+    })
+
+    it('converts a 1x1 INSERT into a plain AcDbBlockReference', () => {
+      const converter = new AcDbEntityConverter()
+      const dbInsert = converter.convert({
+        type: 'INSERT',
+        handle: 'INSERT1',
+        layer: '0',
+        name: 'CHAIR',
+        insertionPoint: { x: 0, y: 0, z: 0 },
+        xScale: 1,
+        yScale: 1,
+        zScale: 1,
+        rotation: 0,
+        columnCount: 1,
+        rowCount: 1,
+        columnSpacing: 0,
+        rowSpacing: 0,
+        extrusionDirection: { x: 0, y: 0, z: 1 },
+        attribs: []
+      } as any)
+
+      expect(dbInsert).toBeInstanceOf(AcDbBlockReference)
+      expect(dbInsert).not.toBeInstanceOf(AcDbMInsertBlock)
     })
 
     it('appends ATTRIBs of an INSERT through convert() preserving common attrs', () => {

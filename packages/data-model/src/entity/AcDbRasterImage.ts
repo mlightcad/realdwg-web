@@ -29,6 +29,7 @@ import { acdbDrawImageFrame } from '../misc/acdbDrawImageFrame.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbPoint3dProperties } from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
@@ -407,6 +408,14 @@ export class AcDbRasterImage extends AcDbEntity {
    * Returns the full property definition for this raster image entity.
    */
   get properties(): AcDbEntityProperties {
+    return this.getImageProperties()
+  }
+
+  /**
+   * Builds the property groups of {@link properties}. Subclasses reuse it
+   * to adjust the groups.
+   */
+  protected getImageProperties(): AcDbEntityProperties {
     return {
       type: this.type,
       groups: [
@@ -423,39 +432,13 @@ export class AcDbRasterImage extends AcDbEntity {
                 get: () => this.imageFileName || this.imageDisplayName
               }
             },
-            {
-              name: 'positionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.x,
-                set: (v: number) => {
-                  this.position.x = v
-                }
+            ...acdbPoint3dProperties(
+              'position',
+              () => this.position,
+              value => {
+                this.position = value
               }
-            },
-            {
-              name: 'positionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.y,
-                set: (v: number) => {
-                  this.position.y = v
-                }
-              }
-            },
-            {
-              name: 'positionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.z,
-                set: (v: number) => {
-                  this.position.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'rotation',
               type: 'float',
@@ -474,7 +457,7 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.width,
                 set: (v: number) => {
-                  this.width = v
+                  if (Number.isFinite(v) && v > 0) this.width = v
                 }
               }
             },
@@ -485,7 +468,7 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.height,
                 set: (v: number) => {
-                  this.height = v
+                  if (Number.isFinite(v) && v > 0) this.height = v
                 }
               }
             },
@@ -496,7 +479,11 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.scale.x,
                 set: (v: number) => {
-                  this.scale.x = v
+                  // The drawn size is width; scale it with the factor.
+                  if (!Number.isFinite(v) || v <= 0) return
+                  const old = this.scale.x
+                  if (old > 0) this.width = (this.width * v) / old
+                  this.scale = new AcGeVector2d(v, this.scale.y)
                 }
               }
             },
@@ -507,7 +494,11 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.scale.y,
                 set: (v: number) => {
-                  this.scale.y = v
+                  // The drawn size is height; scale it with the factor.
+                  if (!Number.isFinite(v) || v <= 0) return
+                  const old = this.scale.y
+                  if (old > 0) this.height = (this.height * v) / old
+                  this.scale = new AcGeVector2d(this.scale.x, v)
                 }
               }
             }
@@ -523,7 +514,7 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.brightness,
                 set: (v: number) => {
-                  this.brightness = v
+                  this.brightness = Math.min(100, Math.max(0, Math.round(v)))
                 }
               }
             },
@@ -534,7 +525,7 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.contrast,
                 set: (v: number) => {
-                  this.contrast = v
+                  this.contrast = Math.min(100, Math.max(0, Math.round(v)))
                 }
               }
             },
@@ -545,7 +536,7 @@ export class AcDbRasterImage extends AcDbEntity {
               accessor: {
                 get: () => this.fade,
                 set: (v: number) => {
-                  this.fade = v
+                  this.fade = Math.min(100, Math.max(0, Math.round(v)))
                 }
               }
             },
@@ -596,29 +587,23 @@ export class AcDbRasterImage extends AcDbEntity {
             {
               name: 'imageSizeX',
               type: 'float',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.imageSize.x,
-                set: (v: number) => {
-                  this.imageSize.x = v
-                }
+                get: () => this.imageSize.x
               }
             },
             {
               name: 'imageSizeY',
               type: 'float',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.imageSize.y,
-                set: (v: number) => {
-                  this.imageSize.y = v
-                }
+                get: () => this.imageSize.y
               }
             },
             {
               name: 'clipBoundaryType',
               type: 'enum',
-              editable: true,
+              editable: false,
               options: [
                 {
                   label:
@@ -643,10 +628,7 @@ export class AcDbRasterImage extends AcDbEntity {
                 }
               ],
               accessor: {
-                get: () => this.clipBoundaryType,
-                set: (v: AcDbRasterImageClipBoundaryType) => {
-                  this.clipBoundaryType = v
-                }
+                get: () => this.clipBoundaryType
               }
             },
             {
@@ -663,12 +645,9 @@ export class AcDbRasterImage extends AcDbEntity {
             {
               name: 'classVersion',
               type: 'int',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.classVersion,
-                set: (v: number) => {
-                  this.classVersion = v
-                }
+                get: () => this.classVersion
               }
             },
             {

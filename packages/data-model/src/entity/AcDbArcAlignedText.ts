@@ -24,6 +24,10 @@ import type {
 import { DEFAULT_TEXT_STYLE } from '../misc/AcDbConstants.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbEstimatePlainTextWidth } from './AcDbTextExtentsHelpers.js'
 
 /**
@@ -718,39 +722,13 @@ export class AcDbArcAlignedText extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'centerX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.x,
-                set: (v: number) => {
-                  this.center.x = v
-                }
+            ...acdbPoint3dProperties(
+              'center',
+              () => this.center,
+              value => {
+                this.center = value
               }
-            },
-            {
-              name: 'centerY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.y,
-                set: (v: number) => {
-                  this.center.y = v
-                }
-              }
-            },
-            {
-              name: 'centerZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.z,
-                set: (v: number) => {
-                  this.center.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'radius',
               type: 'float',
@@ -784,39 +762,7 @@ export class AcDbArcAlignedText extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            },
+            ...acdbVector3dProperties('normal', () => this.normal),
             {
               name: 'leftOffset',
               type: 'float',

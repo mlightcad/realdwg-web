@@ -586,7 +586,7 @@ function createTypedAnnotScaleContext(
     return ctx
   }
 
-  if (typeName === 'BlockReference') {
+  if (typeName === 'BlockReference' || typeName === 'MInsertBlock') {
     const ctx = new AcDbBlkRefObjectContextData()
     if (template instanceof AcDbBlkRefObjectContextData) {
       ctx.position = template.position

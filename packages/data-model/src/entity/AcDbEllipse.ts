@@ -16,6 +16,11 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 
@@ -497,6 +502,7 @@ export class AcDbEllipse extends AcDbCurve {
    * Each property is an {@link AcDbEntityRuntimeProperty}.
    */
   get properties(): AcDbEntityProperties {
+    const isPositive = (value: number) => Number.isFinite(value) && value > 0
     return {
       type: this.type,
       groups: [
@@ -504,132 +510,48 @@ export class AcDbEllipse extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'centerX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.x,
-                set: (v: number) => {
-                  this.center.x = v
-                }
+            ...acdbPoint3dProperties(
+              'center',
+              () => this.center,
+              value => {
+                this.center = value
               }
-            },
-            {
-              name: 'centerY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.y,
-                set: (v: number) => {
-                  this.center.y = v
-                }
+            ),
+            acdbCreateProperty(
+              'majorAxisRadius',
+              'float',
+              () => this.majorAxisRadius,
+              (value: number) => {
+                if (isPositive(value)) this.majorAxisRadius = value
               }
-            },
-            {
-              name: 'centerZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.z,
-                set: (v: number) => {
-                  this.center.z = v
-                }
+            ),
+            acdbCreateProperty(
+              'minorAxisRadius',
+              'float',
+              () => this.minorAxisRadius,
+              (value: number) => {
+                if (isPositive(value)) this.minorAxisRadius = value
               }
-            },
-            {
-              name: 'majorAxisRadius',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.majorAxisRadius,
-                set: (v: number) => {
-                  this.center.x = v
-                }
+            ),
+            acdbCreateProperty(
+              'startAngle',
+              'float',
+              () => this.startAngle,
+              (value: number) => {
+                this.startAngle = value
               }
-            },
-            {
-              name: 'minorAxisRadius',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.minorAxisRadius,
-                set: (v: number) => {
-                  this.minorAxisRadius = v
-                }
+            ),
+            acdbCreateProperty(
+              'endAngle',
+              'float',
+              () => this.endAngle,
+              (value: number) => {
+                this.endAngle = value
               }
-            },
-            {
-              name: 'startAngle',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startAngle,
-                set: (v: number) => {
-                  this.startAngle = v
-                }
-              }
-            },
-            {
-              name: 'endAngle',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.endAngle,
-                set: (v: number) => {
-                  this.endAngle = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            },
-            {
-              name: 'length',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.length
-              }
-            },
-            {
-              name: 'area',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this.area
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal),
+            acdbCreateProperty('length', 'float', () => this._geo.length),
+            acdbCreateProperty('area', 'float', () => this.area)
           ]
         }
       ]
@@ -696,9 +618,7 @@ export class AcDbEllipse extends AcDbCurve {
     let ny = this.normal.y
     let nz = this.normal.z
     let axisRatio =
-      this.majorAxisRadius > 0
-        ? this.minorAxisRadius / this.majorAxisRadius
-        : 1
+      this.majorAxisRadius > 0 ? this.minorAxisRadius / this.majorAxisRadius : 1
     let startAngle = this.startAngle
     let endAngle = this.endAngle
 
@@ -915,4 +835,3 @@ export class AcDbEllipse extends AcDbCurve {
     )
   }
 }
-

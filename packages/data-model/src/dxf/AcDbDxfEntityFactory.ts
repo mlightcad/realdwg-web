@@ -34,6 +34,7 @@ import { AcDbViewport } from '../entity/AcDbViewport.js'
 import { AcDbWipeout } from '../entity/AcDbWipeout.js'
 import { AcDbXline } from '../entity/AcDbXline.js'
 import { acdbDxfInDimension } from './AcDbDxfDimensionAssembler.js'
+import { acdbDxfInInsert } from './AcDbDxfInsertAssembler.js'
 import { acdbDxfInPolyline } from './AcDbDxfPolylineAssembler.js'
 
 /**
@@ -154,6 +155,10 @@ export function acdbDxfInEntity(
   }
   if (upper === 'DIMENSION') {
     return acdbDxfInDimension(filer)
+  }
+  if (upper === 'INSERT') {
+    // INSERT and MINSERT share the DXF type name; pick the class first.
+    return acdbDxfInInsert(filer)
   }
 
   // Types without a native class are kept verbatim (ezdxf DXFTagStorage /

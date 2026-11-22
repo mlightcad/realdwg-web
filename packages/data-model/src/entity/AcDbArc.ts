@@ -11,13 +11,19 @@ import {
   acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
-  AcGeVector3dLike} from '@mlightcad/geometry-engine'
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 import {
@@ -412,141 +418,51 @@ export class AcDbArc extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            // --- Cennter Point ---
-            {
-              name: 'centerX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.x,
-                set: (v: number) => {
-                  this.center.x = v
-                }
+            ...acdbPoint3dProperties(
+              'center',
+              () => this.center,
+              value => {
+                this.center = value
               }
-            },
-            {
-              name: 'centerY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.y,
-                set: (v: number) => {
-                  this.center.y = v
-                }
+            ),
+            acdbCreateProperty(
+              'radius',
+              'float',
+              () => this.radius,
+              (value: number) => {
+                if (Number.isFinite(value) && value > 0) this.radius = value
               }
-            },
-            {
-              name: 'centerZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.z,
-                set: (v: number) => {
-                  this.center.z = v
-                }
+            ),
+            acdbCreateProperty(
+              'startAngle',
+              'float',
+              () => this.startAngle,
+              (value: number) => {
+                this.startAngle = value
               }
-            },
-            {
-              name: 'radius',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.radius,
-                set: (v: number) => {
-                  this.radius = v
-                }
+            ),
+            acdbCreateProperty(
+              'endAngle',
+              'float',
+              () => this.endAngle,
+              (value: number) => {
+                this.endAngle = value
               }
-            },
-            {
-              name: 'startAngle',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startAngle,
-                set: (v: number) => {
-                  this.startAngle = v
-                }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal),
+            acdbCreateProperty('arcLength', 'float', () => this._geo.length),
+            acdbCreateProperty('totalAngle', 'float', () =>
+              AcGeMathUtil.radToDeg(Math.abs(this._geo.deltaAngle))
+            ),
+            acdbCreateProperty('area', 'float', () => this.area),
+            acdbCreateProperty(
+              'thickness',
+              'float',
+              () => this.thickness,
+              (value: number) => {
+                this.thickness = value
               }
-            },
-            {
-              name: 'endAngle',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.endAngle,
-                set: (v: number) => {
-                  this.endAngle = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            },
-            {
-              name: 'arcLength',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.length
-              }
-            },
-            {
-              name: 'totalAngle',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => AcGeMathUtil.radToDeg(Math.abs(this._geo.deltaAngle))
-              }
-            },
-            {
-              name: 'area',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this.area
-              }
-            },
-            {
-              name: 'thickness',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.thickness,
-                set: (v: number) => {
-                  this.thickness = v
-                }
-              }
-            }
+            )
           ]
         }
       ]
@@ -734,8 +650,14 @@ export class AcDbArc extends AcDbCurve {
     filer.writeDouble(40, this.radius)
     filer.writeVector3d(210, this.normal)
     filer.writeSubclassMarker('AcDbArc')
-    filer.writeAngle(50, acgeGetOcsAngle(this.center, this.startPoint, this.normal))
-    filer.writeAngle(51, acgeGetOcsAngle(this.center, this.endPoint, this.normal))
+    filer.writeAngle(
+      50,
+      acgeGetOcsAngle(this.center, this.startPoint, this.normal)
+    )
+    filer.writeAngle(
+      51,
+      acgeGetOcsAngle(this.center, this.endPoint, this.normal)
+    )
     return this
   }
 
@@ -752,9 +674,7 @@ export class AcDbArc extends AcDbCurve {
     let ny = this.normal.y
     let nz = this.normal.z
 
-    const readGeometryCodes = (
-      stopOnNextSubclass: boolean
-    ): boolean => {
+    const readGeometryCodes = (stopOnNextSubclass: boolean): boolean => {
       while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
         const item = filer.readItem()
         if (!item) break
@@ -915,4 +835,3 @@ export class AcDbArc extends AcDbCurve {
     )
   }
 }
-

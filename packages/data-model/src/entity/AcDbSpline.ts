@@ -17,6 +17,10 @@ import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPointArrayProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { AcDbPolyline } from './AcDbPolyline.js'
 import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
@@ -564,6 +568,19 @@ export class AcDbSpline extends AcDbCurve {
   }
 
   /**
+   * Moves the editable points (fit points of a fit-point spline, control
+   * points otherwise) to `points`, rebuilding the curve like a grip edit.
+   */
+  private movePointsTo(points: AcGePoint3dLike[]) {
+    const current = this._geo.getGripPoints()
+    if (points.length !== current.length) return
+    points.forEach((point, index) => {
+      const offset = new AcGeVector3d(point).sub(current[index])
+      if (offset.lengthSq() > 0) this._geo.moveGripPointsAt([index], offset)
+    })
+  }
+
+  /**
    * Returns the full property definition for this spline entity, including
    * general group and geometry group.
    */
@@ -575,60 +592,22 @@ export class AcDbSpline extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'controlPoints',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'z',
-                    type: 'float',
-                    editable: false
-                  }
-                ]
-              },
-              accessor: {
-                get: () => this._geo.controlPoints
-              }
-            },
-            {
-              name: 'fitPoints',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'z',
-                    type: 'float',
-                    editable: false
-                  }
-                ]
-              },
-              accessor: {
-                get: () => this._geo.fitPoints ?? []
-              }
-            },
+            acdbPointArrayProperty(
+              'controlPoints',
+              3,
+              () => this._geo.controlPoints,
+              this._geo.isFitPointSpline
+                ? undefined
+                : points => this.movePointsTo(points)
+            ),
+            acdbPointArrayProperty(
+              'fitPoints',
+              3,
+              () => this._geo.fitPoints ?? [],
+              this._geo.isFitPointSpline
+                ? points => this.movePointsTo(points)
+                : undefined
+            ),
             {
               name: 'degree',
               type: 'int',
@@ -653,39 +632,7 @@ export class AcDbSpline extends AcDbCurve {
                 get: () => this.area
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         },
         {
@@ -1102,4 +1049,3 @@ export class AcDbSpline extends AcDbCurve {
     return this._geo.getOffsetSamplePath2d(offsetDist).points
   }
 }
-

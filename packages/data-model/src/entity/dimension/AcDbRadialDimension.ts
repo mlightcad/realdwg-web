@@ -293,10 +293,19 @@ export class AcDbRadialDimension extends AcDbDimension {
         {
           groupName: 'geometry',
           properties: [
-            ...this.createPoint3dProperties('center', () => this.center),
+            ...this.createPoint3dProperties(
+              'center',
+              () => this.center,
+              value => {
+                this.center = value
+              }
+            ),
             ...this.createPoint3dProperties(
               'chordPoint',
-              () => this.chordPoint
+              () => this.chordPoint,
+              value => {
+                this.chordPoint = value
+              }
             ),
             this.createProperty(
               'leaderLength',

@@ -161,12 +161,13 @@ describe('AcDbTable', () => {
     const tableHeightProp = tableGroup?.properties.find(
       p => p.name === 'tableHeight'
     )
+    // The grid size needs cells, row heights and column widths to change
+    // together, so the palette shows it read-only.
     expect(numRowsProp?.accessor.get()).toBe(2)
-    numRowsProp?.accessor.set?.(3)
-    expect(numRowsProp?.accessor.get()).toBe(3)
+    expect(numRowsProp?.editable).toBe(false)
+    expect(numRowsProp?.accessor.set).toBeUndefined()
     expect(numColumnsProp?.accessor.get()).toBe(2)
-    numColumnsProp?.accessor.set?.(4)
-    expect(numColumnsProp?.accessor.get()).toBe(4)
+    expect(numColumnsProp?.editable).toBe(false)
     expect(tableWidthProp?.accessor.get()).toBe(40)
     expect(tableHeightProp?.accessor.get()).toBe(20)
 

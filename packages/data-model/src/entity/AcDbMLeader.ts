@@ -48,6 +48,10 @@ import { AcDbMLeaderObjectContextData } from '../object/AcDbMLeaderObjectContext
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
@@ -2033,7 +2037,7 @@ export class AcDbMLeader extends AcDbEntity {
             {
               name: 'contentType',
               type: 'enum',
-              editable: true,
+              editable: false,
               options: [
                 {
                   label:
@@ -2058,11 +2062,10 @@ export class AcDbMLeader extends AcDbEntity {
                   value: AcDbMLeaderContentType.ToleranceContent
                 }
               ],
+              // Switching the content kind needs new content (MText, block,
+              // tolerance) to be created, so it is shown read-only.
               accessor: {
-                get: () => this.contentType,
-                set: (value: AcDbMLeaderContentType) => {
-                  this.contentType = value
-                }
+                get: () => this.contentType
               }
             },
             {
@@ -2125,12 +2128,9 @@ export class AcDbMLeader extends AcDbEntity {
             {
               name: 'mleaderStyleId',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.mleaderStyleId,
-                set: (value: string) => {
-                  this.mleaderStyleId = value
-                }
+                get: () => this.mleaderStyleId
               }
             },
             {
@@ -2147,12 +2147,9 @@ export class AcDbMLeader extends AcDbEntity {
             {
               name: 'blockContentId',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.blockContentId ?? '',
-                set: (value: string) => {
-                  this.blockContentId = value
-                }
+                get: () => this.blockContentId ?? ''
               }
             },
             {
@@ -2176,7 +2173,16 @@ export class AcDbMLeader extends AcDbEntity {
                   this.arrowheadSize = value
                 }
               }
-            }
+            },
+            acdbCreateProperty<AcCmColor | undefined>(
+              'leaderLineColor',
+              'color',
+              () => this.getResolvedLeaderLineColor(),
+              (value: AcCmColor | undefined) => {
+                this.leaderLineColor = value
+                this.setPropertyOverride(MLEADER_OVERRIDE_LEADER_LINE_COLOR)
+              }
+            )
           ]
         },
         {
@@ -2193,6 +2199,15 @@ export class AcDbMLeader extends AcDbEntity {
                 }
               }
             },
+            acdbCreateProperty<AcCmColor | undefined>(
+              'textColor',
+              'color',
+              () => this.getResolvedTextColor(),
+              (value: AcCmColor | undefined) => {
+                this.textColor = value
+                this.setPropertyOverride(MLEADER_OVERRIDE_TEXT_COLOR)
+              }
+            ),
             {
               name: 'textHeight',
               type: 'float',
@@ -2389,51 +2404,7 @@ export class AcDbMLeader extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (value: number) => {
-                  this.normal = {
-                    x: value,
-                    y: this.normal.y,
-                    z: this.normal.z
-                  }
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (value: number) => {
-                  this.normal = {
-                    x: this.normal.x,
-                    y: value,
-                    z: this.normal.z
-                  }
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (value: number) => {
-                  this.normal = {
-                    x: this.normal.x,
-                    y: this.normal.y,
-                    z: value
-                  }
-                }
-              }
-            },
+            ...acdbVector3dProperties('normal', () => this.normal),
             {
               name: 'textLocationX',
               type: 'float',
@@ -4704,6 +4675,13 @@ export class AcDbMLeader extends AcDbEntity {
       throw new Error('No valid text style found in text style table.')
     }
     return style.textStyle
+  }
+
+  /**
+   * Marks a style property as overridden by this entity (DXF group 90).
+   */
+  private setPropertyOverride(mask: number) {
+    this._propertyOverrideFlag = (this._propertyOverrideFlag ?? 0) | mask
   }
 
   /**

@@ -33,6 +33,14 @@ export type {
   AcDbEntityRuntimeProperty,
   AcDbPropertyAccessor
 } from './AcDbEntityProperties.js'
+export {
+  acdbCreateProperty,
+  acdbEnumOptions,
+  acdbPoint3dProperties,
+  acdbPointArrayProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
+export type { AcDbEntityPropertyOption } from './AcDbEntityPropertyHelpers.js'
 export { AcDbFace } from './AcDbFace.js'
 export { AcDbFcf } from './AcDbFcf.js'
 export {
@@ -45,7 +53,11 @@ export {
 export type { AcDbGradientName } from './AcDbHatch.js'
 export { AcDbLeader, AcDbLeaderAnnotationType } from './AcDbLeader.js'
 export { AcDbLine } from './AcDbLine.js'
-export { AcDbMLine, AcDbMLineFlags, AcDbMLineJustification } from './AcDbMLine.js'
+export {
+  AcDbMLine,
+  AcDbMLineFlags,
+  AcDbMLineJustification
+} from './AcDbMLine.js'
 export type {
   AcDbMLineElement,
   AcDbMLineElementLike,
@@ -74,6 +86,7 @@ export type {
   AcDbMLeaderMTextContent,
   AcDbMLeaderMTextContentLike
 } from './AcDbMLeader.js'
+export { AcDbMInsertBlock } from './AcDbMInsertBlock.js'
 export { AcDbMText } from './AcDbMText.js'
 export { AcDbFrame } from './AcDbFrame.js'
 export { AcDbOleFrame } from './AcDbOleFrame.js'

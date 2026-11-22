@@ -34,6 +34,10 @@ import {
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import { acdbEstimateToleranceCellWidth } from './AcDbTextExtentsHelpers.js'
 
@@ -361,105 +365,15 @@ export class AcDbFcf extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'locationX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.x,
-                set: (v: number) => {
-                  this.location.x = v
-                }
+            ...acdbPoint3dProperties(
+              'location',
+              () => this.location,
+              value => {
+                this.location = value
               }
-            },
-            {
-              name: 'locationY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.y,
-                set: (v: number) => {
-                  this.location.y = v
-                }
-              }
-            },
-            {
-              name: 'locationZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.z,
-                set: (v: number) => {
-                  this.location.z = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            },
-            {
-              name: 'directionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.x,
-                set: (v: number) => {
-                  this.direction.x = v
-                }
-              }
-            },
-            {
-              name: 'directionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.y,
-                set: (v: number) => {
-                  this.direction.y = v
-                }
-              }
-            },
-            {
-              name: 'directionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.z,
-                set: (v: number) => {
-                  this.direction.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal),
+            ...acdbVector3dProperties('direction', () => this.direction)
           ]
         }
       ]

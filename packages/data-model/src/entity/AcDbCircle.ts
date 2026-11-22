@@ -11,13 +11,19 @@ import {
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike,
-  TAU} from '@mlightcad/geometry-engine'
+  TAU
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 import {
@@ -117,11 +123,7 @@ export class AcDbCircle extends AcDbCurve {
    * ```
    */
   constructor()
-  constructor(
-    center: AcGePointLike,
-    radius: number,
-    normal?: AcGeVector3dLike
-  )
+  constructor(center: AcGePointLike, radius: number, normal?: AcGeVector3dLike)
   constructor(
     center?: AcGePointLike,
     radius?: number,
@@ -323,6 +325,11 @@ export class AcDbCircle extends AcDbCurve {
    * Each property is an {@link AcDbEntityRuntimeProperty}.
    */
   get properties(): AcDbEntityProperties {
+    // Like AutoCAD, diameter, circumference and area are editable and all
+    // resize the circle around its center. Non-positive values are ignored.
+    const setRadius = (radius: number) => {
+      if (Number.isFinite(radius) && radius > 0) this.radius = radius
+    }
     return {
       type: this.type,
       groups: [
@@ -330,124 +337,46 @@ export class AcDbCircle extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'centerX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.x,
-                set: (v: number) => {
-                  this.center.x = v
-                }
+            ...acdbPoint3dProperties(
+              'center',
+              () => this.center,
+              value => {
+                this.center = value
               }
-            },
-            {
-              name: 'centerY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.y,
-                set: (v: number) => {
-                  this.center.y = v
-                }
+            ),
+            acdbCreateProperty('radius', 'float', () => this.radius, setRadius),
+            ...acdbVector3dProperties('normal', () => this.normal),
+            acdbCreateProperty(
+              'diameter',
+              'float',
+              () => this._geo.radius * 2,
+              (value: number) => setRadius(value / 2)
+            ),
+            acdbCreateProperty(
+              'perimeter',
+              'float',
+              () => this._geo.length,
+              (value: number) => setRadius(value / TAU)
+            ),
+            acdbCreateProperty(
+              'area',
+              'float',
+              () => this.area,
+              (value: number) => setRadius(Math.sqrt(value / Math.PI))
+            ),
+            acdbCreateProperty(
+              'thickness',
+              'float',
+              () => this.thickness,
+              (value: number) => {
+                this.thickness = value
               }
-            },
-            {
-              name: 'centerZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.center.z,
-                set: (v: number) => {
-                  this.center.z = v
-                }
-              }
-            },
-            {
-              name: 'radius',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.radius,
-                set: (v: number) => {
-                  this.radius = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            },
-            {
-              name: 'diameter',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.radius * 2
-              }
-            },
-            {
-              name: 'perimeter',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.length
-              }
-            },
-            {
-              name: 'area',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this.area
-              }
-            },
-            {
-              name: 'thickness',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.thickness,
-                set: (v: number) => {
-                  this.thickness = v
-                }
-              }
-            }
+            )
           ]
         }
       ]
     }
   }
-
   /**
    * Gets the grip points for this circle.
    *
@@ -679,4 +608,3 @@ export class AcDbCircle extends AcDbCurve {
     }
   }
 }
-

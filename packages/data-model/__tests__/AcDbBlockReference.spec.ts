@@ -139,9 +139,7 @@ describe('AcDbBlockReference', () => {
   it('keeps nested elevated INSERT extents in the plan-view Z band', () => {
     const db = createDb()
     const stamp = createNamedBlock(db, 'STAMP')
-    stamp.appendEntity(
-      new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 })
-    )
+    stamp.appendEntity(new AcDbLine({ x: 0, y: 0, z: 0 }, { x: 1, y: 0, z: 0 }))
 
     const titleBlock = createNamedBlock(db, 'TITLE_BLOCK')
     const stampRef = new AcDbBlockReference('STAMP')
@@ -446,11 +444,14 @@ describe('AcDbBlockReference', () => {
 
     posX?.accessor.set?.(11)
     scaleY?.accessor.set?.(2.5)
-    normalZ?.accessor.set?.(3)
+    // A zero scale would collapse the block and is ignored.
+    scaleY?.accessor.set?.(0)
 
     expect(posX?.accessor.get()).toBe(11)
     expect(scaleY?.accessor.get()).toBe(2.5)
-    expect(normalZ?.accessor.get()).toBe(3)
+    // The normal is shown read-only, like AutoCAD.
+    expect(normalZ?.editable).toBe(false)
+    expect(normalZ?.accessor.get()).toBe(1)
 
     const attrProp = attribute?.properties.find(p => p.name === 'TAG_A')
     expect(attrProp?.editable).toBe(true)
