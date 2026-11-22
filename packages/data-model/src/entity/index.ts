@@ -40,7 +40,10 @@ export {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
-export type { AcDbEntityPropertyOption } from './AcDbEntityPropertyHelpers.js'
+export type {
+  AcDbEntityPropertyOption,
+  AcDbPointArrayItem
+} from './AcDbEntityPropertyHelpers.js'
 export { AcDbFace } from './AcDbFace.js'
 export { AcDbFcf } from './AcDbFcf.js'
 export {

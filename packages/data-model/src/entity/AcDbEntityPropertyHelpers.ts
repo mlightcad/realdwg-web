@@ -139,6 +139,12 @@ export function acdbVector3dProperties(
 }
 
 /**
+ * One point as returned by {@link acdbPointArrayProperty}, optionally with
+ * extra float fields (e.g. polyline `bulge` / widths).
+ */
+export type AcDbPointArrayItem = AcGePoint3dLike & Record<string, number>
+
+/**
  * Creates an `array` property for a list of points.
  *
  * The palette edits one element at a time: it copies the array returned by
@@ -146,36 +152,56 @@ export function acdbVector3dProperties(
  * array to `set`. `get` returns plain `{ x, y[, z] }` copies, so the palette
  * can never mutate the entity's internal storage by accident.
  *
+ * Pass `extraFields` for per-vertex floats beyond the coordinates (polyline
+ * bulge and widths). Missing or non-finite values become `0` in the copy.
+ *
  * @param name - Property name, e.g. `vertices`.
  * @param dimension - 2 for `{x, y}` items, 3 for `{x, y, z}` items.
  * @param get - Reads the live points.
  * @param set - Writes all points (same count as `get`); omit for read-only.
+ * @param extraFields - Additional float field names on each item.
  */
 export function acdbPointArrayProperty(
   name: string,
   dimension: 2 | 3,
   get: () => ArrayLike<AcGePoint3dLike | { x: number; y: number }>,
-  set?: (points: AcGePoint3dLike[]) => void
-): AcDbEntityRuntimeProperty<AcGePoint3dLike[]> {
+  set?: (points: AcDbPointArrayItem[]) => void,
+  extraFields: readonly string[] = []
+): AcDbEntityRuntimeProperty<AcDbPointArrayItem[]> {
   const axes = dimension === 2 ? AXES.slice(0, 2) : AXES
+  const editable = set != null
   return {
     name,
     type: 'array',
-    editable: set != null,
+    editable,
     itemSchema: {
-      properties: axes.map(axis => ({
-        name: axis,
-        type: 'float' as const,
-        editable: set != null
-      }))
+      properties: [
+        ...axes.map(axis => ({
+          name: axis,
+          type: 'float' as const,
+          editable
+        })),
+        ...extraFields.map(field => ({
+          name: field,
+          type: 'float' as const,
+          editable
+        }))
+      ]
     },
     accessor: {
       get: () =>
         Array.from(get(), point => {
           const z = (point as AcGePoint3dLike).z
-          return dimension === 2
-            ? { x: point.x, y: point.y, z: 0 }
-            : { x: point.x, y: point.y, z: z ?? 0 }
+          const copy: AcDbPointArrayItem =
+            dimension === 2
+              ? { x: point.x, y: point.y, z: 0 }
+              : { x: point.x, y: point.y, z: z ?? 0 }
+          for (const field of extraFields) {
+            const value = (point as Record<string, unknown>)[field]
+            copy[field] =
+              typeof value === 'number' && Number.isFinite(value) ? value : 0
+          }
+          return copy
         }),
       ...(set ? { set } : {})
     }

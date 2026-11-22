@@ -303,6 +303,15 @@ describe('AcDbPolyline', () => {
     const lengthProp = geometryGroup!.properties.find(p => p.name === 'length')
     const closedProp = othersGroup!.properties.find(p => p.name === 'closed')
 
+    expect(verticesProp?.editable).toBe(true)
+    expect(verticesProp?.itemSchema?.properties.map(p => p.name)).toEqual([
+      'x',
+      'y',
+      'bulge',
+      'startWidth',
+      'endWidth'
+    ])
+
     const vertices = verticesProp?.accessor.get() as Array<{
       x: number
       y: number
@@ -326,6 +335,12 @@ describe('AcDbPolyline', () => {
     })
     expect(vertices[1].startWidth).toBe(0)
     expect(vertices[1].endWidth).toBe(0)
+
+    // Palette copies must not alias internal vertex storage.
+    vertices[0].x = 99
+    expect(
+      (verticesProp?.accessor.get() as Array<{ x: number }>)[0].x
+    ).toBe(0)
 
     expect(Number(lengthProp?.accessor.get())).toBeGreaterThan(5)
 

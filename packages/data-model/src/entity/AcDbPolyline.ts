@@ -27,6 +27,8 @@ import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
+  acdbPointArrayProperty,
+  type AcDbPointArrayItem,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import {
@@ -47,17 +49,6 @@ import {
 
 /** Reused across dxfIn to avoid per-vertex temporaries (parse is sequential). */
 const _dxfInVertex = /*@__PURE__*/ new AcGePoint2d()
-
-/**
- * One vertex as shown and edited by the property palette.
- */
-interface AcDbPolylineVertexProperty {
-  x: number
-  y: number
-  bulge?: number
-  startWidth?: number
-  endWidth?: number
-}
 
 /**
  * Represents one vertex of a polyline entity in AutoCAD.
@@ -634,33 +625,13 @@ export class AcDbPolyline extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: true,
-              itemSchema: {
-                properties: [
-                  { name: 'x', type: 'float', editable: true },
-                  { name: 'y', type: 'float', editable: true },
-                  { name: 'bulge', type: 'float', editable: true },
-                  { name: 'startWidth', type: 'float', editable: true },
-                  { name: 'endWidth', type: 'float', editable: true }
-                ]
-              },
-              accessor: {
-                get: () =>
-                  this._geo.vertices.map(vertex => ({
-                    x: vertex.x,
-                    y: vertex.y,
-                    bulge: vertex.bulge ?? 0,
-                    startWidth: vertex.startWidth ?? 0,
-                    endWidth: vertex.endWidth ?? 0
-                  })),
-                set: (items: AcDbPolylineVertexProperty[]) => {
-                  this.setVerticesFromProperties(items)
-                }
-              }
-            },
+            acdbPointArrayProperty(
+              'vertices',
+              2,
+              () => this._geo.vertices,
+              items => this.setVerticesFromProperties(items),
+              ['bulge', 'startWidth', 'endWidth']
+            ),
             acdbCreateProperty(
               'constantWidth',
               'float',
@@ -669,7 +640,10 @@ export class AcDbPolyline extends AcDbCurve {
                 if (!Number.isFinite(value) || value < 0) return
                 this.setVerticesFromProperties(
                   this._geo.vertices.map(vertex => ({
-                    ...vertex,
+                    x: vertex.x,
+                    y: vertex.y,
+                    z: 0,
+                    bulge: vertex.bulge ?? 0,
                     startWidth: value,
                     endWidth: value
                   }))
@@ -718,7 +692,7 @@ export class AcDbPolyline extends AcDbCurve {
    * Replaces all vertices with the edited values from the property palette.
    * The vertex count must not change; mismatched input is ignored.
    */
-  private setVerticesFromProperties(items: AcDbPolylineVertexProperty[]) {
+  private setVerticesFromProperties(items: AcDbPointArrayItem[]) {
     const current = this._geo.vertices
     if (items.length !== current.length) return
     const vertices = items.map((item, index) => {

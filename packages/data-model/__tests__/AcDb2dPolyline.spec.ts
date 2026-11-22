@@ -224,7 +224,23 @@ describe('AcDb2dPolyline', () => {
     const lengthProp = geometryGroup!.properties.find(p => p.name === 'length')
     const closedProp = othersGroup!.properties.find(p => p.name === 'closed')
 
-    expect((verticesProp?.accessor.get() as unknown[]).length).toBe(2)
+    expect(verticesProp?.editable).toBe(true)
+    expect(verticesProp?.itemSchema?.properties.map(p => p.name)).toEqual([
+      'x',
+      'y',
+      'bulge'
+    ])
+    const vertices = verticesProp?.accessor.get() as Array<{
+      x: number
+      y: number
+      bulge: number
+    }>
+    expect(vertices).toHaveLength(2)
+    expect(vertices[0]).toMatchObject({ x: 0, y: 0, bulge: 0 })
+    vertices[0].x = 99
+    expect(
+      (verticesProp?.accessor.get() as Array<{ x: number }>)[0].x
+    ).toBe(0)
     expect(lengthProp?.accessor.get()).toBe(5)
 
     elevationProp?.accessor.set?.(11)
