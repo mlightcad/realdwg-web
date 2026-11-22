@@ -41,8 +41,8 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mlightcad/data-model": "workspace:*",
-    "@mlightcad/libredwg-converter": "workspace:*"
+    "@mlightcad/data-model": "workspace:^",
+    "@mlightcad/libredwg-converter": "workspace:^"
   },
   "devDependencies": {
     "vite": "^6.4.3",

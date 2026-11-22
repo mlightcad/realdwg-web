@@ -40,7 +40,7 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "peerDependencies": {
-    "@mlightcad/common": "workspace:*",
-    "@mlightcad/geometry-engine": "workspace:*"
+    "@mlightcad/common": "workspace:^",
+    "@mlightcad/geometry-engine": "workspace:^"
   }
 }

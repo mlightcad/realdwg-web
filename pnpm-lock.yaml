@@ -114,16 +114,16 @@ importers:
   packages/data-model:
     dependencies:
       '@mlightcad/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@mlightcad/emf-converter':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../emf-converter
       '@mlightcad/geometry-engine':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../geometry-engine
       '@mlightcad/graphic-interface':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../graphic-interface
       uid:
         specifier: ^2.0.2
@@ -144,10 +144,10 @@ importers:
   packages/example:
     dependencies:
       '@mlightcad/data-model':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../data-model
       '@mlightcad/libredwg-converter':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../libredwg-converter
     devDependencies:
       vite:
@@ -160,16 +160,16 @@ importers:
   packages/geometry-engine:
     dependencies:
       '@mlightcad/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
 
   packages/graphic-interface:
     dependencies:
       '@mlightcad/common':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../common
       '@mlightcad/geometry-engine':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../geometry-engine
 
   packages/libredwg-converter:
@@ -179,7 +179,7 @@ importers:
         version: 0.9.3
     devDependencies:
       '@mlightcad/data-model':
-        specifier: workspace:*
+        specifier: workspace:^
         version: link:../data-model
       vite:
         specifier: ^6.4.3

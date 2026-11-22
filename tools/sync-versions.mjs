@@ -135,7 +135,7 @@ async function syncPackage(
     for (const [name, value] of Object.entries(deps)) {
       let newVersion = null;
 
-      // Priority 1: handle workspace:* versions
+      // Priority 1: handle workspace: protocol versions (workspace:*, workspace:^, …)
       if (isWorkspaceVersion(value)) {
         if (workspacePackageNames.has(name)) continue;
 

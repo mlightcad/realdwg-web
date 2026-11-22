@@ -58,10 +58,10 @@
     "@mlightcad/libredwg-web": "0.9.3"
   },
   "devDependencies": {
-    "@mlightcad/data-model": "workspace:*",
+    "@mlightcad/data-model": "workspace:^",
     "vite": "^6.4.3"
   },
   "peerDependencies": {
-    "@mlightcad/data-model": "workspace:*"
+    "@mlightcad/data-model": "workspace:^"
   }
 }
