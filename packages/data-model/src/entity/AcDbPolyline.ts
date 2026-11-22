@@ -27,8 +27,8 @@ import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
-  acdbPointArrayProperty,
   type AcDbPointArrayItem,
+  acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import {
