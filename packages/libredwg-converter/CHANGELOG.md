@@ -1,5 +1,16 @@
 # @mlightcad/libredwg-converter
 
+## 3.16.0
+
+### Minor Changes
+
+- feat: makes entity properties fully editable for property palettes via setters and shared helpers, and adds AcDbMInsertBlock so MINSERT arrays match ObjectARX with DXF/DWG import and export. Array fields leave AcDbBlockReference; spacing is in drawing units without scale multiplication. Hardens MINSERT import for 1×1 spacing cases, keeps polyline bulge and widths on the copy-safe point-array path, maps DWG lineweight indexes to real values, and upgrades libredwg-web through 0.9.3
+
+### Patch Changes
+
+- Updated dependencies
+  - @mlightcad/data-model@1.16.0
+
 ## 3.15.30
 
 ### Patch Changes
