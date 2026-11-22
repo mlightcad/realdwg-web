@@ -2,9 +2,17 @@ import { AcGeMatrix3d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
 import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
-import { acdbDxfInEntity } from '../src/dxf/AcDbDxfEntityFactory'
-import { AcDbBlockReference, AcDbLine, AcDbMInsertBlock } from '../src/entity'
-import { AcDbOsnapMode } from '../src/misc'
+import {
+  acdbCreateEntityForDxfIn,
+  acdbDxfInEntity
+} from '../src/dxf/AcDbDxfEntityFactory'
+import {
+  AcDbAttribute,
+  AcDbBlockReference,
+  AcDbLine,
+  AcDbMInsertBlock
+} from '../src/entity'
+import { AcDbOsnapMode, AcDbRenderingCache } from '../src/misc'
 import { expectDetachedClone } from '../test-utils/cloneTestUtils'
 
 const createDb = () => {
@@ -23,8 +31,16 @@ const createUnitLineBlock = (db: AcDbDatabase, name: string) => {
 }
 
 describe('AcDbMInsertBlock', () => {
-  it('creates a detached clone with a new objectId', () => {
+  it('creates a detached clone that keeps array fields', () => {
     expectDetachedClone(() => new AcDbMInsertBlock('TEST', 2, 3, 10, 20))
+    const source = new AcDbMInsertBlock('TEST', 2, 3, 10, 20)
+    const cloned = source.clone() as AcDbMInsertBlock
+    expect(cloned).toBeInstanceOf(AcDbMInsertBlock)
+    expect(cloned.columns).toBe(2)
+    expect(cloned.rows).toBe(3)
+    expect(cloned.columnSpacing).toBe(10)
+    expect(cloned.rowSpacing).toBe(20)
+    expect(cloned.blockName).toBe('TEST')
   })
 
   it('is a block reference written as INSERT', () => {
@@ -210,5 +226,51 @@ describe('AcDbMInsertBlock', () => {
       y: 4,
       z: 0
     })
+  })
+
+  it('reads a 1x1 INSERT with non-zero spacing as AcDbMInsertBlock', () => {
+    const entity = readInsert(
+      '5\nA4\n100\nAcDbEntity\n8\n0\n100\nAcDbBlockReference\n2\nBLK\n' +
+        '10\n0\n20\n0\n30\n0\n70\n1\n71\n1\n44\n15\n45\n0\n'
+    )
+    expect(entity).toBeInstanceOf(AcDbMInsertBlock)
+    const minsert = entity as AcDbMInsertBlock
+    expect(minsert.columns).toBe(1)
+    expect(minsert.rows).toBe(1)
+    expect(minsert.columnSpacing).toBe(15)
+    expect(minsert.rowSpacing).toBe(0)
+  })
+
+  it('does not create INSERT via the empty factory (use acdbDxfInEntity)', () => {
+    expect(acdbCreateEntityForDxfIn('INSERT')).toBeNull()
+  })
+
+  it('draws attributes only on the first array instance, like AutoCAD', () => {
+    const db = createDb()
+    createUnitLineBlock(db, 'ATTR_BLOCK')
+    const minsert = new AcDbMInsertBlock('ATTR_BLOCK', 2, 2, 10, 10)
+    db.tables.blockTable.modelSpace.appendEntity(minsert)
+
+    const attr = new AcDbAttribute()
+    attr.database = db
+    attr.isInvisible = false
+    const attrDrawn = { id: 'attr' }
+    jest.spyOn(attr, 'worldDraw').mockReturnValue(attrDrawn as never)
+    minsert.appendAttributes(attr)
+
+    const drawSpy = jest
+      .spyOn(AcDbRenderingCache.instance, 'draw')
+      .mockReturnValue({ id: 'cell' } as never)
+    const renderer = {
+      group: jest.fn((children: unknown[]) => ({ children }))
+    }
+
+    minsert.subWorldDraw(renderer as never)
+    expect(drawSpy).toHaveBeenCalledTimes(4)
+    expect(drawSpy.mock.calls[0][3]).toEqual([attrDrawn])
+    expect(drawSpy.mock.calls[1][3]).toEqual([])
+    expect(drawSpy.mock.calls[2][3]).toEqual([])
+    expect(drawSpy.mock.calls[3][3]).toEqual([])
+    drawSpy.mockRestore()
   })
 })

@@ -194,6 +194,33 @@ describe('libredwg AcDbEntityConverter', () => {
       expect(dbInsert).not.toBeInstanceOf(AcDbMInsertBlock)
     })
 
+    it('converts a 1x1 INSERT with non-zero spacing into AcDbMInsertBlock', () => {
+      const converter = new AcDbEntityConverter()
+      const dbInsert = converter.convert({
+        type: 'INSERT',
+        handle: 'INSERT_SPACING',
+        layer: '0',
+        name: 'CHAIR',
+        insertionPoint: { x: 0, y: 0, z: 0 },
+        xScale: 1,
+        yScale: 1,
+        zScale: 1,
+        rotation: 0,
+        columnCount: 1,
+        rowCount: 1,
+        columnSpacing: 15,
+        rowSpacing: 0,
+        extrusionDirection: { x: 0, y: 0, z: 1 },
+        attribs: []
+      } as any) as AcDbMInsertBlock
+
+      expect(dbInsert).toBeInstanceOf(AcDbMInsertBlock)
+      expect(dbInsert.columns).toBe(1)
+      expect(dbInsert.rows).toBe(1)
+      expect(dbInsert.columnSpacing).toBe(15)
+      expect(dbInsert.rowSpacing).toBe(0)
+    })
+
     it('appends ATTRIBs of an INSERT through convert() preserving common attrs', () => {
       const converter = new AcDbEntityConverter()
       const dbInsert = converter.convert({

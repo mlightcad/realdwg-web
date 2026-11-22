@@ -4,7 +4,6 @@ import { AcDbArc } from '../entity/AcDbArc.js'
 import { AcDbArcAlignedText } from '../entity/AcDbArcAlignedText.js'
 import { AcDbAttribute } from '../entity/AcDbAttribute.js'
 import { AcDbAttributeDefinition } from '../entity/AcDbAttributeDefinition.js'
-import { AcDbBlockReference } from '../entity/AcDbBlockReference.js'
 import { AcDbCircle } from '../entity/AcDbCircle.js'
 import { AcDbEllipse } from '../entity/AcDbEllipse.js'
 import type { AcDbEntity } from '../entity/AcDbEntity.js'
@@ -40,6 +39,12 @@ import { acdbDxfInPolyline } from './AcDbDxfPolylineAssembler.js'
 /**
  * Creates an empty entity instance for the given DXF type name, ready for dxfIn.
  * Returns null for unsupported types (caller should skip to next code 0).
+ *
+ * Composite types that need a subclass/assembler pass first are **not** created
+ * here — use {@link acdbDxfInEntity} (or the dedicated assemblers) instead:
+ * - `INSERT` / MINSERT → {@link acdbDxfInInsert}
+ * - `POLYLINE` → {@link acdbDxfInPolyline}
+ * - `DIMENSION` → {@link acdbDxfInDimension}
  */
 export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
   const type = typeName.toUpperCase()
@@ -67,8 +72,9 @@ export function acdbCreateEntityForDxfIn(typeName: string): AcDbEntity | null {
       return new AcDbFace()
     case 'LWPOLYLINE':
       return new AcDbPolyline()
+    // INSERT/MINSERT share the DXF type name; class selection needs the pairs.
     case 'INSERT':
-      return new AcDbBlockReference('')
+      return null
     case 'TEXT':
       return new AcDbText()
     case 'ARCALIGNEDTEXT':

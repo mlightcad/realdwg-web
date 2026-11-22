@@ -13,9 +13,12 @@ import {
  * {@link AcDbBlockReference} or an {@link AcDbMInsertBlock}.
  *
  * DXF stores both INSERT and MINSERT with the entity type name `INSERT`.
- * A MINSERT is recognized by its `AcDbMInsertBlock` subclass marker (ODA /
- * ezdxf output) or, for writers that keep the `AcDbBlockReference` marker
- * (AutoCAD), by a column count (70) or row count (71) greater than one.
+ * A MINSERT is recognized by:
+ * - its `AcDbMInsertBlock` subclass marker (ODA / ezdxf),
+ * - a column count (70) or row count (71) greater than one (AutoCAD keeps the
+ *   `AcDbBlockReference` marker), or
+ * - non-zero column/row spacing (44/45), so 1×1 arrays with spacing survive a
+ *   round trip instead of dropping those fields.
  *
  * Expects the filer just after `(0, INSERT)`.
  */
@@ -61,6 +64,13 @@ function isMInsert(pairs: readonly AcDbDxfPair[]): boolean {
       (pair.code === 70 || pair.code === 71) &&
       typeof pair.value === 'number' &&
       pair.value > 1
+    ) {
+      return true
+    }
+    if (
+      (pair.code === 44 || pair.code === 45) &&
+      typeof pair.value === 'number' &&
+      pair.value !== 0
     ) {
       return true
     }

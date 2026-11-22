@@ -1744,17 +1744,20 @@ export class AcDbEntityConverter {
 
   private convertBlockReference(blockReference: DwgInsertEntity) {
     // libredwg-web reports both INSERT and MINSERT as type 'INSERT'; a MINSERT
-    // is recognized by its array dimensions (columns/rows > 1).
+    // is recognized by array dimensions > 1 or non-zero spacing (so 1×1 with
+    // spacing is preserved instead of dropping 44/45).
     const columns = blockReference.columnCount ?? 1
     const rows = blockReference.rowCount ?? 1
+    const columnSpacing = blockReference.columnSpacing ?? 0
+    const rowSpacing = blockReference.rowSpacing ?? 0
     const dbBlockReference =
-      columns > 1 || rows > 1
+      columns > 1 || rows > 1 || columnSpacing !== 0 || rowSpacing !== 0
         ? new AcDbMInsertBlock(
             blockReference.name,
             columns,
             rows,
-            blockReference.columnSpacing ?? 0,
-            blockReference.rowSpacing ?? 0
+            columnSpacing,
+            rowSpacing
           )
         : new AcDbBlockReference(blockReference.name)
     if (blockReference.insertionPoint)
