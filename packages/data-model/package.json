@@ -47,10 +47,10 @@
     "lint:fix": "eslint --fix --quiet src/"
   },
   "dependencies": {
-    "@mlightcad/common": "workspace:*",
-    "@mlightcad/emf-converter": "workspace:*",
-    "@mlightcad/geometry-engine": "workspace:*",
-    "@mlightcad/graphic-interface": "workspace:*",
+    "@mlightcad/common": "workspace:^",
+    "@mlightcad/emf-converter": "workspace:^",
+    "@mlightcad/geometry-engine": "workspace:^",
+    "@mlightcad/graphic-interface": "workspace:^",
     "uid": "^2.0.2"
   }
 }
