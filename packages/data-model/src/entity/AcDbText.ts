@@ -39,6 +39,11 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
   acdbEstimatePlainTextWidth,
@@ -734,6 +739,17 @@ export class AcDbText extends AcDbEntity {
   }
 
   /**
+   * Justified text is drawn from {@link alignmentPoint}. Before switching
+   * away from LEFT/BASELINE, give text without one an alignment point at its
+   * insertion point so it does not jump to the origin.
+   */
+  private ensureAlignmentPoint() {
+    if (this._hasAlignmentPoint) return
+    this._alignmentPoint.copy(this._position)
+    this._hasAlignmentPoint = true
+  }
+
+  /**
    * Builds text/geometry property groups shared by TEXT, ATTRIB, and ATTDEF.
    */
   protected getTextProperties(): AcDbEntityProperties {
@@ -784,7 +800,7 @@ export class AcDbText extends AcDbEntity {
               accessor: {
                 get: () => this.height,
                 set: (v: number) => {
-                  this.height = v
+                  if (Number.isFinite(v) && v > 0) this.height = v
                 }
               }
             },
@@ -806,7 +822,7 @@ export class AcDbText extends AcDbEntity {
               accessor: {
                 get: () => this.widthFactor,
                 set: (v: number) => {
-                  this.widthFactor = v
+                  if (Number.isFinite(v) && v > 0) this.widthFactor = v
                 }
               }
             },
@@ -832,28 +848,38 @@ export class AcDbText extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'horizontalMode',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.horizontalMode,
-                set: (v: number) => {
-                  this.horizontalMode = v
-                }
-              }
-            },
-            {
-              name: 'verticalMode',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.verticalMode,
-                set: (v: number) => {
-                  this.verticalMode = v
-                }
-              }
-            },
+            acdbCreateProperty<AcDbTextHorizontalMode>(
+              'horizontalMode',
+              'enum',
+              () => this.horizontalMode,
+              (value: AcDbTextHorizontalMode) => {
+                this.ensureAlignmentPoint()
+                this.horizontalMode = value
+              },
+              [
+                { label: 'Left', value: AcDbTextHorizontalMode.LEFT },
+                { label: 'Center', value: AcDbTextHorizontalMode.CENTER },
+                { label: 'Right', value: AcDbTextHorizontalMode.RIGHT },
+                { label: 'Aligned', value: AcDbTextHorizontalMode.ALIGNED },
+                { label: 'Middle', value: AcDbTextHorizontalMode.MIDDLE },
+                { label: 'Fit', value: AcDbTextHorizontalMode.FIT }
+              ]
+            ),
+            acdbCreateProperty<AcDbTextVerticalMode>(
+              'verticalMode',
+              'enum',
+              () => this.verticalMode,
+              (value: AcDbTextVerticalMode) => {
+                this.ensureAlignmentPoint()
+                this.verticalMode = value
+              },
+              [
+                { label: 'Baseline', value: AcDbTextVerticalMode.BASELINE },
+                { label: 'Bottom', value: AcDbTextVerticalMode.BOTTOM },
+                { label: 'Middle', value: AcDbTextVerticalMode.MIDDLE },
+                { label: 'Top', value: AcDbTextVerticalMode.TOP }
+              ]
+            ),
             {
               name: 'isBackward',
               type: 'boolean',
@@ -889,105 +915,25 @@ export class AcDbText extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'positionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.x,
-                set: (v: number) => {
-                  this.position.x = v
-                }
+            ...acdbPoint3dProperties(
+              'position',
+              () => this.position,
+              value => {
+                // Justified text draws from the alignment point, so move both
+                // anchors together like a grip drag does.
+                const offset = new AcGeVector3d(value).sub(this.position)
+                this.position = value
+                if (this._hasAlignmentPoint) this._alignmentPoint.add(offset)
               }
-            },
-            {
-              name: 'positionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.y,
-                set: (v: number) => {
-                  this.position.y = v
-                }
+            ),
+            ...acdbPoint3dProperties(
+              'alignmentPoint',
+              () => this.alignmentPoint,
+              value => {
+                this.alignmentPoint = value
               }
-            },
-            {
-              name: 'positionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.z,
-                set: (v: number) => {
-                  this.position.z = v
-                }
-              }
-            },
-            {
-              name: 'alignmentPointX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.alignmentPoint.x,
-                set: (v: number) => {
-                  this.alignmentPoint.x = v
-                }
-              }
-            },
-            {
-              name: 'alignmentPointY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.alignmentPoint.y,
-                set: (v: number) => {
-                  this.alignmentPoint.y = v
-                }
-              }
-            },
-            {
-              name: 'alignmentPointZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.alignmentPoint.z,
-                set: (v: number) => {
-                  this.alignmentPoint.z = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -1042,8 +988,7 @@ export class AcDbText extends AcDbEntity {
     const { anchor, attachmentPoint } = this.resolveTextAnchor()
     const draw = this.extrusionDrawingAdjust()
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let height = this.height
     let position = anchor
@@ -1054,10 +999,7 @@ export class AcDbText extends AcDbEntity {
     if (isAnnotative && contexts.length > 0) {
       const paperHeight = acdbAnnotativePaperHeight(this.height, contexts)
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       height = acdbAnnotativeModelHeight(
@@ -1098,13 +1040,8 @@ export class AcDbText extends AcDbEntity {
     // or MIDDLE/TOP/BOTTOM modes. Pick the right reference + the matching
     // attachment point so the renderer can compute the offset itself
     // from the real bbox of the laid-out glyphs.
-    const {
-      height,
-      position,
-      attachmentPoint,
-      rotation,
-      annotationScale
-    } = this.resolveAnnotativePresentation()
+    const { height, position, attachmentPoint, rotation, annotationScale } =
+      this.resolveAnnotativePresentation()
     const draw = this.extrusionDrawingAdjust()
     const mtextData: AcGiMTextData = {
       text: this.textString,
@@ -1147,18 +1084,10 @@ export class AcDbText extends AcDbEntity {
     rotation: number
     widthFactor: number
   } {
-    if (
-      this._normal.x === 0 &&
-      this._normal.y === 0 &&
-      this._normal.z === 1
-    ) {
+    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
       return { rotation: this._rotation, widthFactor: this._widthFactor }
     }
-    if (
-      this._normal.x === 0 &&
-      this._normal.y === 0 &&
-      this._normal.z < 0
-    ) {
+    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z < 0) {
       return {
         rotation: -this._rotation,
         widthFactor: -this._widthFactor
@@ -1202,8 +1131,7 @@ export class AcDbText extends AcDbEntity {
     // alignment point. The all-zero check stays as a guard for files that
     // carry a degenerate zero group 11.
     const apIsUnset =
-      !this._hasAlignmentPoint ||
-      (ap.x === 0 && ap.y === 0 && ap.z === 0)
+      !this._hasAlignmentPoint || (ap.x === 0 && ap.y === 0 && ap.z === 0)
     if (apIsUnset) {
       return {
         anchor: this.pointToWcs(this._position),

@@ -247,11 +247,19 @@ describe('AcDbPolyline', () => {
     expect(polyline.getPoint2dAt(0)).toEqual(new AcGePoint2d(11, 0))
     expect(polyline.getPoint2dAt(1)).toEqual(new AcGePoint2d(14, 3))
 
-    const verticesBeforeMirror = polyline.properties.groups
+    const verticesProp = polyline.properties.groups
       .find(g => g.groupName === 'geometry')
       ?.properties.find(p => p.name === 'vertices')
-      ?.accessor.get() as Array<{ bulge?: number }>
-    verticesBeforeMirror[0].bulge = undefined
+    const verticesBeforeMirror = verticesProp?.accessor.get() as Array<{
+      bulge?: number
+    }>
+    // Mutating the returned copy must not touch the entity...
+    verticesBeforeMirror[0].bulge = 0
+    expect(
+      (verticesProp?.accessor.get() as Array<{ bulge?: number }>)[0].bulge
+    ).toBe(0.5)
+    // ...writing it back through the accessor does.
+    verticesProp?.accessor.set?.(verticesBeforeMirror)
 
     polyline.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
 
@@ -260,7 +268,7 @@ describe('AcDbPolyline', () => {
       ?.properties.find(p => p.name === 'vertices')
       ?.accessor.get() as Array<{ bulge?: number }>
 
-    expect(vertices[0].bulge).toBeUndefined()
+    expect(vertices[0].bulge).toBeCloseTo(0, 12)
     expect(vertices[1].bulge).toBe(1)
 
     const afterMirrorLength = Number(
@@ -316,8 +324,8 @@ describe('AcDbPolyline', () => {
       y: 4,
       bulge: 0
     })
-    expect(vertices[1].startWidth).toBeUndefined()
-    expect(vertices[1].endWidth).toBeUndefined()
+    expect(vertices[1].startWidth).toBe(0)
+    expect(vertices[1].endWidth).toBe(0)
 
     expect(Number(lengthProp?.accessor.get())).toBeGreaterThan(5)
 
@@ -379,8 +387,7 @@ describe('AcDbPolyline', () => {
     }
 
     const result = polyline.subWorldDraw(renderer as never)
-    const [outer, inner] = (renderer.offsetRing as jest.Mock).mock
-      .calls[0] as [
+    const [outer, inner] = (renderer.offsetRing as jest.Mock).mock.calls[0] as [
       Array<{ x: number; y: number; z: number }>,
       Array<{ x: number; y: number; z: number }>
     ]
@@ -504,7 +511,8 @@ describe('AcDbPolyline', () => {
     // Closed fallthrough must close the hairline seam and not leave solid fill
     // on traits when stroking the centerline.
     expect(renderer.subEntityTraits.fillType.solidFill).toBe(false)
-    const strokeArg = (renderer.lines as jest.Mock).mock.calls[0]?.[0] as Array<{
+    const strokeArg = (renderer.lines as jest.Mock).mock
+      .calls[0]?.[0] as Array<{
       x: number
       y: number
     }>

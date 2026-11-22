@@ -59,6 +59,10 @@ import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.j
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
+  acdbCreateProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
+import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers.js'
@@ -1186,7 +1190,7 @@ export class AcDbHatch extends AcDbEntity {
               accessor: {
                 get: () => this.patternScale,
                 set: (v: number) => {
-                  this.patternScale = v
+                  if (Number.isFinite(v) && v > 0) this.patternScale = v
                 }
               }
             },
@@ -1242,17 +1246,13 @@ export class AcDbHatch extends AcDbEntity {
                 get: () => this.isGradient
               }
             },
-            {
-              name: 'isSolidFill',
-              type: 'boolean',
-              editable: true,
-              accessor: {
-                get: () => this.isSolidFill,
-                set: (v: boolean) => {
-                  this.isSolidFill = v
-                }
-              }
-            },
+            // Solid fill follows the pattern name (SOLID); choose the pattern
+            // instead of toggling the flag.
+            acdbCreateProperty(
+              'isSolidFill',
+              'boolean',
+              () => this.isSolidFill
+            ),
             {
               name: 'hatchStyle',
               type: 'enum',
@@ -1345,28 +1345,36 @@ export class AcDbHatch extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'gradientStartColor',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.gradientStartColor ?? 0,
-                set: (v: number) => {
-                  this.gradientStartColor = v
-                }
+            // Gradient colors are stored as packed RGB; the palette edits
+            // them as true colors.
+            acdbCreateProperty<AcCmColor | undefined>(
+              'gradientStartColor',
+              'color',
+              () => {
+                const rgb = this.gradientStartColor
+                return rgb == null
+                  ? undefined
+                  : new AcCmColor().setRGBValue(rgb)
+              },
+              (value: AcCmColor | undefined) => {
+                this.gradientStartColor = value?.RGB
               }
-            },
-            {
-              name: 'gradientEndColor',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.gradientEndColor ?? 0,
-                set: (v: number) => {
-                  this.gradientEndColor = v
-                }
+            ),
+            // Gradient colors are stored as packed RGB; the palette edits
+            // them as true colors.
+            acdbCreateProperty<AcCmColor | undefined>(
+              'gradientEndColor',
+              'color',
+              () => {
+                const rgb = this.gradientEndColor
+                return rgb == null
+                  ? undefined
+                  : new AcCmColor().setRGBValue(rgb)
+              },
+              (value: AcCmColor | undefined) => {
+                this.gradientEndColor = value?.RGB
               }
-            },
+            ),
             {
               name: 'hatchObjectType',
               type: 'enum',
@@ -1377,7 +1385,8 @@ export class AcDbHatch extends AcDbEntity {
                   value: AcDbHatchObjectType.HatchObject
                 },
                 {
-                  label: AcDbHatchObjectType[AcDbHatchObjectType.GradientObject],
+                  label:
+                    AcDbHatchObjectType[AcDbHatchObjectType.GradientObject],
                   value: AcDbHatchObjectType.GradientObject
                 }
               ],
@@ -1412,39 +1421,7 @@ export class AcDbHatch extends AcDbEntity {
                 get: () => this.area
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -1942,8 +1919,7 @@ export class AcDbHatch extends AcDbEntity {
   } {
     const baseScale = this.getEffectivePatternScale()
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let patternScale = baseScale
     let preferred: AcDbAnnotationScaleContext | undefined
@@ -1951,18 +1927,12 @@ export class AcDbHatch extends AcDbEntity {
 
     if (isAnnotative && contexts.length > 0) {
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       annotationScale = acdbBuildAnnotationScaleDrawInfo(contexts, preferred)
       const ctx = preferred.contextData
-      if (
-        ctx instanceof AcDbHatchScaleContextData &&
-        ctx.patternScale > 0
-      ) {
+      if (ctx instanceof AcDbHatchScaleContextData && ctx.patternScale > 0) {
         patternScale = ctx.patternScale
       } else {
         patternScale = acdbAnnotativeModelHeight(

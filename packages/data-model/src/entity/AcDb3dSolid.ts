@@ -129,7 +129,7 @@ function pointsFromWireframe(wireframe: Float32Array): AcGePoint3d[] {
  */
 function resolveSolidPayload(
   input: string | AcDb3dSolidOptions,
-  version?: number,
+  version?: number
 ): {
   sabBytes?: Uint8Array
   satText: string
@@ -141,7 +141,7 @@ function resolveSolidPayload(
   return {
     sabBytes: input.sabBytes,
     satText: input.satText ?? input.acisData ?? '',
-    version: input.version ?? version,
+    version: input.version ?? version
   }
 }
 
@@ -194,7 +194,7 @@ export class AcDb3dSolid extends AcDbEntity {
   constructor(options: AcDb3dSolidOptions)
   constructor(
     acisDataOrOptions: string | AcDb3dSolidOptions,
-    version?: number,
+    version?: number
   ) {
     super()
     const payload = resolveSolidPayload(acisDataOrOptions, version)
@@ -269,8 +269,7 @@ export class AcDb3dSolid extends AcDbEntity {
    * @param sabBytes - Raw ASM_Data payload for this solid.
    */
   setSabBytes(sabBytes: Uint8Array | undefined) {
-    this._sabBytes =
-      sabBytes && sabBytes.length > 0 ? sabBytes : undefined
+    this._sabBytes = sabBytes && sabBytes.length > 0 ? sabBytes : undefined
     this.rebuildGeometryCaches()
   }
 
@@ -328,34 +327,25 @@ export class AcDb3dSolid extends AcDbEntity {
             {
               name: 'guid',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.guid ?? '',
-                set: (v: string) => {
-                  this.guid = v
-                }
+                get: () => this.guid ?? ''
               }
             },
             {
               name: 'historyObjectSoftId',
               type: 'string',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.historyObjectSoftId ?? '',
-                set: (v: string) => {
-                  this.historyObjectSoftId = v
-                }
+                get: () => this.historyObjectSoftId ?? ''
               }
             },
             {
               name: 'satCache',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.satCache ?? false,
-                set: (v: boolean) => {
-                  this.satCache = v
-                }
+                get: () => this.satCache ?? false
               }
             },
             {
@@ -421,7 +411,7 @@ export class AcDb3dSolid extends AcDbEntity {
         const point = new AcGePoint3d(
           this._wireframe[i]!,
           this._wireframe[i + 1]!,
-          this._wireframe[i + 2]!,
+          this._wireframe[i + 2]!
         )
         point.applyMatrix4(matrix)
         transformed[i] = point.x
@@ -475,9 +465,7 @@ export class AcDb3dSolid extends AcDbEntity {
       buffer[i * 3 + 2] = corner.z
     })
     const indices = new Uint16Array([
-      0, 1, 1, 2, 2, 3, 3, 0,
-      4, 5, 5, 6, 6, 7, 7, 4,
-      0, 4, 1, 5, 2, 6, 3, 7
+      0, 1, 1, 2, 2, 3, 3, 0, 4, 5, 5, 6, 6, 7, 7, 4, 0, 4, 1, 5, 2, 6, 3, 7
     ])
     return renderer.lineSegments(buffer, 3, indices)
   }
@@ -584,4 +572,3 @@ export class AcDb3dSolid extends AcDbEntity {
     return this
   }
 }
-

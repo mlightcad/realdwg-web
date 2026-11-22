@@ -38,6 +38,11 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbMTextObjectContextData } from '../object/AcDbMTextObjectContextData.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
   acdbCollectMTextOrientedCorners,
@@ -525,8 +530,7 @@ export class AcDbMText extends AcDbEntity {
     annotationScale?: AcDbAnnotationScaleDrawInfo
   } {
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let height = this.height
     let position = this._location
@@ -540,10 +544,7 @@ export class AcDbMText extends AcDbEntity {
     if (isAnnotative && contexts.length > 0) {
       const paperHeight = acdbAnnotativePaperHeight(this.height, contexts)
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       height = acdbAnnotativeModelHeight(
@@ -802,7 +803,7 @@ export class AcDbMText extends AcDbEntity {
               accessor: {
                 get: () => this.height,
                 set: (v: number) => {
-                  this.height = v
+                  if (Number.isFinite(v) && v > 0) this.height = v
                 }
               }
             },
@@ -813,7 +814,9 @@ export class AcDbMText extends AcDbEntity {
               accessor: {
                 get: () => this.rotation,
                 set: (v: number) => {
+                  // Drawing prefers the direction vector, so keep both in sync.
                   this.rotation = v
+                  this.direction = new AcGeVector3d(Math.cos(v), Math.sin(v), 0)
                 }
               }
             },
@@ -839,50 +842,19 @@ export class AcDbMText extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'directionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.x,
-                set: (v: number) => {
-                  this.direction.x = v
-                }
-              }
-            },
-            {
-              name: 'directionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.y,
-                set: (v: number) => {
-                  this.direction.y = v
-                }
-              }
-            },
-            {
-              name: 'directionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.direction.z,
-                set: (v: number) => {
-                  this.direction.z = v
-                }
-              }
-            },
-            {
-              name: 'lineSpacingStyle',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.lineSpacingStyle,
-                set: (v: number) => {
-                  this.lineSpacingStyle = v
-                }
-              }
-            },
+            ...acdbVector3dProperties('direction', () => this.direction),
+            acdbCreateProperty(
+              'lineSpacingStyle',
+              'enum',
+              () => this.lineSpacingStyle,
+              (value: number) => {
+                this.lineSpacingStyle = value
+              },
+              [
+                { label: 'AtLeast', value: 1 },
+                { label: 'Exactly', value: 2 }
+              ]
+            ),
             {
               name: 'backgroundFill',
               type: 'boolean',
@@ -938,17 +910,19 @@ export class AcDbMText extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'columnType',
-              type: 'int',
-              editable: true,
-              accessor: {
-                get: () => this.columnType,
-                set: (v: number) => {
-                  this.columnType = v
-                }
-              }
-            },
+            acdbCreateProperty(
+              'columnType',
+              'enum',
+              () => this.columnType,
+              (value: number) => {
+                this.columnType = value
+              },
+              [
+                { label: 'NoColumns', value: 0 },
+                { label: 'Static', value: 1 },
+                { label: 'Dynamic', value: 2 }
+              ]
+            ),
             {
               name: 'columnCount',
               type: 'int',
@@ -1028,72 +1002,14 @@ export class AcDbMText extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'locationX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.x,
-                set: (v: number) => {
-                  this.location.x = v
-                }
+            ...acdbPoint3dProperties(
+              'location',
+              () => this.location,
+              value => {
+                this.location = value
               }
-            },
-            {
-              name: 'locationY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.y,
-                set: (v: number) => {
-                  this.location.y = v
-                }
-              }
-            },
-            {
-              name: 'locationZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.location.z,
-                set: (v: number) => {
-                  this.location.z = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -1322,7 +1238,9 @@ export class AcDbMText extends AcDbEntity {
     // MTEXT contents use \P for paragraph breaks; raw newlines must not appear in DXF.
     // AutoCAD splits strings longer than 250 chars into group-3 chunks, with the
     // final remainder in group 1.
-    filer.writeMTextContents(this.encodeMTextContentsForDxf(this.contents ?? ''))
+    filer.writeMTextContents(
+      this.encodeMTextContentsForDxf(this.contents ?? '')
+    )
     filer.writeString(7, this.styleName)
     filer.writeAngle(50, this.rotation)
     filer.writeVector3d(11, this.direction)

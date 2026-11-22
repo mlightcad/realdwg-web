@@ -484,13 +484,13 @@ describe('AcDbOle2Frame image drawing', () => {
     byName.positionX.accessor.set?.(15)
     byName.width.accessor.set?.(50)
     byName.userType.accessor.set?.('Excel Worksheet')
-    byName.oleObjectType.accessor.set?.(AcDbOleObjectType.Link)
+    expect(byName.oleObjectType.editable).toBe(false)
     byName.lockAspect.accessor.set?.(false)
 
     expect(ole.upperLeftCorner.x).toBe(15)
     expect(ole.wcsWidth()).toBe(50)
     expect(ole.userType).toBe('Excel Worksheet')
-    expect(ole.oleObjectType).toBe(AcDbOleObjectType.Link)
+    expect(ole.oleObjectType).not.toBe(AcDbOleObjectType.Link)
     expect(ole.lockAspect()).toBe(false)
   })
 })
@@ -567,7 +567,9 @@ function buildCfb(streams: Record<string, Uint8Array>) {
     buf.set(data)
     return buf
   })
-  const miniStream = new Uint8Array(chunks.reduce((sum, chunk) => sum + chunk.length, 0))
+  const miniStream = new Uint8Array(
+    chunks.reduce((sum, chunk) => sum + chunk.length, 0)
+  )
   const starts: number[] = []
   let miniCursor = 0
   chunks.forEach(chunk => {
@@ -580,11 +582,9 @@ function buildCfb(streams: Record<string, Uint8Array>) {
   const firstMiniSector = 3
   const file = new Uint8Array((1 + 3 + miniStreamSectors) * sectorSize)
   const header = new DataView(file.buffer)
-  ;[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].forEach(
-    (byte, index) => {
-      file[index] = byte
-    }
-  )
+  ;[0xd0, 0xcf, 0x11, 0xe0, 0xa1, 0xb1, 0x1a, 0xe1].forEach((byte, index) => {
+    file[index] = byte
+  })
   header.setUint16(0x18, 0x003e, true)
   header.setUint16(0x1a, 3, true)
   header.setUint16(0x1c, 0xfffe, true)
@@ -610,12 +610,18 @@ function buildCfb(streams: Record<string, Uint8Array>) {
   fat.setUint32(8, CFB_ENDOFCHAIN, true)
   for (let index = 0; index < miniStreamSectors; index++) {
     const sector = firstMiniSector + index
-    const next =
-      index + 1 < miniStreamSectors ? sector + 1 : CFB_ENDOFCHAIN
+    const next = index + 1 < miniStreamSectors ? sector + 1 : CFB_ENDOFCHAIN
     fat.setUint32(sector * 4, next, true)
   }
 
-  writeCfbDirEntry(file, 2 * sectorSize, 'Root Entry', 5, firstMiniSector, miniStream.length)
+  writeCfbDirEntry(
+    file,
+    2 * sectorSize,
+    'Root Entry',
+    5,
+    firstMiniSector,
+    miniStream.length
+  )
   names.forEach((name, index) => {
     writeCfbDirEntry(
       file,

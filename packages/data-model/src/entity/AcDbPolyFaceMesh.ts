@@ -13,9 +13,10 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbPointArrayProperty } from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
-import { acdbOffsetVertexPathAsPolyline,AcDbPolyline } from './AcDbPolyline.js'
+import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
 
 /**
  * Represents a polyface mesh vertex in AutoCAD.
@@ -244,38 +245,17 @@ export class AcDbPolyFaceMesh extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: true
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: true
-                  },
-                  {
-                    name: 'z',
-                    type: 'float',
-                    editable: true
-                  }
-                ]
-              },
-              accessor: {
-                get: () =>
-                  this._vertices.map(v => ({
-                    x: v.position.x,
-                    y: v.position.y,
-                    z: v.position.z
-                  }))
+            acdbPointArrayProperty(
+              'vertices',
+              3,
+              () => this._vertices.map(vertex => vertex.position),
+              points => {
+                if (points.length !== this._vertices.length) return
+                points.forEach((point, index) =>
+                  this._vertices[index].position.copy(point)
+                )
               }
-            },
+            ),
             {
               name: 'faces',
               type: 'array',

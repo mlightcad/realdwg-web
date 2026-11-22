@@ -50,6 +50,10 @@ import {
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
 } from '../AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from '../AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from '../AcDbGripHelpers.js'
 import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers.js'
 import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
@@ -1005,13 +1009,19 @@ export abstract class AcDbDimension extends AcDbEntity {
           'string',
           () => this.dimBlockId ?? ''
         ),
-        ...this.createPoint3dProperties(
+        // The block position is reset whenever the dimension block is
+        // regenerated, so it is informational only.
+        ...acdbPoint3dProperties(
           'dimBlockPosition',
           () => this.dimBlockPosition
         ),
-        ...this.createPoint3dProperties(
+        ...acdbPoint3dProperties(
           'textPosition',
-          () => this.textPosition
+          () => this.textPosition,
+          value => {
+            this.textPosition = value
+            this.isUsingDefaultTextPosition = false
+          }
         ),
         this.createProperty(
           'textRotation',
@@ -1047,7 +1057,7 @@ export abstract class AcDbDimension extends AcDbEntity {
             }
           ]
         ),
-        ...this.createPoint3dProperties('normal', () => this.normal),
+        ...acdbVector3dProperties('normal', () => this.normal),
         this.createProperty(
           'horizontalRotation',
           'float',
@@ -1056,14 +1066,8 @@ export abstract class AcDbDimension extends AcDbEntity {
             this.horizontalRotation = value
           }
         ),
-        this.createProperty(
-          'dimensionType',
-          'int',
-          () => this.dimensionType,
-          (value: number) => {
-            this.dimensionType = value
-          }
-        ),
+        // Type and flag bits are defined by the dimension class.
+        this.createProperty('dimensionType', 'int', () => this.dimensionType),
         this.createProperty(
           'attachmentPoint',
           'enum',
@@ -1103,36 +1107,17 @@ export abstract class AcDbDimension extends AcDbEntity {
     }
   }
 
+  /**
+   * Creates X/Y/Z properties for a definition point. Editing a coordinate
+   * passes a new point to `setPoint`; the palette regenerates the dimension
+   * block afterwards (see {@link recomputeDimBlock}).
+   */
   protected createPoint3dProperties(
     prefix: string,
-    getPoint: () => AcGePoint3d
+    getPoint: () => AcGePoint3d,
+    setPoint?: (value: AcGePoint3d) => void
   ): AcDbEntityRuntimeProperty<number>[] {
-    return [
-      this.createProperty(
-        `${prefix}X`,
-        'float',
-        () => getPoint().x,
-        (value: number) => {
-          getPoint().x = value
-        }
-      ),
-      this.createProperty(
-        `${prefix}Y`,
-        'float',
-        () => getPoint().y,
-        (value: number) => {
-          getPoint().y = value
-        }
-      ),
-      this.createProperty(
-        `${prefix}Z`,
-        'float',
-        () => getPoint().z,
-        (value: number) => {
-          getPoint().z = value
-        }
-      )
-    ]
+    return acdbPoint3dProperties(prefix, getPoint, setPoint)
   }
 
   protected getMeasurementPropertyValue(): number | undefined {

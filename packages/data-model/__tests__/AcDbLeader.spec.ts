@@ -1129,7 +1129,10 @@ describe('AcDbLeader', () => {
 
       expect(props.associatedAnnotation.editable).toBe(false)
       expect(props.byBlockColor.editable).toBe(false)
-      expect(props.vertices.editable).toBe(false)
+      // Vertices are edited one at a time through the array accessor.
+      expect(props.vertices.editable).toBe(true)
+      expect(props.normalZ.editable).toBe(false)
+      expect(props.horizontalDirectionX.editable).toBe(false)
     })
 
     it('exposes vertices, normal, horizontal direction and optional offsets', () => {
@@ -1148,9 +1151,20 @@ describe('AcDbLeader', () => {
       ;(props.vertices.accessor.get() as { x: number; y: number }[])[0].y = 99
       expect(leader.vertices[0].y).toBe(2)
 
+      const edited = props.vertices.accessor.get() as {
+        x: number
+        y: number
+        z: number
+      }[]
+      edited[1] = { x: 7, y: 8, z: 9 }
+      props.vertices.accessor.set?.(edited)
+      expect(leader.vertices[1]).toMatchObject({ x: 7, y: 8, z: 9 })
+      expect(leader.vertices[0]).toMatchObject({ x: 1, y: 2, z: 3 })
+
       expect(props.normalZ.accessor.get()).toBe(1)
-      props.horizontalDirectionX.accessor.set?.(0)
-      expect(leader.horizontalDirection.x).toBe(0)
+      expect(props.horizontalDirectionX.accessor.get()).toBe(
+        leader.horizontalDirection.x
+      )
 
       // Optional vectors start out absent.
       expect(props.offsetFromBlockX.accessor.get()).toBeUndefined()

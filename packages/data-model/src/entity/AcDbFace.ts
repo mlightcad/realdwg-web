@@ -14,6 +14,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbPointArrayProperty } from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
@@ -203,40 +204,14 @@ export class AcDbFace extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  {
-                    name: 'x',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'y',
-                    type: 'float',
-                    editable: false
-                  },
-                  {
-                    name: 'z',
-                    type: 'float',
-                    editable: false
-                  }
-                ]
-              },
-              accessor: {
-                get: () => {
-                  const count = this._vertices.length
-                  const verts = []
-                  for (let i = 0; i < count; i++) {
-                    verts.push(this.getVertexAt(i))
-                  }
-                  return verts
-                }
+            acdbPointArrayProperty(
+              'vertices',
+              3,
+              () => this._vertices.map((_, index) => this.getVertexAt(index)),
+              points => {
+                points.forEach((point, index) => this.setVertexAt(index, point))
               }
-            },
+            ),
             {
               name: 'area',
               type: 'float',
@@ -424,9 +399,7 @@ export class AcDbFace extends AcDbEntity {
     // Constructor starts with 3 verts; seed local copies without requiring index 3.
     const pts = [0, 1, 2, 3].map(i => {
       const v = this._vertices[i]
-      return v
-        ? { x: v.x, y: v.y, z: v.z }
-        : { x: 0, y: 0, z: 0 }
+      return v ? { x: v.x, y: v.y, z: v.z } : { x: 0, y: 0, z: 0 }
     })
     let edgeMask = this._edgeInvisibilities
 
@@ -467,4 +440,3 @@ export class AcDbFace extends AcDbEntity {
     return this
   }
 }
-

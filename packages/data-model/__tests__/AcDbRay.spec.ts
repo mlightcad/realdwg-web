@@ -77,6 +77,9 @@ describe('AcDbRay', () => {
       'basePointX',
       'basePointY',
       'basePointZ',
+      'secondPointX',
+      'secondPointY',
+      'secondPointZ',
       'unitDirX',
       'unitDirY',
       'unitDirZ'
@@ -89,18 +92,20 @@ describe('AcDbRay', () => {
     byName.get('basePointX')!.accessor.set!(3.5)
     byName.get('basePointY')!.accessor.set!(-4.25)
     byName.get('basePointZ')!.accessor.set!(5.75)
-    byName.get('unitDirX')!.accessor.set!(-1)
-    byName.get('unitDirY')!.accessor.set!(2)
-    byName.get('unitDirZ')!.accessor.set!(0.5)
+    // The unit direction is edited through the second point and stays unit.
+    expect(byName.get('unitDirX')!.editable).toBe(false)
+    byName.get('secondPointX')!.accessor.set!(3.5 - 3)
+    byName.get('secondPointY')!.accessor.set!(-4.25 + 4)
 
     expect(byName.get('basePointX')!.accessor.get()).toBe(3.5)
     expect(byName.get('basePointY')!.accessor.get()).toBe(-4.25)
     expect(byName.get('basePointZ')!.accessor.get()).toBe(5.75)
-    expect(byName.get('unitDirX')!.accessor.get()).toBe(-1)
-    expect(byName.get('unitDirY')!.accessor.get()).toBe(2)
-    expect(byName.get('unitDirZ')!.accessor.get()).toBe(0.5)
     expect(ray.basePoint).toMatchObject({ x: 3.5, y: -4.25, z: 5.75 })
-    expect(ray.unitDir).toMatchObject({ x: -1, y: 2, z: 0.5 })
+    // X sets the direction to (-1, 0, 0); Y then moves the second point
+    // (base + unitDir) 4 along +Y, giving (-1, 4, 0) normalized.
+    expect(ray.unitDir.x).toBeCloseTo(-1 / Math.sqrt(17), 10)
+    expect(ray.unitDir.y).toBeCloseTo(4 / Math.sqrt(17), 10)
+    expect(ray.unitDir.z).toBeCloseTo(0, 10)
   })
 
   it('returns base point as the only grip point', () => {

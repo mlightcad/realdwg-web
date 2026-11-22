@@ -37,6 +37,10 @@ import {
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty
 } from './AcDbEntityProperties.js'
+import {
+  acdbPointArrayProperty,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbMText } from './AcDbMText.js'
@@ -525,28 +529,17 @@ export class AcDbLeader extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: false,
-              itemSchema: {
-                properties: [
-                  { name: 'x', type: 'float', editable: false },
-                  { name: 'y', type: 'float', editable: false },
-                  { name: 'z', type: 'float', editable: false }
-                ]
-              },
-              accessor: {
-                get: () =>
-                  this.vertices.map(vertex => ({
-                    x: vertex.x,
-                    y: vertex.y,
-                    z: vertex.z
-                  }))
+            acdbPointArrayProperty(
+              'vertices',
+              3,
+              () => this.vertices,
+              points => {
+                if (points.length !== this.numVertices) return
+                points.forEach((point, index) => this.setVertexAt(index, point))
               }
-            },
-            ...this.createPoint3dProperties('normal', () => this._normal),
-            ...this.createPoint3dProperties(
+            ),
+            ...acdbVector3dProperties('normal', () => this._normal),
+            ...acdbVector3dProperties(
               'horizontalDirection',
               () => this._horizontalDirection
             ),
@@ -587,41 +580,6 @@ export class AcDbLeader extends AcDbCurve {
       options,
       accessor: set ? { get, set } : { get }
     }
-  }
-
-  /**
-   * Builds the X/Y/Z properties of a required vector.
-   */
-  private createPoint3dProperties(
-    prefix: string,
-    getVector: () => AcGeVector3d
-  ): AcDbEntityRuntimeProperty<number>[] {
-    return [
-      this.createProperty(
-        `${prefix}X`,
-        'float',
-        () => getVector().x,
-        (value: number) => {
-          getVector().x = value
-        }
-      ),
-      this.createProperty(
-        `${prefix}Y`,
-        'float',
-        () => getVector().y,
-        (value: number) => {
-          getVector().y = value
-        }
-      ),
-      this.createProperty(
-        `${prefix}Z`,
-        'float',
-        () => getVector().z,
-        (value: number) => {
-          getVector().z = value
-        }
-      )
-    ]
   }
 
   /**

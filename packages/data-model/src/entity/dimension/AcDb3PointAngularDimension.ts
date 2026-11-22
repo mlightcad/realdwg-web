@@ -154,17 +154,32 @@ export class AcDb3PointAngularDimension extends AcDbDimension {
           properties: [
             ...this.createPoint3dProperties(
               'centerPoint',
-              () => this.centerPoint
+              () => this.centerPoint,
+              value => {
+                this.centerPoint = value
+              }
             ),
             ...this.createPoint3dProperties(
               'xLine1Point',
-              () => this.xLine1Point
+              () => this.xLine1Point,
+              value => {
+                this.xLine1Point = value
+              }
             ),
             ...this.createPoint3dProperties(
               'xLine2Point',
-              () => this.xLine2Point
+              () => this.xLine2Point,
+              value => {
+                this.xLine2Point = value
+              }
             ),
-            ...this.createPoint3dProperties('arcPoint', () => this.arcPoint)
+            ...this.createPoint3dProperties(
+              'arcPoint',
+              () => this.arcPoint,
+              value => {
+                this.arcPoint = value
+              }
+            )
           ]
         }
       ]

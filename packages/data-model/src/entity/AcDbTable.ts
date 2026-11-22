@@ -23,6 +23,7 @@ import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
 import { acdbDxfVersionCaps } from '../dxf/AcDbDxfVersionCaps.js'
 import { AcDbBlockReference } from './AcDbBlockReference.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbPoint3dProperties } from './AcDbEntityPropertyHelpers.js'
 
 /**
  * Interface defining the properties of a table cell within an AcDbTable entity.
@@ -492,23 +493,17 @@ export class AcDbTable extends AcDbBlockReference {
             {
               name: 'numRows',
               type: 'int',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.numRows,
-                set: (v: number) => {
-                  this.numRows = v
-                }
+                get: () => this.numRows
               }
             },
             {
               name: 'numColumns',
               type: 'int',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.numColumns,
-                set: (v: number) => {
-                  this.numColumns = v
-                }
+                get: () => this.numColumns
               }
             },
             {
@@ -556,39 +551,13 @@ export class AcDbTable extends AcDbBlockReference {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'positionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.x,
-                set: (v: number) => {
-                  this.position.x = v
-                }
+            ...acdbPoint3dProperties(
+              'position',
+              () => this.position,
+              value => {
+                this.position = value
               }
-            },
-            {
-              name: 'positionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.y,
-                set: (v: number) => {
-                  this.position.y = v
-                }
-              }
-            },
-            {
-              name: 'positionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.z,
-                set: (v: number) => {
-                  this.position.z = v
-                }
-              }
-            }
+            )
           ]
         }
       ]
@@ -1132,11 +1101,7 @@ export class AcDbTable extends AcDbBlockReference {
 
     const ensureGrid = () => {
       if (rows > 0 && cols > 0) {
-        if (
-          !resized ||
-          this._numRows !== rows ||
-          this._numColumns !== cols
-        ) {
+        if (!resized || this._numRows !== rows || this._numColumns !== cols) {
           this.resizeGrid(rows, cols)
           resized = true
         }

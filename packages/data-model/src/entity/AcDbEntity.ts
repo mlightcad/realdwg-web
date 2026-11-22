@@ -1035,7 +1035,7 @@ export abstract class AcDbEntity extends AcDbObject {
       properties: [
         {
           name: 'handle',
-          type: 'int',
+          type: 'string',
           editable: false,
           accessor: {
             get: (): string => this.objectId
@@ -1054,7 +1054,7 @@ export abstract class AcDbEntity extends AcDbObject {
         },
         {
           name: 'layer',
-          type: 'string',
+          type: 'layer',
           editable: true,
           accessor: {
             get: (): string => this.layer,

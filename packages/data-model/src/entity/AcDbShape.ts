@@ -22,6 +22,10 @@ import type {
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 
 /**
@@ -464,39 +468,13 @@ export class AcDbShape extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'positionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.x,
-                set: (v: number) => {
-                  this.position.x = v
-                }
+            ...acdbPoint3dProperties(
+              'position',
+              () => this.position,
+              value => {
+                this.position = value
               }
-            },
-            {
-              name: 'positionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.y,
-                set: (v: number) => {
-                  this.position.y = v
-                }
-              }
-            },
-            {
-              name: 'positionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.z,
-                set: (v: number) => {
-                  this.position.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'thickness',
               type: 'float',
@@ -508,39 +486,7 @@ export class AcDbShape extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -748,4 +694,3 @@ export class AcDbShape extends AcDbEntity {
     return this
   }
 }
-

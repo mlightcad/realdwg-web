@@ -425,8 +425,7 @@ export class AcDbAttributeDefinition extends AcDbText {
       AcGiMTextAttachmentPoint.TopLeft
 
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let height = baseHeight
     let width = baseWidth
@@ -438,10 +437,7 @@ export class AcDbAttributeDefinition extends AcDbText {
 
     if (isAnnotative && contexts.length > 0) {
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       height = acdbAnnotativeModelHeight(
@@ -597,12 +593,9 @@ export class AcDbAttributeDefinition extends AcDbText {
             {
               name: 'isMTextAttribute',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isMTextAttribute,
-                set: (v: boolean) => {
-                  this.isMTextAttribute = v
-                }
+                get: () => this.isMTextAttribute
               }
             },
             {
@@ -630,23 +623,17 @@ export class AcDbAttributeDefinition extends AcDbText {
             {
               name: 'isReallyLocked',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isReallyLocked,
-                set: (v: boolean) => {
-                  this.isReallyLocked = v
-                }
+                get: () => this.isReallyLocked
               }
             },
             {
               name: 'isConstMTextAttribute',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isConstMTextAttribute,
-                set: (v: boolean) => {
-                  this.isConstMTextAttribute = v
-                }
+                get: () => this.isConstMTextAttribute
               }
             }
           ]
@@ -709,8 +696,7 @@ export class AcDbAttributeDefinition extends AcDbText {
           this.isPreset = (n & AcDbAttributeFlags.Preset) !== 0
           break
         case 71:
-          this.isMTextAttribute =
-            (n & AcDbAttributeMTextFlag.MultiLine) !== 0
+          this.isMTextAttribute = (n & AcDbAttributeMTextFlag.MultiLine) !== 0
           this.isConstMTextAttribute =
             (n & AcDbAttributeMTextFlag.ConstMultiLine) !== 0
           break
@@ -734,4 +720,3 @@ export class AcDbAttributeDefinition extends AcDbText {
     return this
   }
 }
-

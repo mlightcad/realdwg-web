@@ -14,6 +14,11 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbCreateProperty,
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import {
   acdbScaleAlongNormal,
@@ -271,124 +276,30 @@ export class AcDbLine extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'startX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPoint.x,
-                set: (v: number) => {
-                  this.startPoint.x = v
-                }
+            ...acdbPoint3dProperties(
+              'start',
+              () => this.startPoint,
+              value => {
+                this.startPoint = value
               }
-            },
-            {
-              name: 'startY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPoint.y,
-                set: (v: number) => {
-                  this.startPoint.y = v
-                }
+            ),
+            ...acdbPoint3dProperties(
+              'end',
+              () => this.endPoint,
+              value => {
+                this.endPoint = value
               }
-            },
-            {
-              name: 'startZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.startPoint.z,
-                set: (v: number) => {
-                  this.startPoint.z = v
-                }
+            ),
+            acdbCreateProperty('length', 'float', () => this._geo.length),
+            acdbCreateProperty(
+              'thickness',
+              'float',
+              () => this.thickness,
+              (value: number) => {
+                this.thickness = value
               }
-            },
-            {
-              name: 'endX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.endPoint.x,
-                set: (v: number) => {
-                  this.endPoint.x = v
-                }
-              }
-            },
-            {
-              name: 'endY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.endPoint.y,
-                set: (v: number) => {
-                  this.endPoint.y = v
-                }
-              }
-            },
-            {
-              name: 'endZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.endPoint.z,
-                set: (v: number) => {
-                  this.endPoint.z = v
-                }
-              }
-            },
-            {
-              name: 'length',
-              type: 'float',
-              editable: false,
-              accessor: {
-                get: () => this._geo.length
-              }
-            },
-            {
-              name: 'thickness',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.thickness,
-                set: (v: number) => {
-                  this.thickness = v
-                }
-              }
-            },
-            {
-              name: 'normalX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.x,
-                set: (v: number) => {
-                  this.normal.x = v
-                }
-              }
-            },
-            {
-              name: 'normalY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.y,
-                set: (v: number) => {
-                  this.normal.y = v
-                }
-              }
-            },
-            {
-              name: 'normalZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.normal.z,
-                set: (v: number) => {
-                  this.normal.z = v
-                }
-              }
-            }
+            ),
+            ...acdbVector3dProperties('normal', () => this.normal)
           ]
         }
       ]
@@ -658,4 +569,3 @@ export class AcDbLine extends AcDbCurve {
       : -1
   }
 }
-

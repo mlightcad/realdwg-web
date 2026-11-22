@@ -280,15 +280,24 @@ export class AcDbAlignedDimension extends AcDbDimension {
           properties: [
             ...this.createPoint3dProperties(
               'xLine1Point',
-              () => this.xLine1Point
+              () => this.xLine1Point,
+              value => {
+                this.xLine1Point = value
+              }
             ),
             ...this.createPoint3dProperties(
               'xLine2Point',
-              () => this.xLine2Point
+              () => this.xLine2Point,
+              value => {
+                this.xLine2Point = value
+              }
             ),
             ...this.createPoint3dProperties(
               'dimLinePoint',
-              () => this.dimLinePoint
+              () => this.dimLinePoint,
+              value => {
+                this.dimLinePoint = value
+              }
             ),
             this.createProperty(
               'rotation',

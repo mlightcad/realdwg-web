@@ -204,6 +204,7 @@ export {
   AcDbLeaderAnnotationType,
   AcDbLine,
   AcDbLineSpacingStyle,
+  AcDbMInsertBlock,
   AcDbMLeader,
   AcDbMLeaderContentType,
   AcDbMLeaderDirectionType,

@@ -11,6 +11,7 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbPoint3dProperties } from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
   acdbIsMirroring,
@@ -185,39 +186,13 @@ export class AcDb2dVertex extends AcDbEntity {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'positionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.x,
-                set: (v: number) => {
-                  this.position.x = v
-                }
+            ...acdbPoint3dProperties(
+              'position',
+              () => this.position,
+              value => {
+                this.position = value
               }
-            },
-            {
-              name: 'positionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.y,
-                set: (v: number) => {
-                  this.position.y = v
-                }
-              }
-            },
-            {
-              name: 'positionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.position.z,
-                set: (v: number) => {
-                  this.position.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'bulge',
               type: 'float',
@@ -254,12 +229,9 @@ export class AcDb2dVertex extends AcDbEntity {
             {
               name: 'vertexType',
               type: 'int',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.vertexType,
-                set: (v: number) => {
-                  this.vertexType = v
-                }
+                get: () => this.vertexType
               }
             }
           ]

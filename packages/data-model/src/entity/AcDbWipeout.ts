@@ -2,6 +2,7 @@ import { AcGeArea2d, AcGePolyline2d } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { AcDbRasterImage } from './AcDbRasterImage.js'
 
 /**
@@ -26,6 +27,19 @@ export class AcDbWipeout extends AcDbRasterImage {
 
   override get dxfTypeName() {
     return 'WIPEOUT'
+  }
+
+  /**
+   * Same as {@link AcDbRasterImage.properties} without the image group:
+   * brightness, contrast, fade and the image display flags have no effect on
+   * a wipeout mask.
+   */
+  override get properties(): AcDbEntityProperties {
+    const properties = this.getImageProperties()
+    return {
+      type: properties.type,
+      groups: properties.groups.filter(group => group.groupName !== 'image')
+    }
   }
   /**
    * Draws the wipeout entity.

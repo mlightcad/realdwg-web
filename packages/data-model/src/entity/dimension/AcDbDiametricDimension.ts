@@ -183,11 +183,17 @@ export class AcDbDiametricDimension extends AcDbDimension {
           properties: [
             ...this.createPoint3dProperties(
               'chordPoint',
-              () => this.chordPoint
+              () => this.chordPoint,
+              value => {
+                this.chordPoint = value
+              }
             ),
             ...this.createPoint3dProperties(
               'farChordPoint',
-              () => this.farChordPoint
+              () => this.farChordPoint,
+              value => {
+                this.farChordPoint = value
+              }
             ),
             this.createProperty(
               'leaderLength',

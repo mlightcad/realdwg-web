@@ -342,8 +342,7 @@ export class AcDbAttribute extends AcDbText {
       AcGiMTextAttachmentPoint.TopLeft
 
     const contexts = acdbGetAnnotationScaleContexts(this)
-    const isAnnotative =
-      contexts.length > 0 || acdbIsAnnotativeObject(this)
+    const isAnnotative = contexts.length > 0 || acdbIsAnnotativeObject(this)
 
     let height = baseHeight
     let width = baseWidth
@@ -355,10 +354,7 @@ export class AcDbAttribute extends AcDbText {
 
     if (isAnnotative && contexts.length > 0) {
       preferred =
-        acdbMatchAnnotationScaleContext(
-          contexts,
-          this.database?.cannoscale
-        ) ??
+        acdbMatchAnnotationScaleContext(contexts, this.database?.cannoscale) ??
         contexts.find(c => c.isDefault) ??
         contexts[0]
       height = acdbAnnotativeModelHeight(
@@ -425,10 +421,39 @@ export class AcDbAttribute extends AcDbText {
   }
 
   /**
+   * Text value shown for this attribute: the embedded MText contents of a
+   * multi-line attribute (which is what gets drawn), otherwise
+   * {@link textString}.
+   */
+  get displayText(): string {
+    return (this.isMTextAttribute && this.mtext?.contents) || this.textString
+  }
+
+  /**
+   * Sets the attribute value, keeping {@link textString} and the embedded
+   * MText of a multi-line attribute in sync.
+   */
+  set displayText(value: string) {
+    this.textString = value
+    if (this.isMTextAttribute && this.mtext) this.mtext.contents = value
+  }
+
+  /**
    * Returns the full property definition for this attribute entity.
    */
   override get properties(): AcDbEntityProperties {
     const base = this.getTextProperties()
+    const contents = base.groups
+      .flatMap(group => group.properties)
+      .find(property => property.name === 'contents')
+    if (contents) {
+      contents.accessor = {
+        get: () => this.displayText,
+        set: (value: unknown) => {
+          this.displayText = String(value)
+        }
+      }
+    }
     return {
       type: this.type,
       groups: [
@@ -494,12 +519,9 @@ export class AcDbAttribute extends AcDbText {
             {
               name: 'isMTextAttribute',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isMTextAttribute,
-                set: (v: boolean) => {
-                  this.isMTextAttribute = v
-                }
+                get: () => this.isMTextAttribute
               }
             },
             {
@@ -527,23 +549,17 @@ export class AcDbAttribute extends AcDbText {
             {
               name: 'isReallyLocked',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isReallyLocked,
-                set: (v: boolean) => {
-                  this.isReallyLocked = v
-                }
+                get: () => this.isReallyLocked
               }
             },
             {
               name: 'isConstMTextAttribute',
               type: 'boolean',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.isConstMTextAttribute,
-                set: (v: boolean) => {
-                  this.isConstMTextAttribute = v
-                }
+                get: () => this.isConstMTextAttribute
               }
             }
           ]
@@ -603,8 +619,7 @@ export class AcDbAttribute extends AcDbText {
           this.isPreset = (n & AcDbAttributeFlags.Preset) !== 0
           break
         case 71:
-          this.isMTextAttribute =
-            (n & AcDbAttributeMTextFlag.MultiLine) !== 0
+          this.isMTextAttribute = (n & AcDbAttributeMTextFlag.MultiLine) !== 0
           this.isConstMTextAttribute =
             (n & AcDbAttributeMTextFlag.ConstMultiLine) !== 0
           break
@@ -628,4 +643,3 @@ export class AcDbAttribute extends AcDbText {
     return this
   }
 }
-

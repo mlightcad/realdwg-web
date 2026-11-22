@@ -21,6 +21,10 @@ import type {
 import { acdbGetViewportAnnotationScale } from '../misc/AcDbAnnotationScale.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import {
+  acdbPoint3dProperties,
+  acdbVector3dProperties
+} from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 
@@ -578,47 +582,18 @@ export class AcDbViewport extends AcDbEntity {
             {
               name: 'number',
               type: 'int',
-              editable: true,
+              editable: false,
               accessor: {
-                get: () => this.number,
-                set: (v: number) => {
-                  this.number = v
-                }
+                get: () => this.number
               }
             },
-            {
-              name: 'centerX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.centerPoint.x,
-                set: (v: number) => {
-                  this.centerPoint.x = v
-                }
+            ...acdbPoint3dProperties(
+              'center',
+              () => this.centerPoint,
+              value => {
+                this.centerPoint = value
               }
-            },
-            {
-              name: 'centerY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.centerPoint.y,
-                set: (v: number) => {
-                  this.centerPoint.y = v
-                }
-              }
-            },
-            {
-              name: 'centerZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.centerPoint.z,
-                set: (v: number) => {
-                  this.centerPoint.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'width',
               type: 'float',
@@ -626,7 +601,7 @@ export class AcDbViewport extends AcDbEntity {
               accessor: {
                 get: () => this.width,
                 set: (v: number) => {
-                  this.width = v
+                  if (Number.isFinite(v) && v > 0) this.width = v
                 }
               }
             },
@@ -637,43 +612,17 @@ export class AcDbViewport extends AcDbEntity {
               accessor: {
                 get: () => this.height,
                 set: (v: number) => {
-                  this.height = v
+                  if (Number.isFinite(v) && v > 0) this.height = v
                 }
               }
             },
-            {
-              name: 'viewCenterX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewCenter.x,
-                set: (v: number) => {
-                  this.viewCenter.x = v
-                }
+            ...acdbPoint3dProperties(
+              'viewCenter',
+              () => this.viewCenter,
+              value => {
+                this.viewCenter = value
               }
-            },
-            {
-              name: 'viewCenterY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewCenter.y,
-                set: (v: number) => {
-                  this.viewCenter.y = v
-                }
-              }
-            },
-            {
-              name: 'viewCenterZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewCenter.z,
-                set: (v: number) => {
-                  this.viewCenter.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'viewHeight',
               type: 'float',
@@ -681,7 +630,7 @@ export class AcDbViewport extends AcDbEntity {
               accessor: {
                 get: () => this.viewHeight,
                 set: (v: number) => {
-                  this.viewHeight = v
+                  if (Number.isFinite(v) && v > 0) this.viewHeight = v
                 }
               }
             },
@@ -696,72 +645,20 @@ export class AcDbViewport extends AcDbEntity {
                 }
               }
             },
-            {
-              name: 'viewTargetX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewTarget.x,
-                set: (v: number) => {
-                  this.viewTarget.x = v
-                }
+            ...acdbPoint3dProperties(
+              'viewTarget',
+              () => this.viewTarget,
+              value => {
+                this.viewTarget = value
               }
-            },
-            {
-              name: 'viewTargetY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewTarget.y,
-                set: (v: number) => {
-                  this.viewTarget.y = v
-                }
+            ),
+            ...acdbVector3dProperties(
+              'viewDirection',
+              () => this.viewDirection,
+              value => {
+                this.viewDirection = value
               }
-            },
-            {
-              name: 'viewTargetZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewTarget.z,
-                set: (v: number) => {
-                  this.viewTarget.z = v
-                }
-              }
-            },
-            {
-              name: 'viewDirectionX',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewDirection.x,
-                set: (v: number) => {
-                  this.viewDirection.x = v
-                }
-              }
-            },
-            {
-              name: 'viewDirectionY',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewDirection.y,
-                set: (v: number) => {
-                  this.viewDirection.y = v
-                }
-              }
-            },
-            {
-              name: 'viewDirectionZ',
-              type: 'float',
-              editable: true,
-              accessor: {
-                get: () => this.viewDirection.z,
-                set: (v: number) => {
-                  this.viewDirection.z = v
-                }
-              }
-            },
+            ),
             {
               name: 'elevation',
               type: 'float',
@@ -1591,4 +1488,3 @@ export class AcDbViewport extends AcDbEntity {
     }
   }
 }
-

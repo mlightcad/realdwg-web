@@ -30,6 +30,7 @@ import {
   AcDbLeaderAnnotationType,
   AcDbLine,
   AcDbLineSpacingStyle,
+  AcDbMInsertBlock,
   AcDbMLeader,
   AcDbMLeaderContentType,
   AcDbMLeaderLineType,
@@ -1742,7 +1743,20 @@ export class AcDbEntityConverter {
   }
 
   private convertBlockReference(blockReference: DwgInsertEntity) {
-    const dbBlockReference = new AcDbBlockReference(blockReference.name)
+    // libredwg-web reports both INSERT and MINSERT as type 'INSERT'; a MINSERT
+    // is recognized by its array dimensions (columns/rows > 1).
+    const columns = blockReference.columnCount ?? 1
+    const rows = blockReference.rowCount ?? 1
+    const dbBlockReference =
+      columns > 1 || rows > 1
+        ? new AcDbMInsertBlock(
+            blockReference.name,
+            columns,
+            rows,
+            blockReference.columnSpacing ?? 0,
+            blockReference.rowSpacing ?? 0
+          )
+        : new AcDbBlockReference(blockReference.name)
     if (blockReference.insertionPoint)
       dbBlockReference.position.copy(blockReference.insertionPoint)
     dbBlockReference.scaleFactors.x = blockReference.xScale
@@ -1750,21 +1764,6 @@ export class AcDbEntityConverter {
     dbBlockReference.scaleFactors.z = blockReference.zScale
     dbBlockReference.rotation = blockReference.rotation
     dbBlockReference.normal.copy(blockReference.extrusionDirection)
-    // MINSERT array parameters (libredwg fills these for TYPE_MINSERT /
-    // multi-column INSERT). Without them every array collapses to 1×1 and
-    // large floor-plan drawings look massively incomplete vs DXF.
-    if (blockReference.columnCount != null) {
-      dbBlockReference.columnCount = blockReference.columnCount
-    }
-    if (blockReference.rowCount != null) {
-      dbBlockReference.rowCount = blockReference.rowCount
-    }
-    if (blockReference.columnSpacing != null) {
-      dbBlockReference.columnSpacing = blockReference.columnSpacing
-    }
-    if (blockReference.rowSpacing != null) {
-      dbBlockReference.rowSpacing = blockReference.rowSpacing
-    }
     // Pre-assign the BlockReference's objectId from the DWG handle so that
     // `appendAttributes` below (which sets `attrib.ownerId = this.objectId`)
     // produces a valid ownerId pointing at this INSERT, matching ObjectARX
