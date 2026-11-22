@@ -22,6 +22,7 @@ import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
   acdbEnumOptions,
+  acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import {
@@ -424,39 +425,25 @@ export class AcDb2dPolyline extends AcDbCurve {
         {
           groupName: 'geometry',
           properties: [
-            {
-              name: 'vertices',
-              type: 'array',
-              editable: true,
-              itemSchema: {
-                properties: [
-                  { name: 'x', type: 'float', editable: true },
-                  { name: 'y', type: 'float', editable: true },
-                  { name: 'bulge', type: 'float', editable: true }
-                ]
+            acdbPointArrayProperty(
+              'vertices',
+              2,
+              () => this._geo.vertices,
+              items => {
+                if (items.length !== this._geo.numberOfVertices) return
+                const current = this._geo.vertices
+                this._geo.reset(false)
+                items.forEach((item, index) =>
+                  this._geo.addVertexAt(index, {
+                    ...current[index],
+                    x: item.x,
+                    y: item.y,
+                    bulge: item.bulge || undefined
+                  })
+                )
               },
-              accessor: {
-                get: () =>
-                  this._geo.vertices.map(vertex => ({
-                    x: vertex.x,
-                    y: vertex.y,
-                    bulge: vertex.bulge ?? 0
-                  })),
-                set: (items: { x: number; y: number; bulge?: number }[]) => {
-                  if (items.length !== this._geo.numberOfVertices) return
-                  const current = this._geo.vertices
-                  this._geo.reset(false)
-                  items.forEach((item, index) =>
-                    this._geo.addVertexAt(index, {
-                      ...current[index],
-                      x: item.x,
-                      y: item.y,
-                      bulge: item.bulge || undefined
-                    })
-                  )
-                }
-              }
-            },
+              ['bulge']
+            ),
             acdbCreateProperty(
               'elevation',
               'float',
