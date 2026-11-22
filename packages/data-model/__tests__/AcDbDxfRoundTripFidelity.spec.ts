@@ -6,6 +6,7 @@ import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDbFileType } from '../src/database/AcDbDatabaseConverterManager'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbLine } from '../src/entity/AcDbLine'
+import { AcDbMInsertBlock } from '../src/entity/AcDbMInsertBlock'
 import { AcDbUnknownEntity } from '../src/entity/AcDbUnknownEntity'
 import { AcLyLayerFilter } from '../src/ly/AcLyLayerFilter'
 import { AcDbDictionary } from '../src/object/AcDbDictionary'
@@ -281,6 +282,76 @@ describe('DXF export consistency', () => {
     const [parent2] = again.layerFilters.root.getNestedFilters()
     expect(parent2.name).toBe('Parent')
     expect(parent2.getNestedFilters().map(f => f.name)).toEqual(['Child'])
+  })
+})
+
+describe('DXF MINSERT round trip', () => {
+  const MINSERT_DXF = dxf([
+    '0', 'SECTION', '2', 'HEADER', '9', '$ACADVER', '1', 'AC1032',
+    '0', 'ENDSEC',
+    '0', 'SECTION', '2', 'TABLES',
+    '0', 'TABLE', '2', 'BLOCK_RECORD', '5', '1', '330', '0',
+    '100', 'AcDbSymbolTable', '70', '2',
+    '0', 'BLOCK_RECORD', '5', '1F', '330', '1', '100', 'AcDbSymbolTableRecord',
+    '100', 'AcDbBlockTableRecord', '2', '*Model_Space',
+    '0', 'BLOCK_RECORD', '5', '30', '330', '1', '100', 'AcDbSymbolTableRecord',
+    '100', 'AcDbBlockTableRecord', '2', 'DESK',
+    '0', 'ENDTAB',
+    '0', 'ENDSEC',
+    '0', 'SECTION', '2', 'BLOCKS',
+    '0', 'BLOCK', '5', '31', '330', '30', '100', 'AcDbEntity', '8', '0',
+    '100', 'AcDbBlockBegin', '2', 'DESK', '70', '0',
+    '10', '0', '20', '0', '30', '0', '3', 'DESK',
+    '0', 'LINE', '5', '32', '330', '30', '100', 'AcDbEntity', '8', '0',
+    '100', 'AcDbLine', '10', '0', '20', '0', '30', '0', '11', '1', '21', '0', '31', '0',
+    '0', 'ENDBLK', '5', '33', '330', '30', '100', 'AcDbEntity', '8', '0',
+    '100', 'AcDbBlockEnd',
+    '0', 'ENDSEC',
+    '0', 'SECTION', '2', 'ENTITIES',
+    '0', 'INSERT', '5', '40', '330', '1F', '100', 'AcDbEntity', '8', '0',
+    '100', 'AcDbMInsertBlock', '66', '1', '2', 'DESK',
+    '10', '10', '20', '20', '30', '0',
+    '70', '3', '71', '2', '44', '12', '45', '8',
+    '0', 'ATTRIB', '5', '41', '330', '40', '100', 'AcDbEntity', '8', '0',
+    '100', 'AcDbText', '10', '10', '20', '20', '30', '0', '40', '1', '1', 'A1',
+    '100', 'AcDbAttribute', '2', 'TAG', '70', '0',
+    '0', 'SEQEND', '5', '42', '330', '40', '100', 'AcDbEntity', '8', '0',
+    '0', 'ENDSEC', '0', 'EOF'
+  ])
+
+  it('round-trips MINSERT array fields and ATTRIB/SEQEND', async () => {
+    const db = await readDxf(MINSERT_DXF)
+    const minsert = modelSpace(db).find(
+      e => e instanceof AcDbMInsertBlock
+    ) as AcDbMInsertBlock
+    expect(minsert).toBeDefined()
+    expect(minsert.blockName).toBe('DESK')
+    expect(minsert.position).toMatchObject({ x: 10, y: 20, z: 0 })
+    expect(minsert.columns).toBe(3)
+    expect(minsert.rows).toBe(2)
+    expect(minsert.columnSpacing).toBe(12)
+    expect(minsert.rowSpacing).toBe(8)
+    expect([...minsert.attributeIterator()].map(a => a.textString)).toEqual([
+      'A1'
+    ])
+
+    const out = db.dxfOut() as string
+    const tags = recordTags(out, 'INSERT', '40').join('|')
+    expect(tags).toContain('100|AcDbMInsertBlock')
+    expect(tags).toContain('70|3|71|2|44|12|45|8')
+    expect(tags).toContain('66|1')
+    expect(out).toContain('0\nATTRIB\n')
+    expect(out).toContain('0\nSEQEND\n')
+
+    const again = await readDxf(out)
+    const minsert2 = modelSpace(again).find(
+      e => e instanceof AcDbMInsertBlock
+    ) as AcDbMInsertBlock
+    expect(minsert2.columns).toBe(3)
+    expect(minsert2.rows).toBe(2)
+    expect(minsert2.columnSpacing).toBe(12)
+    expect(minsert2.rowSpacing).toBe(8)
+    expect([...minsert2.attributeIterator()].map(a => a.tag)).toEqual(['TAG'])
   })
 })
 
