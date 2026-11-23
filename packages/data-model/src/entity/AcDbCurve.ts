@@ -1,4 +1,4 @@
-import { AcGePoint3dLike } from '@mlightcad/geometry-engine'
+import { AcGePoint3d, AcGePoint3dLike } from '@mlightcad/geometry-engine'
 
 import { AcDbEntity } from './AcDbEntity.js'
 
@@ -69,5 +69,158 @@ export abstract class AcDbCurve extends AcDbEntity {
    */
   getOffsetSideAtPoint(_point: AcGePoint3dLike): 1 | -1 {
     return 1
+  }
+
+  /**
+   * Parameter at the start of the curve, like ObjectARX
+   * `AcDbCurve::getStartParam`. Curves that do not support parameterization
+   * return `0`.
+   */
+  get startParam(): number {
+    return 0
+  }
+
+  /**
+   * Parameter at the end of the curve, like ObjectARX
+   * `AcDbCurve::getEndParam`. It is always `>= startParam`; unbounded curves
+   * return `Infinity`. Curves that do not support parameterization return `0`.
+   */
+  get endParam(): number {
+    return 0
+  }
+
+  /**
+   * Returns the parameter of a point on the curve, like ObjectARX
+   * `AcDbCurve::getParamAtPoint`.
+   *
+   * The point must lie on the curve within tolerance. Some curve types also
+   * accept points on their natural extension and return a parameter outside
+   * `[startParam, endParam]` (lines, rays, xlines: signed distance; arcs and
+   * ellipse arcs: any point of the full circle / ellipse maps into
+   * `[startParam, startParam + 2π)`; open polylines: the extension of the
+   * first and last segments).
+   *
+   * @param _point - Point in WCS
+   * @returns The parameter, or `undefined` when the point is not on the curve
+   *   or the curve type does not support parameterization
+   */
+  getParamAtPoint(_point: AcGePoint3dLike): number | undefined {
+    return undefined
+  }
+
+  /**
+   * Returns the point at a parameter, like ObjectARX
+   * `AcDbCurve::getPointAtParam`. Parameters returned by
+   * {@link getParamAtPoint} for points on the natural extension are accepted
+   * as well.
+   *
+   * @param _param - Curve parameter
+   * @returns The point in WCS, or `undefined` when unsupported
+   */
+  getPointAtParam(_param: number): AcGePoint3d | undefined {
+    return undefined
+  }
+
+  /**
+   * Returns the point on the curve closest to `point`, like ObjectARX
+   * `AcDbCurve::getClosestPointTo`.
+   *
+   * @param _point - Query point in WCS
+   * @param _extend - When true, the natural extension of the curve (infinite
+   *   line, full circle, full ellipse, open polyline end segments) is
+   *   considered as well
+   * @returns The closest point in WCS, or `undefined` when unsupported
+   */
+  getClosestPointTo(
+    _point: AcGePoint3dLike,
+    _extend?: boolean
+  ): AcGePoint3d | undefined {
+    return undefined
+  }
+
+  /**
+   * Returns the curve length from {@link startParam} to `param`, like
+   * ObjectARX `AcDbCurve::getDistAtParam`. Rays and xlines measure the signed
+   * distance from their base point. Parameters on the natural extension of
+   * analytic curves give a signed (possibly negative) distance.
+   *
+   * @param _param - Curve parameter
+   * @returns The distance, or `undefined` when unsupported
+   */
+  getDistAtParam(_param: number): number | undefined {
+    return undefined
+  }
+
+  /**
+   * Splits the curve at the given parameters, like ObjectARX
+   * `AcDbCurve::getSplitCurves(const AcGeDoubleArray&, ...)`.
+   *
+   * Parameters are sorted and de-duplicated. On open curves, parameters not
+   * strictly inside `(startParam, endParam)` are ignored and `n` parameters
+   * produce `n + 1` pieces ordered from start to end. On closed curves,
+   * parameters are wrapped into `[startParam, endParam)`, at least two are
+   * required, and the last piece runs from the last parameter through the
+   * start/end seam to the first one.
+   *
+   * The pieces are new entities that are not database resident and carry
+   * the common properties (layer, color, linetype, ...) of this curve.
+   * Zero-length pieces are dropped.
+   *
+   * @param _params - Split parameters
+   * @returns The pieces, or an empty array when nothing is split or the curve
+   *   type does not support splitting
+   */
+  getSplitCurves(_params: readonly number[]): AcDbCurve[] {
+    return []
+  }
+
+  /**
+   * Splits the curve at the given points, like ObjectARX
+   * `AcDbCurve::getSplitCurves(const AcGePoint3dArray&, ...)`.
+   *
+   * Each point is mapped through {@link getParamAtPoint}; points that are not
+   * on the curve are ignored. See {@link getSplitCurves} for the rules.
+   *
+   * @param points - Split points in WCS
+   * @returns The pieces, or an empty array when nothing is split
+   */
+  getSplitCurvesAtPoints(points: readonly AcGePoint3dLike[]): AcDbCurve[] {
+    const params: number[] = []
+    for (const point of points) {
+      const param = this.getParamAtPoint(point)
+      if (param !== undefined) params.push(param)
+    }
+    return params.length > 0 ? this.getSplitCurves(params) : []
+  }
+
+  /**
+   * Extends the curve in place to `newParam`, like ObjectARX
+   * `AcDbCurve::extend(double)`.
+   *
+   * A parameter below {@link startParam} moves the start, one above
+   * {@link endParam} moves the end.
+   *
+   * @param _newParam - Parameter to extend to
+   * @returns True when the curve was modified; false when `newParam` is
+   *   inside the curve or the curve cannot be extended
+   */
+  extend(_newParam: number): boolean {
+    return false
+  }
+
+  /**
+   * Extends the start or end of the curve in place to a point, like
+   * ObjectARX `AcDbCurve::extend(Adesk::Boolean, const AcGePoint3d&)`.
+   *
+   * The point must lie on the natural extension of the curve beyond that end
+   * (within tolerance); otherwise false is returned and the curve is left
+   * unchanged.
+   *
+   * @param _extendStart - True to extend the start, false to extend the end
+   * @param _toPoint - Target point in WCS
+   * @returns True when the curve was modified
+   */
+  extendToPoint(_extendStart: boolean, _toPoint: AcGePoint3dLike): boolean {
+    return false
   }
 }

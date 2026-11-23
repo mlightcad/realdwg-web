@@ -50,6 +50,17 @@ export {
   acgeInterpolateNurbsCurve
 } from './AcGeNurbsUtil.js'
 export {
+  acgeNurbsClosestParam,
+  acgeNurbsEvaluate,
+  acgeNurbsExtractSegment,
+  acgeNurbsInsertKnot,
+  acgeNurbsJoin,
+  acgeNurbsLengthTo,
+  acgeNurbsParameterRange,
+  acgeNurbsSplitAt
+} from './AcGeNurbsSplitUtil.js'
+export type { AcGeNurbsCurveData } from './AcGeNurbsSplitUtil.js'
+export {
   acgeGetOcsAngle,
   acgeGetOcsReferenceVector,
   acgeGetOcsReferenceVectorInto,

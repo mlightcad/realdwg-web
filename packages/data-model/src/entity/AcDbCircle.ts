@@ -17,7 +17,13 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
+import { AcDbArc } from './AcDbArc.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCircleAngleOf,
+  acdbCurveOnTol,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -573,6 +579,86 @@ export class AcDbCircle extends AcDbCurve {
     const c = this.center
     const r = this.radius
     return Math.sqrt((point.x - c.x) ** 2 + (point.y - c.y) ** 2) >= r ? 1 : -1
+  }
+
+  private onTol() {
+    const c = this.center
+    return acdbCurveOnTol(
+      Math.max(Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)) + this.radius
+    )
+  }
+
+  /** Start parameter (`0`). The parameter of a circle is its polar angle. */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter (`2π`). */
+  override get endParam(): number {
+    return TAU
+  }
+
+  /** Polar angle in `[0, 2π)` of a point on the circle. */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    const geo = this._geo
+    const tol = this.onTol()
+    const { angle, dist, rho } = acdbCircleAngleOf(
+      geo.center,
+      geo.radius,
+      geo.refVec,
+      geo.normal,
+      point
+    )
+    if (!(rho > 0) || dist > tol) return undefined
+    return angle > TAU - tol / Math.max(geo.radius, tol) ? 0 : angle
+  }
+
+  /** Point at the given polar angle. */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    if (!Number.isFinite(param)) return undefined
+    return this._geo.getPointAtAngle(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(point: AcGePoint3dLike): AcGePoint3d | undefined {
+    const geo = this._geo
+    const { angle, rho } = acdbCircleAngleOf(
+      geo.center,
+      geo.radius,
+      geo.refVec,
+      geo.normal,
+      point
+    )
+    return geo.getPointAtAngle(rho > 0 ? angle : 0)
+  }
+
+  /** Arc length `radius * param`. */
+  override getDistAtParam(param: number): number | undefined {
+    if (!Number.isFinite(param)) return undefined
+    return this.radius * param
+  }
+
+  /**
+   * Splits the circle into {@link AcDbArc} pieces (closed-curve rules: at
+   * least two parameters are needed).
+   */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    const radius = this.radius
+    if (!(radius > 0)) return []
+    const tol = this.onTol()
+    return acdbSplitCurveByParams(
+      params,
+      0,
+      TAU,
+      true,
+      tol / Math.max(radius, tol),
+      (from, to) => {
+        const arc = new AcDbArc(this.center, radius, from, to, this.normal)
+        arc.setPropertiesFrom(this)
+        arc.thickness = this.thickness
+        return arc
+      }
+    )
   }
 
   private createOffsetCurve(offsetDist: number): AcDbCircle | null {

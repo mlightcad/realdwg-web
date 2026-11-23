@@ -13,6 +13,11 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCurveOnTol,
+  acdbDetachSplitPiece,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
@@ -569,6 +574,147 @@ export class AcDbLine extends AcDbCurve {
     return (e.x - s.x) * (point.y - s.y) - (e.y - s.y) * (point.x - s.x) >= 0
       ? 1
       : -1
+  }
+
+  /** Unit direction and length, or `undefined` for a zero-length line. */
+  private paramFrame() {
+    const s = this.startPoint
+    const e = this.endPoint
+    const length = s.distanceTo(e)
+    if (!(length > 0)) return undefined
+    const dir = new AcGeVector3d(e.x - s.x, e.y - s.y, e.z - s.z).divideScalar(
+      length
+    )
+    return { s, dir, length }
+  }
+
+  private onTol() {
+    const s = this.startPoint
+    const e = this.endPoint
+    return acdbCurveOnTol(
+      Math.max(
+        Math.abs(s.x),
+        Math.abs(s.y),
+        Math.abs(s.z),
+        Math.abs(e.x),
+        Math.abs(e.y),
+        Math.abs(e.z)
+      )
+    )
+  }
+
+  /**
+   * Start parameter (`0`). The parameter of a line is the distance from
+   * {@link startPoint}.
+   */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter: the line length. */
+  override get endParam(): number {
+    return this._geo.length
+  }
+
+  /**
+   * Returns the signed distance from {@link startPoint} of a point on the
+   * infinite line through this line (so points on the extension give a
+   * parameter `< 0` or `> length`).
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    const frame = this.paramFrame()
+    if (!frame) {
+      return this.startPoint.distanceTo(point) <= this.onTol() ? 0 : undefined
+    }
+    const { s, dir } = frame
+    const t =
+      (point.x - s.x) * dir.x +
+      (point.y - s.y) * dir.y +
+      ((point.z ?? 0) - s.z) * dir.z
+    const foot = s.clone().add(dir.clone().multiplyScalar(t))
+    return foot.distanceTo(point) <= this.onTol() ? t : undefined
+  }
+
+  /** Point at the given distance from {@link startPoint} (any sign). */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    if (!Number.isFinite(param)) return undefined
+    const frame = this.paramFrame()
+    if (!frame) return this.startPoint.clone()
+    return frame.s.clone().add(frame.dir.clone().multiplyScalar(param))
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    const frame = this.paramFrame()
+    if (!frame) return this.startPoint.clone()
+    const { s, dir, length } = frame
+    let t =
+      (point.x - s.x) * dir.x +
+      (point.y - s.y) * dir.y +
+      ((point.z ?? 0) - s.z) * dir.z
+    if (!extend) t = Math.max(0, Math.min(length, t))
+    return s.clone().add(dir.clone().multiplyScalar(t))
+  }
+
+  /** The parameter itself (distance from {@link startPoint}). */
+  override getDistAtParam(param: number): number | undefined {
+    return Number.isFinite(param) ? param : undefined
+  }
+
+  /** Splits into {@link AcDbLine} pieces. */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    const frame = this.paramFrame()
+    if (!frame) return []
+    return acdbSplitCurveByParams(
+      params,
+      0,
+      frame.length,
+      false,
+      this.onTol(),
+      (from, to) => {
+        const piece = acdbDetachSplitPiece(this.clone())
+        piece.startPoint = this.getPointAtParam(from)!
+        piece.endPoint = this.getPointAtParam(to)!
+        return piece
+      }
+    )
+  }
+
+  /**
+   * Moves the start (`newParam < 0`) or end (`newParam > length`) along the
+   * line direction.
+   */
+  override extend(newParam: number): boolean {
+    const frame = this.paramFrame()
+    if (!frame || !Number.isFinite(newParam)) return false
+    const tol = this.onTol()
+    const point = this.getPointAtParam(newParam)!
+    if (newParam < -tol) {
+      this.startPoint = point
+      return true
+    }
+    if (newParam > frame.length + tol) {
+      this.endPoint = point
+      return true
+    }
+    return false
+  }
+
+  /** @inheritdoc */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    const frame = this.paramFrame()
+    if (!frame) return false
+    const t = this.getParamAtPoint(toPoint)
+    if (t === undefined) return false
+    const tol = this.onTol()
+    if (extendStart ? t >= -tol : t <= frame.length + tol) return false
+    return this.extend(t)
   }
 
   /**

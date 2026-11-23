@@ -3,8 +3,15 @@ import {
   AcGeIntersectPrimitive,
   AcGeKnotParameterizationType,
   AcGeMatrix3d,
+  acgeNurbsClosestParam,
+  type AcGeNurbsCurveData,
+  acgeNurbsExtractSegment,
+  acgeNurbsJoin,
+  acgeNurbsLengthTo,
+  acgeNurbsParameterRange,
   acgeOffsetSmoothedSampledPath,
   AcGePoint2d,
+  AcGePoint3d,
   AcGePoint3dLike,
   AcGeSpline3d,
   AcGeVector3d,
@@ -16,6 +23,11 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCurveOnTol,
+  acdbDetachSplitPiece,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbPointArrayProperty,
@@ -1047,5 +1059,179 @@ export class AcDbSpline extends AcDbCurve {
    */
   private collectPath2d(offsetDist: number): AcGePoint2d[] {
     return this._geo.getOffsetSamplePath2d(offsetDist).points
+  }
+
+  /** NURBS data (degree, knots, control points, weights) of this spline. */
+  private nurbsData(): AcGeNurbsCurveData {
+    const geo = this._geo
+    const controlPoints = geo.controlPoints
+    const weights = geo.weights
+    return {
+      degree: geo.degree,
+      knots: geo.knots,
+      controlPoints,
+      weights:
+        weights.length === controlPoints.length
+          ? weights
+          : new Array<number>(controlPoints.length).fill(1)
+    }
+  }
+
+  private onTol() {
+    const box = this._geo.box
+    const scale = box.isEmpty()
+      ? 0
+      : Math.max(
+          Math.abs(box.min.x),
+          Math.abs(box.min.y),
+          Math.abs(box.min.z),
+          Math.abs(box.max.x),
+          Math.abs(box.max.y),
+          Math.abs(box.max.z)
+        )
+    return acdbCurveOnTol(scale)
+  }
+
+  /** Knot-parameter tolerance equivalent to {@link onTol} along the curve. */
+  private paramTol(data: AcGeNurbsCurveData) {
+    const { start, end } = acgeNurbsParameterRange(data)
+    const span = end - start
+    const length = this._geo.length
+    if (!(span > 0)) return 1e-12
+    if (!(length > 0)) return span * 1e-9
+    return Math.max(span * 1e-12, (this.onTol() / length) * span)
+  }
+
+  /** True when the spline is flagged closed and its ends coincide. */
+  private get isClosedLoop(): boolean {
+    if (!this.closed) return false
+    return this._geo.startPoint.distanceTo(this._geo.endPoint) <= this.onTol()
+  }
+
+  /**
+   * Start parameter: the first valid knot `knots[degree]`. The parameter of a
+   * spline is its NURBS knot parameter.
+   */
+  override get startParam(): number {
+    return acgeNurbsParameterRange(this.nurbsData()).start
+  }
+
+  /** End parameter: the last valid knot `knots[knots.length - degree - 1]`. */
+  override get endParam(): number {
+    return acgeNurbsParameterRange(this.nurbsData()).end
+  }
+
+  /**
+   * Returns the knot parameter of a point on the spline (nearest-point search
+   * with refinement). Closed splines map their seam point to
+   * {@link startParam}.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    const data = this.nurbsData()
+    const u = acgeNurbsClosestParam(data, point)
+    const p = this._geo.evaluateAt(u)
+    if (p.distanceTo(point) > this.onTol()) return undefined
+    const { start, end } = acgeNurbsParameterRange(data)
+    if (this.isClosedLoop && u >= end - this.paramTol(data)) return start
+    return u
+  }
+
+  /**
+   * Point at a knot parameter within `[startParam, endParam]`. Closed splines
+   * wrap parameters outside the range; open splines return `undefined`.
+   */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    if (!Number.isFinite(param)) return undefined
+    const data = this.nurbsData()
+    const { start, end } = acgeNurbsParameterRange(data)
+    const tol = this.paramTol(data)
+    const span = end - start
+    if (this.isClosedLoop && span > 0 && (param < start || param > end)) {
+      param = start + ((((param - start) % span) + span) % span)
+    }
+    if (param < start - tol || param > end + tol) return undefined
+    return this._geo.evaluateAt(Math.max(start, Math.min(end, param)))
+  }
+
+  /**
+   * Closest point on the spline. Splines have no natural extension, so
+   * `extend` is ignored.
+   */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    _extend?: boolean
+  ): AcGePoint3d | undefined {
+    return this._geo.evaluateAt(acgeNurbsClosestParam(this.nurbsData(), point))
+  }
+
+  /** Arc length from {@link startParam} (numerical integration). */
+  override getDistAtParam(param: number): number | undefined {
+    if (!Number.isFinite(param)) return undefined
+    const data = this.nurbsData()
+    const { start, end } = acgeNurbsParameterRange(data)
+    const tol = this.paramTol(data)
+    if (param < start - tol || param > end + tol) return undefined
+    if (param <= start + tol) return 0
+    if (param >= end - tol) return this._geo.length
+    return acgeNurbsLengthTo(data, param)
+  }
+
+  /**
+   * Splits into control-point {@link AcDbSpline} pieces by knot insertion
+   * (Boehm) to multiplicity `degree` at each parameter; rational weights are
+   * preserved. Closed splines (flagged closed with coincident ends) follow
+   * the closed-curve rules and their wrap piece is joined across the seam.
+   */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    const data = this.nurbsData()
+    const { start, end } = acgeNurbsParameterRange(data)
+    if (!(end > start)) return []
+    const tol = this.paramTol(data)
+    const onTol = this.onTol()
+    return acdbSplitCurveByParams(
+      params,
+      start,
+      end,
+      this.isClosedLoop,
+      tol,
+      (from, to) => {
+        let piece: AcGeNurbsCurveData | undefined
+        if (to > end + tol) {
+          const head = acgeNurbsExtractSegment(data, from, end)
+          const tail = acgeNurbsExtractSegment(data, start, to - (end - start))
+          piece = head && tail ? acgeNurbsJoin(head, tail) : (head ?? tail)
+        } else {
+          piece = acgeNurbsExtractSegment(data, from, to)
+        }
+        if (!piece) return undefined
+        const spline = acdbDetachSplitPiece(this.clone())
+        spline.rebuild(
+          piece.controlPoints,
+          piece.knots,
+          piece.weights,
+          piece.degree,
+          false
+        )
+        if (spline._geo.length <= onTol) return undefined
+        return spline
+      }
+    )
+  }
+
+  /**
+   * Splines cannot be extended (no natural extension); always returns false.
+   */
+  override extend(_newParam: number): boolean {
+    return false
+  }
+
+  /**
+   * Splines cannot be extended (no natural extension); always returns false.
+   */
+  override extendToPoint(
+    _extendStart: boolean,
+    _toPoint: AcGePoint3dLike
+  ): boolean {
+    return false
   }
 }
