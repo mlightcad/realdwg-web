@@ -36,3 +36,34 @@ export type {
   AcGeCurveExtent,
   AcGeIntersectPrimitive
 } from './AcGeCurveIntersect.js'
+export {
+  acgeFilletCurves2d,
+  acgeFilletPrimitiveFromEllipse2d,
+  acgeFilletPrimitiveFromSpline3d
+} from './AcGeFillet2d.js'
+export type {
+  AcGeFillet2dError,
+  AcGeFillet2dFailure,
+  AcGeFillet2dOptions,
+  AcGeFillet2dOutcome,
+  AcGeFillet2dResult,
+  AcGeFillet2dSuccess,
+  AcGeFilletCircArc2d,
+  AcGeFilletEllipseArc2d,
+  AcGeFilletLine2d,
+  AcGeFilletPrimitive2d,
+  AcGeFilletSpline2d
+} from './AcGeFillet2d.js'
+export { acgeChamferCurves2d } from './AcGeChamfer2d.js'
+export type {
+  AcGeChamfer2dError,
+  AcGeChamfer2dFailure,
+  AcGeChamfer2dOptions,
+  AcGeChamfer2dOutcome,
+  AcGeChamfer2dResult,
+  AcGeChamfer2dSuccess,
+  AcGeChamferAngleMode,
+  AcGeChamferDistanceMode,
+  AcGeChamferLine2d,
+  AcGeChamferMode
+} from './AcGeChamfer2d.js'

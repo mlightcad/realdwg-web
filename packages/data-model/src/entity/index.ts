@@ -46,6 +46,28 @@ export type {
   AcDbJoinableCurve
 } from './AcDbJoinHelpers.js'
 export {
+  acdbFilletPolyline,
+  acdbFilletTwoEntities,
+  acdbIsFilletableEntity
+} from './AcDbFilletHelpers.js'
+export type {
+  AcDbFilletOptions,
+  AcDbFilletPolylineResult,
+  AcDbFilletTwoResult,
+  AcDbFilletableEntity
+} from './AcDbFilletHelpers.js'
+export {
+  acdbChamferPolyline,
+  acdbChamferTwoEntities,
+  acdbIsChamferableEntity
+} from './AcDbChamferHelpers.js'
+export type {
+  AcDbChamferOptions,
+  AcDbChamferPolylineResult,
+  AcDbChamferTwoResult,
+  AcDbChamferableEntity
+} from './AcDbChamferHelpers.js'
+export {
   acdbExplodeBlockContent,
   acdbIsConformalInPlane,
   acdbResolveByBlockProperties,

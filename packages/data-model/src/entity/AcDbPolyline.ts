@@ -361,6 +361,40 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
+   * Sets the bulge of the segment starting at the vertex with the specified
+   * index, mirroring ObjectARX `AcDbPolyline::setBulgeAt()`.
+   *
+   * @param index - The index (0-based) of the vertex
+   * @param bulge - The new bulge value (`tan(θ / 4)`)
+   */
+  setBulgeAt(index: number, bulge: number) {
+    const vertex = this._geo.vertices[index]
+    if (!vertex) return
+    const pt = this.getPoint2dAt(index)
+    const startWidth = vertex.startWidth ?? -1
+    const endWidth = vertex.endWidth ?? -1
+    this.removeVertexAt(index)
+    this.addVertexAt(index, pt, bulge, startWidth, endWidth)
+  }
+
+  /**
+   * Sets the 2D location of a vertex at the specified index in OCS,
+   * mirroring ObjectARX `AcDbPolyline::setPointAt()`.
+   *
+   * @param index - The index (0-based) of the vertex
+   * @param pt - The new vertex location in the polyline OCS
+   */
+  setPointAt(index: number, pt: AcGePoint2d) {
+    const vertex = this._geo.vertices[index]
+    if (!vertex) return
+    const bulge = vertex.bulge ?? 0
+    const startWidth = vertex.startWidth ?? -1
+    const endWidth = vertex.endWidth ?? -1
+    this.removeVertexAt(index)
+    this.addVertexAt(index, pt, bulge, startWidth, endWidth)
+  }
+
+  /**
    * Gets the start width of the segment starting at the vertex with the
    * specified index, mirroring ObjectARX `AcDbPolyline::getWidthsAt()`.
    *
