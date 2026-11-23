@@ -421,6 +421,72 @@ describe('AcDbOle2Frame image drawing', () => {
     })
   })
 
+  it.each([
+    {
+      name: 'mirror about Y (scale X = -1)',
+      matrix: () => new AcGeMatrix3d().makeScale(-1, 1, 1)
+    },
+    {
+      name: 'mirror about X (scale Y = -1)',
+      matrix: () => new AcGeMatrix3d().makeScale(1, -1, 1)
+    },
+    {
+      name: '180° rotation',
+      matrix: () => new AcGeMatrix3d().makeRotationZ(Math.PI)
+    },
+    {
+      name: 'rotation then mirror (typical mirrored INSERT)',
+      matrix: () =>
+        new AcGeMatrix3d()
+          .makeRotationZ(Math.PI / 6)
+          .multiply(new AcGeMatrix3d().makeScale(-1, 1, 1))
+    }
+  ])(
+    'preserves WCS corners under transformBy ($name)',
+    ({ matrix: makeMatrix }) => {
+      const ole = new AcDbOle2Frame()
+      ole.upperLeftCorner = new AcGePoint3d(10, 20, 0)
+      ole.lowerRightCorner = new AcGePoint3d(30, 5, 0)
+
+      const outlineRenderer = {
+        lines: jest.fn((_points: AcGePoint3d[]) => ({ kind: 'lines' })),
+        image: jest.fn(),
+        area: jest.fn(() => ({ kind: 'area' })),
+        group: jest.fn((entities: unknown[]) => ({
+          kind: 'group',
+          entities
+        })),
+        subEntityTraits: {
+          fillType: undefined as unknown,
+          transparency: undefined as unknown
+        }
+      }
+
+      ole.subWorldDraw(outlineRenderer as never)
+      const before = (
+        outlineRenderer.lines.mock.calls[0][0] as AcGePoint3d[]
+      )
+        .slice(0, 4)
+        .map(p => p.clone())
+
+      const matrix = makeMatrix()
+      const expected = before.map(p => p.clone().applyMatrix4(matrix))
+      ole.transformBy(matrix)
+
+      outlineRenderer.lines.mockClear()
+      ole.subWorldDraw(outlineRenderer as never)
+      const after = (
+        outlineRenderer.lines.mock.calls[0][0] as AcGePoint3d[]
+      ).slice(0, 4)
+
+      expected.forEach((point, index) => {
+        expect(after[index].x).toBeCloseTo(point.x)
+        expect(after[index].y).toBeCloseTo(point.y)
+        expect(after[index].z).toBeCloseTo(point.z)
+      })
+    }
+  )
+
   it('invalidates cached image when OLE payload changes', () => {
     const ole = new AcDbOle2Frame()
     ole.setOleObject(createMinimalBmp())
