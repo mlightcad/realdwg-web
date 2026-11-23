@@ -2726,7 +2726,11 @@ export class AcDbMLeader extends AcDbEntity {
     return parts.map(part => {
       part.setPropertiesFrom(this)
       if (color && !color.isByBlock) part.color = color
-      if (lineTypeName) part.lineType = lineTypeName
+      // A ByBlock leader linetype follows the multileader itself, which
+      // setPropertiesFrom has already copied.
+      if (lineTypeName && lineTypeName.toUpperCase() !== 'BYBLOCK') {
+        part.lineType = lineTypeName
+      }
       if (lineWeight != null && lineWeight !== AcGiLineWeight.ByBlock) {
         part.lineWeight = lineWeight
       }

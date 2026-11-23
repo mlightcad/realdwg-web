@@ -1,4 +1,9 @@
-import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
+import {
+  AcCmColor,
+  AcCmColorMethod,
+  AcCmTransparency,
+  AcCmTransparencyMethod
+} from '@mlightcad/common'
 import {
   AcGeMatrix3d,
   AcGePoint2d,
@@ -6,9 +11,16 @@ import {
   AcGePolyline2d,
   AcGeVector3d
 } from '@mlightcad/geometry-engine'
-import { AcGiMTextAttachmentPoint } from '@mlightcad/graphic-interface'
+import {
+  AcGiLineWeight,
+  AcGiMTextAttachmentPoint
+} from '@mlightcad/graphic-interface'
 
-import { AcDbBlockTableRecord, AcDbDatabase } from '../src/database'
+import {
+  AcDbBlockTableRecord,
+  AcDbDatabase,
+  AcDbDimStyleTableRecord
+} from '../src/database'
 import {
   AcDb2dPolyline,
   AcDb3dPolyline,
@@ -22,8 +34,10 @@ import {
   AcDbEntity,
   AcDbFace,
   AcDbHatch,
+  AcDbLeader,
   AcDbLine,
   AcDbMInsertBlock,
+  AcDbMLeader,
   AcDbMText,
   acdbMTextToPlainParagraphs,
   AcDbPoint,
@@ -32,9 +46,9 @@ import {
   AcDbPolyFaceMesh,
   AcDbPolygonMesh,
   AcDbPolyline,
+  acdbTessellateHatchPattern,
   AcDbText,
   AcDbTextHorizontalMode,
-  acdbTessellateHatchPattern,
   acdbTransformForExplode
 } from '../src/entity'
 import { setupWorkingDatabase } from '../test-utils/entityTestUtils'
@@ -546,6 +560,130 @@ describe('AcDbEntity.explode', () => {
       dashes.forEach(([a, b]) =>
         expect(b.x - a.x).toBeLessThanOrEqual(2 + 1e-9)
       )
+    })
+  })
+
+  describe('ByBlock / ByLayer properties', () => {
+    const byBlockTransparency = () => {
+      const t = new AcCmTransparency()
+      t.method = AcCmTransparencyMethod.ByBlock
+      return t
+    }
+
+    it('keeps ByBlock transparency of block reference parts', () => {
+      const inner = new AcDbLine(new AcGePoint3d(), new AcGePoint3d(1, 0, 0))
+      inner.transparency = byBlockTransparency()
+      addBlock(db, 'TB', [inner])
+      const ref = new AcDbBlockReference('TB')
+      ref.transparency = new AcCmTransparency(128)
+      db.tables.blockTable.modelSpace.appendEntity(ref)
+      expect(ref.explode()[0].transparency.isByBlock).toBe(true)
+    })
+
+    it('resolves ByBlock linetype, lineweight and transparency of dimension parts', () => {
+      const dimLine = new AcDbLine(
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(5, 0, 0)
+      )
+      dimLine.layer = '0'
+      dimLine.lineType = 'BYBLOCK'
+      dimLine.lineWeight = AcGiLineWeight.ByBlock
+      dimLine.transparency = byBlockTransparency()
+      const byLayerLine = new AcDbLine(
+        new AcGePoint3d(0, 1, 0),
+        new AcGePoint3d(5, 1, 0)
+      )
+      byLayerLine.layer = '0'
+      byLayerLine.color = new AcCmColor(AcCmColorMethod.ByLayer)
+      addBlock(db, '*D2', [dimLine, byLayerLine])
+      const dim = new AcDbAlignedDimension(
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(5, 0, 0),
+        new AcGePoint3d(0, 2, 0)
+      )
+      dim.dimBlockId = '*D2'
+      dim.layer = 'DIMS'
+      dim.lineType = 'DASHED'
+      dim.lineWeight = AcGiLineWeight.LineWeight050
+      dim.transparency = new AcCmTransparency(100)
+      db.tables.blockTable.modelSpace.appendEntity(dim)
+
+      const [line, layerLine] = dim.explode()
+      expect(line.lineType).toBe('DASHED')
+      expect(line.lineWeight).toBe(AcGiLineWeight.LineWeight050)
+      expect(line.transparency.isByAlpha).toBe(true)
+      expect(line.transparency.alpha).toBe(100)
+      // ByLayer stays ByLayer and follows the dimension's layer.
+      expect(layerLine.layer).toBe('DIMS')
+      expect(layerLine.color.isByLayer).toBe(true)
+    })
+
+    const createLeader = (style: string, byBlockColor?: number) => {
+      const leader = new AcDbLeader()
+      leader.appendVertex(new AcGePoint3d(0, 0, 0))
+      leader.appendVertex(new AcGePoint3d(10, 0, 0))
+      leader.hasArrowHead = false
+      leader.dimensionStyle = style
+      leader.byBlockColor = byBlockColor
+      leader.layer = 'LEADERS'
+      leader.color = new AcCmColor(AcCmColorMethod.ByACI, 1)
+      db.tables.blockTable.modelSpace.appendEntity(leader)
+      return leader
+    }
+    const addDimStyle = (name: string, dimclrd: number) => {
+      const style = new AcDbDimStyleTableRecord()
+      style.name = name
+      style.dimclrd = dimclrd
+      db.tables.dimStyleTable.add(style)
+    }
+
+    it('keeps DIMCLRD ByLayer as ByLayer when exploding a leader', () => {
+      addDimStyle('L_BYLAYER', 256)
+      const parts = createLeader('L_BYLAYER').explode()
+      expect(parts.length).toBeGreaterThan(0)
+      parts.forEach(part => {
+        expect(part.layer).toBe('LEADERS')
+        expect(part.color.isByLayer).toBe(true)
+      })
+    })
+
+    it('resolves DIMCLRD ByBlock of an exploded leader', () => {
+      addDimStyle('L_BYBLOCK', 0)
+      createLeader('L_BYBLOCK')
+        .explode()
+        .forEach(part => expect(part.color.colorIndex).toBe(1))
+      createLeader('L_BYBLOCK', 256)
+        .explode()
+        .forEach(part => expect(part.color.isByLayer).toBe(true))
+      createLeader('L_BYBLOCK', 5)
+        .explode()
+        .forEach(part => expect(part.color.colorIndex).toBe(5))
+    })
+
+    it('uses the explicit DIMCLRD color of an exploded leader', () => {
+      addDimStyle('L_RED', 1)
+      const leader = createLeader('L_RED')
+      leader.color = new AcCmColor(AcCmColorMethod.ByACI, 3)
+      leader.explode().forEach(part => expect(part.color.colorIndex).toBe(1))
+    })
+
+    it('resolves a ByBlock leader linetype of an exploded multileader', () => {
+      const mleader = new AcDbMLeader()
+      const leaderIndex = mleader.addLeader()
+      mleader.addLeaderLine(leaderIndex, [
+        new AcGePoint3d(0, 0, 0),
+        new AcGePoint3d(5, 0, 0)
+      ])
+      mleader.lineType = 'DASHED'
+      mleader.color = new AcCmColor(AcCmColorMethod.ByACI, 4)
+      // The default multileader style uses ByBlock color / linetype.
+      db.tables.blockTable.modelSpace.appendEntity(mleader)
+      const lines = mleader.explode().filter(part => part instanceof AcDbLine)
+      expect(lines.length).toBeGreaterThan(0)
+      lines.forEach(line => {
+        expect(line.lineType).toBe('DASHED')
+        expect(line.color.colorIndex).toBe(4)
+      })
     })
   })
 })
