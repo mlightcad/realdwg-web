@@ -820,6 +820,13 @@ export class AcDbOle2Frame extends AcDbOleFrame {
 
   /**
    * Transforms this OLE frame by the specified matrix.
+   *
+   * The frame is stored as upper-left + rotation + axis-aligned width/height
+   * (height measured downward before rotation). After a reflection (e.g.
+   * exploding a mirrored INSERT), the local "down" axis may point opposite
+   * to the transformed V edge — height must keep that **signed** projection,
+   * not `length()`, otherwise the quad flips to the other side of the
+   * baseline (OLE appears above its mirrored position).
    */
   transformBy(matrix: AcGeMatrix3d) {
     const signedWidth = this._lowerRight.x - this._upperLeft.x
@@ -842,12 +849,23 @@ export class AcDbOle2Frame extends AcDbOleFrame {
     const transformedV = new AcGeVector3d().subVectors(vPoint, origin)
 
     this._upperLeft.copy(origin)
-    this._rotation = Math.atan2(transformedU.y, transformedU.x)
-    this._lowerRight.set(
-      origin.x + transformedU.length(),
-      origin.y - transformedV.length(),
-      origin.z
-    )
+    const uLenSq = transformedU.lengthSq()
+    if (uLenSq < Number.EPSILON * Number.EPSILON) {
+      // Collapsed width: derive angle from V when possible, else clear rotation.
+      const vLenSq = transformedV.lengthSq()
+      this._rotation =
+        vLenSq < Number.EPSILON * Number.EPSILON
+          ? 0
+          : Math.atan2(transformedV.y, transformedV.x) + Math.PI / 2
+    } else {
+      this._rotation = Math.atan2(transformedU.y, transformedU.x)
+    }
+    const newCos = Math.cos(this._rotation)
+    const newSin = Math.sin(this._rotation)
+    // Local right = (cos, sin); local down = (sin, -cos) — same basis as above.
+    const width = transformedU.x * newCos + transformedU.y * newSin
+    const height = transformedV.x * newSin + transformedV.y * -newCos
+    this._lowerRight.set(origin.x + width, origin.y - height, origin.z)
     return this
   }
 
