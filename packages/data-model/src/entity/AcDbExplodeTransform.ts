@@ -267,7 +267,7 @@ export function acdbExplodeBlockContent(
  * The anonymous blocks of annotation objects are drawn with layer `0` and
  * ByBlock properties so that they follow the owning object. AutoCAD EXPLODE
  * keeps the look of such objects: the parts end up on the object's layer with
- * its color, linetype and lineweight.
+ * its color, linetype, lineweight and transparency.
  *
  * Block references are deliberately not resolved this way: exploding an
  * INSERT keeps layer `0` and ByBlock values unchanged, as in AutoCAD.
@@ -285,6 +285,9 @@ export function acdbResolveByBlockProperties<T extends AcDbEntity>(
   if (entity.lineType === ByBlock) entity.lineType = owner.lineType
   if (entity.lineWeight === AcGiLineWeight.ByBlock) {
     entity.lineWeight = owner.lineWeight
+  }
+  if (entity.transparency.isByBlock) {
+    entity.transparency = owner.transparency
   }
   return entity
 }

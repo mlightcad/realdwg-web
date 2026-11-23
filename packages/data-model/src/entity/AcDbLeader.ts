@@ -1,4 +1,4 @@
-import { AcCmColor } from '@mlightcad/common'
+import { AcCmColor, AcCmColorMethod } from '@mlightcad/common'
 import {
   AcGeArea2d,
   AcGeBox3d,
@@ -885,12 +885,37 @@ export class AcDbLeader extends AcDbCurve {
     const arrow = this.createArrowHeadEntity(points)
     if (arrow) parts.push(arrow)
 
-    const leaderColor = this.resolveLeaderLineColor()
+    const leaderColor = this.resolveExplodedLeaderLineColor()
     return parts.map(part => {
       part.setPropertiesFrom(this)
       if (leaderColor) part.color = leaderColor
       return part
     })
+  }
+
+  /**
+   * Color assigned to the exploded leader parts.
+   *
+   * Unlike {@link resolveLeaderLineColor} (a display color, where ByLayer is
+   * already resolved to the layer's actual color), this keeps ByLayer as
+   * ByLayer, as AutoCAD EXPLODE does, so the parts keep following their
+   * layer. `undefined` means the parts keep the leader's own color (DIMCLRD
+   * ByBlock without a group 77 override, or no dimension style).
+   */
+  private resolveExplodedLeaderLineColor(): AcCmColor | undefined {
+    const style = this.resolveDimensionStyle()
+    if (!style) return undefined
+    const dimColor = acdbDecodeDimStyleColor(style.dimclrd)
+    if (dimColor.isByLayer) return new AcCmColor(AcCmColorMethod.ByLayer)
+    if (dimColor.isByBlock) {
+      const override = this._byBlockColor
+      if (override === 256) return new AcCmColor(AcCmColorMethod.ByLayer)
+      if (override != null && override > 0 && override < 256) {
+        return new AcCmColor(AcCmColorMethod.ByACI, override)
+      }
+      return undefined
+    }
+    return dimColor
   }
 
   /**
