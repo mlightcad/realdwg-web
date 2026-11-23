@@ -184,6 +184,16 @@ export const ACDB_COMPAREHATCH_DEFAULT = 0
 export const ACDB_COMPAREHATCH_MIN = 0
 export const ACDB_COMPAREHATCH_MAX = 1
 
+/**
+ * AutoCAD default for MIRRTEXT: mirrored TEXT/MTEXT stay readable (not truly
+ * mirrored).
+ */
+export const ACDB_MIRRTEXT_DEFAULT = 0
+
+/** AutoCAD valid range for the MIRRTEXT system variable. */
+export const ACDB_MIRRTEXT_MIN = 0
+export const ACDB_MIRRTEXT_MAX = 1
+
 /** AutoCAD default for COMPARERCMARGIN: revision-cloud offset of 5. */
 export const ACDB_COMPARERCMARGIN_DEFAULT = 5
 

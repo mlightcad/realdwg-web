@@ -15,6 +15,8 @@ import {
   ACDB_COMPARETEXT_MIN,
   ACDB_COMPARETOLERANCE_MAX,
   ACDB_COMPARETOLERANCE_MIN,
+  ACDB_MIRRTEXT_MAX,
+  ACDB_MIRRTEXT_MIN,
   acdbIntegerSysVarIfInRange,
   ByLayer,
   DEFAULT_MLEADER_STYLE,
@@ -191,6 +193,15 @@ function applyHeaderVar(
     case '$ORTHOMODE':
       db.orthomode = readHeaderNumber(filer) ?? 0
       break
+    case '$MIRRTEXT': {
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_MIRRTEXT_MIN,
+        ACDB_MIRRTEXT_MAX
+      )
+      if (n != null) db.mirrtext = n
+      break
+    }
     case '$COMPAREHATCH': {
       const n = acdbIntegerSysVarIfInRange(
         readHeaderNumber(filer),

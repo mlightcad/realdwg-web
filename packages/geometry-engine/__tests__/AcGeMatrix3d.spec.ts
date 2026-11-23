@@ -84,4 +84,59 @@ describe('AcGeMatrix3d', () => {
     const singular = new AcGeMatrix3d().makeScale(1, 0, 1).invert()
     expect(singular.elements.every(v => v === 0)).toBe(true)
   })
+
+  it('setToMirroring reflects about an XY line', () => {
+    // Mirror about the X-axis (line from origin to (1,0))
+    const m = new AcGeMatrix3d().setToMirroring(
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 }
+    )
+    expect(m.determinant()).toBeLessThan(0)
+
+    const onLine = new AcGeVector3d(5, 0, 0).applyMatrix4(m)
+    expect(onLine.x).toBeCloseTo(5, 8)
+    expect(onLine.y).toBeCloseTo(0, 8)
+
+    const offLine = new AcGeVector3d(2, 3, 0).applyMatrix4(m)
+    expect(offLine.x).toBeCloseTo(2, 8)
+    expect(offLine.y).toBeCloseTo(-3, 8)
+
+    // Mirror about x = 5 (vertical line through (5,0) → (5,1))
+    const vertical = new AcGeMatrix3d().setToMirroring(
+      { x: 5, y: 0, z: 0 },
+      { x: 5, y: 1, z: 0 }
+    )
+    const mirrored = new AcGeVector3d(7, 2, 0).applyMatrix4(vertical)
+    expect(mirrored.x).toBeCloseTo(3, 8)
+    expect(mirrored.y).toBeCloseTo(2, 8)
+  })
+
+  it('setToMirroring reflects about a plane', () => {
+    // Mirror about the YZ plane (point origin, normal +X)
+    const m = new AcGeMatrix3d().setToMirroring(
+      { x: 0, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      'plane'
+    )
+    expect(m.determinant()).toBeLessThan(0)
+
+    const onPlane = new AcGeVector3d(0, 4, 5).applyMatrix4(m)
+    expect(onPlane.x).toBeCloseTo(0, 8)
+    expect(onPlane.y).toBeCloseTo(4, 8)
+    expect(onPlane.z).toBeCloseTo(5, 8)
+
+    const offPlane = new AcGeVector3d(3, 1, 2).applyMatrix4(m)
+    expect(offPlane.x).toBeCloseTo(-3, 8)
+    expect(offPlane.y).toBeCloseTo(1, 8)
+    expect(offPlane.z).toBeCloseTo(2, 8)
+
+    // Plane x = 2
+    const shifted = new AcGeMatrix3d().setToMirroring(
+      { x: 2, y: 0, z: 0 },
+      { x: 1, y: 0, z: 0 },
+      'plane'
+    )
+    const p = new AcGeVector3d(5, 0, 0).applyMatrix4(shifted)
+    expect(p.x).toBeCloseTo(-1, 8)
+  })
 })

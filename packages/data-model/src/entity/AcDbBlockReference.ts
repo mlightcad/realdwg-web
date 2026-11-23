@@ -716,6 +716,9 @@ export class AcDbBlockReference extends AcDbEntity {
       zSign * zAxis.length()
     )
 
+    // Variable ATTRIB follows MIRRTEXT (AutoCAD): readable + mirrored extent
+    // when MIRRTEXT=0. Block-definition TEXT/MTEXT always reverse with the
+    // INSERT's negative scale, independent of MIRRTEXT.
     this._attribs.forEach(attrib => attrib.transformBy(matrix))
     return this
   }

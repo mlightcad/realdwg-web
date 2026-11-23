@@ -10,6 +10,7 @@ import { acdbHostApplicationServices } from '../src/base/AcDbHostApplicationServ
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
 import { AcDb2dVertex } from '../src/entity/AcDb2dVertex'
 import { AcDbArc } from '../src/entity/AcDbArc'
+import { AcDbAttribute } from '../src/entity/AcDbAttribute'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbCircle } from '../src/entity/AcDbCircle'
 import { AcDbEllipse } from '../src/entity/AcDbEllipse'
@@ -22,7 +23,10 @@ import { AcDbMText } from '../src/entity/AcDbMText'
 import { AcDbPoint } from '../src/entity/AcDbPoint'
 import { AcDbPolyline } from '../src/entity/AcDbPolyline'
 import { AcDbRasterImage } from '../src/entity/AcDbRasterImage'
-import { AcDbText } from '../src/entity/AcDbText'
+import {
+  AcDbText,
+  AcDbTextHorizontalMode
+} from '../src/entity/AcDbText'
 import { AcDbTrace } from '../src/entity/AcDbTrace'
 import { AcDbAlignedDimension } from '../src/entity/dimension/AcDbAlignedDimension'
 import { AcDbRadialDimension } from '../src/entity/dimension/AcDbRadialDimension'
@@ -235,6 +239,138 @@ describe('AcDbEntity.transformBy with a uniform SCALE matrix', () => {
     expect(text.height).toBeCloseTo(5, 8)
     expect(text.widthFactor).toBeCloseTo(0.8, 8)
     expect(text.rotation).toBeCloseTo(Math.PI / 5, 8)
+  })
+
+  it('keeps TEXT readable and swaps Left↔Right when MIRRTEXT=0', () => {
+    // AutoCAD: vertical mirror keeps the mirrored insertion and flips
+    // Left↔Right so the glyphs fill the mirrored box without needing a
+    // font-accurate width (see D5495-style SHX labels).
+    const db = createWorkingDb()
+    db.mirrtext = 0
+    const text = new AcDbText()
+    text.textString = 'ABC'
+    text.position = new AcGePoint3d(10, 10, 0)
+    text.height = 5
+    text.rotation = 0
+    db.tables.blockTable.modelSpace.appendEntity(text)
+    const width = text.geometricExtents.max.x - text.geometricExtents.min.x
+
+    text.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expectPointClose(text.position, { x: -10, y: 10, z: 0 })
+    expect(text.horizontalMode).toBe(AcDbTextHorizontalMode.RIGHT)
+    const rot =
+      ((text.rotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+    expect(rot < 1e-8 || Math.abs(rot - 2 * Math.PI) < 1e-8).toBe(true)
+    expect(text.isBackward).toBe(false)
+    expect(text.isUpsideDown).toBe(false)
+    // Occupies the mirrored extent even though insertion stayed at -x.
+    expect(text.geometricExtents.min.x).toBeCloseTo(-(10 + width), 5)
+    expect(text.geometricExtents.max.x).toBeCloseTo(-10, 5)
+  })
+
+  it('swaps Right→Left and syncs position when MIRRTEXT=0', () => {
+    const db = createWorkingDb()
+    db.mirrtext = 0
+    const text = new AcDbText()
+    text.textString = 'ABC'
+    text.height = 5
+    text.rotation = 0
+    text.position = new AcGePoint3d(0, 10, 0)
+    text.alignmentPoint = new AcGePoint3d(10, 10, 0)
+    text.horizontalMode = AcDbTextHorizontalMode.RIGHT
+    db.tables.blockTable.modelSpace.appendEntity(text)
+    const width = text.geometricExtents.max.x - text.geometricExtents.min.x
+
+    text.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expect(text.horizontalMode).toBe(AcDbTextHorizontalMode.LEFT)
+    // Mirrored former right edge becomes the new left insertion.
+    expectPointClose(text.position, { x: -10, y: 10, z: 0 })
+    expect(text.geometricExtents.min.x).toBeCloseTo(-10, 5)
+    expect(text.geometricExtents.max.x).toBeCloseTo(-10 + width, 5)
+  })
+
+  it('truly mirrors TEXT when MIRRTEXT=1', () => {
+    const db = createWorkingDb()
+    db.mirrtext = 1
+    const text = new AcDbText()
+    text.position = new AcGePoint3d(2, 1, 0)
+    text.height = 1
+    text.rotation = 0
+    db.tables.blockTable.modelSpace.appendEntity(text)
+
+    text.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expectPointClose(text.position, { x: -2, y: 1, z: 0 })
+    expect(text.isBackward).toBe(true)
+  })
+
+  it('getTransformedCopy applies MIRRTEXT from the source entity', () => {
+    const db = createWorkingDb()
+    db.mirrtext = 0
+    const text = new AcDbText()
+    text.textString = 'Hi'
+    text.position = new AcGePoint3d(3, 0, 0)
+    text.height = 1
+    text.rotation = 0
+    db.tables.blockTable.modelSpace.appendEntity(text)
+
+    const copy = text.getTransformedCopy(
+      new AcGeMatrix3d().makeScale(-1, 1, 1)
+    ) as AcDbText
+    expectPointClose(copy.position, { x: -3, y: 0, z: 0 })
+    expect(copy.horizontalMode).toBe(AcDbTextHorizontalMode.RIGHT)
+    expect(copy.isBackward).toBe(false)
+    expect(text.position.x).toBeCloseTo(3, 8)
+  })
+
+  it('keeps INSERT attributes readable when MIRRTEXT=0', () => {
+    // AutoCAD: block-definition TEXT always reverses with the INSERT;
+    // variable ATTRIB follows MIRRTEXT (default: readable, Left↔Right).
+    const db = createWorkingDb()
+    db.mirrtext = 0
+    const insert = new AcDbBlockReference('TITLE')
+    insert.position = new AcGePoint3d(10, 0, 0)
+    insert.scaleFactors = new AcGePoint3d(1, 1, 1)
+    const attrib = new AcDbAttribute()
+    attrib.tag = 'NAME'
+    attrib.textString = 'AB'
+    attrib.position = new AcGePoint3d(12, 1, 0)
+    attrib.height = 1
+    attrib.rotation = 0
+    insert.appendAttributes(attrib)
+    db.tables.blockTable.modelSpace.appendEntity(insert)
+
+    insert.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expect(
+      insert.scaleFactors.x < 0 || insert.scaleFactors.y < 0
+    ).toBe(true)
+    expect(attrib.isBackward).toBe(false)
+    expect(attrib.horizontalMode).toBe(AcDbTextHorizontalMode.RIGHT)
+    expectPointClose(attrib.position, { x: -12, y: 1, z: 0 })
+  })
+
+  it('places MTEXT TopLeft into the mirrored wrap box when MIRRTEXT=0', () => {
+    const db = createWorkingDb()
+    db.mirrtext = 0
+    const mtext = new AcDbMText()
+    mtext.contents = 'MTEXT'
+    mtext.height = 5
+    mtext.width = 50
+    mtext.location = new AcGePoint3d(10, 30, 0)
+    mtext.attachmentPoint = 1 // TopLeft
+    db.tables.blockTable.modelSpace.appendEntity(mtext)
+
+    mtext.transformBy(new AcGeMatrix3d().makeScale(-1, 1, 1))
+
+    expectPointClose(mtext.location, { x: -(10 + 50), y: 30, z: 0 })
+    expect(mtext.attachmentPoint).toBe(1)
+    const rot =
+      ((mtext.rotation % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)
+    expect(rot < 1e-8 || Math.abs(rot - 2 * Math.PI) < 1e-8).toBe(true)
+    expect(mtext.direction.x).toBeGreaterThan(0)
   })
 
   it('scales mtext height, defined width and column sizes', () => {

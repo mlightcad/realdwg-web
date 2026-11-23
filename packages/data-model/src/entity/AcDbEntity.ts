@@ -846,6 +846,23 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Returns a new entity that is a clone of this entity transformed by
+   * `matrix`, mirroring ObjectARX `AcDbEntity::getTransformedCopy()`.
+   *
+   * The default implementation clones this entity and calls
+   * {@link transformBy} on the clone. Subclasses that need database-context
+   * during the transform (for example TEXT/`MIRRTEXT`) may override this.
+   *
+   * @param matrix - Transformation matrix to apply to the copy.
+   * @returns A non-database-resident transformed copy.
+   */
+  getTransformedCopy(matrix: AcGeMatrix3d): AcDbEntity {
+    const copy = this.clone()
+    copy.transformBy(matrix)
+    return copy
+  }
+
+  /**
    * Breaks this entity into a set of simpler entities, mirroring ObjectARX
    * `AcDbEntity::explode()`.
    *

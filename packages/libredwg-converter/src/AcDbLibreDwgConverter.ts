@@ -679,6 +679,10 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     db.insunits = header.INSUNITS ?? 1
     db.pdmode = header.PDMODE ?? 0
     db.pdsize = header.PDSIZE ?? 0.0
+    const mirrtext = (header as { MIRRTEXT?: number }).MIRRTEXT
+    if (mirrtext != null) {
+      db.mirrtext = mirrtext
+    }
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
     // Match DXF header reader: new dimensions must inherit $DIMSTYLE.
     // Without this, DWG loads leave db.dimstyle as the constructor default

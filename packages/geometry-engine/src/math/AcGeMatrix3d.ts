@@ -1,4 +1,4 @@
-import { DEFAULT_TOL } from '../util/AcGeTol.js'
+import { AcGeTol, DEFAULT_TOL } from '../util/AcGeTol.js'
 import { AcGeMatrix2d } from './AcGeMatrix2d.js'
 import { AcGeQuaternion } from './AcGeQuaternion.js'
 import { AcGeVector3d, AcGeVector3dLike } from './AcGeVector3d.js'
@@ -1114,6 +1114,32 @@ export class AcGeMatrix3d {
   }
 
   /**
+   * Set this matrix to a reflection (mirroring) transform.
+   *
+   * - Default (`mode` omitted or `'line'`): mirror about the XY line through
+   *   `a` → `b`. Degenerate (coincident) points fall back to mirroring about
+   *   the vertical line `x = a.x` through `a`.
+   * - `mode: 'plane'`: mirror about the plane through point `a` with normal `b`.
+   *
+   * @param a - First line point, or a point on the mirror plane.
+   * @param b - Second line point, or the plane normal when `mode` is `'plane'`.
+   * @param mode - `'line'` (default) or `'plane'`.
+   * @returns This matrix.
+   */
+  setToMirroring(
+    a: AcGeVector3dLike,
+    b: AcGeVector3dLike,
+    mode: 'line' | 'plane' = 'line'
+  ): this {
+    if (mode === 'plane') {
+      acgeSetToMirroringAboutPlane(this, a, b)
+    } else {
+      acgeSetToMirroringAboutLine(this, a, b)
+    }
+    return this
+  }
+
+  /**
    * Set this matrix as a shear transform.
    * @param xy Input the amount to shear X by Y.
    * @param xz Input the amount to shear X by Z.
@@ -1416,6 +1442,93 @@ export class AcGeMatrix3d {
 
     return array
   }
+}
+
+/**
+ * Mirror about the XY line through `point1` → `point2`.
+ *
+ * Composes `T(p1) · R(θ) · Scale(1,-1,1) · R(-θ) · T(-p1)`.
+ */
+function acgeSetToMirroringAboutLine(
+  target: AcGeMatrix3d,
+  point1: AcGeVector3dLike,
+  point2: AcGeVector3dLike
+): AcGeMatrix3d {
+  const dx = point2.x - point1.x
+  const dy = point2.y - point1.y
+  const lenSq = dx * dx + dy * dy
+
+  if (AcGeTol.equalToZero(Math.sqrt(lenSq))) {
+    // Degenerate: mirror about the vertical line through point1.
+    return target.copy(
+      new AcGeMatrix3d()
+        .makeTranslation(point1.x, point1.y, point1.z ?? 0)
+        .multiply(new AcGeMatrix3d().makeScale(-1, 1, 1))
+        .multiply(
+          new AcGeMatrix3d().makeTranslation(
+            -point1.x,
+            -point1.y,
+            -(point1.z ?? 0)
+          )
+        )
+    )
+  }
+
+  const theta = Math.atan2(dy, dx)
+  const z = point1.z ?? 0
+  return target.copy(
+    new AcGeMatrix3d()
+      .makeTranslation(point1.x, point1.y, z)
+      .multiply(new AcGeMatrix3d().makeRotationZ(theta))
+      .multiply(new AcGeMatrix3d().makeScale(1, -1, 1))
+      .multiply(new AcGeMatrix3d().makeRotationZ(-theta))
+      .multiply(new AcGeMatrix3d().makeTranslation(-point1.x, -point1.y, -z))
+  )
+}
+
+/**
+ * Mirror about the plane through `planePoint` with normal `normal`
+ * (Householder reflection).
+ */
+function acgeSetToMirroringAboutPlane(
+  target: AcGeMatrix3d,
+  planePoint: AcGeVector3dLike,
+  normal: AcGeVector3dLike
+): AcGeMatrix3d {
+  const nx = normal.x
+  const ny = normal.y
+  const nz = normal.z ?? 0
+  const len = Math.hypot(nx, ny, nz)
+  if (AcGeTol.equalToZero(len)) {
+    return target.identity()
+  }
+  const nX = nx / len
+  const nY = ny / len
+  const nZ = nz / len
+  const px = planePoint.x
+  const py = planePoint.y
+  const pz = planePoint.z ?? 0
+  const d = nX * px + nY * py + nZ * pz
+
+  // Column-major: upper-left I - 2 n n^T, translation 2 (n·p) n.
+  return target.set(
+    1 - 2 * nX * nX,
+    -2 * nX * nY,
+    -2 * nX * nZ,
+    2 * d * nX,
+    -2 * nY * nX,
+    1 - 2 * nY * nY,
+    -2 * nY * nZ,
+    2 * d * nY,
+    -2 * nZ * nX,
+    -2 * nZ * nY,
+    1 - 2 * nZ * nZ,
+    2 * d * nZ,
+    0,
+    0,
+    0,
+    1
+  )
 }
 
 const _v1 = /*@__PURE__*/ new AcGeVector3d()
