@@ -1,5 +1,11 @@
 # @mlightcad/common
 
+## 1.16.1
+
+### Patch Changes
+
+- 39718f8: feat: adds ObjectARX-style AcDbEntity.explode() and subExplode() so polylines, block references, dimensions, leaders, tables, mtext, multilines, meshes and pattern hatches can explode into primitives, with polyline bulge/width accessors and shared explode helpers. Fixes ByLayer and ByBlock property resolution when exploding annotations, and switches internal deps to workspace:^ to avoid peer major bumps on minor releases
+
 ## 1.16.0
 
 ### Minor Changes
