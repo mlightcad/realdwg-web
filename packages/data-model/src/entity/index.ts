@@ -33,6 +33,19 @@ export type {
   AcDbExplodeBulgePathOptions
 } from './AcDbExplodeHelpers.js'
 export {
+  acdbIsJoinableEntity,
+  acdbJoinAllEntities,
+  acdbJoinCollinearLines,
+  acdbJoinConcentricArcs,
+  acdbJoinEndpointsOf,
+  acdbJoinToPolyline
+} from './AcDbJoinHelpers.js'
+export type {
+  AcDbJoinAllResult,
+  AcDbJoinGroup,
+  AcDbJoinableCurve
+} from './AcDbJoinHelpers.js'
+export {
   acdbExplodeBlockContent,
   acdbIsConformalInPlane,
   acdbResolveByBlockProperties,
