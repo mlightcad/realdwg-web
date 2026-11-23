@@ -53,6 +53,7 @@ import {
   HATCH_PATTERN_SOLID,
   HATCH_PATTERN_USER
 } from '../misc/AcDbConstants.js'
+import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbPredefinedAcadIsoPat } from '../misc/pat/AcDbPatPredefined.js'
 import { AcDbHatchScaleContextData } from '../object/AcDbHatchScaleContextData.js'
@@ -66,11 +67,14 @@ import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers.js'
+import { acdbTessellateHatchPattern } from './AcDbHatchPatternHelpers.js'
 import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers.js'
+import { AcDbLine } from './AcDbLine.js'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
+import { AcDbPoint } from './AcDbPoint.js'
 
 /**
  * Defines the type of hatch pattern.
@@ -2002,6 +2006,61 @@ export class AcDbHatch extends AcDbEntity {
         userData.annotationScale = info
       }
       return drawable
+    } finally {
+      this._patternScale = savedScale
+      this._patternScaleSet = savedSet
+      this.updatePredefinedPatternDefinitionLines()
+    }
+  }
+
+  /**
+   * Explodes this hatch like AutoCAD EXPLODE: a pattern hatch becomes the
+   * individual pattern lines clipped to its boundary (dots become points),
+   * placed in the hatch plane and carrying the hatch's properties. The
+   * boundary itself is not part of the result.
+   *
+   * Solid-fill and gradient hatches have no pattern lines and cannot be
+   * exploded.
+   */
+  protected override subExplode(): AcDbEntity[] | undefined {
+    if (this.isSolidFill || this.isGradient) return undefined
+    const presentation = this.resolveAnnotativePresentation()
+    const savedScale = this._patternScale
+    const savedSet = this._patternScaleSet
+    this._patternScale = presentation.patternScale
+    this._patternScaleSet = true
+    try {
+      this.updatePredefinedPatternDefinitionLines()
+      const definitionLines = this.definitionLines
+      if (definitionLines.length === 0) return undefined
+      const patternAngle = this.getRenderablePatternAngle()
+      const options = acdbDrawTessellateOptions({
+        context: { database: this.database }
+      })
+      const areas = this.buildAreasFromLoops()
+      const toWcs = (x: number, y: number) =>
+        acgeTransformOcsPointToWcs({ x, y, z: this._elevation }, this._normal)
+
+      const parts: AcDbEntity[] = []
+      for (const area of areas.length > 0 ? areas : [this._geo]) {
+        const loops = area.tessellate(options)
+        for (const [a, b] of acdbTessellateHatchPattern(
+          loops,
+          definitionLines,
+          patternAngle
+        )) {
+          let part: AcDbEntity
+          if (a.x === b.x && a.y === b.y) {
+            const point = new AcDbPoint()
+            point.position = toWcs(a.x, a.y)
+            part = point
+          } else {
+            part = new AcDbLine(toWcs(a.x, a.y), toWcs(b.x, b.y))
+          }
+          parts.push(part.setPropertiesFrom(this))
+        }
+      }
+      return parts
     } finally {
       this._patternScale = savedScale
       this._patternScaleSet = savedSet

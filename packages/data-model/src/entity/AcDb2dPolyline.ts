@@ -25,6 +25,7 @@ import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodeBulgePath } from './AcDbExplodeHelpers.js'
 import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
@@ -234,6 +235,23 @@ export class AcDb2dPolyline extends AcDbCurve {
   getBulgeAt(index: number): number {
     const vertex = this._geo.vertices[index]
     return vertex?.bulge || 0
+  }
+
+  /**
+   * Explodes this polyline into one {@link AcDbLine} or {@link AcDbArc} per
+   * segment, like AutoCAD EXPLODE.
+   *
+   * Curve-fit and spline-fit polylines are exploded along their stored
+   * vertices, which is the path that is drawn. The generated entities keep the
+   * elevation, normal and general properties of the polyline; segment widths
+   * are discarded, as in AutoCAD.
+   */
+  protected override subExplode() {
+    return acdbExplodeBulgePath(this._geo.vertices, {
+      closed: this.closed,
+      elevation: this._elevation,
+      normal: this._normal
+    }).map(curve => curve.setPropertiesFrom(this))
   }
 
   /**

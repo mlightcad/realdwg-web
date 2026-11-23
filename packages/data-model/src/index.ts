@@ -192,6 +192,14 @@ export {
   acdbDisposeDimBlock,
   AcDbEllipse,
   AcDbEntity,
+  acdbExplodeBlockContent,
+  acdbExplodeBulgePath,
+  acdbExplodePointPath,
+  acdbIsConformalInPlane,
+  acdbMTextToPlainParagraphs,
+  acdbResolveByBlockProperties,
+  acdbTessellateHatchPattern,
+  acdbTransformForExplode,
   AcDbFace,
   AcDbFcf,
   AcDbFrame,
@@ -249,6 +257,7 @@ export {
   AcDbXline
 } from './entity/index.js'
 export type {
+  AcDbBulgePathVertex,
   AcDbEntityArrayItemSchema,
   AcDbEntityProperties,
   AcDbEntityProperty,
@@ -256,7 +265,9 @@ export type {
   AcDbEntityPropertyGroupName,
   AcDbEntityPropertyType,
   AcDbEntityRuntimeProperty,
+  AcDbExplodeBulgePathOptions,
   AcDbGradientName,
+  AcDbHatchPatternSegment,
   AcDbMLeaderBlockAttribute,
   AcDbMLeaderBlockContent,
   AcDbMLeaderBlockContentLike,

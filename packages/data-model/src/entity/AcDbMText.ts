@@ -7,6 +7,7 @@ import {
   AcGePoint3d,
   AcGePoint3dLike,
   AcGePolyline2d,
+  acgeTransformWcsPointToOcs,
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
@@ -43,7 +44,17 @@ import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import {
+  acdbGetOcsAxes,
+  acdbMTextToPlainParagraphs,
+  acdbWrapPlainParagraph
+} from './AcDbExplodeHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import {
+  AcDbText,
+  AcDbTextHorizontalMode,
+  AcDbTextVerticalMode
+} from './AcDbText.js'
 import {
   acdbCollectMTextOrientedCorners,
   acdbMTextBackgroundMaskPadding,
@@ -703,6 +714,83 @@ export class AcDbMText extends AcDbEntity {
     }
     this._normal.copy(acdbTransformNormal(this._normal, matrix))
     return this
+  }
+
+  /**
+   * Explodes this multiline text into one single-line {@link AcDbText} per
+   * displayed line, like AutoCAD EXPLODE.
+   *
+   * Paragraphs are split at paragraph breaks and wrapped to the defined
+   * width, lines are spaced with the line-spacing factor and justified
+   * according to the attachment point (left / center / right). Inline
+   * formatting (fonts, colors, heights inside the text) is not kept, and
+   * wrapping uses estimated character widths, so line breaks approximate the
+   * font-accurate breaks AutoCAD computes. Empty lines produce no text.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const { height, width, position, direction, attachmentPoint } =
+      this.resolveAnnotativePresentation()
+    if (!(height > 0)) return []
+
+    const lines = acdbMTextToPlainParagraphs(this.contents).flatMap(paragraph =>
+      acdbWrapPlainParagraph(paragraph, width, height)
+    )
+    if (lines.every(line => line.trim() === '')) return []
+
+    const normal = new AcGeVector3d(this._normal).normalize()
+    const xAxis =
+      direction.lengthSq() > 0
+        ? direction.clone().normalize()
+        : new AcGeVector3d(
+            Math.cos(this._rotation),
+            Math.sin(this._rotation),
+            0
+          )
+    const yAxis = new AcGeVector3d().crossVectors(normal, xAxis).normalize()
+    const ocs = acdbGetOcsAxes(normal)
+    const rotation = Math.atan2(xAxis.dot(ocs.yAxis), xAxis.dot(ocs.xAxis))
+
+    const spacingFactor = Math.max(this.lineSpacingFactor, 0) * (5 / 3)
+    const step =
+      height *
+      (this.lineSpacingStyle === 2 ? spacingFactor : Math.max(spacingFactor, 1))
+    const totalHeight = height + (lines.length - 1) * step
+
+    // Attachment point 1..9: rows top / middle / bottom, columns left /
+    // center / right.
+    const index = Math.min(Math.max(attachmentPoint, 1), 9) - 1
+    const row = Math.floor(index / 3)
+    const column = index % 3
+    const top = row === 0 ? 0 : row === 1 ? totalHeight / 2 : totalHeight
+    const horizontalMode =
+      column === 0
+        ? AcDbTextHorizontalMode.LEFT
+        : column === 1
+          ? AcDbTextHorizontalMode.CENTER
+          : AcDbTextHorizontalMode.RIGHT
+
+    const texts: AcDbEntity[] = []
+    lines.forEach((line, i) => {
+      if (line.trim() === '') return
+      const baseline = top - height - i * step
+      const wcs = new AcGePoint3d(position).addScaledVector(yAxis, baseline)
+      const ocsPoint = new AcGePoint3d(acgeTransformWcsPointToOcs(wcs, normal))
+      const text = new AcDbText()
+      text.setPropertiesFrom(this)
+      text.textString = line
+      text.height = height
+      text.styleName = this.styleName
+      text.rotation = rotation
+      text.normal = normal
+      text.position = ocsPoint
+      text.horizontalMode = horizontalMode
+      text.verticalMode = AcDbTextVerticalMode.BASELINE
+      if (horizontalMode !== AcDbTextHorizontalMode.LEFT) {
+        text.alignmentPoint = ocsPoint
+      }
+      texts.push(text)
+    })
+    return texts
   }
 
   /**

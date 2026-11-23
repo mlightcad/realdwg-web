@@ -22,8 +22,15 @@ import type {
 import type { AcDbBlockTableRecord } from '../database/AcDbBlockTableRecord.js'
 import { acdbDxfVersionCaps } from '../dxf/AcDbDxfVersionCaps.js'
 import { AcDbBlockReference } from './AcDbBlockReference.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbPoint3dProperties } from './AcDbEntityPropertyHelpers.js'
+import {
+  acdbExplodeBlockContent,
+  acdbResolveByBlockProperties
+} from './AcDbExplodeTransform.js'
+import { AcDbLine } from './AcDbLine.js'
+import { AcDbMText } from './AcDbMText.js'
 
 /**
  * Interface defining the properties of a table cell within an AcDbTable entity.
@@ -731,6 +738,107 @@ export class AcDbTable extends AcDbBlockReference {
     }
 
     return group
+  }
+
+  /**
+   * Tables can always be exploded (they are not limited by the block
+   * explodability flag of their anonymous block).
+   */
+  override get isExplodable(): boolean {
+    return true
+  }
+
+  /**
+   * Explodes this table into lines and multiline text, like AutoCAD EXPLODE.
+   *
+   * When the table carries its anonymous block (the usual case for DWG/DXF
+   * tables), the content of that block is exploded with the table transform.
+   * Otherwise the grid lines and cell texts are generated from the cell data.
+   * Layer `0` / ByBlock values of the parts resolve to the table's properties.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const block = this.blockTableRecord
+    let parts: AcDbEntity[]
+    if (block && block.newIterator().count > 0) {
+      parts = acdbExplodeBlockContent(block, this.getExplodeTransform())
+    } else {
+      parts = this.explodeFromCells()
+    }
+    return parts.map(part => acdbResolveByBlockProperties(part, this))
+  }
+
+  /**
+   * Generates the table grid lines and cell texts from the cell data, using
+   * the same layout as {@link subWorldDraw} when no anonymous block exists.
+   */
+  private explodeFromCells(): AcDbEntity[] {
+    const rows = this.numRows
+    const cols = this.numColumns
+    const xs: number[] = [0]
+    for (let i = 0; i < cols; i++) xs.push(xs[i] + (this.columnWidth(i) ?? 0))
+    const ys: number[] = [0]
+    for (let j = 0; j < rows; j++) ys.push(ys[j] - (this.rowHeight(j) ?? 0))
+
+    const quaternion = new AcGeQuaternion().setFromAxisAngle(
+      AcGeVector3d.Z_AXIS,
+      this.rotation
+    )
+    const matrix = new AcGeMatrix3d()
+      .setFromExtrusionDirection(this.normal)
+      .multiply(
+        new AcGeMatrix3d().compose(this.position, quaternion, this.scaleFactors)
+      )
+
+    const parts: AcDbEntity[] = []
+    const addLine = (x0: number, y0: number, x1: number, y1: number) => {
+      if (x0 === x1 && y0 === y1) return
+      const line = new AcDbLine(
+        new AcGePoint3d(x0, y0, 0),
+        new AcGePoint3d(x1, y1, 0)
+      )
+      line.setPropertiesFrom(this)
+      parts.push(line.transformBy(matrix))
+    }
+
+    const visited = new Array<boolean>(rows * cols).fill(false)
+    for (let j = 0; j < rows; j++) {
+      for (let i = 0; i < cols; i++) {
+        const cellIndex = j * cols + i
+        const cell = this.cell(cellIndex)
+        if (!cell || visited[cellIndex]) continue
+        const colSpan = Math.max(1, Math.min(cell.borderWidth ?? 1, cols - i))
+        const rowSpan = Math.max(1, Math.min(cell.borderHeight ?? 1, rows - j))
+        this.fillVisited(visited, cellIndex, cols, colSpan, rowSpan)
+        const left = xs[i]
+        const right = xs[i + colSpan]
+        const top = ys[j]
+        const bottom = ys[j + rowSpan]
+        addLine(left, top, right, top)
+        addLine(left, bottom, left, top)
+        if (i + colSpan === cols) addLine(right, top, right, bottom)
+        if (j + rowSpan === rows) addLine(left, bottom, right, bottom)
+
+        if (cell.text) {
+          const width = right - left
+          const height = top - bottom
+          const attachmentPoint =
+            cell.attachmentPoint ||
+            this.attachmentPoint ||
+            AcGiMTextAttachmentPoint.MiddleCenter
+          const offset = this.getTableTextOffset(attachmentPoint, width, height)
+          const mtext = new AcDbMText()
+          mtext.contents = cell.text
+          mtext.height = this.getCellTextHeight(cell, height)
+          mtext.width = width
+          mtext.attachmentPoint = attachmentPoint
+          if (cell.textStyle) mtext.styleName = cell.textStyle
+          mtext.location = new AcGePoint3d(left, top, 0).add(offset)
+          mtext.setPropertiesFrom(this)
+          parts.push(mtext.transformBy(matrix))
+        }
+      }
+    }
+    return parts
   }
 
   /**

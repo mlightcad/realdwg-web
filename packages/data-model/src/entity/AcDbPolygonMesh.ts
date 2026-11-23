@@ -12,8 +12,10 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbPointArrayProperty } from './AcDbEntityPropertyHelpers.js'
+import { AcDbFace } from './AcDbFace.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
@@ -274,6 +276,33 @@ export class AcDbPolygonMesh extends AcDbCurve {
       vertex.position.applyMatrix4(matrix)
     })
     return this
+  }
+
+  /**
+   * Explodes this polygon mesh like AutoCAD EXPLODE: every M × N grid cell
+   * becomes an {@link AcDbFace} (3D face), including the wrap-around cells of
+   * a mesh closed in M and/or N.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const parts: AcDbEntity[] = []
+    const mCount = this._mCount
+    const nCount = this._nCount
+    if (this._vertices.length < mCount * nCount) return parts
+    const mCells = this._closedM ? mCount : mCount - 1
+    const nCells = this._closedN ? nCount : nCount - 1
+    for (let m = 0; m < mCells; m++) {
+      const m1 = (m + 1) % mCount
+      for (let n = 0; n < nCells; n++) {
+        const n1 = (n + 1) % nCount
+        const face = new AcDbFace()
+        face.setVertexAt(0, this.getVertexAtMN(m, n).position)
+        face.setVertexAt(1, this.getVertexAtMN(m, n1).position)
+        face.setVertexAt(2, this.getVertexAtMN(m1, n1).position)
+        face.setVertexAt(3, this.getVertexAtMN(m1, n).position)
+        parts.push(face.setPropertiesFrom(this))
+      }
+    }
+    return parts
   }
 
   /**

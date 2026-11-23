@@ -54,6 +54,10 @@ import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from '../AcDbEntityPropertyHelpers.js'
+import {
+  acdbExplodeBlockContent,
+  acdbResolveByBlockProperties
+} from '../AcDbExplodeTransform.js'
 import { acdbForEachGripIndex } from '../AcDbGripHelpers.js'
 import { acdbTransformIntersectPrimitives } from '../AcDbIntersectHelpers.js'
 import { acdbUniformScaleFactor } from '../AcDbTransformHelpers.js'
@@ -746,6 +750,33 @@ export abstract class AcDbDimension extends AcDbEntity {
       annotationScale?: AcDbAnnotationScaleDrawInfo
     }
     userData.annotationScale = resolved
+  }
+
+  /**
+   * Explodes this dimension into the entities of its anonymous dimension
+   * block (lines, arcs, multiline text, points and arrowhead block
+   * references), like AutoCAD EXPLODE.
+   *
+   * The parts are placed in WCS with the dimension block transform. Layer `0`
+   * and ByBlock values resolve to the dimension's own properties, so the
+   * exploded geometry looks the same as the dimension. When the dimension has
+   * no block yet, its geometry is generated with {@link createDimBlock}
+   * without adding a block to the database.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const presentation = this.resolveAnnotativePresentation()
+    let block = this.getDimBlockTableRecord(presentation.dimBlockId)
+    let matrix: AcGeMatrix3d
+    if (block && block.newIterator().count > 0) {
+      matrix = this.getFullDimBlockTransform(presentation.blockPosition)
+    } else {
+      // createDimBlock emits WCS geometry (see recomputeDimBlock).
+      block = this.createDimBlock('*D')
+      matrix = new AcGeMatrix3d()
+    }
+    return acdbExplodeBlockContent(block, matrix).map(part =>
+      acdbResolveByBlockProperties(part, this)
+    )
   }
 
   /** @inheritdoc */

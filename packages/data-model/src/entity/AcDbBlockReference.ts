@@ -45,6 +45,7 @@ import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodeBlockContent } from './AcDbExplodeTransform.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import { acdbTransformIntersectPrimitives } from './AcDbIntersectHelpers.js'
 import {
@@ -1294,6 +1295,75 @@ export class AcDbBlockReference extends AcDbEntity {
   private getFullInsertionTransform() {
     const extrusion = new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
     return new AcGeMatrix3d().multiplyMatrices(extrusion, this.blockTransform)
+  }
+
+  /**
+   * Returns whether this block reference can be exploded, mirroring the checks
+   * AutoCAD EXPLODE performs before exploding an INSERT.
+   *
+   * An INSERT cannot be exploded when its block definition is missing, is an
+   * external reference (or an xref-dependent block), or disallows exploding
+   * (block definition "Allow exploding" option, DXF group 280 = 0).
+   */
+  get isExplodable(): boolean {
+    const block = this.drawableBlockTableRecord
+    if (!block) return false
+    if (block.isXref || this._blockName.includes('|')) return false
+    if (this.blockTableRecord?.explodability === 0) return false
+    return true
+  }
+
+  /**
+   * Builds the transform from block-definition space to WCS used by
+   * {@link subExplode}.
+   *
+   * Unlike {@link blockTransform} (a display transform whose insertion Z is
+   * forced to `0`), this keeps the real elevation of the insertion point and
+   * includes the extrusion, so exploded entities land exactly where the
+   * block content is.
+   *
+   * @returns `extrusion · T(position) · R(rotation) · S(scale) · T(-base)`
+   */
+  protected getExplodeTransform(): AcGeMatrix3d {
+    const presentation = this.resolveAnnotativePresentation()
+    const base = this.drawableBlockTableRecord?.origin ?? AcGePoint3d.ORIGIN
+    const { position, rotation, scaleFactors } = presentation
+    const matrix = new AcGeMatrix3d()
+      .setFromExtrusionDirection(this._normal)
+      .multiply(
+        new AcGeMatrix3d().makeTranslation(position.x, position.y, position.z)
+      )
+      .multiply(new AcGeMatrix3d().makeRotationZ(rotation))
+      .multiply(
+        new AcGeMatrix3d().makeScale(
+          scaleFactors.x,
+          scaleFactors.y,
+          scaleFactors.z
+        )
+      )
+      .multiply(new AcGeMatrix3d().makeTranslation(-base.x, -base.y, -base.z))
+    return matrix
+  }
+
+  /**
+   * Explodes this block reference one level, like AutoCAD EXPLODE.
+   *
+   * Every entity of the block definition is copied into WCS with the
+   * insertion transform. Nested block references stay block references.
+   * Following AutoCAD:
+   *
+   * - The exploded entities keep their own properties: entities on layer `0`
+   *   or with ByBlock color / linetype / lineweight stay that way.
+   * - The attributes attached to this INSERT are dropped and the attribute
+   *   definitions of the block appear again (showing their tags).
+   * - Circles and arcs become ellipses when the block is scaled non-uniformly.
+   * - Block references that are not {@link isExplodable} return no entities.
+   */
+  protected override subExplode(): AcDbEntity[] | undefined {
+    if (!this.isExplodable) return undefined
+    const block = this.drawableBlockTableRecord
+    if (!block) return undefined
+    return acdbExplodeBlockContent(block, this.getExplodeTransform())
   }
 
   /**

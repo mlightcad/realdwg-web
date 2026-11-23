@@ -39,6 +39,8 @@ import {
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import { AcDbLine } from './AcDbLine.js'
+import { AcDbMText } from './AcDbMText.js'
 import { acdbEstimateToleranceCellWidth } from './AcDbTextExtentsHelpers.js'
 
 interface ToleranceFrameRow {
@@ -551,15 +553,44 @@ export class AcDbFcf extends AcDbEntity {
     renderer: AcGiRenderer,
     delay?: boolean
   ): AcGiEntity | undefined {
-    const rows = this.parseToleranceFrame(this._text)
-    if (rows.length === 0) {
+    const cells = this.collectToleranceCellTexts()
+    if (cells.length === 0) {
       return undefined
     }
 
-    const layout = this.resolveFrameLayout(rows)
     const textStyle = this.getTextStyle()
-    const entities: AcGiEntity[] = []
+    const entities = cells.map(({ text, position }) => {
+      const mtextData: AcGiMTextData = {
+        text,
+        height: this.textHeight,
+        width: Infinity,
+        position,
+        directionVector: this._direction,
+        attachmentPoint: AcGiMTextAttachmentPoint.MiddleCenter,
+        drawingDirection: AcGiMTextFlowDirection.LEFT_TO_RIGHT
+      }
+      return renderer.mtext(mtextData, textStyle, delay)
+    })
 
+    if (entities.length === 1) {
+      return entities[0]
+    }
+    return renderer.group(entities)
+  }
+
+  /**
+   * Collects the non-empty cell texts of the tolerance frame together with
+   * their WCS centers.
+   */
+  private collectToleranceCellTexts(): {
+    text: string
+    position: AcGePoint3d
+  }[] {
+    const rows = this.parseToleranceFrame(this._text)
+    if (rows.length === 0) return []
+
+    const layout = this.resolveFrameLayout(rows)
+    const cells: { text: string; position: AcGePoint3d }[] = []
     for (let rowIndex = 0; rowIndex < rows.length; rowIndex++) {
       const row = rows[rowIndex]
       let cellOffset = layout.cellPadding
@@ -569,33 +600,41 @@ export class AcDbFcf extends AcDbEntity {
         const cellText = row.cells[columnIndex]
         const cellWidth = layout.columnWidths[columnIndex] ?? this.textHeight
         if (cellText.trim()) {
-          const position = this.toFrameWcs(
-            cellOffset + cellWidth / 2,
-            rowCenterY
-          )
-
-          const mtextData: AcGiMTextData = {
+          cells.push({
             text: cellText,
-            height: this.textHeight,
-            width: Infinity,
-            position,
-            directionVector: this._direction,
-            attachmentPoint: AcGiMTextAttachmentPoint.MiddleCenter,
-            drawingDirection: AcGiMTextFlowDirection.LEFT_TO_RIGHT
-          }
-          entities.push(renderer.mtext(mtextData, textStyle, delay))
+            position: this.toFrameWcs(cellOffset + cellWidth / 2, rowCenterY)
+          })
         }
         cellOffset += cellWidth + layout.columnGap
       }
     }
+    return cells
+  }
 
-    if (entities.length === 0) {
-      return undefined
+  /**
+   * Explodes this feature control frame like AutoCAD EXPLODE: the frame
+   * becomes lines and every cell text an {@link AcDbMText}, using the same
+   * layout as the displayed frame. The parts take the frame's properties.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const parts: AcDbEntity[] = []
+    for (const [start, end] of this.collectFrameLineSegments()) {
+      if (!start.equals(end)) parts.push(new AcDbLine(start, end))
     }
-    if (entities.length === 1) {
-      return entities[0]
+    const cells = this.collectToleranceCellTexts()
+    const styleName = cells.length > 0 ? this.getTextStyle().name : undefined
+    for (const { text, position } of cells) {
+      const mtext = new AcDbMText()
+      mtext.contents = text
+      mtext.height = this.textHeight
+      mtext.location = position
+      mtext.direction = this._direction
+      mtext.normal = this._normal
+      mtext.attachmentPoint = AcGiMTextAttachmentPoint.MiddleCenter
+      if (styleName) mtext.styleName = styleName
+      parts.push(mtext)
     }
-    return renderer.group(entities)
+    return parts.map(part => part.setPropertiesFrom(this))
   }
 
   private collectFrameLineSegments(): [AcGePoint3d, AcGePoint3d][] {

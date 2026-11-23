@@ -23,6 +23,23 @@ export { AcDbCircle } from './AcDbCircle.js'
 export { AcDbCurve } from './AcDbCurve.js'
 export { AcDbEllipse } from './AcDbEllipse.js'
 export { AcDbEntity } from './AcDbEntity.js'
+export {
+  acdbExplodeBulgePath,
+  acdbExplodePointPath,
+  acdbMTextToPlainParagraphs
+} from './AcDbExplodeHelpers.js'
+export type {
+  AcDbBulgePathVertex,
+  AcDbExplodeBulgePathOptions
+} from './AcDbExplodeHelpers.js'
+export {
+  acdbExplodeBlockContent,
+  acdbIsConformalInPlane,
+  acdbResolveByBlockProperties,
+  acdbTransformForExplode
+} from './AcDbExplodeTransform.js'
+export { acdbTessellateHatchPattern } from './AcDbHatchPatternHelpers.js'
+export type { AcDbHatchPatternSegment } from './AcDbHatchPatternHelpers.js'
 export type {
   AcDbEntityArrayItemSchema,
   AcDbEntityProperties,
