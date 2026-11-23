@@ -10,7 +10,11 @@ import {
   AcGeVector3d,
   AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
-import { AcGiEntity, AcGiRenderer } from '@mlightcad/graphic-interface'
+import {
+  AcGiEntity,
+  AcGiRenderer,
+  AcGiSubEntityTraits
+} from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import type {
@@ -25,12 +29,14 @@ import {
 } from '../misc/AcDbConstants.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbMlineStyle } from '../object/AcDbMlineStyle.js'
+import { AcDbArc } from './AcDbArc.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodePointPath, acdbGetOcsAxes } from './AcDbExplodeHelpers.js'
 import {
   acdbForEachGripIndex,
   acdbMovePointArrayGripAt
@@ -835,6 +841,88 @@ export class AcDbMLine extends AcDbEntity {
 
     if (entities.length === 0) return undefined
     return entities.length === 1 ? entities[0] : renderer.group(entities)
+  }
+
+  /**
+   * Explodes this multiline like AutoCAD EXPLODE: every style element
+   * becomes lines along its offset path, and miter joints and caps become
+   * lines and arcs. The parts take the multiline's properties, with the color
+   * and linetype of their style element. The solid background fill of the
+   * style is not kept.
+   *
+   * The geometry is produced by the same code that draws the multiline,
+   * through a renderer that records primitives instead of drawing them.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    if (this._segments.length === 0) return []
+
+    const parts: AcDbEntity[] = []
+    const traits: Partial<AcGiSubEntityTraits> = {}
+    const record = (part: AcDbEntity) => {
+      part.setPropertiesFrom(this)
+      if (traits.color) part.color = traits.color
+      const lineType = traits.lineType
+      if (lineType?.type === 'ByLayer') {
+        part.lineType = ByLayer
+      } else if (lineType?.type === 'UserSpecified' && lineType.name) {
+        part.lineType = lineType.name
+      }
+      parts.push(part)
+    }
+    const recorder = {
+      subEntityTraits: traits,
+      lines: (points: AcGePoint3d[]) => {
+        acdbExplodePointPath(points, false).forEach(record)
+        return undefined
+      },
+      circularArc: (arc: AcGeCircArc3d) => {
+        const normal = arc.normal
+        const { xAxis, yAxis } = acdbGetOcsAxes(normal)
+        const angleOf = (point: AcGePoint3d) => {
+          const v = new AcGeVector3d(point).sub(arc.center)
+          return Math.atan2(v.dot(yAxis), v.dot(xAxis))
+        }
+        record(
+          new AcDbArc(
+            arc.center,
+            arc.radius,
+            angleOf(arc.startPoint),
+            angleOf(arc.endPoint),
+            normal
+          )
+        )
+        return undefined
+      },
+      area: () => undefined,
+      group: () => undefined
+    } as unknown as AcGiRenderer
+
+    const mlineStyle = this.getMLineStyle()
+    const elementCount = this.getRenderableElementCount(mlineStyle)
+    this._drawIsColorByLayer = undefined
+    if (elementCount <= 0) {
+      recorder.lines(this.getReferencePath())
+    } else {
+      for (let elementIndex = 0; elementIndex < elementCount; elementIndex++) {
+        traits.color = undefined
+        traits.lineType = undefined
+        this.applyStyleElementTraits(
+          mlineStyle,
+          elementIndex,
+          traits as AcGiSubEntityTraits
+        )
+        recorder.lines(this.getElementPath(elementIndex, mlineStyle))
+      }
+      this.appendStyleDrivenJointAndCapEntities(
+        recorder,
+        [],
+        mlineStyle,
+        elementCount,
+        undefined as unknown as AcGiSubEntityTraits['color'],
+        undefined as unknown as AcGiSubEntityTraits['lineType']
+      )
+    }
+    return parts
   }
 
   /**

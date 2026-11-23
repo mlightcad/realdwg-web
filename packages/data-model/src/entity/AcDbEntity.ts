@@ -846,6 +846,79 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Breaks this entity into a set of simpler entities, mirroring ObjectARX
+   * `AcDbEntity::explode()`.
+   *
+   * The returned entities are new, non-database-resident objects expressed in
+   * WCS. This entity is not modified: as in ObjectARX, it is up to the caller
+   * (for example the EXPLODE command) to append the returned entities to a
+   * block table record and to erase the original entity.
+   *
+   * An empty array means the entity cannot be exploded (ObjectARX returns
+   * `Acad::eNotApplicable` in that case), e.g. lines, arcs, circles, single
+   * line text, MINSERT block references or blocks whose definition disallows
+   * exploding.
+   *
+   * This method is non-virtual: subclasses customize the behavior by
+   * overriding {@link subExplode}.
+   *
+   * @returns The entities this entity breaks into, or an empty array when it
+   *          cannot be exploded.
+   *
+   * @example
+   * ```typescript
+   * const parts = polyline.explode()
+   * if (parts.length > 0) {
+   *   db.tables.blockTable.modelSpace.appendEntity(parts)
+   *   polyline.erase()
+   * }
+   * ```
+   */
+  explode(): AcDbEntity[] {
+    return this.subExplode() ?? []
+  }
+
+  /**
+   * Explodes this entity. Called by {@link explode}; mirrors ObjectARX
+   * `AcDbEntity::subExplode()`.
+   *
+   * Overrides must return new, non-database-resident entities in WCS and must
+   * not modify this entity. The default implementation returns `undefined`,
+   * meaning the entity cannot be exploded.
+   *
+   * @returns The exploded entities, or `undefined` / an empty array when this
+   *          entity cannot be exploded.
+   */
+  protected subExplode(): AcDbEntity[] | undefined {
+    return undefined
+  }
+
+  /**
+   * Copies the general entity properties of `source` to this entity, mirroring
+   * ObjectARX `AcDbEntity::setPropertiesFrom()`.
+   *
+   * The copied properties are layer, color, linetype, linetype scale,
+   * lineweight, transparency and visibility. Unset (lazily resolved) values
+   * stay unset so that database defaults still apply when this entity is
+   * appended to a database.
+   *
+   * @param source - Entity whose properties are copied.
+   * @returns This entity.
+   */
+  setPropertiesFrom(source: AcDbEntity): this {
+    this._layer = source._layer
+    this._color = source._color?.clone()
+    this._colorIsByLayerDefault = source._colorIsByLayerDefault
+    this._lineType = source._lineType
+    this._linetypeScale = source._linetypeScale
+    this._lineWeight = source._lineWeight
+    this._visibility = source._visibility
+    this._transparency = source._transparency?.clone()
+    this._transparencySet = source._transparencySet
+    return this
+  }
+
+  /**
    * Adds the layer and linetype this entity references.
    *
    * @param deps - Dependency collector.

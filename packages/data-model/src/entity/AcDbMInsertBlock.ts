@@ -165,6 +165,14 @@ export class AcDbMInsertBlock extends AcDbBlockReference {
   }
 
   /**
+   * Always `false`: like AutoCAD, blocks inserted with MINSERT cannot be
+   * exploded, so {@link explode} returns no entities.
+   */
+  override get isExplodable(): boolean {
+    return false
+  }
+
+  /**
    * Transforms this MINSERT by an arbitrary world-space matrix.
    *
    * The placement is transformed by {@link AcDbBlockReference.transformBy};

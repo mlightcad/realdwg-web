@@ -20,6 +20,7 @@ import {
   acdbEnumOptions,
   acdbPointArrayProperty
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodePointPath } from './AcDbExplodeHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
@@ -138,6 +139,21 @@ export class AcDb3dPolyline extends AcDbCurve {
     const vertex = this._geo.vertices[index] as AcGePolyline2dVertex &
       AcGePoint3dLike
     return new AcGePoint3d(vertex.x, vertex.y, vertex.z || 0)
+  }
+
+  /**
+   * Explodes this 3D polyline into one {@link AcDbLine} per segment, like
+   * AutoCAD EXPLODE. Spline-fit polylines are exploded along their stored
+   * vertices, which is the path that is drawn.
+   */
+  protected override subExplode() {
+    const points: AcGePoint3d[] = []
+    for (let i = 0; i < this.numberOfVertices; i++) {
+      points.push(this.getPointAt(i))
+    }
+    return acdbExplodePointPath(points, this.closed).map(line =>
+      line.setPropertiesFrom(this)
+    )
   }
 
   /**

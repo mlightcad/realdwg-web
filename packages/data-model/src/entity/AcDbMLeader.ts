@@ -46,18 +46,23 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbMLeaderObjectContextData } from '../object/AcDbMLeaderObjectContextData.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
+import { AcDbBlockReference } from './AcDbBlockReference.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodePointPath } from './AcDbExplodeHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
+import { AcDbMText } from './AcDbMText.js'
 import {
   acdbCollectLineSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
+import { AcDbSolid } from './AcDbSolid.js'
+import { AcDbSpline } from './AcDbSpline.js'
 import {
   acdbCollectMTextOrientedCorners,
   acdbResolveMTextLayoutMetrics
@@ -2650,6 +2655,178 @@ export class AcDbMLeader extends AcDbEntity {
       userData.annotationScale = info
     }
     return drawable
+  }
+
+  /**
+   * Explodes this multileader like AutoCAD EXPLODE.
+   *
+   * The result mirrors what {@link subWorldDraw} shows: each leader line
+   * becomes lines (a spline for spline leaders), each dogleg a line, each
+   * arrowhead a block reference of the arrow block (or a solid for the
+   * default closed filled arrow), the text content an {@link AcDbMText} and
+   * block content a block reference. The parts take the multileader's
+   * properties, with the leader-line / text colors, linetype and lineweight
+   * resolved from the multileader style.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const presentation = this.resolveAnnotativePresentation()
+    this._drawPresentation = presentation
+    try {
+      return [
+        ...this.explodeLeaderLines(),
+        ...this.explodeContent(presentation)
+      ]
+    } finally {
+      this._drawPresentation = undefined
+    }
+  }
+
+  /**
+   * Creates the leader lines, doglegs and arrowheads for {@link subExplode}.
+   */
+  private explodeLeaderLines(): AcDbEntity[] {
+    const lineType = this.getResolvedLeaderLineType()
+    if (lineType === AcDbMLeaderLineType.InvisibleLeader) return []
+
+    const parts: AcDbEntity[] = []
+    this._leaders.forEach(leader => {
+      leader.leaderLines.forEach(line => {
+        const points = this.getLeaderLineDrawPoints(leader, line)
+        if (points.length === 0) return
+        const linePoints = this.getLeaderLinePointsForDraw(points)
+        if (
+          linePoints.length >= 3 &&
+          lineType === AcDbMLeaderLineType.SplineLeader
+        ) {
+          parts.push(
+            new AcDbSpline(
+              linePoints,
+              'Uniform',
+              Math.min(3, linePoints.length - 1)
+            )
+          )
+        } else {
+          parts.push(...acdbExplodePointPath(linePoints, false))
+        }
+        const arrow = this.createArrowheadEntity(points)
+        if (arrow) parts.push(arrow)
+      })
+      const doglegPoints = this.getDoglegPoints(leader)
+      if (doglegPoints) {
+        parts.push(...acdbExplodePointPath(doglegPoints, false))
+      }
+    })
+
+    const color = this.getResolvedLeaderLineColor()
+    const lineTypeId = this.getResolvedLeaderLineTypeId()
+    const lineTypeName = lineTypeId
+      ? this.database.tables.linetypeTable.getIdAt(lineTypeId)?.name
+      : undefined
+    const lineWeight = this.getResolvedLeaderLineWeight()
+    return parts.map(part => {
+      part.setPropertiesFrom(this)
+      if (color && !color.isByBlock) part.color = color
+      if (lineTypeName) part.lineType = lineTypeName
+      if (lineWeight != null && lineWeight !== AcGiLineWeight.ByBlock) {
+        part.lineWeight = lineWeight
+      }
+      return part
+    })
+  }
+
+  /**
+   * Creates the arrowhead entity of one leader line for {@link subExplode},
+   * mirroring {@link drawArrowhead}.
+   */
+  private createArrowheadEntity(points: AcGePoint3d[]): AcDbEntity | undefined {
+    if (!this.isArrowheadVisible()) return undefined
+    const frame = this.getArrowheadFrame(points)
+    if (!frame) return undefined
+
+    const block = this.getResolvedArrowheadBlockTableRecord()
+    if (block) {
+      const size = this.getResolvedArrowheadSize()
+      const insert = new AcDbBlockReference(block.name)
+      insert.position = frame.tip
+      insert.rotation = Math.atan2(frame.unit.y, frame.unit.x)
+      insert.scaleFactors = { x: size, y: size, z: size }
+      insert.normal = this.normal
+      return insert
+    }
+
+    const arrowPoints = this.getArrowheadPoints(points)
+    if (!arrowPoints) return undefined
+    const solid = new AcDbSolid()
+    solid.setPointAt(0, arrowPoints[0])
+    solid.setPointAt(1, arrowPoints[1])
+    solid.setPointAt(2, arrowPoints[2])
+    solid.setPointAt(3, arrowPoints[2])
+    return solid
+  }
+
+  /**
+   * Creates the text and block content for {@link subExplode}.
+   */
+  private explodeContent(presentation: {
+    textHeight: number
+    textAnchor?: AcGePoint3d
+  }): AcDbEntity[] {
+    const parts: AcDbEntity[] = []
+    const mtextContent = this.getRenderableMTextContent()
+    const hasText =
+      !!mtextContent &&
+      (this.contentType === AcDbMLeaderContentType.MTextContent ||
+        this.contentType === AcDbMLeaderContentType.NoneContent ||
+        this.hasMText === true)
+    if (hasText && mtextContent) {
+      const mtext = new AcDbMText()
+      mtext.setPropertiesFrom(this)
+      mtext.contents = mtextContent.text
+      mtext.height = presentation.textHeight
+      mtext.width = this.getMTextRenderWidth(
+        mtextContent.text,
+        presentation.textHeight
+      )
+      mtext.location = presentation.textAnchor ?? mtextContent.anchorPoint
+      mtext.rotation = this.textRotation
+      mtext.direction = this.textDirection
+      mtext.normal = this.normal
+      mtext.attachmentPoint = this.textAttachmentPoint
+      mtext.drawingDirection = this.textDrawingDirection
+      mtext.lineSpacingFactor = this.textLineSpacingFactor
+      if (this.textLineSpacingStyle != null) {
+        mtext.lineSpacingStyle = this.textLineSpacingStyle
+      }
+      const styleName = this.getResolvedTextStyleName()
+      if (styleName) mtext.styleName = styleName
+      const textColor = this.getResolvedTextColor()
+      if (textColor && !textColor.isByBlock) mtext.color = textColor
+      parts.push(mtext)
+    }
+
+    const content = this._blockContent
+    if (
+      content?.position &&
+      this.contentType === AcDbMLeaderContentType.BlockContent
+    ) {
+      const blockId = content.blockContentId ?? content.blockHandle
+      const block = blockId
+        ? this.database.tables.blockTable.getIdAt(blockId)
+        : undefined
+      if (block) {
+        const insert = new AcDbBlockReference(block.name)
+        insert.setPropertiesFrom(this)
+        insert.position = content.position
+        insert.rotation = content.rotation
+        insert.scaleFactors = content.scale
+        if (content.normal) insert.normal = content.normal
+        if (content.color && !content.color.isByBlock) {
+          insert.color = content.color
+        }
+        parts.push(insert)
+      }
+    }
+    return parts
   }
 
   /**

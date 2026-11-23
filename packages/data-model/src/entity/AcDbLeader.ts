@@ -31,7 +31,9 @@ import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { acdbDecodeDimStyleColor } from '../misc/AcDbMLeaderStyleColorCodec.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
+import { AcDbBlockReference } from './AcDbBlockReference.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import {
   AcDbEntityProperties,
   AcDbEntityPropertyType,
@@ -41,6 +43,7 @@ import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodePointPath } from './AcDbExplodeHelpers.js'
 import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbMText } from './AcDbMText.js'
@@ -49,6 +52,8 @@ import {
   acdbPickNearestOsnapPoint
 } from './AcDbOsnapHelpers.js'
 import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
+import { AcDbSolid } from './AcDbSolid.js'
+import { AcDbSpline } from './AcDbSpline.js'
 import {
   acdbCollectMTextOrientedCorners,
   acdbEstimatePlainTextWidth,
@@ -845,6 +850,87 @@ export class AcDbLeader extends AcDbCurve {
     }
     if (entities.length === 0) return renderer.lines([])
     return entities.length === 1 ? entities[0] : renderer.group(entities)
+  }
+
+  /**
+   * Explodes this leader like AutoCAD EXPLODE: the leader path becomes lines
+   * (a spline for a splined leader, including the hook line) and the
+   * arrowhead becomes a block reference of the arrow block, or a solid for
+   * the default closed filled arrow when no such block exists.
+   *
+   * The associated annotation is a separate entity and is not included. The
+   * parts take the leader's properties; when the dimension style assigns the
+   * leader a color (DIMCLRD), the parts use that color.
+   */
+  protected override subExplode(): AcDbEntity[] {
+    const parts: AcDbEntity[] = []
+    let points: AcGePoint3d[]
+    const spline = this.isSplined ? this.splineGeo : undefined
+    if (spline) {
+      parts.push(
+        new AcDbSpline(
+          spline.controlPoints,
+          spline.knots,
+          spline.weights,
+          spline.degree,
+          false
+        )
+      )
+      points = spline.tessellate()
+    } else {
+      points = this.collectDrawPoints()
+      parts.push(...acdbExplodePointPath(points, false))
+    }
+
+    const arrow = this.createArrowHeadEntity(points)
+    if (arrow) parts.push(arrow)
+
+    const leaderColor = this.resolveLeaderLineColor()
+    return parts.map(part => {
+      part.setPropertiesFrom(this)
+      if (leaderColor) part.color = leaderColor
+      return part
+    })
+  }
+
+  /**
+   * Creates the entity representing the arrowhead for {@link subExplode},
+   * mirroring the geometry drawn by {@link drawArrowHead}.
+   */
+  private createArrowHeadEntity(points: AcGePoint3d[]): AcDbEntity | undefined {
+    if (!this.hasRenderableArrowHead || points.length < 2) return undefined
+    const tip = points[0]
+    const next = points.find(point => !point.equals(tip))
+    if (!next) return undefined
+    const intoBody = new AcGeVector3d().subVectors(next, tip).normalize()
+    const size = this.resolveArrowHeadSize()
+    const blockName = this.resolveArrowHeadBlockName()
+
+    if (this.resolveArrowHeadBlock(blockName)) {
+      const insert = new AcDbBlockReference(blockName)
+      insert.position = tip
+      insert.rotation = Math.atan2(-intoBody.y, -intoBody.x)
+      insert.scaleFactors = { x: size, y: size, z: size }
+      insert.normal = this.normal
+      return insert
+    }
+
+    if (blockName !== CLOSED_FILLED_ARROW_BLOCK) return undefined
+    const baseCenter = tip.clone().addScaledVector(intoBody, size)
+    const perpendicular = new AcGeVector3d(-intoBody.y, intoBody.x, intoBody.z)
+    const halfWidth = size / 6
+    const solid = new AcDbSolid()
+    solid.setPointAt(0, tip)
+    solid.setPointAt(
+      1,
+      baseCenter.clone().addScaledVector(perpendicular, halfWidth)
+    )
+    solid.setPointAt(
+      2,
+      baseCenter.clone().addScaledVector(perpendicular, -halfWidth)
+    )
+    solid.setPointAt(3, solid.getPointAt(2))
+    return solid
   }
 
   /**

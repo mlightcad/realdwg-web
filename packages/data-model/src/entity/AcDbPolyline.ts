@@ -31,6 +31,7 @@ import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
+import { acdbExplodeBulgePath } from './AcDbExplodeHelpers.js'
 import {
   acdbForEachGripIndex,
   acdbMovePolyline2dVertexAt
@@ -340,6 +341,60 @@ export class AcDbPolyline extends AcDbCurve {
   getPoint3dAt(index: number): AcGePoint3d {
     const vertex = this.getPoint2dAt(index)
     return this.ocsPointToWcs(vertex.x, vertex.y)
+  }
+
+  /**
+   * Gets the bulge of the segment starting at the vertex with the specified
+   * index, mirroring ObjectARX `AcDbPolyline::getBulgeAt()`.
+   *
+   * The bulge is `tan(θ / 4)` where `θ` is the included angle of the arc
+   * segment; `0` means a straight segment and a negative value a clockwise
+   * arc.
+   *
+   * @param index - The index (0-based) of the vertex
+   * @returns The bulge value, or `0` when the index is out of range
+   */
+  getBulgeAt(index: number): number {
+    return this._geo.vertices[index]?.bulge || 0
+  }
+
+  /**
+   * Gets the start width of the segment starting at the vertex with the
+   * specified index, mirroring ObjectARX `AcDbPolyline::getWidthsAt()`.
+   *
+   * @param index - The index (0-based) of the vertex
+   * @returns The start width, or `0` when it is not set
+   */
+  getStartWidthAt(index: number): number {
+    return this._geo.vertices[index]?.startWidth ?? 0
+  }
+
+  /**
+   * Gets the end width of the segment starting at the vertex with the
+   * specified index, mirroring ObjectARX `AcDbPolyline::getWidthsAt()`.
+   *
+   * @param index - The index (0-based) of the vertex
+   * @returns The end width, or `0` when it is not set
+   */
+  getEndWidthAt(index: number): number {
+    return this._geo.vertices[index]?.endWidth ?? 0
+  }
+
+  /**
+   * Explodes this polyline into one {@link AcDbLine} or {@link AcDbArc} per
+   * segment, like AutoCAD EXPLODE.
+   *
+   * The generated entities keep the elevation, normal, thickness and general
+   * properties of the polyline. Segment widths are discarded, as in AutoCAD.
+   * A polyline with fewer than two vertices cannot be exploded.
+   */
+  protected override subExplode() {
+    return acdbExplodeBulgePath(this._geo.vertices, {
+      closed: this.closed,
+      elevation: this._elevation,
+      normal: this._normal,
+      thickness: this._thickness
+    }).map(curve => curve.setPropertiesFrom(this))
   }
 
   /**
