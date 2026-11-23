@@ -233,7 +233,7 @@ export function acdbTransformForExplode(
         .flatMap(part => acdbTransformForExplode(part, matrix))
     }
   }
-  return [entity.clone().transformBy(matrix)]
+  return [entity.getTransformedCopy(matrix)]
 }
 
 /**

@@ -9,6 +9,8 @@ import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import {
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
+  ACDB_MIRRTEXT_MAX,
+  ACDB_MIRRTEXT_MIN,
   ACDB_COMPARERCMARGIN_MAX,
   ACDB_COMPARERCMARGIN_MIN,
   ACDB_COMPARETEXT_MAX,
@@ -191,6 +193,15 @@ function applyHeaderVar(
     case '$ORTHOMODE':
       db.orthomode = readHeaderNumber(filer) ?? 0
       break
+    case '$MIRRTEXT': {
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_MIRRTEXT_MIN,
+        ACDB_MIRRTEXT_MAX
+      )
+      if (n != null) db.mirrtext = n
+      break
+    }
     case '$COMPAREHATCH': {
       const n = acdbIntegerSysVarIfInRange(
         readHeaderNumber(filer),

@@ -33,6 +33,9 @@ import {
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
+  ACDB_MIRRTEXT_DEFAULT,
+  ACDB_MIRRTEXT_MAX,
+  ACDB_MIRRTEXT_MIN,
   ACDB_COMPARERCMARGIN_DEFAULT,
   ACDB_COMPARERCMARGIN_MAX,
   ACDB_COMPARERCMARGIN_MIN,
@@ -175,7 +178,8 @@ const DXF_HEADER_NATIVE_VARS = new Set([
   '$PDMODE',
   '$PDSIZE',
   '$OSMODE',
-  '$ORTHOMODE'
+  '$ORTHOMODE',
+  '$MIRRTEXT'
 ])
 
 /**
@@ -491,6 +495,8 @@ export class AcDbDatabase extends AcDbObject {
   private _osmode: number
   /** Orthogonal mode flag (ORTHOMODE): 0 = off, 1 = on */
   private _orthomode: number
+  /** MIRRTEXT: whether TEXT/MTEXT are truly mirrored by MIRROR (0 = readable) */
+  private _mirrtext: number
   /** COMPAREHATCH: whether hatch objects are included in drawing comparison */
   private _comparehatch: number
   /** COMPARERCMARGIN: revision-cloud offset around comparison change sets */
@@ -664,6 +670,7 @@ export class AcDbDatabase extends AcDbObject {
     this._pdsize = 0
     this._osmode = 0
     this._orthomode = 0
+    this._mirrtext = ACDB_MIRRTEXT_DEFAULT
     this._comparehatch = ACDB_COMPAREHATCH_DEFAULT
     this._comparercmargin = ACDB_COMPARERCMARGIN_DEFAULT
     this._comparetext = ACDB_COMPARETEXT_DEFAULT
@@ -2519,6 +2526,34 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Whether TEXT / MTEXT / ATTRIB are truly mirrored by MIRROR (**MIRRTEXT**).
+   *
+   * - `0`: keep text readable after mirror (AutoCAD default)
+   * - `1`: mirror text
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-75AADC72-8BFA-4F42-BFD1-1852F3EE61DC
+   */
+  get mirrtext(): number {
+    return this._mirrtext
+  }
+  set mirrtext(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'MIRRTEXT',
+      value ?? ACDB_MIRRTEXT_DEFAULT,
+      ACDB_MIRRTEXT_MIN,
+      ACDB_MIRRTEXT_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.MIRRTEXT,
+      this._mirrtext,
+      nextValue,
+      coerced => {
+        this._mirrtext = coerced
+      }
+    )
+  }
+
+  /**
    * Whether hatch objects are included in drawing comparison (**COMPAREHATCH**).
    *
    * - `0`: Hatch objects are excluded (AutoCAD default)
@@ -3598,6 +3633,8 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt32(70, this.osmode)
     filer.writeString(9, '$ORTHOMODE')
     filer.writeInt16(70, this.orthomode)
+    filer.writeString(9, '$MIRRTEXT')
+    filer.writeInt16(70, this.mirrtext)
     this.writeDxfHeaderExtras(filer)
     filer.endSection()
   }

@@ -46,9 +46,14 @@ import {
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
+  acdbApplyTextMirrtextPolicy,
+  acdbResolveMirrtext
+} from './AcDbMirrtext.js'
+import {
   acdbEstimatePlainTextWidth,
   acdbExpandBoxByOrientedTextRect
 } from './AcDbTextExtentsHelpers.js'
+import { acdbIsMirroring } from './AcDbTransformHelpers.js'
 
 /**
  * Defines the horizontal alignment mode for text entities.
@@ -678,8 +683,36 @@ export class AcDbText extends AcDbEntity {
 
   /**
    * Transforms this text by the specified matrix.
+   *
+   * When `matrix` is a mirror, **MIRRTEXT** controls whether glyphs stay
+   * readable (`0`, default) or are truly mirrored (`1`).
    */
   transformBy(matrix: AcGeMatrix3d) {
+    return this.transformByWithMirrtext(matrix, acdbResolveMirrtext(this))
+  }
+
+  /**
+   * Returns a transformed copy, applying **MIRRTEXT** from this entity's
+   * database (not the detached clone's).
+   */
+  override getTransformedCopy(matrix: AcGeMatrix3d) {
+    const copy = this.clone()
+    copy.transformByWithMirrtext(matrix, acdbResolveMirrtext(this))
+    return copy
+  }
+
+  /**
+   * Geometric TEXT transform plus an explicit MIRRTEXT policy value.
+   *
+   * Prefer {@link transformBy} / {@link getTransformedCopy} so MIRRTEXT is
+   * taken from the entity database. Use this when the policy must be supplied
+   * explicitly (for example a detached clone that no longer sees the drawing
+   * sysvar).
+   *
+   * @param matrix - WCS transform.
+   * @param mirrtext - `0` readable, `1` true mirror.
+   */
+  transformByWithMirrtext(matrix: AcGeMatrix3d, mirrtext: number) {
     const origin = this._position.clone()
     const xAxisPoint = this._position
       .clone()
@@ -721,7 +754,46 @@ export class AcDbText extends AcDbEntity {
     const alignmentPoint = this._alignmentPoint.clone()
     alignmentPoint.applyMatrix4(matrix)
     this._alignmentPoint.copy(alignmentPoint)
+
+    acdbApplyTextMirrtextPolicy(this, matrix, xAxis, yAxis, mirrtext)
+
+    // MIRRTEXT=0 with a baseline-reversing mirror: AutoCAD keeps the mirrored
+    // insertion and swaps Left↔Right so the run fills the mirrored box without
+    // needing a font-accurate string width (estimates were shifting labels by
+    // ~½ glyph width for SHX Latin text).
+    if (mirrtext === 0 && acdbIsMirroring(matrix)) {
+      this.applyReadableMirrorJustification(xAxis, yAxis)
+    }
     return this
+  }
+
+  /**
+   * Swaps Left↔Right justification after a readable mirror whose baseline
+   * points the opposite way (vertical-ish mirror line).
+   */
+  private applyReadableMirrorJustification(
+    xAxis: AcGeVector3d,
+    yAxis: AcGeVector3d
+  ) {
+    const xLen = xAxis.length()
+    const yLen = yAxis.length()
+    if (xLen === 0 || yLen === 0) return
+
+    const xN = xAxis.clone().multiplyScalar(1 / xLen)
+    const yN = yAxis.clone().multiplyScalar(1 / yLen)
+    const hand = xN.x * yN.y - xN.y * yN.x
+    const baselineReversed = hand < 0 && xN.x < 0
+    if (!baselineReversed) return
+
+    if (this._horizontalMode === AcDbTextHorizontalMode.LEFT) {
+      this.ensureAlignmentPoint()
+      this._horizontalMode = AcDbTextHorizontalMode.RIGHT
+    } else if (this._horizontalMode === AcDbTextHorizontalMode.RIGHT) {
+      // LEFT draws from `position`; the mirrored former right edge is
+      // `alignmentPoint`. Sync so the run still fills the mirrored box.
+      this._position.copy(this._alignmentPoint)
+      this._horizontalMode = AcDbTextHorizontalMode.LEFT
+    }
   }
 
   /**
@@ -1074,37 +1146,54 @@ export class AcDbText extends AcDbEntity {
   }
 
   /**
-   * Plan-view drawing adjustments for entity extrusion.
+   * Plan-view drawing adjustments for entity extrusion and generation flags.
    *
    * For extrusion (0,0,-1) the flat WCS equivalent is an XY mirror: negate
    * rotation and width factor (see issue #226). Other extrusions map the OCS
    * X axis into WCS for rotation only.
+   *
+   * Entity generation flags (DXF group 71) are applied here because the
+   * mtext renderer has no separate glyph-mirror path: `isBackward` negates
+   * `widthFactor` (X mirror along the baseline); `isUpsideDown` adds π and
+   * another widthFactor flip (Y mirror about the baseline).
    */
   private extrusionDrawingAdjust(): {
     rotation: number
     widthFactor: number
   } {
+    let rotation: number
+    let widthFactor: number
     if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
-      return { rotation: this._rotation, widthFactor: this._widthFactor }
+      rotation = this._rotation
+      widthFactor = this._widthFactor
+    } else if (
+      this._normal.x === 0 &&
+      this._normal.y === 0 &&
+      this._normal.z < 0
+    ) {
+      rotation = -this._rotation
+      widthFactor = -this._widthFactor
+    } else {
+      const axis = new AcGeVector3d(
+        Math.cos(this._rotation),
+        Math.sin(this._rotation),
+        0
+      )
+      axis.transformDirection(
+        new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
+      )
+      rotation = Math.atan2(axis.y, axis.x)
+      widthFactor = this._widthFactor
     }
-    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z < 0) {
-      return {
-        rotation: -this._rotation,
-        widthFactor: -this._widthFactor
-      }
+
+    if (this.isBackward) {
+      widthFactor = -widthFactor
     }
-    const axis = new AcGeVector3d(
-      Math.cos(this._rotation),
-      Math.sin(this._rotation),
-      0
-    )
-    axis.transformDirection(
-      new AcGeMatrix3d().setFromExtrusionDirection(this._normal)
-    )
-    return {
-      rotation: Math.atan2(axis.y, axis.x),
-      widthFactor: this._widthFactor
+    if (this.isUpsideDown) {
+      rotation += Math.PI
+      widthFactor = -widthFactor
     }
+    return { rotation, widthFactor }
   }
 
   /**

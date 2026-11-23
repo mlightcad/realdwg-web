@@ -120,6 +120,11 @@ export type {
   AcDbMLeaderMTextContentLike
 } from './AcDbMLeader.js'
 export { AcDbMInsertBlock } from './AcDbMInsertBlock.js'
+export {
+  acdbApplyMTextMirrtextPolicy,
+  acdbApplyTextMirrtextPolicy,
+  acdbResolveMirrtext
+} from './AcDbMirrtext.js'
 export { AcDbMText } from './AcDbMText.js'
 export { AcDbFrame } from './AcDbFrame.js'
 export { AcDbOleFrame } from './AcDbOleFrame.js'

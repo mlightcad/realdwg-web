@@ -194,6 +194,14 @@ export const AcDbSystemVariables = {
   MEASUREMENT: 'MEASUREMENT',
   /** Color used for measurement tool overlays (distance, area, arc). */
   MEASUREMENTCOLOR: 'MEASUREMENTCOLOR',
+  /**
+   * Controls whether TEXT / MTEXT / ATTRIB mirror truly or stay readable under
+   * the MIRROR command. `0` keeps text readable (AutoCAD default); `1` mirrors
+   * text. Saved in the drawing (`$MIRRTEXT`).
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-75AADC72-8BFA-4F42-BFD1-1852F3EE61DC
+   */
+  MIRRTEXT: 'MIRRTEXT',
   /** Background color of the model-space drawing area. */
   MODELBKCOLOR: 'MODELBKCOLOR',
   /** Running object snap mode bitmask (OSNAP settings). */

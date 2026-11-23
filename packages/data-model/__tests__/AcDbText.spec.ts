@@ -226,6 +226,50 @@ describe('AcDbText', () => {
     expect(snapPoints[0]).toMatchObject({ x: 150, y: 220, z: 0 })
   })
 
+  it('applies isBackward as a negative widthFactor for drawing', () => {
+    const text = new AcDbText()
+    text.position = new AcGePoint3d(10, 20, 0)
+    text.height = 2.5
+    text.widthFactor = 0.8
+    text.rotation = Math.PI
+    text.textString = 'Mirror'
+    text.isBackward = true
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+    text.database = db
+    const renderer = { mtext: jest.fn(() => ({})) } as unknown as {
+      mtext: jest.Mock
+    }
+    text.subWorldDraw(renderer as never, true)
+    const [mtextData] = renderer.mtext.mock.calls[0]
+    expect(mtextData.rotation).toBeCloseTo(Math.PI, 8)
+    expect(mtextData.widthFactor).toBeCloseTo(-0.8, 8)
+  })
+
+  it('applies isUpsideDown as π rotation plus widthFactor flip', () => {
+    const text = new AcDbText()
+    text.position = new AcGePoint3d(0, 0, 0)
+    text.height = 2
+    text.widthFactor = 1
+    text.rotation = 0
+    text.textString = 'Up'
+    text.isUpsideDown = true
+
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    acdbHostApplicationServices().workingDatabase = db
+    text.database = db
+    const renderer = { mtext: jest.fn(() => ({})) } as unknown as {
+      mtext: jest.Mock
+    }
+    text.subWorldDraw(renderer as never, true)
+    const [mtextData] = renderer.mtext.mock.calls[0]
+    expect(mtextData.rotation).toBeCloseTo(Math.PI, 8)
+    expect(mtextData.widthFactor).toBeCloseTo(-1, 8)
+  })
+
   it('places TEXT with extrusion (0,0,-1) at mirrored WCS X', () => {
     const text = new AcDbText()
     text.dxfInFields(

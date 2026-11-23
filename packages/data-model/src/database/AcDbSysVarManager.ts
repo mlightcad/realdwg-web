@@ -12,6 +12,9 @@ import {
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
+  ACDB_MIRRTEXT_DEFAULT,
+  ACDB_MIRRTEXT_MAX,
+  ACDB_MIRRTEXT_MIN,
   ACDB_COMPAREPROPS_DEFAULT,
   ACDB_COMPAREPROPS_MAX,
   ACDB_COMPAREPROPS_MIN,
@@ -682,6 +685,16 @@ export class AcDbSysVarManager {
       })()
     })
     /**
+     * Controls TEXT/MTEXT mirroring under MIRROR (`0` readable, `1` mirrored).
+     * AutoCAD default is `0`. Saved in the drawing.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.MIRRTEXT,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: ACDB_MIRRTEXT_DEFAULT
+    })
+    /**
      * Background color of the model-space drawing area.
      * Default: RGB(0, 0, 0)
      */
@@ -1091,6 +1104,14 @@ export class AcDbSysVarManager {
           value,
           ACDB_COMPAREHATCH_MIN,
           ACDB_COMPAREHATCH_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.MIRRTEXT.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'MIRRTEXT',
+          value,
+          ACDB_MIRRTEXT_MIN,
+          ACDB_MIRRTEXT_MAX
         )
       }
       if (name === AcDbSystemVariables.COMPAREPROPS.toLowerCase()) {

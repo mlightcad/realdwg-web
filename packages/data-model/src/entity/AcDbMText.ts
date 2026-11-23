@@ -51,16 +51,25 @@ import {
 } from './AcDbExplodeHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
 import {
+  acdbApplyMTextMirrtextPolicy,
+  acdbComputeMirroredReadableAnchor,
+  acdbResolveMirrtext
+} from './AcDbMirrtext.js'
+import {
   AcDbText,
   AcDbTextHorizontalMode,
   AcDbTextVerticalMode
 } from './AcDbText.js'
 import {
   acdbCollectMTextOrientedCorners,
+  acdbGetLocalBoundsFromAttachment,
   acdbMTextBackgroundMaskPadding,
   acdbResolveMTextLayoutMetrics
 } from './AcDbTextExtentsHelpers.js'
-import { acdbTransformNormal } from './AcDbTransformHelpers.js'
+import {
+  acdbIsMirroring,
+  acdbTransformNormal
+} from './AcDbTransformHelpers.js'
 
 /**
  * Represents a multiline text (mtext) entity in AutoCAD.
@@ -668,17 +677,63 @@ export class AcDbMText extends AcDbEntity {
 
   /**
    * Transforms this mtext by the specified matrix.
+   *
+   * When `matrix` is a mirror, **MIRRTEXT** controls whether the paragraph
+   * stays readable (`0`, default) or is truly mirrored (`1`).
    */
   transformBy(matrix: AcGeMatrix3d) {
-    const origin = this._location.clone()
-    const xDir =
+    return this.transformByWithMirrtext(matrix, acdbResolveMirrtext(this))
+  }
+
+  /**
+   * Returns a transformed copy, applying **MIRRTEXT** from this entity's
+   * database (not the detached clone's).
+   */
+  override getTransformedCopy(matrix: AcGeMatrix3d) {
+    const copy = this.clone()
+    copy.transformByWithMirrtext(matrix, acdbResolveMirrtext(this))
+    return copy
+  }
+
+  /**
+   * Geometric MTEXT transform plus an explicit MIRRTEXT policy value.
+   */
+  private transformByWithMirrtext(matrix: AcGeMatrix3d, mirrtext: number) {
+    // Pre-transform defined box (AutoCAD mirrors the wrap rectangle, not just
+    // the insertion point) for MIRRTEXT=0 readable rematch.
+    const oldLocation = this._location.clone()
+    const oldRotation = this._rotation
+    const oldDirection =
       this._direction.lengthSq() > 0
-        ? this._direction.clone().normalize()
+        ? this._direction.clone()
         : new AcGeVector3d(
             Math.cos(this._rotation),
             Math.sin(this._rotation),
             0
           )
+    // AutoCAD mirrors the defined wrap rectangle (DXF group 41), not the
+    // tighter content extents — pass extentsWidth 0 so layout.width is the
+    // reference width when set.
+    const layout = acdbResolveMTextLayoutMetrics({
+      contents: this.contents,
+      height: this._height,
+      width: this._width,
+      extentsWidth: 0,
+      lineSpacingFactor: this.lineSpacingFactor,
+      lineSpacingStyle: this.lineSpacingStyle,
+      attachmentPoint: this._attachmentPoint,
+      rotation: oldRotation,
+      direction: oldDirection,
+      location: oldLocation
+    })
+    const localBounds = acdbGetLocalBoundsFromAttachment(
+      layout.width,
+      layout.height,
+      this._attachmentPoint
+    )
+
+    const origin = this._location.clone()
+    const xDir = oldDirection.clone().normalize()
     const yDir = new AcGeVector3d(-xDir.y, xDir.x, xDir.z)
     if (yDir.lengthSq() === 0) {
       yDir.set(0, 1, 0)
@@ -713,6 +768,25 @@ export class AcDbMText extends AcDbEntity {
       this._annotationHeight *= yScale
     }
     this._normal.copy(acdbTransformNormal(this._normal, matrix))
+    acdbApplyMTextMirrtextPolicy(this, matrix, xAxis, yAxis, mirrtext)
+
+    // MIRRTEXT=0: TopLeft at x with width w → location -(x+w), still TopLeft.
+    if (
+      mirrtext === 0 &&
+      acdbIsMirroring(matrix) &&
+      (layout.width > 0 || layout.height > 0)
+    ) {
+      const correctAnchor = acdbComputeMirroredReadableAnchor(
+        matrix,
+        oldLocation,
+        oldRotation,
+        oldDirection,
+        localBounds,
+        this._rotation,
+        this._direction
+      )
+      this._location.copy(correctAnchor)
+    }
     return this
   }
 
