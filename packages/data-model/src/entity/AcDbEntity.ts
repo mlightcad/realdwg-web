@@ -894,6 +894,65 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Joins `other` into a new entity with this as the primary, mirroring
+   * ObjectARX `AcDbEntity::joinEntity()`.
+   *
+   * The returned entity is a new, non-database-resident object. This entity and
+   * `other` are not modified: the caller (for example the JOIN command) must
+   * append the result and erase the sources.
+   *
+   * Returns `undefined` when the two entities cannot be joined (ObjectARX
+   * `Acad::eNotApplicable`), e.g. closed curves, non-collinear lines, or
+   * unsupported types.
+   *
+   * This method is non-virtual: subclasses customize behavior by overriding
+   * {@link subJoinEntity}.
+   *
+   * @param other - Secondary entity to join with this primary.
+   * @returns The joined entity, or `undefined` when join is not applicable.
+   */
+  joinEntity(other: AcDbEntity): AcDbEntity | undefined {
+    return this.subJoinEntity(other)
+  }
+
+  /**
+   * Joins `others` into a new entity with this as the primary, mirroring
+   * ObjectARX `AcDbEntity::joinEntities()`.
+   *
+   * Same contract as {@link joinEntity}: returns a new entity and does not
+   * mutate or erase inputs. Subclasses that support batch rules (gapped
+   * collinear lines, concentric arcs, polyline chains) override
+   * {@link subJoinEntities}.
+   *
+   * @param others - Secondary entities to join with this primary.
+   * @returns The joined entity, or `undefined` when join is not applicable.
+   */
+  joinEntities(others: readonly AcDbEntity[]): AcDbEntity | undefined {
+    return this.subJoinEntities(others)
+  }
+
+  /**
+   * Pairwise join hook for {@link joinEntity}. Default: not joinable.
+   */
+  protected subJoinEntity(_other: AcDbEntity): AcDbEntity | undefined {
+    return undefined
+  }
+
+  /**
+   * Multi-entity join hook for {@link joinEntities}.
+   *
+   * Default folds a single secondary through {@link joinEntity}; longer lists
+   * return `undefined` unless a subclass overrides for batch join rules.
+   */
+  protected subJoinEntities(
+    others: readonly AcDbEntity[]
+  ): AcDbEntity | undefined {
+    if (others.length === 0) return undefined
+    if (others.length === 1) return this.joinEntity(others[0])
+    return undefined
+  }
+
+  /**
    * Copies the general entity properties of `source` to this entity, mirroring
    * ObjectARX `AcDbEntity::setPropertiesFrom()`.
    *

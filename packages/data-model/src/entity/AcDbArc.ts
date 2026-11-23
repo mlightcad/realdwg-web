@@ -18,6 +18,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -25,6 +26,7 @@ import {
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbJoinConcentricArcs } from './AcDbJoinHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 import {
   acdbIsMirroring,
@@ -833,5 +835,20 @@ export class AcDbArc extends AcDbCurve {
       geo.endAngle,
       geo.normal
     )
+  }
+
+  /**
+   * Joins another concentric arc into one arc or circle (gaps allowed), like
+   * AutoCAD JOIN with an arc as the source object.
+   */
+  protected override subJoinEntity(other: AcDbEntity) {
+    return acdbJoinConcentricArcs(this, [other])
+  }
+
+  /**
+   * Joins every concentric arc in `others` into one arc or circle.
+   */
+  protected override subJoinEntities(others: readonly AcDbEntity[]) {
+    return acdbJoinConcentricArcs(this, others)
   }
 }

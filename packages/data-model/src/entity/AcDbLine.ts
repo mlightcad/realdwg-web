@@ -13,6 +13,7 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -20,6 +21,7 @@ import {
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbJoinCollinearLines } from './AcDbJoinHelpers.js'
 import {
   acdbScaleAlongNormal,
   acdbTransformNormal
@@ -567,5 +569,20 @@ export class AcDbLine extends AcDbCurve {
     return (e.x - s.x) * (point.y - s.y) - (e.y - s.y) * (point.x - s.x) >= 0
       ? 1
       : -1
+  }
+
+  /**
+   * Joins another collinear line into one line (gaps allowed), like AutoCAD
+   * JOIN with a line as the source object.
+   */
+  protected override subJoinEntity(other: AcDbEntity) {
+    return acdbJoinCollinearLines(this, [other])
+  }
+
+  /**
+   * Joins every collinear line in `others` into one line spanning their union.
+   */
+  protected override subJoinEntities(others: readonly AcDbEntity[]) {
+    return acdbJoinCollinearLines(this, others)
   }
 }

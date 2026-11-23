@@ -24,6 +24,7 @@ import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -37,6 +38,7 @@ import {
   acdbMovePolyline2dVertexAt
 } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers.js'
+import { acdbJoinToPolyline } from './AcDbJoinHelpers.js'
 import {
   acdbCollectPolyline2dSegmentOsnapPoints,
   acdbPickNearestOsnapPoint
@@ -395,6 +397,22 @@ export class AcDbPolyline extends AcDbCurve {
       normal: this._normal,
       thickness: this._thickness
     }).map(curve => curve.setPropertiesFrom(this))
+  }
+
+  /**
+   * Joins a contiguous line, arc, or open polyline at a shared endpoint into
+   * one LWPOLYLINE, like AutoCAD JOIN with a polyline as the source object.
+   */
+  protected override subJoinEntity(other: AcDbEntity) {
+    return acdbJoinToPolyline(this, [other])
+  }
+
+  /**
+   * Joins contiguous lines, arcs, and open polylines in `others` into one
+   * LWPOLYLINE.
+   */
+  protected override subJoinEntities(others: readonly AcDbEntity[]) {
+    return acdbJoinToPolyline(this, others)
   }
 
   /**
