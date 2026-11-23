@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.16.2
+
+### Patch Changes
+
+- feat: adds AutoCAD-style AcDbEntity.joinEntity and joinEntities for joining entities, honors MIRRTEXT so mirrored TEXT and MTEXT stay readable when mirroring is enabled, and keeps OLE frames on the correct side after mirror transforms
+- Updated dependencies
+  - @mlightcad/data-model@1.16.2
+
 ## 3.16.1
 
 ### Patch Changes
