@@ -29,5 +29,6 @@ export type { AcDbAssocArrayCreateResult } from './AcDbAssocArrayActionBody.js'
 export { AcDbAssocArray } from './AcDbAssocArray.js'
 export {
   acdbAllocateAnonymousUserBlockName,
+  acdbAllocateAssocDictionaryKey,
   acdbCreateAnonymousUserBlock
 } from './acdbAllocateAnonymousUserBlockName.js'

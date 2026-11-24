@@ -53,9 +53,13 @@ export class AcDbAssocNetwork extends AcDbAssocAction {
       return
     }
 
+    let failed = false
     for (const action of this.actions(database)) {
       if (action instanceof AcDbAssocNetwork) {
         action.evaluate()
+        if (action.status === AcDbAssocStatus.FailedToEvaluateAssocStatus) {
+          failed = true
+        }
         continue
       }
       // Propagate dirty deps onto the action.
@@ -70,8 +74,15 @@ export class AcDbAssocNetwork extends AcDbAssocAction {
       if (action.needsEvaluation) {
         action.evaluate()
       }
+      if (action.status === AcDbAssocStatus.FailedToEvaluateAssocStatus) {
+        failed = true
+      }
     }
-    this.setUpToDate()
+    if (failed) {
+      this.status = AcDbAssocStatus.FailedToEvaluateAssocStatus
+    } else {
+      this.setUpToDate()
+    }
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {

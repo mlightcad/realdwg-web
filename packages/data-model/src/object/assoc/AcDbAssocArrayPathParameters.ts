@@ -119,10 +119,26 @@ export class AcDbAssocArrayPathParameters extends AcDbAssocArrayCommonParameters
   }
 
   getItemLocators(): AcDbAssocArrayItemLocator[] {
+    // kMeasure: only place items that fit on the path (AutoCAD Measure).
+    // Without this, getParamAtDist clamps past the end and extras stack.
+    let itemCount = this.itemCount
+    if (
+      this._method === AcDbAssocArrayPathMethod.kMeasure &&
+      this._pathCurve &&
+      this._itemSpacing > 0
+    ) {
+      const length = this.pathLength()
+      if (length > 0) {
+        itemCount = Math.min(
+          itemCount,
+          Math.floor(length / this._itemSpacing) + 1
+        )
+      }
+    }
     const locators: AcDbAssocArrayItemLocator[] = []
     for (let level = 0; level < this.levelCount; level++) {
       for (let row = 0; row < this.rowCount; row++) {
-        for (let item = 0; item < this.itemCount; item++) {
+        for (let item = 0; item < itemCount; item++) {
           locators.push(new AcDbAssocArrayItemLocator(item, row, level))
         }
       }
@@ -170,10 +186,14 @@ export class AcDbAssocArrayPathParameters extends AcDbAssocArrayCommonParameters
     const length = this.pathLength()
     let dist = 0
     if (this._method === AcDbAssocArrayPathMethod.kDivide) {
-      const denom = Math.max(1, this.itemCount - (this._pathCurve?.closed ? 0 : 1))
+      const denom = Math.max(
+        1,
+        this.itemCount - (this._pathCurve?.closed ? 0 : 1)
+      )
       dist = this.itemCount <= 1 ? 0 : (locator.itemIndex / denom) * length
     } else {
       dist = locator.itemIndex * this._itemSpacing
+      if (length > 0) dist = Math.min(dist, length)
     }
 
     const point = this.pointAtDistance(dist) ?? this._basePoint.clone()
@@ -203,8 +223,16 @@ export class AcDbAssocArrayPathParameters extends AcDbAssocArrayCommonParameters
 
     const m = AcGeMatrix3d.makeTranslation(x, y, z)
     if (this._alignItems) {
-      const angle = Math.atan2(tangent.y, tangent.x)
-      m.multiply(new AcGeMatrix3d().makeRotationZ(angle))
+      // AutoCAD aligns relative to the first item (path start tangent), not
+      // absolute world angle — otherwise a base≠object offset is spun by each
+      // segment heading and items scatter off the path.
+      const tangent0 = this.tangentAtDistance(0)
+      const angle =
+        Math.atan2(tangent.y, tangent.x) -
+        Math.atan2(tangent0.y, tangent0.x)
+      if (Math.abs(angle) > 1e-12) {
+        m.multiply(new AcGeMatrix3d().makeRotationZ(angle))
+      }
     }
     return m
   }

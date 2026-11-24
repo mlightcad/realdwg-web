@@ -1,4 +1,4 @@
-import { AcGePoint3d } from '@mlightcad/geometry-engine'
+import { AcGePoint2d, AcGePoint3d } from '@mlightcad/geometry-engine'
 
 import { AcDbDxfFiler } from '../src/base'
 import { AcDbDatabase } from '../src/database/AcDbDatabase'
@@ -7,10 +7,13 @@ import { AcDbSysVarManager } from '../src/database/AcDbSysVarManager'
 import { AcDbBlockReference } from '../src/entity/AcDbBlockReference'
 import { AcDbCircle } from '../src/entity/AcDbCircle'
 import { AcDbLine } from '../src/entity/AcDbLine'
+import { AcDbPolyline } from '../src/entity/AcDbPolyline'
 import {
   AcDbAssocAction,
   AcDbAssocArray,
   AcDbAssocArrayActionBody,
+  AcDbAssocArrayItemLocator,
+  AcDbAssocArrayPathMethod,
   AcDbAssocArrayPathParameters,
   AcDbAssocArrayPolarParameters,
   AcDbAssocArrayRectangularParameters,
@@ -280,26 +283,151 @@ describe('AcDbAssocArray', () => {
 
   it('path createInstance binds the path curve and distributes items', () => {
     const db = new AcDbDatabase()
-    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 0.5)
+    const base = new AcGePoint3d(10, 20, 0)
+    const circle = new AcDbCircle(base.clone(), 0.5)
     const path = new AcDbLine(
-      new AcGePoint3d(0, 0, 0),
-      new AcGePoint3d(30, 0, 0)
+      new AcGePoint3d(10, 20, 0),
+      new AcGePoint3d(40, 20, 0)
     )
     db.tables.blockTable.modelSpace.appendEntity(circle)
     db.tables.blockTable.modelSpace.appendEntity(path)
 
     const params = new AcDbAssocArrayPathParameters(10, 5, 1, 4, 1, 1)
+    params.method = AcDbAssocArrayPathMethod.kDivide
+    params.alignItems = false
     params.setPath({ entityId: path.objectId })
 
     const result = AcDbAssocArrayActionBody.createInstance(
       [circle.objectId],
-      new AcGePoint3d(0, 0, 0),
+      base,
       params,
       db
     )
+    expect(params.basePoint.x).toBeCloseTo(10, 10)
+    expect(params.basePoint.y).toBeCloseTo(20, 10)
+
     const ref = db.getObjectById(result.arrayEntityId) as AcDbBlockReference
-    let itemCount = 0
-    for (const _ of ref.blockTableRecord!.newIterator()) itemCount++
-    expect(itemCount).toBe(4)
+    const worlds: AcGePoint3d[] = []
+    for (const item of ref.blockTableRecord!.newIterator()) {
+      expect(item).toBeInstanceOf(AcDbBlockReference)
+      const br = item as AcDbBlockReference
+      worlds.push(
+        new AcGePoint3d(
+          ref.position.x + br.position.x,
+          ref.position.y + br.position.y,
+          ref.position.z + br.position.z
+        )
+      )
+    }
+    expect(worlds).toHaveLength(4)
+    // Divide open path: items at 0, 10, 20, 30 along the 30-unit line.
+    expect(worlds[0].x).toBeCloseTo(10, 6)
+    expect(worlds[0].y).toBeCloseTo(20, 6)
+    expect(worlds[1].x).toBeCloseTo(20, 6)
+    expect(worlds[2].x).toBeCloseTo(30, 6)
+    expect(worlds[3].x).toBeCloseTo(40, 6)
+  })
+
+  it('allocates distinct assoc keys after explode so a second array survives', () => {
+    const db = new AcDbDatabase()
+    const first = new AcDbCircle(new AcGePoint3d(0, 0, 0), 0.5)
+    db.tables.blockTable.modelSpace.appendEntity(first)
+    const firstResult = AcDbAssocArrayActionBody.createInstance(
+      [first.objectId],
+      new AcGePoint3d(0, 0, 0),
+      new AcDbAssocArrayRectangularParameters(5, 5, 1, 2, 1, 1),
+      db
+    )
+    const firstRef = db.getObjectById(
+      firstResult.arrayEntityId
+    ) as AcDbBlockReference
+    firstRef.explode()
+    expect(db.objects.assocActionBody.numEntries).toBe(0)
+
+    const second = new AcDbCircle(new AcGePoint3d(1, 1, 0), 0.5)
+    db.tables.blockTable.modelSpace.appendEntity(second)
+    const secondResult = AcDbAssocArrayActionBody.createInstance(
+      [second.objectId],
+      new AcGePoint3d(1, 1, 0),
+      new AcDbAssocArrayRectangularParameters(5, 5, 1, 3, 1, 1),
+      db
+    )
+    expect(secondResult.actionBodyId).not.toBe(firstResult.actionBodyId)
+    const secondRef = db.getObjectById(
+      secondResult.arrayEntityId
+    ) as AcDbBlockReference
+    expect(AcDbAssocArrayActionBody.isAssociativeArray(secondRef)).toBe(true)
+    expect(db.getObjectById(secondResult.actionBodyId)).toBeInstanceOf(
+      AcDbAssocArrayActionBody
+    )
+  })
+
+  it('evaluateTopLevelNetwork reports failure when the array block is missing', () => {
+    const db = new AcDbDatabase()
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 0.5)
+    db.tables.blockTable.modelSpace.appendEntity(circle)
+    const result = AcDbAssocArrayActionBody.createInstance(
+      [circle.objectId],
+      new AcGePoint3d(0, 0, 0),
+      new AcDbAssocArrayRectangularParameters(5, 5, 1, 2, 1, 1),
+      db
+    )
+    const body = db.getObjectById(
+      result.actionBodyId
+    ) as AcDbAssocArrayActionBody
+    db.tables.blockTable.remove(body.arrayBlockName)
+
+    const action = db.getObjectById(result.actionId) as AcDbAssocAction
+    action.setDirty()
+    expect(AcDbAssocManager.evaluateTopLevelNetwork(db)).toBe(false)
+    expect(action.status).toBe(AcDbAssocStatus.FailedToEvaluateAssocStatus)
+  })
+
+  it('path kMeasure does not stack items past the path end', () => {
+    const path = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(20, 0, 0)
+    )
+    const params = new AcDbAssocArrayPathParameters(10, 1, 1, 10, 1, 1)
+    params.method = AcDbAssocArrayPathMethod.kMeasure
+    params.alignItems = false
+    params.basePoint = new AcGePoint3d(0, 0, 0)
+    params.setPathCurve(path)
+
+    // Path length 20, spacing 10 → items at 0, 10, 20 only (not 10 extras at end).
+    expect(params.getItemLocators()).toHaveLength(3)
+    const last = params.getItemTransform(new AcDbAssocArrayItemLocator(2, 0, 0))
+    expect(last.elements[12]).toBeCloseTo(20, 6)
+  })
+
+  it('path alignItems rotates relative to the start tangent', () => {
+    // Vertical then horizontal: start tangent is +Y, end tangent is +X
+    // (Δ = −90°). Absolute atan2 would rotate the last item by 0° and leave a
+    // base≠object offset pointing the wrong way; relative keeps item 0 unrotated.
+    const path = new AcDbPolyline()
+    path.addVertexAt(0, new AcGePoint2d(0, 0))
+    path.addVertexAt(1, new AcGePoint2d(0, 10))
+    path.addVertexAt(2, new AcGePoint2d(10, 10))
+
+    const params = new AcDbAssocArrayPathParameters(10, 1, 1, 2, 1, 1, 0)
+    params.method = AcDbAssocArrayPathMethod.kDivide
+    params.alignItems = true
+    params.basePoint = new AcGePoint3d(0, 0, 0)
+    params.setPathCurve(path)
+
+    const first = params.getItemTransform(new AcDbAssocArrayItemLocator(0, 0, 0))
+    const last = params.getItemTransform(new AcDbAssocArrayItemLocator(1, 0, 0))
+    // Item 0: no relative rotation (identity rotation about Z).
+    expect(first.elements[0]).toBeCloseTo(1, 6)
+    expect(first.elements[1]).toBeCloseTo(0, 6)
+    // Item 1: relative −90° from +Y to +X → cos=-0? Wait +Y to +X is -90° or +270°
+    // atan2(1,0)=π/2, atan2(0,1)=0 → angle = 0 - π/2 = -π/2
+    // R(-90°): e[0]=cos=0, e[1]=sin=-1? Column-major R_z: [c,-s,0; s,c,0] so
+    // e[0]=c=0, e[1]=s=-1, e[4]=-s=1, e[5]=c=0
+    expect(last.elements[0]).toBeCloseTo(0, 6)
+    expect(last.elements[1]).toBeCloseTo(-1, 6)
+    expect(last.elements[12]).toBeCloseTo(10, 6)
+    expect(last.elements[13]).toBeCloseTo(10, 6)
   })
 })
+

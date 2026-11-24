@@ -13,7 +13,10 @@ import type { AcDbCurve } from '../../entity/AcDbCurve.js'
 import { AcDbEntity } from '../../entity/AcDbEntity.js'
 import { AcDbDictionary } from '../AcDbDictionary.js'
 import { AcDbDictionaryVar } from '../AcDbDictionaryVar.js'
-import { acdbCreateAnonymousUserBlock } from './acdbAllocateAnonymousUserBlockName.js'
+import {
+  acdbAllocateAssocDictionaryKey,
+  acdbCreateAnonymousUserBlock
+} from './acdbAllocateAnonymousUserBlockName.js'
 import { AcDbAssocAction } from './AcDbAssocAction.js'
 import { AcDbAssocActionBody } from './AcDbAssocActionBody.js'
 import { AcDbAssocArrayCommonParameters } from './AcDbAssocArrayCommonParameters.js'
@@ -192,8 +195,14 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     }
 
     const action = new AcDbAssocAction()
-    const bodyKey = `*AB${db.objects.assocActionBody.numEntries + 1}`
-    const actionKey = `*AA${db.objects.assocAction.numEntries + 1}`
+    const bodyKey = acdbAllocateAssocDictionaryKey(
+      db.objects.assocActionBody,
+      '*AB'
+    )
+    const actionKey = acdbAllocateAssocDictionaryKey(
+      db.objects.assocAction,
+      '*AA'
+    )
     db.objects.assocActionBody.setAt(bodyKey, body)
     db.objects.assocAction.setAt(actionKey, action)
     action.actionBodyId = body.objectId
@@ -210,7 +219,7 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     writeDep.isWriteDependency = true
     writeDep.owningActionId = action.objectId
     db.objects.assocDependency.setAt(
-      `*AD${db.objects.assocDependency.numEntries + 1}`,
+      acdbAllocateAssocDictionaryKey(db.objects.assocDependency, '*AD'),
       writeDep
     )
     action.addDependencyId(writeDep.objectId)
@@ -224,7 +233,7 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
         readDep.isWriteDependency = false
         readDep.owningActionId = action.objectId
         db.objects.assocDependency.setAt(
-          `*AD${db.objects.assocDependency.numEntries + 1}`,
+          acdbAllocateAssocDictionaryKey(db.objects.assocDependency, '*AD'),
           readDep
         )
         action.addDependencyId(readDep.objectId)
@@ -244,7 +253,9 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
 
     action.setDirty()
     body.evaluateOverride()
-    action.setUpToDate()
+    if (action.status !== AcDbAssocStatus.FailedToEvaluateAssocStatus) {
+      action.setUpToDate()
+    }
 
     return {
       arrayEntityId: arrayInsert.objectId,

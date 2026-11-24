@@ -105,6 +105,11 @@ export class AcDbAssocAction extends AcDbObject {
     }
     try {
       body.evaluateOverride()
+      // evaluateOverride may set FailedToEvaluateAssocStatus (e.g. missing
+      // array/source block); do not clear that with setUpToDate().
+      if (this._status === AcDbAssocStatus.FailedToEvaluateAssocStatus) {
+        return
+      }
       for (const dep of this.dependencies()) {
         dep.setUpToDate()
       }

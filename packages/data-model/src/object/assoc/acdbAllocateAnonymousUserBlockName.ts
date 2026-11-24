@@ -1,8 +1,10 @@
+import type { AcDbObject } from '../../base/AcDbObject.js'
 import {
   AcDbBlockTableRecord,
   AcDbBlockTableRecordFlag
 } from '../../database/AcDbBlockTableRecord.js'
 import type { AcDbDatabase } from '../../database/AcDbDatabase.js'
+import type { AcDbDictionary } from '../AcDbDictionary.js'
 
 /**
  * Allocates the next free anonymous user block name (`*U{n}`).
@@ -20,6 +22,28 @@ export function acdbAllocateAnonymousUserBlockName(db: AcDbDatabase): string {
     if (Number.isInteger(num) && num > maxNum) maxNum = num
   }
   return `*U${maxNum + 1}`
+}
+
+/**
+ * Allocates the next free anonymous dictionary key with the given prefix
+ * (e.g. `*AB`, `*AA`, `*AD`).
+ *
+ * Scans existing keys for the largest numeric suffix so removed entries do not
+ * cause collisions when a later `setAt` would otherwise reuse `numEntries + 1`.
+ */
+export function acdbAllocateAssocDictionaryKey(
+  dictionary: AcDbDictionary<AcDbObject>,
+  prefix: string
+): string {
+  const upper = prefix.toUpperCase()
+  let maxNum = 0
+  for (const [key] of dictionary.entries()) {
+    if (!key.toUpperCase().startsWith(upper)) continue
+    const suffix = key.slice(prefix.length)
+    const num = Number(suffix)
+    if (Number.isInteger(num) && num > maxNum) maxNum = num
+  }
+  return `${prefix}${maxNum + 1}`
 }
 
 /**
