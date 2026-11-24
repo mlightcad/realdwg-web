@@ -533,7 +533,28 @@ export {
   AcDbRasterImageDef,
   AcDbScale,
   AcDbSortentsTable,
-  AcDbXrecord
+  AcDbXrecord,
+  ACDB_ASSOC_ARRAY_ACTION_BODY,
+  ACDB_ASSOC_NETWORK_DICT,
+  AcDbAssocStatus,
+  acdbAssocStatusNeedsEvaluation,
+  AcDbAssocDependency,
+  AcDbAssocActionBody,
+  AcDbAssocAction,
+  AcDbAssocNetwork,
+  AcDbAssocManager,
+  AcDbAssocArrayItemLocator,
+  AcDbAssocArrayParameters,
+  AcDbAssocArrayCommonParameters,
+  AcDbAssocArrayRectangularParameters,
+  AcDbAssocArrayPolarParameters,
+  AcDbAssocArrayPathMethod,
+  AcDbAssocArrayPathParameters,
+  AcDbAssocArrayActionBody,
+  acdbAssocArrayParametersFromJSON,
+  AcDbAssocArray,
+  acdbAllocateAnonymousUserBlockName,
+  acdbCreateAnonymousUserBlock
 } from './object/index.js'
 export type {
   AcDbBlockChangeIterator,
@@ -544,7 +565,9 @@ export type {
   AcDbLayoutRenamedEventArgs,
   AcDbMlineStyleElement,
   AcDbPlotPaperMargins,
-  AcDbPlotScale
+  AcDbPlotScale,
+  AcDbAssocArrayCreateResult,
+  AcDbAssocArrayPathEdgeRef
 } from './object/index.js'
 export {
   AcLyBoolExpr,

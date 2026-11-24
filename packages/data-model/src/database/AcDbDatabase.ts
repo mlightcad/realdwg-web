@@ -64,6 +64,10 @@ import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
 import { AcDbDictionary } from '../object/AcDbDictionary.js'
 import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar.js'
 import { AcDbGroup } from '../object/AcDbGroup.js'
+import type { AcDbAssocAction } from '../object/assoc/AcDbAssocAction.js'
+import type { AcDbAssocActionBody } from '../object/assoc/AcDbAssocActionBody.js'
+import type { AcDbAssocDependency } from '../object/assoc/AcDbAssocDependency.js'
+import type { AcDbAssocNetwork } from '../object/assoc/AcDbAssocNetwork.js'
 import { AcDbLayerFilter } from '../object/AcDbLayerFilter.js'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
@@ -539,6 +543,10 @@ export class AcDbDatabase extends AcDbObject {
     readonly scale: AcDbDictionary<AcDbScale>
     readonly sortentsTable: AcDbDictionary<AcDbSortentsTable>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
+    readonly assocNetwork: AcDbDictionary<AcDbAssocNetwork>
+    readonly assocAction: AcDbDictionary<AcDbAssocAction>
+    readonly assocActionBody: AcDbDictionary<AcDbAssocActionBody>
+    readonly assocDependency: AcDbDictionary<AcDbAssocDependency>
   }
   /** Current annotation scale name (CANNOSCALE), e.g. `"1:100"`. */
   private _cannoscale: string
@@ -720,7 +728,11 @@ export class AcDbDatabase extends AcDbObject {
       objectContextData: new AcDbDictionary(this),
       scale: new AcDbDictionary(this),
       sortentsTable: new AcDbDictionary(this),
-      xrecord: new AcDbDictionary(this)
+      xrecord: new AcDbDictionary(this),
+      assocNetwork: new AcDbDictionary(this),
+      assocAction: new AcDbDictionary(this),
+      assocActionBody: new AcDbDictionary(this),
+      assocDependency: new AcDbDictionary(this)
     }
     this._layerFilters = new AcLyLayerFilterTree()
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
@@ -954,7 +966,11 @@ export class AcDbDatabase extends AcDbObject {
       this.objects.objectContextData,
       this.objects.scale,
       this.objects.sortentsTable,
-      this.objects.xrecord
+      this.objects.xrecord,
+      this.objects.assocNetwork,
+      this.objects.assocAction,
+      this.objects.assocActionBody,
+      this.objects.assocDependency
     ]
   }
 
@@ -1353,7 +1369,11 @@ export class AcDbDatabase extends AcDbObject {
       this._objects.objectContextData,
       this._objects.scale,
       this._objects.sortentsTable,
-      this._objects.xrecord
+      this._objects.xrecord,
+      this._objects.assocNetwork,
+      this._objects.assocAction,
+      this._objects.assocActionBody,
+      this._objects.assocDependency
     ]) {
       this.registerObjectHandle(dictionary)
     }
@@ -4526,6 +4546,10 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.dictionaryVar.removeAll()
     this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
+    this._objects.assocNetwork.removeAll()
+    this._objects.assocAction.removeAll()
+    this._objects.assocActionBody.removeAll()
+    this._objects.assocDependency.removeAll()
     this._cannoscale = '1:1'
     this._dimStyleAnnotationScales.clear()
     this._annoallvisible = true

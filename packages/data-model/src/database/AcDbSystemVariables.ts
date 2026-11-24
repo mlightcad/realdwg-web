@@ -198,6 +198,24 @@ export const AcDbSystemVariables = {
   GRIPSIZE: 'GRIPSIZE',
   /** Default angle, in radians, for newly created hatch patterns. */
   HPANG: 'HPANG',
+  /**
+   * Default associativity for newly created arrays (`ARRAYASSOCIATIVITY`).
+   * `0` = non-associative, `1` = associative. Not saved in the drawing.
+   */
+  ARRAYASSOCIATIVITY: 'ARRAYASSOCIATIVITY',
+  /**
+   * Read-only flag: drawing is in ARRAYEDIT Source editing state
+   * (`ARRAYEDITSTATE`). `0` = inactive, `1` = active. Session-scoped.
+   * Hosts update it via {@link AcDbSysVarManager.setArrayEditState}.
+   */
+  ARRAYEDITSTATE: 'ARRAYEDITSTATE',
+  /**
+   * Default array type for ARRAY (`ARRAYTYPE`). Session/registry-scoped.
+   * `0` = Rectangular, `1` = Path, `2` = Polar.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-ED05306A-0D24-4FE7-9B50-1207BCA2B4B8.htm
+   */
+  ARRAYTYPE: 'ARRAYTYPE',
   /** Controls whether newly created hatches are associative. */
   HPASSOC: 'HPASSOC',
   /** Default background color for newly created hatch patterns. */

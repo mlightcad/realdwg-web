@@ -76,6 +76,18 @@ npm install @mlightcad/data-model
 - **AcDbLayoutDictionary**: Layout dictionary management
 - **AcDbLayoutManager**: Layout manager for switching between layouts
 
+### Associative framework and arrays
+- **AcDbAssocNetwork** / **AcDbAssocAction** / **AcDbAssocDependency** / **AcDbAssocManager**: ObjectARX-style associative evaluation network (`ACAD_ASSOCNETWORK`)
+- **AcDbAssocArrayActionBody**: Evaluates rectangular, polar, and path associative arrays (visible entity remains an `AcDbBlockReference` of an anonymous `*U` block)
+- **AcDbAssocArrayRectangularParameters** / **AcDbAssocArrayPolarParameters** / **AcDbAssocArrayPathParameters**: Sealed parameter classes owned by the action body
+- **AcDbAssocArray**: Convenience wrapper around `createInstance` / `getAssociativeArray`
+- **acdbAllocateAnonymousUserBlockName**: Allocates the next free `*U{n}` block name
+- **AcDbCurve.getPointAtDist** / **getFirstDeriv**: Helpers used by path arrays
+- System variables:
+  - **ARRAYASSOCIATIVITY** (`0` / `1`, default `1`) — default associativity for new arrays
+  - **ARRAYTYPE** (`0` rectangular / `1` path / `2` polar, default `0`) — default type for ARRAY
+  - **ARRAYEDITSTATE** (read-only `0` / `1`, default `0`) — Source editing state; hosts use `setArrayEditState`
+
 ### File Conversion
 - **AcDbDatabaseConverter**: Base class for file format converters
 - **AcDbDatabaseConverterManager**: Manages registered file converters
