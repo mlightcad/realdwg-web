@@ -169,4 +169,50 @@ describe('Test AcGeEllipseArc3d', () => {
         )
     ).toThrow()
   })
+
+  it('computes the exact box of a rotated full ellipse stored with equal start/end angles', () => {
+    // AutoCAD/DXF store a full ellipse with startAngle === endAngle.
+    const majorAxis = new AcGeVector3d(0.6, 0.8, 0)
+    const center = { x: 3, y: 4, z: 0 }
+    for (const [start, end] of [
+      [0, 0],
+      [0, Math.PI * 2]
+    ]) {
+      const arc = new AcGeEllipseArc3d(
+        center,
+        AcGeVector3d.Z_AXIS,
+        majorAxis,
+        5,
+        2,
+        start,
+        end
+      )
+      // Half extents: sqrt((a*ux)^2 + (b*vx)^2), with v = (-0.8, 0.6).
+      const hx = Math.hypot(5 * 0.6, 2 * 0.8)
+      const hy = Math.hypot(5 * 0.8, 2 * 0.6)
+      expect(arc.box.min.x).toBeCloseTo(3 - hx, 9)
+      expect(arc.box.max.x).toBeCloseTo(3 + hx, 9)
+      expect(arc.box.min.y).toBeCloseTo(4 - hy, 9)
+      expect(arc.box.max.y).toBeCloseTo(4 + hy, 9)
+    }
+  })
+
+  it('computes the exact box of a rotated ellipse arc', () => {
+    // Quarter arc from the major-axis end to the minor-axis end.
+    const arc = new AcGeEllipseArc3d(
+      ORIGIN_POINT_3D,
+      AcGeVector3d.Z_AXIS,
+      new AcGeVector3d(0.6, 0.8, 0),
+      5,
+      2,
+      0,
+      Math.PI / 2
+    )
+    const hy = Math.hypot(5 * 0.8, 2 * 0.6)
+    // Start (3, 4), end (-1.6, 1.2); the y extremum lies inside the span.
+    expect(arc.box.min.x).toBeCloseTo(-1.6, 9)
+    expect(arc.box.max.x).toBeCloseTo(3, 9)
+    expect(arc.box.min.y).toBeCloseTo(1.2, 9)
+    expect(arc.box.max.y).toBeCloseTo(hy, 9)
+  })
 })

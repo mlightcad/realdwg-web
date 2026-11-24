@@ -291,68 +291,39 @@ export class AcGeEllipseArc3d extends AcGeCurve3d {
    * @returns Return bounding box containing the min and max coordinates
    */
   calculateBoundingBox() {
-    // To make it faster, check whether major axis is euqal to x-axis or y-axis firstly because
-    // major axis of ellipse arc is equal to x-axis or y-axis in most of cases.
-    if (
-      this.majorAxis.equals(AcGeVector3d.X_AXIS) ||
-      this.majorAxis.equals(AcGeVector3d.Y_AXIS) ||
-      this.majorAxis.isParallelTo(AcGeVector3d.X_AXIS) ||
-      this.majorAxis.isParallelTo(AcGeVector3d.Y_AXIS)
-    ) {
-      const angles = [this.startAngle, this.endAngle]
-      for (let i = 0; i < 2 * Math.PI; i += Math.PI / 2) {
-        if (AcGeMathUtil.isBetweenAngle(i, this.startAngle, this.endAngle)) {
-          angles.push(i)
+    // Each coordinate is c + a*u*cos(t) + b*v*sin(t), which is extremal where
+    // t = atan2(b*v, a*u) (+ PI). Evaluating those angles exactly keeps the
+    // box tight for rotated ellipses. A full ellipse may be stored with equal
+    // start/end angles (AutoCAD convention, deltaAngle 0), so treat it as a
+    // full 0..2PI sweep instead of a single point.
+    const full = this.closed || Math.abs(this.deltaAngle - TAU) < 1e-10
+    const a = this.majorAxisRadius
+    const b = this.minorAxisRadius
+    const u = this.majorAxis
+    const v = this.minorAxis
+    const angles = full ? [] : [this.startAngle, this.endAngle]
+    for (const [uk, vk] of [
+      [u.x, v.x],
+      [u.y, v.y],
+      [u.z, v.z]
+    ]) {
+      const t = Math.atan2(b * vk, a * uk)
+      for (const angle of [t, t + Math.PI]) {
+        if (
+          full ||
+          AcGeMathUtil.isAngleOnCcwSweep(this.startAngle, angle, this.endAngle)
+        ) {
+          angles.push(angle)
         }
       }
-
-      let minX = Infinity,
-        minY = Infinity,
-        minZ = Infinity
-      let maxX = -Infinity,
-        maxY = -Infinity,
-        maxZ = -Infinity
-
-      for (const angle of angles) {
-        const point = this.getPointAtAngle(angle)
-        if (point.x < minX) minX = point.x
-        if (point.y < minY) minY = point.y
-        if (point.z < minZ) minZ = point.z
-        if (point.x > maxX) maxX = point.x
-        if (point.y > maxY) maxY = point.y
-        if (point.z > maxZ) maxZ = point.z
-      }
-
-      return new AcGeBox3d(
-        { x: minX, y: minY, z: minZ },
-        { x: maxX, y: maxY, z: maxZ }
-      )
-    } else {
-      const numPoints = 100
-      let minX = Infinity,
-        minY = Infinity,
-        minZ = Infinity
-      let maxX = -Infinity,
-        maxY = -Infinity,
-        maxZ = -Infinity
-
-      for (let i = 0; i <= numPoints; i++) {
-        const angle = this.startAngle + this.deltaAngle * (i / numPoints)
-        const point = this.getPointAtAngle(angle)
-        minX = Math.min(minX, point.x)
-        minY = Math.min(minY, point.y)
-        minZ = Math.min(minZ, point.z)
-        maxX = Math.max(maxX, point.x)
-        maxY = Math.max(maxY, point.y)
-        maxZ = Math.max(maxZ, point.z)
-      }
-
-      // Return the bounding box defined by min and max coordinates
-      return new AcGeBox3d(
-        { x: minX, y: minY, z: minZ },
-        { x: maxX, y: maxY, z: maxZ }
-      )
     }
+    if (angles.length === 0) angles.push(this.startAngle)
+
+    const box = new AcGeBox3d()
+    for (const angle of angles) {
+      box.expandByPoint(this.getPointAtAngle(angle))
+    }
+    return box
   }
 
   /**
