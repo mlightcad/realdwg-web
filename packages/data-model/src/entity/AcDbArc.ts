@@ -11,13 +11,21 @@ import {
   acgeTransformOcsPointToWcsInto,
   acgeTransformWcsPointToOcs,
   AcGeVector3d,
-  AcGeVector3dLike
+  AcGeVector3dLike,
+  TAU
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCircleAngleOf,
+  acdbCurveOnTol,
+  acdbDetachSplitPiece,
+  acdbNormalizeAngle,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
@@ -850,5 +858,166 @@ export class AcDbArc extends AcDbCurve {
    */
   protected override subJoinEntities(others: readonly AcDbEntity[]) {
     return acdbJoinConcentricArcs(this, others)
+  }
+
+  /** Counter-clockwise sweep in `(0, 2π]`. */
+  private get sweep(): number {
+    if (this.closed) return TAU
+    return acdbNormalizeAngle(this.endAngle - this.startAngle)
+  }
+
+  private onTol() {
+    const c = this.center
+    return acdbCurveOnTol(
+      Math.max(Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)) + this.radius
+    )
+  }
+
+  private angleTol() {
+    return this.radius > 0 ? this.onTol() / this.radius : this.onTol()
+  }
+
+  /**
+   * Polar angle of a point on the arc's circle, or `undefined` when the point
+   * is not on the circle.
+   */
+  private circleAngleAt(point: AcGePoint3dLike): number | undefined {
+    const geo = this._geo
+    const { angle, dist, rho } = acdbCircleAngleOf(
+      geo.center,
+      geo.radius,
+      geo.refVec,
+      geo.normal,
+      point
+    )
+    if (!(rho > 0) || dist > this.onTol()) return undefined
+    return angle
+  }
+
+  /**
+   * Start parameter: {@link startAngle}. The parameter of an arc is the polar
+   * angle in radians around {@link normal}.
+   */
+  override get startParam(): number {
+    return this.startAngle
+  }
+
+  /** End parameter: `startAngle + sweep`, always greater than `startParam`. */
+  override get endParam(): number {
+    return this.startAngle + this.sweep
+  }
+
+  /**
+   * Returns the angle of a point on the arc's full circle, mapped into
+   * `[startParam, startParam + 2π)`; points outside the arc therefore give a
+   * parameter greater than {@link endParam}.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    const angle = this.circleAngleAt(point)
+    if (angle === undefined) return undefined
+    const s = this.startAngle
+    let t = acdbNormalizeAngle(angle - s)
+    if (t > TAU - this.angleTol()) t = 0
+    return s + t
+  }
+
+  /** Point on the arc's circle at the given angle. */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    if (!Number.isFinite(param)) return undefined
+    return this._geo.getPointAtAngle(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    const geo = this._geo
+    const { angle, rho } = acdbCircleAngleOf(
+      geo.center,
+      geo.radius,
+      geo.refVec,
+      geo.normal,
+      point
+    )
+    if (!(rho > 0)) return this.startPoint
+    const rel = acdbNormalizeAngle(angle - this.startAngle)
+    if (extend || this.closed || rel <= this.sweep) {
+      return geo.getPointAtAngle(angle)
+    }
+    const start = this.startPoint
+    const end = this.endPoint
+    return start.distanceTo(point) <= end.distanceTo(point) ? start : end
+  }
+
+  /** Arc length `radius * (param - startParam)`. */
+  override getDistAtParam(param: number): number | undefined {
+    if (!Number.isFinite(param)) return undefined
+    return this.radius * (param - this.startAngle)
+  }
+
+  /** Splits into {@link AcDbArc} pieces. */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    if (!(this.radius > 0)) return []
+    return acdbSplitCurveByParams(
+      params,
+      this.startParam,
+      this.endParam,
+      this.closed,
+      this.angleTol(),
+      (from, to) => {
+        const piece = acdbDetachSplitPiece(this.clone())
+        piece.startAngle = from
+        piece.endAngle = to
+        return piece
+      }
+    )
+  }
+
+  /**
+   * Lengthens the arc to the angle `newParam` (below {@link startParam}
+   * moves the start, above {@link endParam} the end) while the total sweep
+   * stays below a full turn.
+   */
+  override extend(newParam: number): boolean {
+    if (this.closed || !Number.isFinite(newParam) || !(this.radius > 0)) {
+      return false
+    }
+    const tol = this.angleTol()
+    const s = this.startParam
+    const e = this.endParam
+    if (newParam < s - tol) {
+      if (e - newParam >= TAU - tol) return false
+      this.startAngle = newParam
+      return true
+    }
+    if (newParam > e + tol) {
+      if (newParam - s >= TAU - tol) return false
+      this.endAngle = newParam
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Extends the end counter-clockwise (or the start clockwise) along the
+   * arc's circle to `toPoint`, which must lie on the circle outside the arc.
+   */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    if (this.closed) return false
+    const angle = this.circleAngleAt(toPoint)
+    if (angle === undefined) return false
+    const tol = this.angleTol()
+    if (extendStart) {
+      const delta = acdbNormalizeAngle(this.startAngle - angle)
+      if (delta <= tol || delta >= TAU - tol) return false
+      return this.extend(this.startParam - delta)
+    }
+    const delta = acdbNormalizeAngle(angle - this.endAngle)
+    if (delta <= tol || delta >= TAU - tol) return false
+    return this.extend(this.endParam + delta)
   }
 }

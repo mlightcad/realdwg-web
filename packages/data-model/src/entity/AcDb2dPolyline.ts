@@ -18,6 +18,11 @@ import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  AcDbCurvePathOps,
+  type AcDbCurvePathVertex,
+  acdbDetachSplitPiece
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -645,5 +650,120 @@ export class AcDb2dPolyline extends AcDbCurve {
   private collectPath2d(): AcGePoint2d[] {
     const sampleCount = Math.max(32, this.numberOfVertices * 4)
     return this._geo.getPoints(sampleCount)
+  }
+
+  /** Parameter / split / extend helper over the OCS vertex path. */
+  private pathOps(): AcDbCurvePathOps {
+    const normal = this._normal
+    const elevation = this._elevation
+    return new AcDbCurvePathOps(
+      this._geo.vertices.map(v => ({ x: v.x, y: v.y, z: 0, bulge: v.bulge })),
+      this.closed,
+      {
+        toPath: point => {
+          const ocs = acgeTransformWcsPointToOcs(point, normal)
+          return { x: ocs.x, y: ocs.y, z: ocs.z - elevation }
+        },
+        fromPath: point =>
+          acgeTransformOcsPointToWcs(
+            { x: point.x, y: point.y, z: elevation + (point.z ?? 0) },
+            normal
+          )
+      },
+      elevation
+    )
+  }
+
+  /**
+   * Replaces the vertex list, keeping extra per-vertex data from the
+   * matching `source` vertex when given.
+   */
+  private setPathVertices(
+    vertices: readonly AcDbCurvePathVertex[],
+    closed: boolean,
+    source?: readonly AcGePolyline2dVertex[]
+  ) {
+    const next: AcGePolyline2dVertex[] = vertices.map((v, i) => ({
+      ...(source?.[i] ?? {}),
+      x: v.x,
+      y: v.y,
+      bulge: v.bulge ?? 0
+    }))
+    this._geo = new AcGePolyline2d(next, closed)
+  }
+
+  /**
+   * Start parameter (`0`). The parameter is `vertexIndex + fraction` along
+   * the stored (drawn) vertex path, like `AcDbPolyline`.
+   */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter: the number of segments (closing segment included). */
+  override get endParam(): number {
+    return this.pathOps().endParam
+  }
+
+  /**
+   * Returns the parameter of a point on the polyline. For open polylines a
+   * point on the natural extension of the first or last segment is accepted
+   * as well.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    return this.pathOps().paramAtPoint(point)
+  }
+
+  /** @inheritdoc */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    return this.pathOps().pointAtParam(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    if (this.numberOfVertices === 0) return undefined
+    return this.pathOps().closestPoint(point, extend)
+  }
+
+  /** @inheritdoc */
+  override getDistAtParam(param: number): number | undefined {
+    return this.pathOps().distAtParam(param)
+  }
+
+  /**
+   * Splits into {@link AcDb2dPolyline} pieces (same poly type, elevation and
+   * normal). Bulges of partial arc segments are recomputed.
+   */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    return this.pathOps().split(params, vertices => {
+      const piece = acdbDetachSplitPiece(this.clone())
+      piece.setPathVertices(vertices, false)
+      return piece
+    })
+  }
+
+  /**
+   * Extends the first or last segment of an open polyline (see
+   * `AcDbPolyline.extend`).
+   */
+  override extend(newParam: number): boolean {
+    if (this.closed) return false
+    const vertices = this.pathOps().extendedVertices(newParam)
+    if (!vertices) return false
+    this.setPathVertices(vertices, false, this._geo.vertices)
+    return true
+  }
+
+  /** @inheritdoc */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    if (this.closed) return false
+    const param = this.pathOps().extensionParam(extendStart, toPoint)
+    return param === undefined ? false : this.extend(param)
   }
 }

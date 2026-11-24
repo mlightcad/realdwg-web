@@ -103,6 +103,14 @@ export {
   acgeEuclideanModulo,
   acgeEvaluateNurbsPoint,
   acgeEvaluateNurbsDerivatives,
+  acgeNurbsClosestParam,
+  acgeNurbsEvaluate,
+  acgeNurbsExtractSegment,
+  acgeNurbsInsertKnot,
+  acgeNurbsJoin,
+  acgeNurbsLengthTo,
+  acgeNurbsParameterRange,
+  acgeNurbsSplitAt,
   acgeSignedPlanarCurvature,
   acgeFloorPowerOfTwo,
   acgeGenerateAveragedKnots,
@@ -145,3 +153,4 @@ export {
   acgePolygonArea3d,
   acgeSignedPolygonArea2d
 } from './util/index.js'
+export type { AcGeNurbsCurveData } from './util/index.js'

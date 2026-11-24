@@ -272,6 +272,50 @@ describe('AcDbDatabaseTransactionManager', () => {
     expect(line.endPoint.x).toBe(10)
   })
 
+  it('aborts only the nested transaction and keeps outer changes', () => {
+    const db = new AcDbDatabase()
+    const modelSpace = db.tables.blockTable.modelSpace
+    const lineA = createLine()
+    const lineB = createLine(
+      new AcGePoint3d(0, 5, 0),
+      new AcGePoint3d(10, 5, 0)
+    )
+    modelSpace.appendEntity(lineA)
+    modelSpace.appendEntity(lineB)
+    const manager = db.transactionManager
+
+    const outer = manager.startTransaction()
+    outer.getObject<AcDbLine>(
+      lineA.objectId,
+      AcDbOpenMode.kForWrite
+    )!.endPoint = new AcGePoint3d(30, 0, 0)
+
+    const inner = manager.startTransaction()
+    inner.getObject<AcDbLine>(
+      lineB.objectId,
+      AcDbOpenMode.kForWrite
+    )!.endPoint = new AcGePoint3d(50, 5, 0)
+    const lineC = createLine(
+      new AcGePoint3d(0, 9, 0),
+      new AcGePoint3d(10, 9, 0)
+    )
+    modelSpace.appendEntity(lineC)
+    expect(db.tables.blockTable.getEntityById(lineC.objectId)).toBe(lineC)
+
+    manager.abortTransaction()
+
+    expect(lineB.endPoint.x).toBe(10)
+    expect(db.tables.blockTable.getEntityById(lineC.objectId)).toBeUndefined()
+    expect(lineA.endPoint.x).toBe(30)
+
+    manager.commitTransaction()
+
+    expect(lineA.endPoint.x).toBe(30)
+    expect(lineB.endPoint.x).toBe(10)
+    expect(db.tables.blockTable.getEntityById(lineC.objectId)).toBeUndefined()
+    expect(db.tables.blockTable.getEntityById(lineA.objectId)).toBe(lineA)
+  })
+
   it('rolls back system variable changes on abort', () => {
     const db = new AcDbDatabase()
     const original = db.orthomode

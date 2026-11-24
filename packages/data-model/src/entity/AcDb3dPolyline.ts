@@ -14,6 +14,12 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  ACDB_IDENTITY_PATH_FRAME,
+  AcDbCurvePathOps,
+  type AcDbCurvePathVertex,
+  acdbDetachSplitPiece
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -544,5 +550,97 @@ export class AcDb3dPolyline extends AcDbCurve {
     vertex.y += offset.y
     const point = vertex as AcGePoint3dLike
     point.z = (point.z ?? 0) + (offset.z ?? 0)
+  }
+
+  /** Parameter / split / extend helper over the 3D vertex path. */
+  private pathOps(): AcDbCurvePathOps {
+    return new AcDbCurvePathOps(
+      this._geo.vertices.map(v => ({
+        x: v.x,
+        y: v.y,
+        z: (v as AcGePolyline2dVertex & AcGePoint3dLike).z ?? 0,
+        bulge: 0
+      })),
+      this.closed,
+      ACDB_IDENTITY_PATH_FRAME
+    )
+  }
+
+  /** Replaces the vertex list with straight 3D vertices. */
+  private setPathVertices(vertices: readonly AcDbCurvePathVertex[]) {
+    const next = vertices.map(v => ({ x: v.x, y: v.y, z: v.z ?? 0 }))
+    this._geo = new AcGePolyline2d(next, false)
+  }
+
+  /**
+   * Start parameter (`0`). The parameter is `vertexIndex + fraction` along
+   * the straight 3D segments.
+   */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter: the number of segments (closing segment included). */
+  override get endParam(): number {
+    return this.pathOps().endParam
+  }
+
+  /**
+   * Returns the parameter of a point on the polyline. For open polylines a
+   * point on the natural extension of the first or last segment is accepted
+   * as well.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    return this.pathOps().paramAtPoint(point)
+  }
+
+  /** @inheritdoc */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    return this.pathOps().pointAtParam(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    if (this.numberOfVertices === 0) return undefined
+    return this.pathOps().closestPoint(point, extend)
+  }
+
+  /** @inheritdoc */
+  override getDistAtParam(param: number): number | undefined {
+    return this.pathOps().distAtParam(param)
+  }
+
+  /** Splits into {@link AcDb3dPolyline} pieces of the same poly type. */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    return this.pathOps().split(params, vertices => {
+      const piece = acdbDetachSplitPiece(this.clone())
+      piece.setPathVertices(vertices)
+      return piece
+    })
+  }
+
+  /**
+   * Moves the first (`newParam < 0`) or last (`newParam > endParam`) vertex
+   * of an open polyline along its segment direction.
+   */
+  override extend(newParam: number): boolean {
+    if (this.closed) return false
+    const vertices = this.pathOps().extendedVertices(newParam)
+    if (!vertices) return false
+    this.setPathVertices(vertices)
+    return true
+  }
+
+  /** @inheritdoc */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    if (this.closed) return false
+    const param = this.pathOps().extensionParam(extendStart, toPoint)
+    return param === undefined ? false : this.extend(param)
   }
 }

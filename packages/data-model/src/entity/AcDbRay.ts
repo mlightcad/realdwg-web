@@ -14,12 +14,18 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCurveOnTol,
+  acdbDetachSplitPiece,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import { AcDbLine } from './AcDbLine.js'
 
 /**
  * Represents a ray entity in AutoCAD.
@@ -443,5 +449,101 @@ export class AcDbRay extends AcDbCurve {
     ray.basePoint = offsetPoint
     ray.unitDir = this.unitDir.clone()
     return ray
+  }
+
+  /** Unit direction, or `undefined` when {@link unitDir} is degenerate. */
+  private paramDir(): AcGeVector3d | undefined {
+    const dir = this._unitDir.clone()
+    const len = dir.length()
+    return len > 0 ? dir.divideScalar(len) : undefined
+  }
+
+  private onTol() {
+    const b = this._basePoint
+    return acdbCurveOnTol(Math.max(Math.abs(b.x), Math.abs(b.y), Math.abs(b.z)))
+  }
+
+  /**
+   * Start parameter (`0`, at {@link basePoint}). The parameter of a ray is
+   * the distance from its base point along {@link unitDir}.
+   */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter (`Infinity`). */
+  override get endParam(): number {
+    return Infinity
+  }
+
+  /**
+   * Returns the signed distance from {@link basePoint} of a point on the
+   * infinite line through this ray (points behind the base point give a
+   * negative parameter).
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    const dir = this.paramDir()
+    if (!dir) return undefined
+    const b = this._basePoint
+    const t =
+      (point.x - b.x) * dir.x +
+      (point.y - b.y) * dir.y +
+      ((point.z ?? 0) - b.z) * dir.z
+    const foot = b.clone().add(dir.multiplyScalar(t))
+    return foot.distanceTo(point) <= this.onTol() ? t : undefined
+  }
+
+  /** Point at the given signed distance from {@link basePoint}. */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    const dir = this.paramDir()
+    if (!dir || !Number.isFinite(param)) return undefined
+    return this._basePoint.clone().add(dir.multiplyScalar(param))
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    const dir = this.paramDir()
+    if (!dir) return this._basePoint.clone()
+    const b = this._basePoint
+    let t =
+      (point.x - b.x) * dir.x +
+      (point.y - b.y) * dir.y +
+      ((point.z ?? 0) - b.z) * dir.z
+    if (!extend) t = Math.max(0, t)
+    return b.clone().add(dir.multiplyScalar(t))
+  }
+
+  /** The parameter itself (signed distance from {@link basePoint}). */
+  override getDistAtParam(param: number): number | undefined {
+    return Number.isFinite(param) ? param : undefined
+  }
+
+  /**
+   * Splits into {@link AcDbLine} pieces followed by a final {@link AcDbRay}
+   * starting at the last split parameter.
+   */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    if (!this.paramDir()) return []
+    return acdbSplitCurveByParams(
+      params,
+      0,
+      Infinity,
+      false,
+      this.onTol(),
+      (from, to) => {
+        const start = this.getPointAtParam(from)!
+        if (to === Infinity) {
+          const ray = acdbDetachSplitPiece(this.clone())
+          ray.basePoint = start
+          return ray
+        }
+        const line = new AcDbLine(start, this.getPointAtParam(to)!)
+        line.setPropertiesFrom(this)
+        return line
+      }
+    )
   }
 }

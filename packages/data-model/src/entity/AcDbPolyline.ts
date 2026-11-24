@@ -24,6 +24,11 @@ import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
 import { acdbDrawTessellateOptions } from '../misc/AcDbDrawTessellate.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  AcDbCurvePathOps,
+  type AcDbCurvePathVertex,
+  acdbDetachSplitPiece
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
@@ -1347,6 +1352,139 @@ export class AcDbPolyline extends AcDbCurve {
     const results = this._geo.offset(offsetDist)
     if (results.length === 0) return null
     return AcDbPolyline.fromGePolyline(results[0])
+  }
+
+  /** Parameter / split / extend helper over the OCS vertex path. */
+  private pathOps(): AcDbCurvePathOps {
+    const normal = this._normal
+    const elevation = this._elevation
+    return new AcDbCurvePathOps(
+      this._geo.vertices.map(v => ({
+        x: v.x,
+        y: v.y,
+        z: 0,
+        bulge: v.bulge,
+        startWidth: v.startWidth,
+        endWidth: v.endWidth
+      })),
+      this.closed,
+      {
+        toPath: point => {
+          const ocs = acgeTransformWcsPointToOcs(point, normal)
+          return { x: ocs.x, y: ocs.y, z: ocs.z - elevation }
+        },
+        fromPath: point =>
+          acgeTransformOcsPointToWcs(
+            { x: point.x, y: point.y, z: elevation + (point.z ?? 0) },
+            normal
+          )
+      },
+      elevation
+    )
+  }
+
+  /**
+   * Replaces the vertex list. When `source` is given, per-vertex data such as
+   * widths and identifiers is kept from the matching source vertex.
+   */
+  private setPathVertices(
+    vertices: readonly AcDbCurvePathVertex[],
+    closed: boolean,
+    source?: readonly AcDbPolylineVertex[]
+  ) {
+    const next: AcDbPolylineVertex[] = vertices.map((v, i) => {
+      const vertex: AcDbPolylineVertex = {
+        ...(source?.[i] ?? {}),
+        x: v.x,
+        y: v.y,
+        bulge: v.bulge ?? 0
+      }
+      if (!source) {
+        vertex.startWidth = v.startWidth
+        vertex.endWidth = v.endWidth
+      }
+      return vertex
+    })
+    this._geo = new AcGePolyline2d(next, closed)
+  }
+
+  /**
+   * Start parameter (`0`). The parameter of a polyline is
+   * `vertexIndex + fraction`, where the fraction is measured along the arc
+   * length (bulge arcs: angle fraction) of that segment.
+   */
+  override get startParam(): number {
+    return 0
+  }
+
+  /** End parameter: the number of segments (closing segment included). */
+  override get endParam(): number {
+    return this.pathOps().endParam
+  }
+
+  /**
+   * Returns the parameter of a point on the polyline. For open polylines a
+   * point on the natural extension of the first segment (param `< 0`) or the
+   * last segment (param `> endParam`) is accepted as well.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    return this.pathOps().paramAtPoint(point)
+  }
+
+  /** @inheritdoc */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    return this.pathOps().pointAtParam(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    if (this.numberOfVertices === 0) return undefined
+    return this.pathOps().closestPoint(point, extend)
+  }
+
+  /** @inheritdoc */
+  override getDistAtParam(param: number): number | undefined {
+    return this.pathOps().distAtParam(param)
+  }
+
+  /**
+   * Splits into {@link AcDbPolyline} pieces. Bulges of partial arc segments
+   * and start / end widths at the cut points are recomputed; elevation,
+   * normal and thickness are kept.
+   */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    return this.pathOps().split(params, vertices => {
+      const piece = acdbDetachSplitPiece(this.clone())
+      piece.setPathVertices(vertices, false)
+      return piece
+    })
+  }
+
+  /**
+   * Extends the first (`newParam < 0`) or last (`newParam > endParam`)
+   * segment of an open polyline. Line segments move their end vertex along
+   * the segment direction; arc segments keep center and radius and get a new
+   * bulge.
+   */
+  override extend(newParam: number): boolean {
+    if (this.closed) return false
+    const vertices = this.pathOps().extendedVertices(newParam)
+    if (!vertices) return false
+    this.setPathVertices(vertices, false, this._geo.vertices)
+    return true
+  }
+
+  /** @inheritdoc */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    if (this.closed) return false
+    const param = this.pathOps().extensionParam(extendStart, toPoint)
+    return param === undefined ? false : this.extend(param)
   }
 }
 

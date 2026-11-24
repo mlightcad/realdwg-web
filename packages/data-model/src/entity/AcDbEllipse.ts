@@ -15,6 +15,13 @@ import { AcGiRenderer } from '@mlightcad/graphic-interface'
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbCurve } from './AcDbCurve.js'
+import {
+  acdbCurveOnTol,
+  acdbDetachSplitPiece,
+  acdbNormalizeAngle,
+  acdbPlaneCoords,
+  acdbSplitCurveByParams
+} from './AcDbCurveParamHelpers.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbCreateProperty,
@@ -833,5 +840,214 @@ export class AcDbEllipse extends AcDbCurve {
       geo.startAngle,
       geo.endAngle
     )
+  }
+
+  /** Parametric sweep in `(0, 2π]`. */
+  private get sweep(): number {
+    if (this.closed) return TAU
+    return acdbNormalizeAngle(this.endAngle - this.startAngle)
+  }
+
+  private onTol() {
+    const c = this.center
+    return acdbCurveOnTol(
+      Math.max(Math.abs(c.x), Math.abs(c.y), Math.abs(c.z)) +
+        this.majorAxisRadius
+    )
+  }
+
+  /** Parameter tolerance derived from {@link onTol} and the axis radii. */
+  private paramTol() {
+    const r = Math.max(this.minorAxisRadius, this.onTol())
+    return this.onTol() / r
+  }
+
+  /** Point coordinates in the ellipse frame (major, minor, normal). */
+  private localCoords(point: AcGePoint3dLike) {
+    const geo = this._geo
+    return acdbPlaneCoords(geo.center, geo.majorAxis, geo.normal, point)
+  }
+
+  /**
+   * Parametric angle of the point of the full ellipse (or of the parameter
+   * interval `[from, from + span]` when given) closest to local `(x, y)`.
+   */
+  private nearestParam(
+    x: number,
+    y: number,
+    from = 0,
+    span = TAU
+  ): { theta: number; dist2: number } {
+    const a = this.majorAxisRadius
+    const b = this.minorAxisRadius
+    const dist2 = (t: number) =>
+      (a * Math.cos(t) - x) ** 2 + (b * Math.sin(t) - y) ** 2
+    const full = span >= TAU - 1e-12
+    const clampT = (t: number) => {
+      if (full) return t
+      const rel = t - from
+      return from + Math.max(0, Math.min(span, rel))
+    }
+    const samples = 64
+    let best = from
+    let bestD = dist2(from)
+    const guesses: number[] = []
+    for (let i = 0; i <= samples; i++) guesses.push(from + (span * i) / samples)
+    if (full) guesses.push(Math.atan2(y * a, x * b))
+    for (const guess of guesses) {
+      let t = clampT(guess)
+      // Newton on d/dt |E(t) - P|^2 / 2 = 0
+      for (let i = 0; i < 12; i++) {
+        const s = Math.sin(t)
+        const c = Math.cos(t)
+        const g = (b * b - a * a) * s * c + x * a * s - y * b * c
+        const h = (b * b - a * a) * (c * c - s * s) + x * a * c + y * b * s
+        if (!(Math.abs(h) > 1e-30)) break
+        const next = clampT(t - g / h)
+        if (Math.abs(next - t) < 1e-15) {
+          t = next
+          break
+        }
+        t = next
+      }
+      const d = dist2(t)
+      if (d < bestD) {
+        bestD = d
+        best = t
+      }
+    }
+    return { theta: best, dist2: bestD }
+  }
+
+  /**
+   * Start parameter: {@link startAngle}. The parameter of an ellipse is the
+   * parametric angle `t` of `center + a·cos(t)·major + b·sin(t)·minor`, the
+   * same value DXF stores in groups 41 / 42.
+   */
+  override get startParam(): number {
+    return this.startAngle
+  }
+
+  /** End parameter: `startAngle + sweep`, always greater than `startParam`. */
+  override get endParam(): number {
+    return this.startAngle + this.sweep
+  }
+
+  /**
+   * Returns the parametric angle of a point on the full ellipse, mapped into
+   * `[startParam, startParam + 2π)`.
+   */
+  override getParamAtPoint(point: AcGePoint3dLike): number | undefined {
+    if (!(this.majorAxisRadius > 0) || !(this.minorAxisRadius > 0)) {
+      return undefined
+    }
+    const { x, y, h } = this.localCoords(point)
+    const { theta, dist2 } = this.nearestParam(x, y)
+    if (Math.sqrt(dist2 + h * h) > this.onTol()) return undefined
+    const s = this.startAngle
+    let t = acdbNormalizeAngle(theta - s)
+    if (t > TAU - this.paramTol()) t = 0
+    return s + t
+  }
+
+  /** Point on the full ellipse at the given parametric angle. */
+  override getPointAtParam(param: number): AcGePoint3d | undefined {
+    if (!Number.isFinite(param)) return undefined
+    return this._geo.getPointAtAngle(param)
+  }
+
+  /** @inheritdoc */
+  override getClosestPointTo(
+    point: AcGePoint3dLike,
+    extend = false
+  ): AcGePoint3d | undefined {
+    const { x, y } = this.localCoords(point)
+    const full = extend || this.closed
+    const { theta } = full
+      ? this.nearestParam(x, y)
+      : this.nearestParam(x, y, this.startAngle, this.sweep)
+    return this._geo.getPointAtAngle(theta)
+  }
+
+  /** Arc length from {@link startParam} (numerical integration). */
+  override getDistAtParam(param: number): number | undefined {
+    if (!Number.isFinite(param)) return undefined
+    const a = this.majorAxisRadius
+    const b = this.minorAxisRadius
+    const s = this.startAngle
+    const delta = param - s
+    if (delta === 0) return 0
+    const speed = (t: number) => Math.hypot(a * Math.sin(t), b * Math.cos(t))
+    const n = 2 * Math.max(16, Math.ceil((Math.abs(delta) / TAU) * 256))
+    const step = delta / n
+    let sum = speed(s) + speed(param)
+    for (let i = 1; i < n; i++) {
+      sum += (i % 2 === 1 ? 4 : 2) * speed(s + i * step)
+    }
+    return (sum * step) / 3
+  }
+
+  /** Splits into elliptical arc ({@link AcDbEllipse}) pieces. */
+  override getSplitCurves(params: readonly number[]): AcDbCurve[] {
+    if (!(this.majorAxisRadius > 0) || !(this.minorAxisRadius > 0)) return []
+    return acdbSplitCurveByParams(
+      params,
+      this.startParam,
+      this.endParam,
+      this.closed,
+      this.paramTol(),
+      (from, to) => {
+        const piece = acdbDetachSplitPiece(this.clone())
+        piece.startAngle = from
+        piece.endAngle = to
+        return piece
+      }
+    )
+  }
+
+  /**
+   * Lengthens an elliptical arc to the parameter `newParam` while the sweep
+   * stays below a full turn. Full ellipses cannot be extended.
+   */
+  override extend(newParam: number): boolean {
+    if (this.closed || !Number.isFinite(newParam)) return false
+    const tol = this.paramTol()
+    const s = this.startParam
+    const e = this.endParam
+    if (newParam < s - tol) {
+      if (e - newParam >= TAU - tol) return false
+      this.startAngle = newParam
+      return true
+    }
+    if (newParam > e + tol) {
+      if (newParam - s >= TAU - tol) return false
+      this.endAngle = newParam
+      return true
+    }
+    return false
+  }
+
+  /**
+   * Extends the end (in parameter direction) or the start (against it) along
+   * the full ellipse to `toPoint`, which must lie on the ellipse outside the
+   * arc.
+   */
+  override extendToPoint(
+    extendStart: boolean,
+    toPoint: AcGePoint3dLike
+  ): boolean {
+    if (this.closed) return false
+    const param = this.getParamAtPoint(toPoint)
+    if (param === undefined) return false
+    const tol = this.paramTol()
+    const theta = acdbNormalizeAngle(param)
+    if (extendStart) {
+      const delta = acdbNormalizeAngle(this.startAngle - theta)
+      if (delta <= tol || delta >= TAU - tol) return false
+      return this.extend(this.startParam - delta)
+    }
+    const delta = acdbNormalizeAngle(theta - this.endAngle)
+    if (delta <= tol || delta >= TAU - tol) return false
+    return this.extend(this.endParam + delta)
   }
 }
