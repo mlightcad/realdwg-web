@@ -823,9 +823,9 @@ function pickBestCandidate(
     if (hintA) score += acgeDistance2d(c.trimA, hintA) * 0.5
     if (hintB) score += acgeDistance2d(c.trimB, hintB) * 0.5
     if (c.arc) {
-      // Prefer smaller sweep (typical corner fillet).
-      const sweep = Math.abs(c.arc.endAngle - c.arc.startAngle)
-      score += sweep * 0.01
+      // Prefer smaller sweep (typical corner fillet). Use deltaAngle —
+      // public start/end angles are mirrored when clockwise.
+      score += c.arc.deltaAngle * 0.01
     }
     if (score < bestScore) {
       bestScore = score

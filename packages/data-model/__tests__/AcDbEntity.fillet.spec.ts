@@ -268,6 +268,34 @@ describe('acdbFilletPolyline', () => {
     expect(pline.numberOfVertices).toBe(before)
   })
 
+  it('uses minor arcs at both peaks and valleys of a zigzag', () => {
+    // Peak corners are clockwise fillets; arcBulge must not flip them into
+    // major-arc bulges (|b|>1) via CircArc2d's mirrored angle getters.
+    const pline = new AcDbPolyline()
+    pline.addVertexAt(0, new AcGePoint2d(0, 0))
+    pline.addVertexAt(1, new AcGePoint2d(20, 40))
+    pline.addVertexAt(2, new AcGePoint2d(40, 0))
+    pline.addVertexAt(3, new AcGePoint2d(60, 40))
+    pline.addVertexAt(4, new AcGePoint2d(80, 0))
+
+    const stats = acdbFilletPolyline(pline, { radius: 5 })
+    expect(stats.filleted).toBe(3)
+    expect(pline.numberOfVertices).toBe(8)
+
+    const bulges: number[] = []
+    for (let i = 0; i < pline.numberOfVertices; i++) {
+      const b = pline.getBulgeAt(i)
+      if (Math.abs(b) > 1e-8) bulges.push(b)
+    }
+    expect(bulges).toHaveLength(3)
+    // Two peaks (CW, negative) + one valley (CCW, positive); all minor.
+    expect(bulges.filter(b => b < 0)).toHaveLength(2)
+    expect(bulges.filter(b => b > 0)).toHaveLength(1)
+    for (const b of bulges) {
+      expect(Math.abs(b)).toBeLessThanOrEqual(1 + 1e-6)
+    }
+  })
+
   it('fillets a straight–arc corner when FILLETPOLYARC is on', () => {
     // Open L with an arc on the vertical leg: line (0,0)-(10,0) then
     // quarter-circle bulge to (10,10). Fillet at the (10,0) corner.
