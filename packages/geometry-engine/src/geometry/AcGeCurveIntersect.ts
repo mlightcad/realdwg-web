@@ -5,7 +5,13 @@ import {
   AcGePoint3d,
   AcGeVector3d
 } from '../math/index.js'
-import { AcGeMathUtil, AcGeTol, DEFAULT_TOL, FLOAT_TOL, TAU } from '../util/index.js'
+import {
+  AcGeMathUtil,
+  AcGeTol,
+  DEFAULT_TOL,
+  FLOAT_TOL,
+  TAU
+} from '../util/index.js'
 import { AcGeCircArc3d } from './AcGeCircArc3d.js'
 import { AcGeEllipseArc3d } from './AcGeEllipseArc3d.js'
 import { AcGeLine3d } from './AcGeLine3d.js'
@@ -715,7 +721,7 @@ function intersectCoplanarLineCircle(
   const b = 2 * line.dir.dot(f)
   const c = f.dot(f) - arc.radius * arc.radius
   const points: AcGePoint3d[] = []
-  for (const t of solveQuadratic(a, b, c)) {
+  for (const t of solveQuadratic(a, b, c, 2 * arc.radius * POINT_TOL)) {
     if (!isParamOnExtent(t, line.extent)) continue
     const point = pointOnLine(line.start, line.dir, t)
     if (!isAngleOnCircArc(arc, circArcAngle(arc, point), full)) continue
@@ -759,7 +765,9 @@ function intersectCoplanarLineEllipse(
   const B = (2 * x0 * dx) / (a * a) + (2 * y0 * dy) / (b * b)
   const C = (x0 * x0) / (a * a) + (y0 * y0) / (b * b) - 1
   const points: AcGePoint3d[] = []
-  for (const t of solveQuadratic(A, B, C)) {
+  // Local coordinates are scaled to a unit circle, so the point tolerance
+  // shrinks by the (smaller) minor radius.
+  for (const t of solveQuadratic(A, B, C, (2 * POINT_TOL) / b)) {
     if (!isParamOnExtent(t, line.extent)) continue
     const point = pointOnLine(line.start, line.dir, t)
     if (!isAngleOnEllipseArc(arc, ellipseArcAngle(arc, point), full)) continue
@@ -1084,15 +1092,35 @@ function perpInPlane(normal: AcGeVector3d) {
   return perp.normalize()
 }
 
-function solveQuadratic(a: number, b: number, c: number): number[] {
+/**
+ * Solves `a*t^2 + b*t + c = 0` for a line meeting a conic.
+ *
+ * `disc / (4a^2)` is the squared half distance between the two roots in `t`;
+ * scaled by `|dir|^2 = a` (circle case) it becomes the squared half chord
+ * length, which is what a tangency test must compare. Testing the raw
+ * discriminant against a fixed tolerance breaks once coordinates are large
+ * (round-off then yields two points or none for a tangent line).
+ *
+ * @param tangentTolSq - Half chords whose square is at most this value are
+ *   reported as a single tangent root. Callers derive it from the point
+ *   tolerance and the curve radius (`2 * r * tol`, since
+ *   `halfChord^2 = r^2 - h^2 ~ 2 * r * (r - h)`).
+ */
+function solveQuadratic(
+  a: number,
+  b: number,
+  c: number,
+  tangentTolSq: number
+): number[] {
   if (Math.abs(a) < FLOAT_TOL) {
     if (Math.abs(b) < FLOAT_TOL) return []
     return [-c / b]
   }
   const disc = b * b - 4 * a * c
-  if (disc < -POINT_TOL) return []
-  if (disc < POINT_TOL) return [-b / (2 * a)]
-  const sqrtDisc = Math.sqrt(Math.max(0, disc))
+  const halfChordSq = disc / (4 * Math.abs(a))
+  if (halfChordSq < -tangentTolSq) return []
+  if (halfChordSq <= tangentTolSq) return [-b / (2 * a)]
+  const sqrtDisc = Math.sqrt(disc)
   return [(-b - sqrtDisc) / (2 * a), (-b + sqrtDisc) / (2 * a)]
 }
 
