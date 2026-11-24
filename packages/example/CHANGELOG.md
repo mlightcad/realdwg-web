@@ -1,5 +1,14 @@
 # @mlightcad/realdwg-web-example
 
+## 0.16.3
+
+### Patch Changes
+
+- feat: adds AutoCAD-style FILLET and CHAMFER helpers with sysvars, preview, and polyarc support, plus ObjectARX-style AcDbCurve parameter, split and extend APIs for lines, arcs, circles, ellipses, polylines, rays, xlines and splines. Fixes AcGeEllipseArc3d bounding boxes for rotated full ellipses and makes line–circle/ellipse intersections detect tangency reliably at large coordinates
+- Updated dependencies
+  - @mlightcad/data-model@1.16.3
+  - @mlightcad/libredwg-converter@3.16.3
+
 ## 0.16.2
 
 ### Patch Changes
