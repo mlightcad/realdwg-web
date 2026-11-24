@@ -48,7 +48,8 @@ export type {
 export {
   acdbFilletPolyline,
   acdbFilletTwoEntities,
-  acdbIsFilletableEntity
+  acdbIsFilletableEntity,
+  acdbPreviewFilletTwoEntities
 } from './AcDbFilletHelpers.js'
 export type {
   AcDbFilletOptions,
@@ -59,7 +60,8 @@ export type {
 export {
   acdbChamferPolyline,
   acdbChamferTwoEntities,
-  acdbIsChamferableEntity
+  acdbIsChamferableEntity,
+  acdbPreviewChamferTwoEntities
 } from './AcDbChamferHelpers.js'
 export type {
   AcDbChamferOptions,

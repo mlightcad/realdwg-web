@@ -32,6 +32,12 @@ export interface AcDbFilletOptions {
   radius: number
   /** When true, trim/extend the operands to the fillet ends (default true). */
   trim?: boolean
+  /**
+   * When true (AutoCAD FILLETPOLYARC default), FILLET Polyline also fillets
+   * corners that involve arc (bulge) segments. When false, only straight–straight
+   * corners are filleted (legacy AutoCAD 2014 and earlier).
+   */
+  filletPolyArc?: boolean
 }
 
 /**
@@ -82,6 +88,36 @@ export function acdbIsFilletableEntity(
     entity instanceof AcDbRay ||
     entity instanceof AcDbXline
   )
+}
+
+/**
+ * Builds transient fillet preview geometry without mutating the drawing.
+ *
+ * Used when COMMANDPREVIEW is on: returns the would-be fillet arc
+ * (empty when radius is 0 or no solution exists).
+ */
+export function acdbPreviewFilletTwoEntities(
+  e1: AcDbEntity,
+  pick1: AcGePoint3dLike,
+  e2: AcDbEntity,
+  pick2: AcGePoint3dLike,
+  options: AcDbFilletOptions
+): AcDbEntity[] {
+  const primA = entityToPrimitive(e1, pick1)
+  const primB = entityToPrimitive(e2, pick2)
+  if (!primA || !primB) return []
+
+  const outcome = acgeFilletCurves2d(primA, primB, {
+    radius: options.radius,
+    hintA: { x: pick1.x, y: pick1.y },
+    hintB: { x: pick2.x, y: pick2.y }
+  })
+  if (!outcome.ok || !outcome.result.arc || outcome.result.radius <= FLOAT_TOL) {
+    return []
+  }
+  return [
+    createFilletArcEntity(outcome.result.arc, e1, e2, pick1.z ?? 0)
+  ]
 }
 
 /**
@@ -146,10 +182,14 @@ export function acdbFilletTwoEntities(
 }
 
 /**
- * Inserts fillets at every vertex of a 2D polyline where two straight segments meet.
+ * Inserts fillets at every eligible vertex of a 2D polyline.
+ *
+ * When {@link AcDbFilletOptions.filletPolyArc} is false (FILLETPOLYARC = 0),
+ * only straight–straight corners are filleted. When true (default), corners
+ * involving bulge arcs are also attempted.
  *
  * @param pline - Polyline to mutate
- * @param options - Radius and trim mode
+ * @param options - Radius, trim, and FILLETPOLYARC policy
  * @param onlyCorner - When set, fillet only this vertex index (AutoCAD two-segment pick)
  */
 export function acdbFilletPolyline(
@@ -190,6 +230,7 @@ function filletPolylineCorners(
 
   const closed = pline.closed
   const radius = options.radius
+  const filletPolyArc = options.filletPolyArc !== false
   const out: Vertex[] = []
   let filleted = 0
   let skipped = 0
@@ -213,39 +254,36 @@ function filletPolylineCorners(
       continue
     }
 
-    // Only fillet where both adjoining segments are straight.
-    if (
-      Math.abs(verts[iPrev].bulge) > FLOAT_TOL ||
-      Math.abs(verts[iCurr].bulge) > FLOAT_TOL
-    ) {
+    const bulgeA = verts[iPrev].bulge
+    const bulgeB = verts[iCurr].bulge
+    const hasArc =
+      Math.abs(bulgeA) > FLOAT_TOL || Math.abs(bulgeB) > FLOAT_TOL
+
+    // FILLETPOLYARC = 0: legacy — skip corners that involve arc segments.
+    if (hasArc && !filletPolyArc) {
       out.push({ ...verts[iCurr] })
       skipped++
       continue
     }
 
-    const outcome = acgeFilletCurves2d(
-      {
-        kind: 'line',
-        start: { x: verts[iPrev].x, y: verts[iPrev].y },
-        end: { x: verts[iCurr].x, y: verts[iCurr].y }
-      },
-      {
-        kind: 'line',
-        start: { x: verts[iCurr].x, y: verts[iCurr].y },
-        end: { x: verts[iNext].x, y: verts[iNext].y }
-      },
-      {
-        radius,
-        hintA: {
-          x: (verts[iPrev].x + verts[iCurr].x) / 2,
-          y: (verts[iPrev].y + verts[iCurr].y) / 2
-        },
-        hintB: {
-          x: (verts[iCurr].x + verts[iNext].x) / 2,
-          y: (verts[iCurr].y + verts[iNext].y) / 2
-        }
-      }
+    const primA = polylineSegmentPrimitive(
+      verts[iPrev],
+      verts[iCurr],
+      bulgeA
     )
+    const primB = polylineSegmentPrimitive(
+      verts[iCurr],
+      verts[iNext],
+      bulgeB
+    )
+    const hintA = segmentHint(verts[iPrev], verts[iCurr], bulgeA)
+    const hintB = segmentHint(verts[iCurr], verts[iNext], bulgeB)
+
+    const outcome = acgeFilletCurves2d(primA, primB, {
+      radius,
+      hintA,
+      hintB
+    })
 
     if (!outcome.ok || !outcome.result.arc) {
       if (outcome.ok && radius <= FLOAT_TOL) {
@@ -260,7 +298,27 @@ function filletPolylineCorners(
     }
 
     const { trimA, trimB, arc } = outcome.result
-    const bulge = arcBulge(arc)
+    const filletBulge = arcBulge(arc)
+    const remainA = remainingSegmentBulge(
+      verts[iPrev],
+      verts[iCurr],
+      bulgeA,
+      trimA,
+      'start'
+    )
+    const remainB = remainingSegmentBulge(
+      verts[iCurr],
+      verts[iNext],
+      bulgeB,
+      trimB,
+      'end'
+    )
+
+    // Adjust the outgoing bulge of the previous vertex (start → trimA).
+    if (out.length > 0) {
+      out[out.length - 1].bulge = remainA
+    }
+
     // Polyline encoding: vertex at trimA has bulge for the fillet arc to trimB.
     if (out.length === 0 || !sameXY(out[out.length - 1], trimA)) {
       if (
@@ -270,7 +328,7 @@ function filletPolylineCorners(
         out[out.length - 1] = {
           x: trimA.x,
           y: trimA.y,
-          bulge,
+          bulge: filletBulge,
           startWidth: verts[iCurr].startWidth,
           endWidth: verts[iCurr].endWidth
         }
@@ -278,18 +336,18 @@ function filletPolylineCorners(
         out.push({
           x: trimA.x,
           y: trimA.y,
-          bulge,
+          bulge: filletBulge,
           startWidth: verts[iCurr].startWidth,
           endWidth: verts[iCurr].endWidth
         })
       }
     } else {
-      out[out.length - 1].bulge = bulge
+      out[out.length - 1].bulge = filletBulge
     }
     out.push({
       x: trimB.x,
       y: trimB.y,
-      bulge: 0,
+      bulge: remainB,
       startWidth: verts[iCurr].startWidth,
       endWidth: verts[iCurr].endWidth
     })
@@ -319,6 +377,79 @@ function filletPolylineCorners(
   return { filleted, skipped }
 }
 
+function polylineSegmentPrimitive(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  bulge: number
+): AcGeFilletPrimitive2d {
+  if (Math.abs(bulge) > FLOAT_TOL) {
+    const arc = new AcGeCircArc2d(a, b, bulge)
+    return {
+      kind: 'circArc',
+      center: arc.center,
+      radius: arc.radius,
+      startAngle: arc.startAngle,
+      endAngle: arc.endAngle,
+      clockwise: arc.clockwise
+    }
+  }
+  return { kind: 'line', start: a, end: b, extent: 'bounded' }
+}
+
+function segmentHint(
+  a: { x: number; y: number },
+  b: { x: number; y: number },
+  bulge: number
+): { x: number; y: number } {
+  if (Math.abs(bulge) > FLOAT_TOL) {
+    const arc = new AcGeCircArc2d(a, b, bulge)
+    const mid = arc.midPoint
+    return { x: mid.x, y: mid.y }
+  }
+  return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2 }
+}
+
+/**
+ * Bulge for the kept portion of a polyline segment after a fillet trim.
+ * `side` = `start` keeps from original start → trim; `end` keeps trim → original end.
+ */
+function remainingSegmentBulge(
+  start: { x: number; y: number },
+  end: { x: number; y: number },
+  bulge: number,
+  trim: { x: number; y: number },
+  side: 'start' | 'end'
+): number {
+  if (Math.abs(bulge) <= FLOAT_TOL) return 0
+  const from = side === 'start' ? start : trim
+  const to = side === 'start' ? trim : end
+  if (sameXY(from, to)) return 0
+  try {
+    const full = new AcGeCircArc2d(start, end, bulge)
+    const cx = full.center.x
+    const cy = full.center.y
+    const aStart = Math.atan2(start.y - cy, start.x - cx)
+    const aEnd = Math.atan2(end.y - cy, end.x - cx)
+    const aTrim = Math.atan2(trim.y - cy, trim.x - cx)
+    if (bulge >= 0) {
+      const keep =
+        side === 'start'
+          ? AcGeMathUtil.normalizeAngle(aTrim - aStart)
+          : AcGeMathUtil.normalizeAngle(aEnd - aTrim)
+      if (keep <= FLOAT_TOL) return 0
+      return Math.tan(keep / 4)
+    }
+    const keep =
+      side === 'start'
+        ? AcGeMathUtil.normalizeAngle(aStart - aTrim)
+        : AcGeMathUtil.normalizeAngle(aTrim - aEnd)
+    if (keep <= FLOAT_TOL) return 0
+    return -Math.tan(keep / 4)
+  } catch {
+    return 0
+  }
+}
+
 function filletPolylineSegments(
   pline: AcDbPolyline,
   pick1: AcGePoint3dLike,
@@ -341,25 +472,33 @@ function filletPolylineSegments(
     return { ok: false, error: 'noSolution' }
   }
 
+  const n = pline.numberOfVertices
+  const iPrev = pline.closed ? (shared - 1 + n) % n : shared - 1
+  const iCurr = shared
+  const iNext = pline.closed ? (shared + 1) % n : shared + 1
+  const vPrev = pline.getPoint2dAt(iPrev)
+  const vCurr = pline.getPoint2dAt(iCurr)
+  const vNext = pline.getPoint2dAt(iNext)
+  const bulgeA = pline.getBulgeAt(iPrev)
+  const bulgeB = pline.getBulgeAt(iCurr)
+  const hasArc =
+    Math.abs(bulgeA) > FLOAT_TOL || Math.abs(bulgeB) > FLOAT_TOL
+
+  // FILLETPOLYARC = 0: legacy — refuse corners that involve arc segments.
+  if (hasArc && options.filletPolyArc === false) {
+    return { ok: false, error: 'unsupported' }
+  }
+
+  const primA = polylineSegmentPrimitive(vPrev, vCurr, bulgeA)
+  const primB = polylineSegmentPrimitive(vCurr, vNext, bulgeB)
+  const outcome = acgeFilletCurves2d(primA, primB, {
+    radius: options.radius,
+    hintA: { x: pick1.x, y: pick1.y },
+    hintB: { x: pick2.x, y: pick2.y }
+  })
+  if (!outcome.ok) return outcome
+
   if (options.trim === false) {
-    const p1a = pline.getPoint2dAt(seg1)
-    const p1b = pline.getPoint2dAt(
-      pline.closed ? (seg1 + 1) % pline.numberOfVertices : seg1 + 1
-    )
-    const p2a = pline.getPoint2dAt(seg2)
-    const p2b = pline.getPoint2dAt(
-      pline.closed ? (seg2 + 1) % pline.numberOfVertices : seg2 + 1
-    )
-    const outcome = acgeFilletCurves2d(
-      { kind: 'line', start: p1a, end: p1b },
-      { kind: 'line', start: p2a, end: p2b },
-      {
-        radius: options.radius,
-        hintA: { x: pick1.x, y: pick1.y },
-        hintB: { x: pick2.x, y: pick2.y }
-      }
-    )
-    if (!outcome.ok) return outcome
     const created: AcDbEntity[] = []
     if (outcome.result.arc && outcome.result.radius > FLOAT_TOL) {
       created.push(
@@ -371,7 +510,10 @@ function filletPolylineSegments(
 
   const stats = filletPolylineCorners(pline, options, shared)
   if (stats.filleted === 0 && options.radius > FLOAT_TOL) {
-    return { ok: false, error: 'radiusTooLarge' }
+    // Geometry already failed above in the common case; if the batch path
+    // still skipped the corner, treat it as noSolution rather than
+    // incorrectly claiming the radius is too large.
+    return { ok: false, error: 'noSolution' }
   }
   return {
     ok: true,
@@ -539,10 +681,18 @@ function applyTrim(
       pick.y - entity.center.y,
       pick.x - entity.center.x
     )
-    // Keep the side containing the pick.
-    if (
-      AcGeMathUtil.isAngleOnCcwSweep(entity.startAngle, midPick, ang) ||
-      closerAngle(entity.startAngle, midPick) < closerAngle(entity.endAngle, midPick)
+    // AcDbArc sweeps CCW from startAngle to endAngle. Keep the sub-arc that
+    // contains the pick: start→trim or trim→end. Fall back to the nearer
+    // endpoint when the pick is ambiguous (trim near an endpoint / extension).
+    if (AcGeMathUtil.isAngleOnCcwSweep(entity.startAngle, midPick, ang)) {
+      entity.endAngle = ang
+    } else if (
+      AcGeMathUtil.isAngleOnCcwSweep(ang, midPick, entity.endAngle)
+    ) {
+      entity.startAngle = ang
+    } else if (
+      closerAngle(entity.startAngle, midPick) <
+      closerAngle(entity.endAngle, midPick)
     ) {
       entity.endAngle = ang
     } else {
@@ -570,7 +720,8 @@ function applyTrim(
 
 /**
  * Moves the far endpoint of the picked polyline segment to `trimPt`, keeping
- * the pick side. Returns the polyline when updated.
+ * the pick side. Updates bulge for arc segments so the remaining curve stays
+ * on the original circle. Returns the polyline when updated.
  */
 function trimPolylineSegment(
   pline: AcDbPolyline,
@@ -584,6 +735,42 @@ function trimPolylineSegment(
   const i1 = pline.closed ? (seg + 1) % n : seg + 1
   const a = pline.getPoint2dAt(i0)
   const b = pline.getPoint2dAt(i1)
+  const bulge = pline.getBulgeAt(i0)
+
+  if (Math.abs(bulge) > FLOAT_TOL) {
+    let keepStart: boolean
+    try {
+      const arc = new AcGeCircArc2d(a, b, bulge)
+      const cx = arc.center.x
+      const cy = arc.center.y
+      const aStart = Math.atan2(a.y - cy, a.x - cx)
+      const paramAlong = (ang: number) =>
+        bulge >= 0
+          ? AcGeMathUtil.normalizeAngle(ang - aStart)
+          : AcGeMathUtil.normalizeAngle(aStart - ang)
+      const aPick = Math.atan2(pick.y - cy, pick.x - cx)
+      const aTrim = Math.atan2(trimPt.y - cy, trimPt.x - cx)
+      keepStart = paramAlong(aPick) <= paramAlong(aTrim)
+    } catch {
+      // Degenerate bulge → fall back to chord comparison below.
+      const dx = b.x - a.x
+      const dy = b.y - a.y
+      const lenSq = dx * dx + dy * dy
+      if (lenSq < FLOAT_TOL) return undefined
+      const tPick = ((pick.x - a.x) * dx + (pick.y - a.y) * dy) / lenSq
+      const tTrim = ((trimPt.x - a.x) * dx + (trimPt.y - a.y) * dy) / lenSq
+      keepStart = tPick <= tTrim
+    }
+    if (keepStart) {
+      pline.setPointAt(i1, new AcGePoint2d(trimPt.x, trimPt.y))
+      pline.setBulgeAt(i0, remainingSegmentBulge(a, b, bulge, trimPt, 'start'))
+    } else {
+      pline.setPointAt(i0, new AcGePoint2d(trimPt.x, trimPt.y))
+      pline.setBulgeAt(i0, remainingSegmentBulge(a, b, bulge, trimPt, 'end'))
+    }
+    return pline
+  }
+
   const dx = b.x - a.x
   const dy = b.y - a.y
   const lenSq = dx * dx + dy * dy
@@ -639,7 +826,8 @@ function nearestSegmentIndex(
   for (let i = 0; i < count; i++) {
     const a = pline.getPoint2dAt(i)
     const b = pline.getPoint2dAt(pline.closed ? (i + 1) % n : i + 1)
-    const proj = projectSeg(a, b, pick)
+    const bulge = pline.getBulgeAt(i)
+    const proj = projectOnPolylineSegment(a, b, bulge, pick)
     const d = dist2(proj, pick)
     if (d < bestDist) {
       bestDist = d
@@ -647,6 +835,44 @@ function nearestSegmentIndex(
     }
   }
   return best
+}
+
+/**
+ * Closest point on a polyline segment (line or bulge arc) to `pt`.
+ */
+function projectOnPolylineSegment(
+  a: AcGePoint2d,
+  b: AcGePoint2d,
+  bulge: number,
+  pt: AcGePoint3dLike
+): AcGePoint2d {
+  if (Math.abs(bulge) > FLOAT_TOL) {
+    try {
+      const arc = new AcGeCircArc2d(a, b, bulge)
+      const cx = arc.center.x
+      const cy = arc.center.y
+      const r = arc.radius
+      const start = Math.atan2(a.y - cy, a.x - cx)
+      const end = Math.atan2(b.y - cy, b.x - cx)
+      const ang = Math.atan2(pt.y - cy, pt.x - cx)
+      const onSweep =
+        bulge >= 0
+          ? AcGeMathUtil.isAngleOnCcwSweep(start, ang, end)
+          : AcGeMathUtil.isAngleOnCcwSweep(end, ang, start)
+      const clamped = onSweep
+        ? ang
+        : closerAngle(start, ang) <= closerAngle(end, ang)
+          ? start
+          : end
+      return new AcGePoint2d(
+        cx + r * Math.cos(clamped),
+        cy + r * Math.sin(clamped)
+      )
+    } catch {
+      return projectSeg(a, b, pt)
+    }
+  }
+  return projectSeg(a, b, pt)
 }
 
 function sharedVertex(

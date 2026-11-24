@@ -683,6 +683,18 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     if (mirrtext != null) {
       db.mirrtext = mirrtext
     }
+    const headerExt = header as {
+      FILLETRAD?: number
+      CHAMFERA?: number
+      CHAMFERB?: number
+      CHAMFERC?: number
+      CHAMFERD?: number
+    }
+    if (headerExt.FILLETRAD != null) db.filletrad = headerExt.FILLETRAD
+    if (headerExt.CHAMFERA != null) db.chamfera = headerExt.CHAMFERA
+    if (headerExt.CHAMFERB != null) db.chamferb = headerExt.CHAMFERB
+    if (headerExt.CHAMFERC != null) db.chamferc = headerExt.CHAMFERC
+    if (headerExt.CHAMFERD != null) db.chamferd = headerExt.CHAMFERD
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
     // Match DXF header reader: new dimensions must inherit $DIMSTYLE.
     // Without this, DWG loads leave db.dimstyle as the constructor default

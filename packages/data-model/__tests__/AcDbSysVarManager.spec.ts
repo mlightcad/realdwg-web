@@ -294,6 +294,25 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDescriptor(AcDbSystemVariables.TILEMODE)?.isDbVar).toBe(
       true
     )
+    expect(manager.getDefaultValue(AcDbSystemVariables.TRIMMODE)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.TRIMMODE)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.FILLETRAD)).toBe(0)
+    expect(manager.getDescriptor(AcDbSystemVariables.FILLETRAD)?.isDbVar).toBe(
+      true
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.CHAMFERA)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.CHAMFERB)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.CHAMFERC)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.CHAMFERD)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.CHAMMODE)).toBe(0)
+    expect(manager.getDescriptor(AcDbSystemVariables.CHAMMODE)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDefaultValue(AcDbSystemVariables.FILLETPOLYARC)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.COMMANDPREVIEW)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.PROJMODE)).toBe(1)
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'
@@ -417,5 +436,79 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.COMPARERCMARGIN, 5, db)
     manager.setVar(AcDbSystemVariables.COMPARETEXT, 1, db)
     manager.setVar(AcDbSystemVariables.COMPARETOLERANCE, 6, db)
+  })
+
+  it('registers fillet/chamfer system variables with AutoCAD defaults and ranges', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldTrimmode = manager.getVar(AcDbSystemVariables.TRIMMODE, db) as number
+    const oldChammode = manager.getVar(AcDbSystemVariables.CHAMMODE, db) as number
+    const oldFilletPolyArc = manager.getVar(
+      AcDbSystemVariables.FILLETPOLYARC,
+      db
+    ) as number
+    const oldCommandPreview = manager.getVar(
+      AcDbSystemVariables.COMMANDPREVIEW,
+      db
+    ) as number
+    const oldProjmode = manager.getVar(AcDbSystemVariables.PROJMODE, db) as number
+
+    expect(db.filletrad).toBe(0)
+    expect(db.chamfera).toBe(0)
+    expect(db.chamferb).toBe(0)
+    expect(db.chamferc).toBe(0)
+    expect(db.chamferd).toBe(0)
+    expect(manager.getVar(AcDbSystemVariables.TRIMMODE, db)).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.CHAMMODE, db)).toBe(0)
+    expect(manager.getVar(AcDbSystemVariables.FILLETPOLYARC, db)).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.COMMANDPREVIEW, db)).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.PROJMODE, db)).toBe(1)
+
+    manager.setVar(AcDbSystemVariables.FILLETRAD, 2.5, db)
+    expect(db.filletrad).toBe(2.5)
+    manager.setVar(AcDbSystemVariables.CHAMFERA, 1, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERB, 2, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERC, 3, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERD, 45, db)
+    expect(db.chamfera).toBe(1)
+    expect(db.chamferb).toBe(2)
+    expect(db.chamferc).toBe(3)
+    expect(db.chamferd).toBe(45)
+
+    manager.setVar(AcDbSystemVariables.TRIMMODE, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.TRIMMODE, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.CHAMMODE, 1, db)
+    expect(manager.getVar(AcDbSystemVariables.CHAMMODE, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.FILLETPOLYARC, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.FILLETPOLYARC, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.PROJMODE, 2, db)
+    expect(manager.getVar(AcDbSystemVariables.PROJMODE, db)).toBe(2)
+
+    expect(() => manager.setVar(AcDbSystemVariables.TRIMMODE, 2, db)).toThrow(
+      'Invalid TRIMMODE value! Valid range is 0 to 1.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.CHAMMODE, -1, db)).toThrow(
+      'Invalid CHAMMODE value! Valid range is 0 to 1.'
+    )
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.FILLETPOLYARC, 3, db)
+    ).toThrow('Invalid FILLETPOLYARC value! Valid range is 0 to 1.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.COMMANDPREVIEW, 2, db)
+    ).toThrow('Invalid COMMANDPREVIEW value! Valid range is 0 to 1.')
+    expect(() => manager.setVar(AcDbSystemVariables.PROJMODE, 3, db)).toThrow(
+      'Invalid PROJMODE value! Valid range is 0 to 2.'
+    )
+
+    manager.setVar(AcDbSystemVariables.FILLETRAD, 0, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERA, 0, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERB, 0, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERC, 0, db)
+    manager.setVar(AcDbSystemVariables.CHAMFERD, 0, db)
+    manager.setVar(AcDbSystemVariables.TRIMMODE, oldTrimmode, db)
+    manager.setVar(AcDbSystemVariables.CHAMMODE, oldChammode, db)
+    manager.setVar(AcDbSystemVariables.FILLETPOLYARC, oldFilletPolyArc, db)
+    manager.setVar(AcDbSystemVariables.COMMANDPREVIEW, oldCommandPreview, db)
+    manager.setVar(AcDbSystemVariables.PROJMODE, oldProjmode, db)
   })
 })

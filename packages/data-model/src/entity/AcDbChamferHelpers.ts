@@ -58,6 +58,44 @@ export function acdbIsChamferableEntity(
 }
 
 /**
+ * Builds transient chamfer preview geometry without mutating the drawing.
+ *
+ * Used when COMMANDPREVIEW is on: returns the would-be chamfer segment
+ * (empty for a sharp corner / zero distances / no solution).
+ */
+export function acdbPreviewChamferTwoEntities(
+  e1: AcDbEntity,
+  pick1: AcGePoint3dLike,
+  e2: AcDbEntity,
+  pick2: AcGePoint3dLike,
+  options: AcDbChamferOptions
+): AcDbEntity[] {
+  if (!acdbIsChamferableEntity(e1) || !acdbIsChamferableEntity(e2)) {
+    return []
+  }
+  const lineA = toChamferLine(e1, pick1)
+  const lineB = toChamferLine(e2, pick2)
+  if (!lineA || !lineB) return []
+
+  const outcome = acgeChamferCurves2d(lineA, lineB, {
+    mode: options.mode,
+    hintA: { x: pick1.x, y: pick1.y },
+    hintB: { x: pick2.x, y: pick2.y }
+  })
+  if (!outcome.ok || outcome.result.isCornerOnly) return []
+
+  const z = pick1.z ?? 0
+  const chamfer = new AcDbLine(
+    new AcGePoint3d(outcome.result.trimA.x, outcome.result.trimA.y, z),
+    new AcGePoint3d(outcome.result.trimB.x, outcome.result.trimB.y, z)
+  )
+  if (e1.layer === e2.layer) {
+    chamfer.setPropertiesFrom(e1)
+  }
+  return [chamfer]
+}
+
+/**
  * Chamfers two linear entities.
  */
 export function acdbChamferTwoEntities(

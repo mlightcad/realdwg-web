@@ -123,6 +123,93 @@ describe('acgeChamferCurves2d', () => {
     expect(outcome.result.trimB.y).toBeCloseTo(2)
   })
 
+  it('applies distance1 to the first line and distance2 to the second', () => {
+    // AutoCAD: distances follow selection order, not screen position.
+    const outcome = acgeChamferCurves2d(
+      line([0, 0], [10, 0]),
+      line([0, 0], [0, 10]),
+      {
+        mode: { method: 'distance', distance1: 3, distance2: 1 },
+        hintA: { x: 5, y: 0 },
+        hintB: { x: 0, y: 5 }
+      }
+    )
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.result.trimA.x).toBeCloseTo(3)
+    expect(outcome.result.trimA.y).toBeCloseTo(0)
+    expect(outcome.result.trimB.x).toBeCloseTo(0)
+    expect(outcome.result.trimB.y).toBeCloseTo(1)
+  })
+
+  it('swaps cut lengths when the selection order is reversed', () => {
+    const outcome = acgeChamferCurves2d(
+      line([0, 0], [0, 10]),
+      line([0, 0], [10, 0]),
+      {
+        mode: { method: 'distance', distance1: 3, distance2: 1 },
+        hintA: { x: 0, y: 5 },
+        hintB: { x: 5, y: 0 }
+      }
+    )
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.result.trimA.x).toBeCloseTo(0)
+    expect(outcome.result.trimA.y).toBeCloseTo(3)
+    expect(outcome.result.trimB.x).toBeCloseTo(1)
+    expect(outcome.result.trimB.y).toBeCloseTo(0)
+  })
+
+  it('uses pick hints to choose which sector of crossing lines to chamfer', () => {
+    // X-crossing "八"/X: lines (-10,-10)-(10,10) and (-10,10)-(10,-10).
+    // Picks on the upper halves keep the chamfer in the top sector.
+    const a = line([-10, -10], [10, 10])
+    const b = line([-10, 10], [10, -10])
+    const upper = acgeChamferCurves2d(a, b, {
+      mode: { method: 'distance', distance1: 2, distance2: 2 },
+      hintA: { x: -5, y: -5 },
+      hintB: { x: -5, y: 5 }
+    })
+    const lower = acgeChamferCurves2d(a, b, {
+      mode: { method: 'distance', distance1: 2, distance2: 2 },
+      hintA: { x: 5, y: 5 },
+      hintB: { x: 5, y: -5 }
+    })
+    expect(upper.ok).toBe(true)
+    expect(lower.ok).toBe(true)
+    if (!upper.ok || !lower.ok) return
+    expect(upper.result.corner.x).toBeCloseTo(0)
+    expect(upper.result.corner.y).toBeCloseTo(0)
+    // Upper sector: both trim points have negative X (left of the crossing).
+    expect(upper.result.trimA.x).toBeLessThan(0)
+    expect(upper.result.trimB.x).toBeLessThan(0)
+    // Lower/opposite sector: both trim points have positive X.
+    expect(lower.result.trimA.x).toBeGreaterThan(0)
+    expect(lower.result.trimB.x).toBeGreaterThan(0)
+  })
+
+  it('chamfers a separated 八 by extending to the virtual intersection', () => {
+    // Diverging arms that meet at (0,0) when extended downward.
+    const outcome = acgeChamferCurves2d(
+      line([-2, 2], [-10, 10]),
+      line([2, 2], [10, 10]),
+      {
+        mode: { method: 'distance', distance1: 2, distance2: 2 },
+        hintA: { x: -6, y: 6 },
+        hintB: { x: 6, y: 6 }
+      }
+    )
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.result.corner.x).toBeCloseTo(0)
+    expect(outcome.result.corner.y).toBeCloseTo(0)
+    const invSqrt2 = 1 / Math.SQRT2
+    expect(outcome.result.trimA.x).toBeCloseTo(-2 * invSqrt2)
+    expect(outcome.result.trimA.y).toBeCloseTo(2 * invSqrt2)
+    expect(outcome.result.trimB.x).toBeCloseTo(2 * invSqrt2)
+    expect(outcome.result.trimB.y).toBeCloseTo(2 * invSqrt2)
+  })
+
   it('creates a sharp corner when both distances are 0', () => {
     const outcome = acgeChamferCurves2d(
       line([0, 0], [10, 0]),
@@ -138,6 +225,25 @@ describe('acgeChamferCurves2d', () => {
     expect(outcome.result.isCornerOnly).toBe(true)
     expect(outcome.result.trimA.x).toBeCloseTo(0)
     expect(outcome.result.trimA.y).toBeCloseTo(0)
+  })
+
+  it('extends separated lines to a sharp corner when both distances are 0', () => {
+    const outcome = acgeChamferCurves2d(
+      line([-2, 2], [-10, 10]),
+      line([2, 2], [10, 10]),
+      {
+        mode: { method: 'distance', distance1: 0, distance2: 0 },
+        hintA: { x: -6, y: 6 },
+        hintB: { x: 6, y: 6 }
+      }
+    )
+    expect(outcome.ok).toBe(true)
+    if (!outcome.ok) return
+    expect(outcome.result.isCornerOnly).toBe(true)
+    expect(outcome.result.trimA.x).toBeCloseTo(0)
+    expect(outcome.result.trimA.y).toBeCloseTo(0)
+    expect(outcome.result.trimB.x).toBeCloseTo(0)
+    expect(outcome.result.trimB.y).toBeCloseTo(0)
   })
 
   it('supports angle method', () => {

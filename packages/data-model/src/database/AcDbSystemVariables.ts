@@ -46,6 +46,33 @@ export const AcDbSystemVariables = {
   CELWEIGHT: 'CELWEIGHT',
   /** Current transparency level for newly created entities. */
   CETRANSPARENCY: 'CETRANSPARENCY',
+  /**
+   * First chamfer distance when {@link CHAMMODE} is `0` (`$CHAMFERA`).
+   * Saved in the drawing. AutoCAD initial value is `0.0`.
+   */
+  CHAMFERA: 'CHAMFERA',
+  /**
+   * Second chamfer distance when {@link CHAMMODE} is `0` (`$CHAMFERB`).
+   * Saved in the drawing. AutoCAD initial value is `0.0`.
+   */
+  CHAMFERB: 'CHAMFERB',
+  /**
+   * Chamfer length when {@link CHAMMODE} is `1` (`$CHAMFERC`).
+   * Saved in the drawing. AutoCAD initial value is `0.0`.
+   */
+  CHAMFERC: 'CHAMFERC',
+  /**
+   * Chamfer angle in **degrees** when {@link CHAMMODE} is `1` (`$CHAMFERD`).
+   * Saved in the drawing. AutoCAD initial value is `0.0`.
+   */
+  CHAMFERD: 'CHAMFERD',
+  /**
+   * CHAMFER input method: `0` = two distances, `1` = length + angle.
+   * Not saved. AutoCAD initial value is `0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-0FFBF218-FED2-485D-A332-19F406228123.htm
+   */
+  CHAMMODE: 'CHAMMODE',
   /** Current layer name used when creating new entities. */
   CLAYER: 'CLAYER',
   /** Current multileader style name used when creating new MLEADER entities. */
@@ -56,6 +83,13 @@ export const AcDbSystemVariables = {
   CMLSTYLE: 'CMLSTYLE',
   /** UI color theme selector used by the application shell or viewer integration. */
   COLORTHEME: 'COLORTHEME',
+  /**
+   * Controls whether a preview of the possible outcome of certain commands is
+   * displayed. `0` = off, `1` = on (AutoCAD default). Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2025/ENU/AutoCAD-Core/files/GUID-2B245436-029A-4E14-92C2-0ED4F4F1362E.htm
+   */
+  COMMANDPREVIEW: 'COMMANDPREVIEW',
   /**
    * Controls whether hatch objects are included in drawing comparison.
    * `0` excludes hatches (AutoCAD default); `1` includes them. Saved in the drawing.
@@ -112,6 +146,21 @@ export const AcDbSystemVariables = {
   EXTMAX: 'EXTMAX',
   /** Lower-left corner of the model-space drawing extents. */
   EXTMIN: 'EXTMIN',
+  /**
+   * Controls FILLET Polyline behavior for arc segments.
+   * `0` = legacy (skip arc segments); `1` = fillet arc segments (default).
+   * Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-Core/files/GUID-DD802826-BEE4-4B85-9B76-E9A3FBD02E24.htm
+   */
+  FILLETPOLYARC: 'FILLETPOLYARC',
+  /**
+   * Current 2D fillet radius (`$FILLETRAD`). Saved in the drawing.
+   * AutoCAD initial value is `0.0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2025/ENU/AutoCAD-LT/files/GUID-BA2DD5FF-B663-48DB-95A8-6DEAFCEDDBF5.htm
+   */
+  FILLETRAD: 'FILLETRAD',
   /**
    * ACI color index for unselected grips on selected objects. Valid range is
    * **1–255**. Saved in the registry (not in the drawing).
@@ -254,6 +303,13 @@ export const AcDbSystemVariables = {
   POLARMODE: 'POLARMODE',
   /** Polar angle increment, in degrees, for polar tracking alignment paths. */
   POLARANG: 'POLARANG',
+  /**
+   * Projection mode for TRIM / EXTEND: `0` = true 3D, `1` = UCS XY (default),
+   * `2` = current view. Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-8735A062-2688-44A7-809A-9883761533F9.htm
+   */
+  PROJMODE: 'PROJMODE',
   /** Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area. */
   SHORTCUTMENU: 'SHORTCUTMENU',
   /** Current text style name used when creating new text entities. */
@@ -266,6 +322,14 @@ export const AcDbSystemVariables = {
    * @see https://help.autodesk.com/view/ACD/2027/ENU/?guid=GUID-02F55DD8-1EB1-493C-929D-A7CFDE55C348
    */
   TILEMODE: 'TILEMODE',
+  /**
+   * Controls whether selected edges for chamfers and fillets are trimmed.
+   * `0` = leave intact; `1` = trim to chamfer/fillet ends (default).
+   * Saved in the registry.
+   *
+   * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-3D639DCE-5A01-4C07-899D-0595F8DDEBF7
+   */
+  TRIMMODE: 'TRIMMODE',
   /** Current dimension style name used when creating new dimension entities. */
   DIMSTYLE: 'DIMSTYLE',
   /**
