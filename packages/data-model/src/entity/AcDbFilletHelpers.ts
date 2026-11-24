@@ -956,11 +956,9 @@ function closerAngle(a: number, b: number): number {
 }
 
 function arcBulge(arc: AcGeCircArc2d): number {
-  let sweep = AcGeMathUtil.normalizeAngle(arc.endAngle - arc.startAngle)
-  if (arc.clockwise) {
-    sweep = -AcGeMathUtil.normalizeAngle(arc.startAngle - arc.endAngle)
-  }
-  // bulge = tan(included/4); included is signed (negative = CW)
-  const included = arc.clockwise ? -Math.abs(sweep) : Math.abs(sweep)
+  // Use deltaAngle (true included sweep). Public startAngle/endAngle are
+  // mirrored when clockwise, so end-start would yield the complementary
+  // (major) angle and encode a lightbulb loop into the polyline bulge.
+  const included = arc.clockwise ? -arc.deltaAngle : arc.deltaAngle
   return Math.tan(included / 4)
 }
