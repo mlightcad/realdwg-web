@@ -202,6 +202,21 @@ function applyHeaderVar(
       if (n != null) db.mirrtext = n
       break
     }
+    case '$FILLETRAD':
+      db.filletrad = readHeaderNumber(filer) ?? 0
+      break
+    case '$CHAMFERA':
+      db.chamfera = readHeaderNumber(filer) ?? 0
+      break
+    case '$CHAMFERB':
+      db.chamferb = readHeaderNumber(filer) ?? 0
+      break
+    case '$CHAMFERC':
+      db.chamferc = readHeaderNumber(filer) ?? 0
+      break
+    case '$CHAMFERD':
+      db.chamferd = readHeaderNumber(filer) ?? 0
+      break
     case '$COMPAREHATCH': {
       const n = acdbIntegerSysVarIfInRange(
         readHeaderNumber(filer),

@@ -9,6 +9,12 @@ import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbAngleUnits } from '../misc/AcDbAngleUnits.js'
 import {
+  ACDB_CHAMMODE_DEFAULT,
+  ACDB_CHAMMODE_MAX,
+  ACDB_CHAMMODE_MIN,
+  ACDB_COMMANDPREVIEW_DEFAULT,
+  ACDB_COMMANDPREVIEW_MAX,
+  ACDB_COMMANDPREVIEW_MIN,
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
@@ -24,6 +30,9 @@ import {
   ACDB_COMPARETOLERANCE_DEFAULT,
   ACDB_COMPARETOLERANCE_MAX,
   ACDB_COMPARETOLERANCE_MIN,
+  ACDB_FILLETPOLYARC_DEFAULT,
+  ACDB_FILLETPOLYARC_MAX,
+  ACDB_FILLETPOLYARC_MIN,
   ACDB_GRIPCOLOR_DEFAULT,
   ACDB_GRIPCOLOR_MAX,
   ACDB_GRIPCOLOR_MIN,
@@ -36,6 +45,12 @@ import {
   ACDB_MIRRTEXT_DEFAULT,
   ACDB_MIRRTEXT_MAX,
   ACDB_MIRRTEXT_MIN,
+  ACDB_PROJMODE_DEFAULT,
+  ACDB_PROJMODE_MAX,
+  ACDB_PROJMODE_MIN,
+  ACDB_TRIMMODE_DEFAULT,
+  ACDB_TRIMMODE_MAX,
+  ACDB_TRIMMODE_MIN,
   acdbCoerceIntegerSysVar,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
@@ -248,6 +263,51 @@ export class AcDbSysVarManager {
       isDbVar: true,
       defaultValue: new AcCmTransparency()
     })
+    /**
+     * First chamfer distance when CHAMMODE is 0. Saved in the drawing.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.CHAMFERA,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Second chamfer distance when CHAMMODE is 0. Saved in the drawing.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.CHAMFERB,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Chamfer length when CHAMMODE is 1. Saved in the drawing.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.CHAMFERC,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * Chamfer angle in degrees when CHAMMODE is 1. Saved in the drawing.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.CHAMFERD,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
+    })
+    /**
+     * CHAMFER input method: 0 = two distances, 1 = length + angle. Not saved.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.CHAMMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_CHAMMODE_DEFAULT
+    })
     this.registerVar({
       name: AcDbSystemVariables.CLAYER,
       type: 'string',
@@ -291,6 +351,19 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 0
+    })
+    /**
+     * Controls command-result preview (FILLET/CHAMFER second-object hover,
+     * and AutoCAD's TRIM/EXTEND/BREAK/LENGTHEN/ERASE family).
+     * Saved in the registry. AutoCAD initial value is 1.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2025/ENU/AutoCAD-Core/files/GUID-2B245436-029A-4E14-92C2-0ED4F4F1362E.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.COMMANDPREVIEW,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_COMMANDPREVIEW_DEFAULT
     })
     /**
      * Controls whether hatch objects are included in drawing comparison.
@@ -401,6 +474,30 @@ export class AcDbSysVarManager {
       isDbVar: true,
       readOnly: true,
       defaultValue: 'Drawing1.dwg'
+    })
+    /**
+     * FILLET Polyline arc-segment policy. Saved in the registry.
+     * - 0: Legacy — do not fillet arc segments
+     * - 1: Fillet arc segments (AutoCAD default)
+     *
+     * @see https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-Core/files/GUID-DD802826-BEE4-4B85-9B76-E9A3FBD02E24.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.FILLETPOLYARC,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_FILLETPOLYARC_DEFAULT
+    })
+    /**
+     * Current 2D fillet radius. Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2025/ENU/AutoCAD-LT/files/GUID-BA2DD5FF-B663-48DB-95A8-6DEAFCEDDBF5.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.FILLETRAD,
+      type: 'number',
+      isDbVar: true,
+      defaultValue: 0
     })
     /**
      * Controls the color of unselected grips as an ACI color index. Valid
@@ -823,6 +920,20 @@ export class AcDbSysVarManager {
       defaultValue: 90
     })
     /**
+     * Projection mode for TRIM / EXTEND. Saved in the registry.
+     * - 0: True 3D (no projection)
+     * - 1: Project to UCS XY (AutoCAD default)
+     * - 2: Project to current view
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-8735A062-2688-44A7-809A-9883761533F9.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.PROJMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_PROJMODE_DEFAULT
+    })
+    /**
      * Controls whether Default, Edit, and Command mode shortcut menus are available in the drawing area.
      * - 0: Disables all Default, Edit, and Command mode shortcut menus.
      * - 1: Enables Default mode shortcut menus.
@@ -842,6 +953,20 @@ export class AcDbSysVarManager {
       type: 'string',
       isDbVar: true,
       defaultValue: DEFAULT_TEXT_STYLE
+    })
+    /**
+     * Controls whether selected edges for chamfers and fillets are trimmed.
+     * Saved in the registry. AutoCAD initial value is 1.
+     * - 0: Leave selected edges intact
+     * - 1: Trim to chamfer/fillet ends
+     *
+     * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-3D639DCE-5A01-4C07-899D-0595F8DDEBF7
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.TRIMMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_TRIMMODE_DEFAULT
     })
     /**
      * Controls model space vs paper space (**TILEMODE**).
@@ -1112,6 +1237,46 @@ export class AcDbSysVarManager {
           value,
           ACDB_MIRRTEXT_MIN,
           ACDB_MIRRTEXT_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.TRIMMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'TRIMMODE',
+          value,
+          ACDB_TRIMMODE_MIN,
+          ACDB_TRIMMODE_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.CHAMMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'CHAMMODE',
+          value,
+          ACDB_CHAMMODE_MIN,
+          ACDB_CHAMMODE_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.FILLETPOLYARC.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'FILLETPOLYARC',
+          value,
+          ACDB_FILLETPOLYARC_MIN,
+          ACDB_FILLETPOLYARC_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.COMMANDPREVIEW.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'COMMANDPREVIEW',
+          value,
+          ACDB_COMMANDPREVIEW_MIN,
+          ACDB_COMMANDPREVIEW_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.PROJMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'PROJMODE',
+          value,
+          ACDB_PROJMODE_MIN,
+          ACDB_PROJMODE_MAX
         )
       }
       if (name === AcDbSystemVariables.COMPAREPROPS.toLowerCase()) {

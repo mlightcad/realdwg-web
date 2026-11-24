@@ -194,6 +194,40 @@ export const ACDB_MIRRTEXT_DEFAULT = 0
 export const ACDB_MIRRTEXT_MIN = 0
 export const ACDB_MIRRTEXT_MAX = 1
 
+/**
+ * AutoCAD default for TRIMMODE: fillet/chamfer selected edges are trimmed.
+ * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-3D639DCE-5A01-4C07-899D-0595F8DDEBF7
+ */
+export const ACDB_TRIMMODE_DEFAULT = 1
+export const ACDB_TRIMMODE_MIN = 0
+export const ACDB_TRIMMODE_MAX = 1
+
+/** AutoCAD default for CHAMMODE: two chamfer distances. */
+export const ACDB_CHAMMODE_DEFAULT = 0
+export const ACDB_CHAMMODE_MIN = 0
+export const ACDB_CHAMMODE_MAX = 1
+
+/**
+ * AutoCAD default for FILLETPOLYARC: fillet arc segments in FILLET Polyline.
+ * @see https://help.autodesk.com/cloudhelp/2026/ENU/AutoCAD-Core/files/GUID-DD802826-BEE4-4B85-9B76-E9A3FBD02E24.htm
+ */
+export const ACDB_FILLETPOLYARC_DEFAULT = 1
+export const ACDB_FILLETPOLYARC_MIN = 0
+export const ACDB_FILLETPOLYARC_MAX = 1
+
+/** AutoCAD default for COMMANDPREVIEW: command-result preview on. */
+export const ACDB_COMMANDPREVIEW_DEFAULT = 1
+export const ACDB_COMMANDPREVIEW_MIN = 0
+export const ACDB_COMMANDPREVIEW_MAX = 1
+
+/**
+ * AutoCAD default for PROJMODE: project to UCS XY for TRIM/EXTEND.
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-8735A062-2688-44A7-809A-9883761533F9.htm
+ */
+export const ACDB_PROJMODE_DEFAULT = 1
+export const ACDB_PROJMODE_MIN = 0
+export const ACDB_PROJMODE_MAX = 2
+
 /** AutoCAD default for COMPARERCMARGIN: revision-cloud offset of 5. */
 export const ACDB_COMPARERCMARGIN_DEFAULT = 5
 

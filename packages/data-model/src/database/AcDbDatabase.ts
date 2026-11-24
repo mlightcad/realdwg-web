@@ -179,7 +179,12 @@ const DXF_HEADER_NATIVE_VARS = new Set([
   '$PDSIZE',
   '$OSMODE',
   '$ORTHOMODE',
-  '$MIRRTEXT'
+  '$MIRRTEXT',
+  '$FILLETRAD',
+  '$CHAMFERA',
+  '$CHAMFERB',
+  '$CHAMFERC',
+  '$CHAMFERD'
 ])
 
 /**
@@ -497,6 +502,16 @@ export class AcDbDatabase extends AcDbObject {
   private _orthomode: number
   /** MIRRTEXT: whether TEXT/MTEXT are truly mirrored by MIRROR (0 = readable) */
   private _mirrtext: number
+  /** FILLETRAD: current 2D fillet radius */
+  private _filletrad: number
+  /** CHAMFERA: first chamfer distance (CHAMMODE = 0) */
+  private _chamfera: number
+  /** CHAMFERB: second chamfer distance (CHAMMODE = 0) */
+  private _chamferb: number
+  /** CHAMFERC: chamfer length (CHAMMODE = 1) */
+  private _chamferc: number
+  /** CHAMFERD: chamfer angle in degrees (CHAMMODE = 1) */
+  private _chamferd: number
   /** COMPAREHATCH: whether hatch objects are included in drawing comparison */
   private _comparehatch: number
   /** COMPARERCMARGIN: revision-cloud offset around comparison change sets */
@@ -671,6 +686,11 @@ export class AcDbDatabase extends AcDbObject {
     this._osmode = 0
     this._orthomode = 0
     this._mirrtext = ACDB_MIRRTEXT_DEFAULT
+    this._filletrad = 0
+    this._chamfera = 0
+    this._chamferb = 0
+    this._chamferc = 0
+    this._chamferd = 0
     this._comparehatch = ACDB_COMPAREHATCH_DEFAULT
     this._comparercmargin = ACDB_COMPARERCMARGIN_DEFAULT
     this._comparetext = ACDB_COMPARETEXT_DEFAULT
@@ -2554,6 +2574,93 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Current 2D fillet radius (**FILLETRAD**). Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2025/ENU/AutoCAD-LT/files/GUID-BA2DD5FF-B663-48DB-95A8-6DEAFCEDDBF5.htm
+   */
+  get filletrad(): number {
+    return this._filletrad
+  }
+  set filletrad(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.FILLETRAD,
+      this._filletrad,
+      value ?? 0,
+      nextValue => {
+        this._filletrad = nextValue
+      }
+    )
+  }
+
+  /**
+   * First chamfer distance when CHAMMODE is 0 (**CHAMFERA**).
+   */
+  get chamfera(): number {
+    return this._chamfera
+  }
+  set chamfera(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.CHAMFERA,
+      this._chamfera,
+      value ?? 0,
+      nextValue => {
+        this._chamfera = nextValue
+      }
+    )
+  }
+
+  /**
+   * Second chamfer distance when CHAMMODE is 0 (**CHAMFERB**).
+   */
+  get chamferb(): number {
+    return this._chamferb
+  }
+  set chamferb(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.CHAMFERB,
+      this._chamferb,
+      value ?? 0,
+      nextValue => {
+        this._chamferb = nextValue
+      }
+    )
+  }
+
+  /**
+   * Chamfer length when CHAMMODE is 1 (**CHAMFERC**).
+   */
+  get chamferc(): number {
+    return this._chamferc
+  }
+  set chamferc(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.CHAMFERC,
+      this._chamferc,
+      value ?? 0,
+      nextValue => {
+        this._chamferc = nextValue
+      }
+    )
+  }
+
+  /**
+   * Chamfer angle in degrees when CHAMMODE is 1 (**CHAMFERD**).
+   */
+  get chamferd(): number {
+    return this._chamferd
+  }
+  set chamferd(value: number) {
+    this.updateSysVar(
+      AcDbSystemVariables.CHAMFERD,
+      this._chamferd,
+      value ?? 0,
+      nextValue => {
+        this._chamferd = nextValue
+      }
+    )
+  }
+
+  /**
    * Whether hatch objects are included in drawing comparison (**COMPAREHATCH**).
    *
    * - `0`: Hatch objects are excluded (AutoCAD default)
@@ -3635,6 +3742,16 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeInt16(70, this.orthomode)
     filer.writeString(9, '$MIRRTEXT')
     filer.writeInt16(70, this.mirrtext)
+    filer.writeString(9, '$FILLETRAD')
+    filer.writeDouble(40, this.filletrad)
+    filer.writeString(9, '$CHAMFERA')
+    filer.writeDouble(40, this.chamfera)
+    filer.writeString(9, '$CHAMFERB')
+    filer.writeDouble(40, this.chamferb)
+    filer.writeString(9, '$CHAMFERC')
+    filer.writeDouble(40, this.chamferc)
+    filer.writeString(9, '$CHAMFERD')
+    filer.writeDouble(40, this.chamferd)
     this.writeDxfHeaderExtras(filer)
     filer.endSection()
   }
