@@ -4,6 +4,19 @@ export { AcGeShape2d } from './AcGeShape2d.js'
 export { AcGeCurve2d } from './AcGeCurve2d.js'
 export { AcGeCircArc2d } from './AcGeCircArc2d.js'
 export { AcGeCircArc3d } from './AcGeCircArc3d.js'
+export {
+  acgeBulgeArcTangentAtEnd,
+  acgeBulgeArcTangentAtStart,
+  acgeBulgeFromCenter,
+  acgeBulgeFromCenterWithTangent,
+  acgeBulgeFromCircArc2d,
+  acgeBulgeFromStartEndDirection,
+  acgeBulgeFromStartEndRadius,
+  acgeBulgeFromThreePoints,
+  acgeCenterFromBulge,
+  acgeComplementBulge,
+  acgeGeometricTangentAtPoint
+} from './AcGeBulge2d.js'
 export type {
   AcGeResolvedTessellateOptions,
   AcGeTessellateOptions
