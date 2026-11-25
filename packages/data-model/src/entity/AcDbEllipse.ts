@@ -434,6 +434,13 @@ export class AcDbEllipse extends AcDbCurve {
   }
 
   /**
+   * Ellipses cannot be locally stretched; only the center is a stretch point.
+   */
+  override subGetStretchPoints() {
+    return [this.center]
+  }
+
+  /**
    * Gets the object snap points for this ellipse or ellipse arc.
    *
    * Object snap points are precise points that can be used for positioning

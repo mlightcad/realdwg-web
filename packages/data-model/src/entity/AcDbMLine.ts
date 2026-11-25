@@ -39,7 +39,8 @@ import {
 import { acdbExplodePointPath, acdbGetOcsAxes } from './AcDbExplodeHelpers.js'
 import {
   acdbForEachGripIndex,
-  acdbMovePointArrayGripAt
+  acdbMovePointArrayGripAt,
+  acdbMoveStretchPointsViaGrips
 } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import {
@@ -729,6 +730,16 @@ export class AcDbMLine extends AcDbEntity {
     })
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this MLINE reference path.

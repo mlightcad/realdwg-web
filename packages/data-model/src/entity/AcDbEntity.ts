@@ -739,6 +739,38 @@ export abstract class AcDbEntity extends AcDbObject {
   }
 
   /**
+   * Gets the stretch points for this entity.
+   *
+   * Stretch points are used by the STRETCH command. Points that lie inside
+   * the crossing selection are moved by {@link subMoveStretchPointsAt}.
+   * Matches AutoCAD `AcDbEntity::subGetStretchPoints`.
+   *
+   * The default returns the same points as {@link subGetGripPoints}.
+   *
+   * @returns Array of stretch points as 3D points in WCS
+   */
+  subGetStretchPoints(): AcGePoint3d[] {
+    return this.subGetGripPoints()
+  }
+
+  /**
+   * Moves the stretch points at the specified indices by the given offset.
+   *
+   * Matches AutoCAD `AcDbEntity::subMoveStretchPointsAt`. The default
+   * translates the whole entity via {@link transformBy}, ignoring which
+   * indices were selected. Entities that support local stretch must override
+   * this to move only the selected points.
+   *
+   * @param indices - Zero-based indexes into {@link subGetStretchPoints}
+   * @param offset - WCS translation offset
+   * @returns This entity after the stretch
+   */
+  subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike): this {
+    if (indices.length === 0) return this
+    return this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+  }
+
+  /**
    * Gets the object snap points for this entity.
    *
    * Object snap points are the points that can be used for precise positioning

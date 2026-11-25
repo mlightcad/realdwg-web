@@ -33,7 +33,10 @@ import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
-import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import {
+  acdbForEachGripIndex,
+  acdbMoveStretchPointsViaGrips
+} from './AcDbGripHelpers.js'
 import { acdbJoinConcentricArcs } from './AcDbJoinHelpers.js'
 import { acdbPickNearestOsnapPoint } from './AcDbOsnapHelpers.js'
 import {
@@ -507,6 +510,31 @@ export class AcDbArc extends AcDbCurve {
       this.moveGripAt(index, offset)
     })
     return this
+  }
+
+  /**
+   * Stretch points match grips: center, start, and end.
+   */
+  override subGetStretchPoints() {
+    return [this.center, this.startPoint, this.endPoint]
+  }
+
+  /**
+   * Local stretch via grip editing. Including the center (or selecting every
+   * stretch point) translates the whole arc; endpoint-only selections reshape.
+   *
+   * Center must not be combined with endpoint grip moves — grip index 0 already
+   * calls {@link transformBy}, which would double-apply the offset.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const unique = [
+      ...new Set(indices.filter(i => Number.isInteger(i) && i >= 0))
+    ]
+    if (unique.length === 0) return this
+    if (unique.includes(0) || unique.length === 3) {
+      return this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+    }
+    return acdbMoveStretchPointsViaGrips(this, unique, offset)
   }
 
   /**

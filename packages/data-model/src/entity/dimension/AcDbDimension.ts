@@ -894,6 +894,25 @@ export abstract class AcDbDimension extends AcDbEntity {
   }
 
   /**
+   * Stretch points are definition grips only (AutoCAD excludes the text grip).
+   */
+  override subGetStretchPoints() {
+    return this.collectDimensionDefinitionGripPoints()
+  }
+
+  /**
+   * Moves selected definition stretch points (not the text grip).
+   *
+   * Delegates to {@link subMoveGripPointsAt} so subclasses that dedupe paired
+   * definition grips (aligned dim-line ends, radial/diametric chords) keep the
+   * same stretch behavior as grip editing.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (indices.length === 0) return this
+    return this.subMoveGripPointsAt(indices, offset)
+  }
+
+  /**
    * Moves one definition grip. The default moves the point returned by
    * {@link collectDimensionDefinitionGripPoints} freely.
    *

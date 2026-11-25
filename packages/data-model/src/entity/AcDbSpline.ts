@@ -34,6 +34,7 @@ import {
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { AcDbPolyline } from './AcDbPolyline.js'
+import { acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 function resolveSplineKnotParameterization(
@@ -716,6 +717,13 @@ export class AcDbSpline extends AcDbCurve {
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
     this._geo.moveGripPointsAt(indices, offset)
     return this
+  }
+
+  /**
+   * Local stretch: move selected fit/control points via grip editing.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
   }
 
   /**

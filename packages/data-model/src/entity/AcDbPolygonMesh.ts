@@ -16,7 +16,7 @@ import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbPointArrayProperty } from './AcDbEntityPropertyHelpers.js'
 import { AcDbFace } from './AcDbFace.js'
-import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbForEachGripIndex, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
 
@@ -247,6 +247,16 @@ export class AcDbPolygonMesh extends AcDbCurve {
     })
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this mesh.

@@ -554,6 +554,32 @@ export class AcDbPolyline extends AcDbCurve {
   }
 
   /**
+   * Stretch points are vertices only (AutoCAD excludes segment midpoint grips).
+   */
+  override subGetStretchPoints() {
+    const stretchPoints = new Array<AcGePoint3d>()
+    for (let index = 0; index < this.numberOfVertices; ++index) {
+      stretchPoints.push(this.getPoint3dAt(index))
+    }
+    return stretchPoints
+  }
+
+  /**
+   * Moves the selected polyline vertices by the given offset.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (indices.length === 0) return this
+    const ocsOffset = acgeTransformWcsPointToOcs(offset, this._normal)
+    const vertexCount = this.numberOfVertices
+    acdbForEachGripIndex(indices, index => {
+      if (index < vertexCount) {
+        acdbMovePolyline2dVertexAt(this._geo.vertices, index, ocsOffset)
+      }
+    })
+    return this
+  }
+
+  /**
    * Returns whether segment midpoint grips should be included.
    *
    * Matches AutoCAD **GRIPS** = `2`.

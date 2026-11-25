@@ -22,7 +22,8 @@ import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import {
   acdbForEachGripIndex,
-  acdbMovePointArrayGripAt
+  acdbMovePointArrayGripAt,
+  acdbMoveStretchPointsViaGrips
 } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbOleFrame } from './AcDbOleFrame.js'
@@ -788,6 +789,16 @@ export class AcDbOle2Frame extends AcDbOleFrame {
     })
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets object snap points for this OLE frame.

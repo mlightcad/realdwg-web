@@ -25,7 +25,7 @@ import {
   acdbPoint3dProperties,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
-import { acdbForEachGripIndex } from './AcDbGripHelpers.js'
+import { acdbForEachGripIndex, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 
 /**
@@ -873,6 +873,16 @@ export class AcDbViewport extends AcDbEntity {
     })
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Transforms this viewport entity by the specified matrix.
