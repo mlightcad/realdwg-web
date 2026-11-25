@@ -18,6 +18,7 @@ import {
   AcDbAssocArrayPolarParameters,
   AcDbAssocArrayRectangularParameters,
   AcDbAssocManager,
+  AcDbAssocNetwork,
   AcDbAssocStatus
 } from '../src/object/assoc'
 
@@ -29,9 +30,9 @@ describe('AcDbAssocArray', () => {
     expect(mgr.getVar(AcDbSystemVariables.ARRAYTYPE, db)).toBe(0)
     expect(mgr.getVar(AcDbSystemVariables.ARRAYEDITSTATE, db)).toBe(0)
 
-    expect(() =>
-      mgr.setVar(AcDbSystemVariables.ARRAYEDITSTATE, 1, db)
-    ).toThrow(/read-only/i)
+    expect(() => mgr.setVar(AcDbSystemVariables.ARRAYEDITSTATE, 1, db)).toThrow(
+      /read-only/i
+    )
     mgr.setArrayEditState(1)
     expect(mgr.getVar(AcDbSystemVariables.ARRAYEDITSTATE, db)).toBe(1)
     mgr.setArrayEditState(0)
@@ -67,7 +68,9 @@ describe('AcDbAssocArray', () => {
     const arrayEntity = db.getObjectById(result.arrayEntityId)
     expect(arrayEntity).toBeInstanceOf(AcDbBlockReference)
     expect(
-      AcDbAssocArrayActionBody.isAssociativeArray(arrayEntity as AcDbBlockReference)
+      AcDbAssocArrayActionBody.isAssociativeArray(
+        arrayEntity as AcDbBlockReference
+      )
     ).toBe(true)
 
     const body = db.getObjectById(result.actionBodyId)
@@ -110,14 +113,7 @@ describe('AcDbAssocArray', () => {
     const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 0.5)
     db.tables.blockTable.modelSpace.appendEntity(circle)
 
-    const params = new AcDbAssocArrayRectangularParameters(
-      10,
-      10,
-      1,
-      3,
-      2,
-      1
-    )
+    const params = new AcDbAssocArrayRectangularParameters(10, 10, 1, 3, 2, 1)
     const result = AcDbAssocArrayActionBody.createInstance(
       [circle.objectId],
       new AcGePoint3d(0, 0, 0),
@@ -151,6 +147,11 @@ describe('AcDbAssocArray', () => {
     params.fillAngle = Math.PI / 2
     expect(params.angleBetweenItems).toBeCloseTo(Math.PI / 10, 10)
     expect(params.getItemLocators()).toHaveLength(6)
+    // A full circle spaces items by fill / n (AutoCAD).
+    params.fillAngle = 2 * Math.PI
+    expect(params.angleBetweenItems).toBeCloseTo(Math.PI / 3, 10)
+    params.itemCount = 4
+    expect(params.angleBetweenItems).toBeCloseTo(Math.PI / 2, 10)
   })
 
   it('explode of associative array yields leaf entities and clears assoc', () => {
@@ -169,8 +170,12 @@ describe('AcDbAssocArray', () => {
 
     const parts = ref.explode()
     expect(parts.length).toBe(4) // 2×2 circles
+    // EXPLODE replaces the INSERT; once it is erased the action is orphaned.
+    ref.erase()
     expect(AcDbAssocArrayActionBody.isAssociativeArray(ref)).toBe(false)
-    expect(db.objects.assocActionBody.numEntries).toBe(0)
+    const action = db.getObjectById(result.actionId) as AcDbAssocAction
+    expect(action.isOrphaned).toBe(true)
+    expect(db.dxfOut()).not.toContain('ACDBASSOCARRAYACTIONBODY')
   })
 
   it('rejects createInstance when no source entity resolves', () => {
@@ -225,7 +230,10 @@ describe('AcDbAssocArray', () => {
     const body = AcDbAssocArrayActionBody.getAssociativeArray(ref)!
     const polar = body.parameters as AcDbAssocArrayPolarParameters
     expect(polar.center.x).toBeCloseTo(0, 10)
-    expect(polar.basePoint.x).toBeCloseTo(10, 10)
+    expect(polar.radius).toBeCloseTo(10, 10)
+    expect(polar.startAngle).toBeCloseTo(0, 10)
+    // AutoCAD places polar array INSERTs at the origin.
+    expect(ref.position.x).toBe(0)
 
     const positions: AcGePoint3d[] = []
     for (const item of ref.blockTableRecord!.newIterator()) {
@@ -233,10 +241,10 @@ describe('AcDbAssocArray', () => {
       positions.push((item as AcDbBlockReference).position.clone())
     }
     expect(positions).toHaveLength(4)
-    // Item 0 stays at array-BTR origin; item 1 rotates 90° CCW about center.
-    expect(positions[0].x).toBeCloseTo(0, 6)
+    // Item 0 sits on the base point; item 1 rotates 90° CCW about center.
+    expect(positions[0].x).toBeCloseTo(10, 6)
     expect(positions[0].y).toBeCloseTo(0, 6)
-    expect(positions[1].x).toBeCloseTo(-10, 6)
+    expect(positions[1].x).toBeCloseTo(0, 6)
     expect(positions[1].y).toBeCloseTo(10, 6)
   })
 
@@ -252,13 +260,56 @@ describe('AcDbAssocArray', () => {
       db
     )
     const ref = db.getObjectById(result.arrayEntityId) as AcDbBlockReference
-    expect(db.objects.assocActionBody.numEntries).toBe(1)
-    expect(db.objects.assocAction.numEntries).toBe(1)
+    const network = AcDbAssocNetwork.getInstanceFromObject(
+      db.tables.blockTable.modelSpace
+    )!
+    expect(network.actionIds).toEqual([result.actionId])
 
     expect(ref.erase()).toBe(true)
-    expect(db.objects.assocActionBody.numEntries).toBe(0)
-    expect(db.objects.assocAction.numEntries).toBe(0)
-    expect(db.objects.assocDependency.numEntries).toBe(0)
+    const action = db.getObjectById(result.actionId) as AcDbAssocAction
+    expect(action.isOrphaned).toBe(true)
+    expect(network.getHardOwnedObjectIds()).not.toContain(result.actionId)
+    const out = db.dxfOut() as string
+    expect(out).not.toMatch(/\nACDBASSOCACTION\r?\n/)
+    expect(out).not.toContain('ACDBASSOCDEPENDENCY')
+    expect(AcDbAssocManager.evaluateTopLevelNetwork(db)).toBe(true)
+  })
+
+  it('undo of erase and create keeps the array associative', () => {
+    const db = new AcDbDatabase()
+    const circle = new AcDbCircle(new AcGePoint3d(0, 0, 0), 0.5)
+    db.tables.blockTable.modelSpace.appendEntity(circle)
+    const tm = db.transactionManager
+    let result!: ReturnType<typeof AcDbAssocArrayActionBody.createInstance>
+    tm.runUndoable('Array', () => {
+      result = AcDbAssocArrayActionBody.createInstance(
+        [circle.objectId],
+        new AcGePoint3d(0, 0, 0),
+        new AcDbAssocArrayRectangularParameters(5, 5, 1, 2, 2, 1),
+        db
+      )
+    })
+    const ref = db.getObjectById(result.arrayEntityId) as AcDbBlockReference
+    tm.runUndoable('Erase', () => {
+      ref.erase()
+    })
+    expect(db.getObjectById(result.arrayEntityId)).toBeUndefined()
+
+    tm.undo()
+    const restored = db.getObjectById(
+      result.arrayEntityId
+    ) as AcDbBlockReference
+    expect(restored).toBeInstanceOf(AcDbBlockReference)
+    expect(AcDbAssocArrayActionBody.isAssociativeArray(restored)).toBe(true)
+    expect(db.dxfOut()).toContain('ACDBASSOCARRAYACTIONBODY')
+
+    // Undoing the creation orphans the action again; redo revives it.
+    tm.undo()
+    expect(db.getObjectById(result.arrayEntityId)).toBeUndefined()
+    expect(db.dxfOut()).not.toContain('ACDBASSOCARRAYACTIONBODY')
+    tm.redo()
+    const redone = db.getObjectById(result.arrayEntityId) as AcDbBlockReference
+    expect(AcDbAssocArrayActionBody.isAssociativeArray(redone)).toBe(true)
   })
 
   it('AcDbAssocAction DXF round-trips status and dependency ids', () => {
@@ -303,8 +354,6 @@ describe('AcDbAssocArray', () => {
       params,
       db
     )
-    expect(params.basePoint.x).toBeCloseTo(10, 10)
-    expect(params.basePoint.y).toBeCloseTo(20, 10)
 
     const ref = db.getObjectById(result.arrayEntityId) as AcDbBlockReference
     const worlds: AcGePoint3d[] = []
@@ -342,7 +391,10 @@ describe('AcDbAssocArray', () => {
       firstResult.arrayEntityId
     ) as AcDbBlockReference
     firstRef.explode()
-    expect(db.objects.assocActionBody.numEntries).toBe(0)
+    firstRef.erase()
+    expect(
+      (db.getObjectById(firstResult.actionId) as AcDbAssocAction).isOrphaned
+    ).toBe(true)
 
     const second = new AcDbCircle(new AcGePoint3d(1, 1, 0), 0.5)
     db.tables.blockTable.modelSpace.appendEntity(second)
@@ -400,34 +452,56 @@ describe('AcDbAssocArray', () => {
     expect(last.elements[12]).toBeCloseTo(20, 6)
   })
 
-  it('path alignItems rotates relative to the start tangent', () => {
-    // Vertical then horizontal: start tangent is +Y, end tangent is +X
-    // (Δ = −90°). Absolute atan2 would rotate the last item by 0° and leave a
-    // base≠object offset pointing the wrong way; relative keeps item 0 unrotated.
+  it('path alignItems rotates items to the path tangent (AutoCAD frames)', () => {
+    // Vertical then horizontal: start tangent is +Y, end tangent is +X.
+    const db = new AcDbDatabase()
     const path = new AcDbPolyline()
     path.addVertexAt(0, new AcGePoint2d(0, 0))
     path.addVertexAt(1, new AcGePoint2d(0, 10))
     path.addVertexAt(2, new AcGePoint2d(10, 10))
+    db.tables.blockTable.modelSpace.appendEntity(path)
+    // A line along +X offset from the base point.
+    const source = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(2, 0, 0)
+    )
+    db.tables.blockTable.modelSpace.appendEntity(source)
 
     const params = new AcDbAssocArrayPathParameters(10, 1, 1, 2, 1, 1, 0)
     params.method = AcDbAssocArrayPathMethod.kDivide
     params.alignItems = true
-    params.basePoint = new AcGePoint3d(0, 0, 0)
-    params.setPathCurve(path)
+    params.setPath({ entityId: path.objectId })
+    const result = AcDbAssocArrayActionBody.createInstance(
+      [source.objectId],
+      new AcGePoint3d(0, 0, 0),
+      params,
+      db
+    )
+    const body = db.getObjectById(
+      result.actionBodyId
+    ) as AcDbAssocArrayActionBody
 
-    const first = params.getItemTransform(new AcDbAssocArrayItemLocator(0, 0, 0))
-    const last = params.getItemTransform(new AcDbAssocArrayItemLocator(1, 0, 0))
-    // Item 0: no relative rotation (identity rotation about Z).
-    expect(first.elements[0]).toBeCloseTo(1, 6)
-    expect(first.elements[1]).toBeCloseTo(0, 6)
-    // Item 1: relative −90° from +Y to +X → cos=-0? Wait +Y to +X is -90° or +270°
-    // atan2(1,0)=π/2, atan2(0,1)=0 → angle = 0 - π/2 = -π/2
-    // R(-90°): e[0]=cos=0, e[1]=sin=-1? Column-major R_z: [c,-s,0; s,c,0] so
-    // e[0]=c=0, e[1]=s=-1, e[4]=-s=1, e[5]=c=0
-    expect(last.elements[0]).toBeCloseTo(0, 6)
-    expect(last.elements[1]).toBeCloseTo(-1, 6)
+    const first = body.getTransform(new AcDbAssocArrayItemLocator(0, 0, 0))
+    const last = body.getTransform(new AcDbAssocArrayItemLocator(1, 0, 0))
+    // Item 0: rotated to the +Y start tangent (90°).
+    expect(first.elements[0]).toBeCloseTo(0, 6)
+    expect(first.elements[1]).toBeCloseTo(1, 6)
+    // Item 1: +X end tangent (0°), on the path end.
+    expect(last.elements[0]).toBeCloseTo(1, 6)
+    expect(last.elements[1]).toBeCloseTo(0, 6)
     expect(last.elements[12]).toBeCloseTo(10, 6)
     expect(last.elements[13]).toBeCloseTo(10, 6)
+
+    // The source block is authored in item 0's frame, so item 0 reproduces
+    // the original line and item 1 turns it by −90°.
+    const [line0, line1] = (
+      db.getObjectById(result.arrayEntityId) as AcDbBlockReference
+    ).explode() as AcDbLine[]
+    expect(line0.startPoint.x).toBeCloseTo(0, 6)
+    expect(line0.endPoint.x).toBeCloseTo(2, 6)
+    expect(line0.endPoint.y).toBeCloseTo(0, 6)
+    expect(line1.startPoint.x).toBeCloseTo(10, 6)
+    expect(line1.endPoint.x).toBeCloseTo(10, 6)
+    expect(line1.endPoint.y).toBeCloseTo(8, 6)
   })
 })
-

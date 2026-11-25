@@ -19,6 +19,10 @@ import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
 import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
 import { AcDbUnknownObject } from '../object/AcDbUnknownObject.js'
 import { AcDbXrecord } from '../object/AcDbXrecord.js'
+import { AcDbAssocAction } from '../object/assoc/AcDbAssocAction.js'
+import { AcDbAssocActionBody } from '../object/assoc/AcDbAssocActionBody.js'
+import { AcDbAssocActionParam } from '../object/assoc/AcDbAssocActionParam.js'
+import { AcDbAssocDependency } from '../object/assoc/AcDbAssocDependency.js'
 import { AcDbLayout } from '../object/layout/AcDbLayout.js'
 
 /**
@@ -48,6 +52,15 @@ export function acdbDxfObjectRecordName(
   if (object instanceof AcDbMlineStyle) return 'MLINESTYLE'
   if (object instanceof AcDbScale) return 'SCALE'
   if (object instanceof AcDbDictionaryVar) return 'DICTIONARYVAR'
+  if (
+    object instanceof AcDbAssocAction ||
+    object instanceof AcDbAssocActionBody ||
+    object instanceof AcDbAssocDependency ||
+    object instanceof AcDbAssocActionParam
+  ) {
+    // Each associative class declares its AutoCAD record name.
+    return (object.constructor as { DXF_NAME?: string }).DXF_NAME
+  }
   if (object instanceof AcDbObjectContextData) {
     const name = object.dxfRecordName ?? defaultContextDataRecordName(object)
     if (!name) return undefined

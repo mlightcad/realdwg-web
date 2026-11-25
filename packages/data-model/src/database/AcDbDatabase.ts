@@ -63,11 +63,8 @@ import { AcDbLinearUnits } from '../misc/AcDbLinearUnits.js'
 import { AcDbUnitsValue } from '../misc/AcDbUnitsValue.js'
 import { AcDbDictionary } from '../object/AcDbDictionary.js'
 import { AcDbDictionaryVar } from '../object/AcDbDictionaryVar.js'
+import { AcDbAssocManager } from '../object/assoc/AcDbAssocManager.js'
 import { AcDbGroup } from '../object/AcDbGroup.js'
-import type { AcDbAssocAction } from '../object/assoc/AcDbAssocAction.js'
-import type { AcDbAssocActionBody } from '../object/assoc/AcDbAssocActionBody.js'
-import type { AcDbAssocDependency } from '../object/assoc/AcDbAssocDependency.js'
-import type { AcDbAssocNetwork } from '../object/assoc/AcDbAssocNetwork.js'
 import { AcDbLayerFilter } from '../object/AcDbLayerFilter.js'
 import { AcDbLayerIndex } from '../object/AcDbLayerIndex.js'
 import { AcDbMLeaderStyle } from '../object/AcDbMLeaderStyle.js'
@@ -427,6 +424,19 @@ function appendAll(target: AcDbEntity[], entity: AcDbEntity | AcDbEntity[]) {
  * const entities = database.tables.blockTable.modelSpace.entities;
  * ```
  */
+/**
+ * DXF record name → C++ class name of the ObjectDBX classes data-model can
+ * create natively (CLASSES section entries, app name `ObjectDBX Classes`).
+ */
+const ACDB_OBJECTDBX_CLASSES: Record<string, string> = {
+  ACDBASSOCNETWORK: 'AcDbAssocNetwork',
+  ACDBASSOCACTION: 'AcDbAssocAction',
+  ACDBASSOCARRAYACTIONBODY: 'AcDbAssocArrayActionBody',
+  ACDBASSOCDEPENDENCY: 'AcDbAssocDependency',
+  ACDBASSOCVERTEXACTIONPARAM: 'AcDbAssocVertexActionParam',
+  ACDBASSOCEDGEACTIONPARAM: 'AcDbAssocEdgeActionParam'
+}
+
 export class AcDbDatabase extends AcDbObject {
   /** Sequence counter for default unsaved drawing names (Drawing1.dwg, Drawing2.dwg, ...). */
   private static _unsavedDrawingSequence = 0
@@ -543,10 +553,6 @@ export class AcDbDatabase extends AcDbObject {
     readonly scale: AcDbDictionary<AcDbScale>
     readonly sortentsTable: AcDbDictionary<AcDbSortentsTable>
     readonly xrecord: AcDbDictionary<AcDbXrecord>
-    readonly assocNetwork: AcDbDictionary<AcDbAssocNetwork>
-    readonly assocAction: AcDbDictionary<AcDbAssocAction>
-    readonly assocActionBody: AcDbDictionary<AcDbAssocActionBody>
-    readonly assocDependency: AcDbDictionary<AcDbAssocDependency>
   }
   /** Current annotation scale name (CANNOSCALE), e.g. `"1:100"`. */
   private _cannoscale: string
@@ -728,11 +734,7 @@ export class AcDbDatabase extends AcDbObject {
       objectContextData: new AcDbDictionary(this),
       scale: new AcDbDictionary(this),
       sortentsTable: new AcDbDictionary(this),
-      xrecord: new AcDbDictionary(this),
-      assocNetwork: new AcDbDictionary(this),
-      assocAction: new AcDbDictionary(this),
-      assocActionBody: new AcDbDictionary(this),
-      assocDependency: new AcDbDictionary(this)
+      xrecord: new AcDbDictionary(this)
     }
     this._layerFilters = new AcLyLayerFilterTree()
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
@@ -966,11 +968,7 @@ export class AcDbDatabase extends AcDbObject {
       this.objects.objectContextData,
       this.objects.scale,
       this.objects.sortentsTable,
-      this.objects.xrecord,
-      this.objects.assocNetwork,
-      this.objects.assocAction,
-      this.objects.assocActionBody,
-      this.objects.assocDependency
+      this.objects.xrecord
     ]
   }
 
@@ -1369,11 +1367,7 @@ export class AcDbDatabase extends AcDbObject {
       this._objects.objectContextData,
       this._objects.scale,
       this._objects.sortentsTable,
-      this._objects.xrecord,
-      this._objects.assocNetwork,
-      this._objects.assocAction,
-      this._objects.assocActionBody,
-      this._objects.assocDependency
+      this._objects.xrecord
     ]) {
       this.registerObjectHandle(dictionary)
     }
@@ -3072,6 +3066,10 @@ export class AcDbDatabase extends AcDbObject {
       outputFormat: options.format
     })
 
+    // Undo/redo restores entities and blocks from snapshots that may predate
+    // their association reactors; re-attach them before writing.
+    AcDbAssocManager.linkLoadedObjects(this)
+
     const objectsPlan = filer.capabilities.supportsObjectsSection
       ? this.planDxfObjectsSection(filer)
       : undefined
@@ -3079,7 +3077,7 @@ export class AcDbDatabase extends AcDbObject {
     this.ensureXDataAppIds(objectsPlan)
 
     this.writeDxfHeaderSection(filer)
-    this.writeDxfClassesSection(filer)
+    this.writeDxfClassesSection(filer, objectsPlan)
     this.writeDxfTablesSection(filer, outVersion)
     this.writeDxfBlocksSection(filer)
     this.writeDxfEntitiesSection(filer)
@@ -3836,16 +3834,16 @@ export class AcDbDatabase extends AcDbObject {
    *
    * @param filer - DXF output writer.
    */
-  private writeDxfClassesSection(filer: AcDbDxfFiler) {
-    if (
-      !filer.capabilities.supportsClassesSection ||
-      this._classes.length === 0
-    ) {
-      return
-    }
+  private writeDxfClassesSection(
+    filer: AcDbDxfFiler,
+    objectsPlan?: AcDbDxfObjectsPlan
+  ) {
+    if (!filer.capabilities.supportsClassesSection) return
+    const classes = [...this._classes, ...this.missingDxfClasses(objectsPlan)]
+    if (classes.length === 0) return
 
     filer.startSection('CLASSES')
-    for (const dxfClass of this._classes) {
+    for (const dxfClass of classes) {
       filer.writeStart('CLASS')
       filer.writeString(1, dxfClass.name)
       filer.writeString(2, dxfClass.cppClassName)
@@ -3856,6 +3854,33 @@ export class AcDbDatabase extends AcDbObject {
       filer.writeInt8(281, dxfClass.isEntity ? 1 : 0)
     }
     filer.endSection()
+  }
+
+  /**
+   * CLASS entries AutoCAD requires for natively created custom objects that
+   * the drawing does not declare yet (e.g. associative-array records of a
+   * new drawing).
+   */
+  private missingDxfClasses(objectsPlan?: AcDbDxfObjectsPlan): AcDbClass[] {
+    if (!objectsPlan) return []
+    const declared = new Set(
+      this._classes.map(c => (c.name ?? '').toUpperCase())
+    )
+    const counts = new Map<string, number>()
+    for (const { type } of objectsPlan.records) {
+      const name = type.toUpperCase()
+      if (!ACDB_OBJECTDBX_CLASSES[name] || declared.has(name)) continue
+      counts.set(name, (counts.get(name) ?? 0) + 1)
+    }
+    return [...counts].map(([name, instanceCount]) => ({
+      name,
+      cppClassName: ACDB_OBJECTDBX_CLASSES[name],
+      appName: 'ObjectDBX Classes',
+      proxyFlag: 1025,
+      instanceCount,
+      wasProxy: false,
+      isEntity: false
+    }))
   }
 
   /**
@@ -4059,6 +4084,9 @@ export class AcDbDatabase extends AcDbObject {
       while (next < queue.length) {
         const object = queue[next++]
         visitExtensionDictionary(object)
+        for (const id of object.getHardOwnedObjectIds()) {
+          visit(this.getObjectById(id))
+        }
         if (object instanceof AcDbDictionary) {
           for (const [, entry] of object.entries()) visit(entry)
           if (object.defaultId) visit(this.getObjectById(object.defaultId))
@@ -4132,20 +4160,25 @@ export class AcDbDatabase extends AcDbObject {
       visit(layerIndex)
     }
     // Preserved records owned by an entity or object rather than a
-    // dictionary (e.g. IMAGEDEF_REACTOR) — kept while their owner exists.
-    for (const object of this._dxfUnknownObjects) {
-      const owner = this.getObjectById(object.ownerId)
-      // Kept while the owner is exported; a removed dictionary entry is not.
-      if (
-        owner instanceof AcDbEntity ||
-        (owner &&
-          !(owner instanceof AcDbDictionary) &&
-          records.has(norm(owner.objectId)))
-      ) {
-        visit(object)
+    // dictionary (e.g. IMAGEDEF_REACTOR, associative-framework records) —
+    // kept while their owner exists. Repeated until stable so a record that
+    // precedes its owner in the file is still kept.
+    for (let before = -1; before !== records.size; ) {
+      before = records.size
+      for (const object of this._dxfUnknownObjects) {
+        const owner = this.getObjectById(object.ownerId)
+        // Kept while the owner is exported; a removed dictionary entry is not.
+        if (
+          owner instanceof AcDbEntity ||
+          (owner &&
+            !(owner instanceof AcDbDictionary) &&
+            records.has(norm(owner.objectId)))
+        ) {
+          visit(object)
+        }
       }
+      drain()
     }
-    drain()
 
     // XRecords not owned by any written dictionary go to MLIGHT_XRECORD.
     const looseXrecords: AcDbXrecord[] = []
@@ -4546,10 +4579,6 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.dictionaryVar.removeAll()
     this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
-    this._objects.assocNetwork.removeAll()
-    this._objects.assocAction.removeAll()
-    this._objects.assocActionBody.removeAll()
-    this._objects.assocDependency.removeAll()
     this._cannoscale = '1:1'
     this._dimStyleAnnotationScales.clear()
     this._annoallvisible = true

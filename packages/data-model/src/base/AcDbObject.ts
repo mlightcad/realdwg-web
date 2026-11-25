@@ -102,6 +102,12 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * materialized ResultBuffers. Absent when this object has no XData.
    */
   private _xDataOrder?: string[]
+  /**
+   * Persistent reactors (ObjectARX `addPersistentReactor`): object ids that
+   * are notified when this object changes. Persisted in DXF as the
+   * `102 {ACAD_REACTORS` group.
+   */
+  private _persistentReactors?: AcDbObjectId[]
 
   /**
    * Creates a new AcDbObject instance.
@@ -751,6 +757,49 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   }
 
   /**
+   * Adds a persistent reactor (ObjectARX `AcDbObject::addPersistentReactor`).
+   *
+   * @param id - Object id of the reactor object (e.g. an
+   *   `AcDbAssocDependency` attached to this object).
+   */
+  addPersistentReactor(id: AcDbObjectId): void {
+    if (!id) return
+    const reactors = (this._persistentReactors ??= [])
+    if (!reactors.includes(id)) reactors.push(id)
+  }
+
+  /**
+   * Removes a persistent reactor
+   * (ObjectARX `AcDbObject::removePersistentReactor`).
+   */
+  removePersistentReactor(id: AcDbObjectId): void {
+    const reactors = this._persistentReactors
+    if (!reactors) return
+    const index = reactors.indexOf(id)
+    if (index >= 0) reactors.splice(index, 1)
+  }
+
+  /**
+   * Returns the persistent reactor ids attached to this object
+   * (ObjectARX `AcDbObject::getPersistentReactors`).
+   */
+  getPersistentReactors(): readonly AcDbObjectId[] {
+    return this._persistentReactors ?? []
+  }
+
+  /**
+   * Returns ids of objects hard-owned by this object through a pointer other
+   * than a dictionary entry or the extension dictionary (DXF group 360), e.g.
+   * the action body and dependencies of an `AcDbAssocAction`.
+   *
+   * DXF export follows these ids so owned objects are written with their
+   * owner. Defaults to none.
+   */
+  getHardOwnedObjectIds(): AcDbObjectId[] {
+    return []
+  }
+
+  /**
    * Closes the object.
    *
    * All changes made to the object since it was opened are committed to the database,
@@ -930,6 +979,9 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
     isPrimary = true
   ): AcDbObject {
     const cloned = this.clone()
+    // A copy is not attached to the original's reactors (ObjectARX does not
+    // clone persistent reactors).
+    cloned._persistentReactors = undefined
     cloned._attrs.set('extensionDictionary', undefined, {
       unset: true,
       silent: true
@@ -1157,7 +1209,24 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
    * {@link AcDbDxfFiler.writeExtensionDictionary}.
    */
   protected dxfOutExtensionDictionary(filer: AcDbDxfFiler): void {
+    this.dxfOutPersistentReactors(filer)
     filer.writeExtensionDictionary(this.extensionDictionary)
+  }
+
+  /**
+   * Writes the `102 {ACAD_REACTORS` group. AutoCAD puts it before the
+   * extension dictionary group. Only reactors that are OBJECTS-section
+   * records of the current export are written, so no handle dangles.
+   */
+  protected dxfOutPersistentReactors(filer: AcDbDxfFiler): void {
+    const reactors = this._persistentReactors
+    if (!reactors || reactors.length === 0) return
+    if (!filer.capabilities.supportsHandles || !filer.writtenObjectIds) return
+    const written = reactors.filter(id => filer.isObjectIdWritten(id))
+    if (written.length === 0) return
+    filer.writeString(102, '{ACAD_REACTORS')
+    for (const id of written) filer.writeObjectId(330, id)
+    filer.writeString(102, '}')
   }
 
   /** Emit all attached XData buffers (DXF groups 1000–1071). */
@@ -1281,6 +1350,8 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
   protected dxfInControlString(filer: AcDbDxfFiler, startValue: string): void {
     const isExtDict =
       startValue === '{ACAD_XDICTIONARY' || startValue === 'ACAD_XDICTIONARY'
+    const isReactors =
+      startValue === '{ACAD_REACTORS' || startValue === 'ACAD_REACTORS'
 
     while (!filer.atEndOfObject && !filer.atEof) {
       const item = filer.readItem()
@@ -1297,8 +1368,11 @@ export class AcDbObject<ATTRS extends AcDbObjectAttrs = AcDbObjectAttrs> {
       }
       if (isExtDict && code === 360 && !this.extensionDictionary) {
         this.extensionDictionary = String(item.value)
+      } else if (isReactors && code === 330) {
+        const id = String(item.value ?? '').trim()
+        if (id && id !== '0') this.addPersistentReactor(id)
       }
-      // Ignore other pairs inside the control string (e.g. reactor 330s).
+      // Ignore other pairs inside the control string.
     }
   }
 

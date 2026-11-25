@@ -575,18 +575,6 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
-   * Erases this INSERT. When it is an associative array, also tears down the
-   * action body / network dependencies.
-   */
-  override erase(): boolean {
-    const body = AcDbAssocArrayActionBody.getAssociativeArray(this)
-    // Tear down the assoc graph while this INSERT (and its extension
-    // dictionary) are still resolvable via getObjectById.
-    if (body) body.disassociate()
-    return super.erase()
-  }
-
-  /**
    * Gets the grip points for this block reference.
    *
    * Associative arrays expose extra grips for item counts (columns / rows /

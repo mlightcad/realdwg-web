@@ -29,6 +29,15 @@ import { AcDbSortentsTable } from '../object/AcDbSortentsTable.js'
 import { AcDbTextObjectContextData } from '../object/AcDbTextObjectContextData.js'
 import { AcDbUnknownObject } from '../object/AcDbUnknownObject.js'
 import { AcDbXrecord } from '../object/AcDbXrecord.js'
+import { AcDbAssocAction } from '../object/assoc/AcDbAssocAction.js'
+import { AcDbAssocArrayActionBody } from '../object/assoc/AcDbAssocArrayActionBody.js'
+import { AcDbAssocDependency } from '../object/assoc/AcDbAssocDependency.js'
+import { AcDbAssocManager } from '../object/assoc/AcDbAssocManager.js'
+import { AcDbAssocNetwork } from '../object/assoc/AcDbAssocNetwork.js'
+import {
+  AcDbAssocEdgeActionParam,
+  AcDbAssocVertexActionParam
+} from '../object/assoc/AcDbAssocVertexActionParam.js'
 import { AcDbLayout } from '../object/layout/AcDbLayout.js'
 import {
   acdbDrainDxfObjectPairs,
@@ -55,6 +64,8 @@ export class AcDbDxfObjectsReader {
   private _unknownObjectCount = 0
   /** Objects kept verbatim, linked into dictionaries once all are loaded. */
   private readonly _unknownObjects: AcDbUnknownObject[] = []
+  /** Natively read associative-framework records. */
+  private readonly _assocObjects: AcDbObject[] = []
 
   constructor(private readonly _db: AcDbDatabase) {}
 
@@ -70,6 +81,7 @@ export class AcDbDxfObjectsReader {
   read(filer: AcDbDxfFiler): void {
     this._unknownObjectCount = 0
     this._unknownObjects.length = 0
+    this._assocObjects.length = 0
     while (!filer.atEof) {
       const item = filer.peekItem()
       if (!item) break
@@ -94,6 +106,9 @@ export class AcDbDxfObjectsReader {
     this.finishAnnoallvisible()
     this.finishLayerFilterTree()
     this.linkLayoutsToBlockTableRecords()
+    if (this._assocObjects.length > 0) {
+      AcDbAssocManager.linkLoadedObjects(this._db)
+    }
     if (this._db.objects.layout.numEntries === 0) {
       this._db.createDefaultData({ layout: true })
     }
@@ -311,6 +326,24 @@ export class AcDbDxfObjectsReader {
         }
         break
       }
+      case 'ACDBASSOCNETWORK':
+        this.readAssocObject(filer, new AcDbAssocNetwork())
+        break
+      case 'ACDBASSOCACTION':
+        this.readAssocObject(filer, new AcDbAssocAction())
+        break
+      case 'ACDBASSOCDEPENDENCY':
+        this.readAssocObject(filer, new AcDbAssocDependency())
+        break
+      case 'ACDBASSOCARRAYACTIONBODY':
+        this.readAssocObject(filer, new AcDbAssocArrayActionBody())
+        break
+      case 'ACDBASSOCVERTEXACTIONPARAM':
+        this.readAssocObject(filer, new AcDbAssocVertexActionParam())
+        break
+      case 'ACDBASSOCEDGEACTIONPARAM':
+        this.readAssocObject(filer, new AcDbAssocEdgeActionParam())
+        break
       default: {
         // No native class: keep the tags verbatim (ezdxf DXFTagStorage) so
         // dictionaries and handles that point at the record stay valid.
@@ -326,6 +359,19 @@ export class AcDbDxfObjectsReader {
         break
       }
     }
+  }
+
+  /**
+   * Reads an associative-framework record (network, action, body,
+   * dependency, action parameter). These are owned through hard pointers or
+   * dictionaries and resolved by handle.
+   */
+  private readAssocObject(filer: AcDbDxfFiler, object: AcDbObject): void {
+    object.dxfIn(filer)
+    if (!object.objectId) return
+    object.database = this._db
+    this._db.registerObjectHandle(object)
+    this._assocObjects.push(object)
   }
 
   /**
@@ -505,6 +551,7 @@ export class AcDbDxfObjectsReader {
     for (const [, o] of this._db.objects.dictionaryVar.entries()) add(o)
     for (const [, o] of this._db.objects.objectContextData.entries()) add(o)
     for (const o of this._unknownObjects) add(o)
+    for (const o of this._assocObjects) add(o)
     return map
   }
 

@@ -1,8 +1,18 @@
-import { AcDbAssocArrayParameters } from './AcDbAssocArrayParameters.js'
+import { AcGePoint3d, AcGeVector3d } from '@mlightcad/geometry-engine'
+
+import { AcDbAssocValueUnitType } from './AcDbAssocAction.js'
+import {
+  AcDbAssocArrayParameters,
+  type AcDbAssocArrayValueParamSpec
+} from './AcDbAssocArrayParameters.js'
 
 /**
  * Parameters shared by rectangular, polar, and path arrays
  * (ObjectARX `AcDbAssocArrayCommonParameters`).
+ *
+ * AutoCAD value-parameter names: `Items`, `ItemSpacing`, `Rows`,
+ * `RowSpacing`, `RowElevation`, `Levels`, `LevelSpacing`; point parameters
+ * `Origin`, `BaseNormal`, `basePoint`.
  */
 export abstract class AcDbAssocArrayCommonParameters extends AcDbAssocArrayParameters {
   protected _rowCount = 1
@@ -12,6 +22,12 @@ export abstract class AcDbAssocArrayCommonParameters extends AcDbAssocArrayParam
   protected _columnSpacing = 1
   protected _levelSpacing = 1
   protected _rowElevation = 0
+  /** Array origin in array-block coordinates (`Origin` action param). */
+  protected _origin = new AcGePoint3d(0, 0, 0)
+  /** Array plane normal (`BaseNormal` action param). */
+  protected _baseNormal = new AcGeVector3d(0, 0, 1)
+  /** Base point in source-block coordinates (`basePoint` action param). */
+  protected _basePoint = new AcGePoint3d(0, 0, 0)
 
   get rowCount(): number {
     return this._rowCount
@@ -70,26 +86,86 @@ export abstract class AcDbAssocArrayCommonParameters extends AcDbAssocArrayParam
     this.columnCount = value
   }
 
-  protected commonToJSON(): Record<string, unknown> {
-    return {
-      rowCount: this._rowCount,
-      columnCount: this._columnCount,
-      levelCount: this._levelCount,
-      rowSpacing: this._rowSpacing,
-      columnSpacing: this._columnSpacing,
-      levelSpacing: this._levelSpacing,
-      rowElevation: this._rowElevation
-    }
+  /**
+   * Array origin in array-block coordinates (AutoCAD `Origin` parameter).
+   * For polar arrays this is the center.
+   */
+  get origin(): AcGePoint3d {
+    return this._origin
+  }
+  set origin(value: AcGePoint3d) {
+    this._origin = value.clone()
   }
 
-  protected commonFromJSON(data: Record<string, unknown>): void {
-    if (data.rowCount != null) this.rowCount = Number(data.rowCount)
-    if (data.columnCount != null) this.columnCount = Number(data.columnCount)
-    if (data.levelCount != null) this.levelCount = Number(data.levelCount)
-    if (data.rowSpacing != null) this.rowSpacing = Number(data.rowSpacing)
-    if (data.columnSpacing != null)
-      this.columnSpacing = Number(data.columnSpacing)
-    if (data.levelSpacing != null) this.levelSpacing = Number(data.levelSpacing)
-    if (data.rowElevation != null) this.rowElevation = Number(data.rowElevation)
+  get baseNormal(): AcGeVector3d {
+    return this._baseNormal
+  }
+  set baseNormal(value: AcGeVector3d) {
+    this._baseNormal = value.clone()
+  }
+
+  /** Base point in source-block coordinates (AutoCAD `basePoint`). */
+  get basePoint(): AcGePoint3d {
+    return this._basePoint
+  }
+  set basePoint(value: AcGePoint3d) {
+    this._basePoint = value.clone()
+  }
+
+  /**
+   * Common value parameters in AutoCAD's order. `itemSpacing` is the
+   * type-specific `ItemSpacing` value (distance or angle).
+   */
+  protected commonValueParams(
+    itemSpacing: number,
+    itemSpacingUnit: AcDbAssocValueUnitType
+  ): AcDbAssocArrayValueParamSpec[] {
+    const D = AcDbAssocValueUnitType.Distance
+    const U = AcDbAssocValueUnitType.Unitless
+    return [
+      {
+        name: 'ItemSpacing',
+        value: itemSpacing,
+        unitType: itemSpacingUnit,
+        code: 40
+      },
+      { name: 'Items', value: this.itemCount, unitType: U, code: 90 },
+      {
+        name: 'LevelSpacing',
+        value: this._levelSpacing,
+        unitType: D,
+        code: 40
+      },
+      { name: 'Levels', value: this._levelCount, unitType: U, code: 90 },
+      {
+        name: 'RowElevation',
+        value: this._rowElevation,
+        unitType: D,
+        code: 40
+      },
+      { name: 'RowSpacing', value: this._rowSpacing, unitType: D, code: 40 },
+      { name: 'Rows', value: this._rowCount, unitType: U, code: 90 }
+    ]
+  }
+
+  /**
+   * Restores common values; returns the `ItemSpacing` value, if present.
+   */
+  protected commonFromValueParams(
+    get: (name: string) => number | undefined
+  ): number | undefined {
+    const items = get('Items')
+    if (items != null) this.itemCount = items
+    const levels = get('Levels')
+    if (levels != null) this.levelCount = levels
+    const levelSpacing = get('LevelSpacing')
+    if (levelSpacing != null) this.levelSpacing = levelSpacing
+    const rows = get('Rows')
+    if (rows != null) this.rowCount = rows
+    const rowSpacing = get('RowSpacing')
+    if (rowSpacing != null) this.rowSpacing = rowSpacing
+    const rowElevation = get('RowElevation')
+    if (rowElevation != null) this.rowElevation = rowElevation
+    return get('ItemSpacing')
   }
 }

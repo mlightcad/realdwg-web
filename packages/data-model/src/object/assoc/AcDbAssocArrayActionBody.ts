@@ -1,25 +1,28 @@
+import { AcCmColor, AcCmColorMethod, AcCmTransparency } from '@mlightcad/common'
 import {
   AcGeMatrix3d,
   AcGePoint3d,
   type AcGePoint3dLike,
+  AcGeVector3d,
   type AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
+import { AcGiLineWeight } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../../base/AcDbDxfFiler.js'
-import type { AcDbObjectId } from '../../base/AcDbObject.js'
+import type { AcDbObject, AcDbObjectId } from '../../base/AcDbObject.js'
+import { AcDbBlockTableRecord } from '../../database/AcDbBlockTableRecord.js'
 import type { AcDbDatabase } from '../../database/AcDbDatabase.js'
 import { AcDbBlockReference } from '../../entity/AcDbBlockReference.js'
-import type { AcDbCurve } from '../../entity/AcDbCurve.js'
+import { AcDbCurve } from '../../entity/AcDbCurve.js'
 import { AcDbEntity } from '../../entity/AcDbEntity.js'
-import { AcDbDictionary } from '../AcDbDictionary.js'
-import { AcDbDictionaryVar } from '../AcDbDictionaryVar.js'
-import {
-  acdbAllocateAssocDictionaryKey,
-  acdbCreateAnonymousUserBlock
-} from './acdbAllocateAnonymousUserBlockName.js'
+import { AcDbLine } from '../../entity/AcDbLine.js'
+import { AcDbPolyline } from '../../entity/AcDbPolyline.js'
+import { ByBlock } from '../../misc/AcDbConstants.js'
+import { acdbCreateAnonymousUserBlock } from './acdbAllocateAnonymousUserBlockName.js'
 import { AcDbAssocAction } from './AcDbAssocAction.js'
 import { AcDbAssocActionBody } from './AcDbAssocActionBody.js'
 import { AcDbAssocArrayCommonParameters } from './AcDbAssocArrayCommonParameters.js'
+import { AcDbAssocArrayItem } from './AcDbAssocArrayItem.js'
 import { AcDbAssocArrayItemLocator } from './AcDbAssocArrayItemLocator.js'
 import { AcDbAssocArrayParameters } from './AcDbAssocArrayParameters.js'
 import {
@@ -28,10 +31,19 @@ import {
 } from './AcDbAssocArrayPathParameters.js'
 import { AcDbAssocArrayPolarParameters } from './AcDbAssocArrayPolarParameters.js'
 import { AcDbAssocArrayRectangularParameters } from './AcDbAssocArrayRectangularParameters.js'
-import { ACDB_ASSOC_ARRAY_ACTION_BODY } from './AcDbAssocConstants.js'
 import { AcDbAssocDependency } from './AcDbAssocDependency.js'
-import { AcDbAssocManager } from './AcDbAssocManager.js'
+import {
+  AcDbAssocDxfCursor,
+  acdbAssocWriteId,
+  acdbAssocWriteMatrix
+} from './acdbAssocDxf.js'
+import { AcDbAssocNetwork } from './AcDbAssocNetwork.js'
 import { AcDbAssocStatus } from './AcDbAssocStatus.js'
+import {
+  AcDbAssocEdgeActionParam,
+  type AcDbAssocEdgeLineSegment,
+  AcDbAssocVertexActionParam
+} from './AcDbAssocVertexActionParam.js'
 
 export interface AcDbAssocArrayCreateResult {
   arrayEntityId: AcDbObjectId
@@ -39,67 +51,348 @@ export interface AcDbAssocArrayCreateResult {
   actionId: AcDbObjectId
 }
 
+/** Order AutoCAD gives the dependency on the array INSERT. */
+const ARRAY_ENTITY_DEPENDENCY_ORDER = -2147483648
+
+/** Item record class name AutoCAD writes into the body. */
+const ITEM_CLASS_NAME = 'AcDbAssocArrayItem'
+
+/**
+ * Fields of an {@link AcDbAssocArrayActionBody} decoded from a DWG record.
+ */
+export interface AcDbAssocArrayActionBodyData {
+  actionBodyClassVersion?: number
+  classVersion: number
+  parametersClassName: string
+  parametersVersion: number
+  items: {
+    classVersion: number
+    itemIndex: number
+    rowIndex: number
+    levelIndex: number
+    flags: number
+    /** Row-major 4×4 matrix (16 values). */
+    matrix: number[]
+    entityId: AcDbObjectId
+  }[]
+  /** Row-major 4×4 array transform (16 values). */
+  arrayTransform: number[]
+}
+
+/** Builds a matrix from 16 row-major values. */
+function matrixFromRowMajor(values: readonly number[]): AcGeMatrix3d {
+  const m = new AcGeMatrix3d()
+  if (values.length >= 16) {
+    m.set(
+      values[0],
+      values[1],
+      values[2],
+      values[3],
+      values[4],
+      values[5],
+      values[6],
+      values[7],
+      values[8],
+      values[9],
+      values[10],
+      values[11],
+      values[12],
+      values[13],
+      values[14],
+      values[15]
+    )
+  }
+  return m
+}
+
+/**
+ * Returns the WCS transform of an array INSERT (block space → world).
+ */
+export function acdbAssocArrayInsertTransform(
+  ref: AcDbBlockReference
+): AcGeMatrix3d {
+  const s = ref.scaleFactors
+  const p = ref.position
+  return new AcGeMatrix3d()
+    .setFromExtrusionDirection(ref.normal)
+    .multiply(AcGeMatrix3d.makeTranslation(p.x, p.y, p.z))
+    .multiply(new AcGeMatrix3d().makeRotationZ(ref.rotation))
+    .multiply(new AcGeMatrix3d().makeScale(s.x, s.y, s.z))
+}
+
 /**
  * Associative action body that evaluates an array of items from parameters
  * (ObjectARX `AcDbAssocArrayActionBody`).
+ *
+ * The array is an INSERT of an anonymous *array block* whose entities are
+ * item INSERTs of an anonymous *source block*. The body's action depends on:
+ * - the array block (write),
+ * - the source block (read),
+ * - the array INSERT (read + write, order `-2147483648`),
+ * - the path curve, for path arrays (read).
+ *
+ * Parameter values live on the owning action (value parameters and
+ * `Origin` / `BaseNormal` / `basePoint` / `RowProfile` action parameters).
+ *
+ * DXF layout (`AcDbAssocArrayActionBody` subclass): `90 1,
+ * 1 <parameters class name>, 90 0, 90 itemCount, 1 AcDbAssocArrayItem,
+ * item×itemCount, 40×16 array transform (row-major)`.
  */
 export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
+  static readonly DXF_NAME = 'ACDBASSOCARRAYACTIONBODY'
+
+  private _classVersion = 1
+  private _parametersClassName = ''
+  private _parametersVersion = 0
+  private _items: AcDbAssocArrayItem[] = []
+  /** Array INSERT transform at the last evaluation (column-major). */
+  private _arrayTransform = new AcGeMatrix3d()
+  /** Lazily built from the owning action; see {@link parameters}. */
   private _parameters: AcDbAssocArrayParameters | undefined
-  private _arrayEntityId: AcDbObjectId = ''
-  private _sourceBlockName = ''
-  private _arrayBlockName = ''
-  private _basePoint = new AcGePoint3d(0, 0, 0)
-  /** Soft pointers of source entities cloned into the source BTR. */
-  private _sourceEntityIds: AcDbObjectId[] = []
 
-  get parameters(): AcDbAssocArrayParameters | undefined {
-    return this._parameters
+  // ---------------------------------------------------------------------------
+  // Graph navigation
+  // ---------------------------------------------------------------------------
+
+  /** Owning action, if resident. */
+  get action(): AcDbAssocAction | undefined {
+    const db = this.database
+    const action = db?.getObjectById(this.parentActionId)
+    return action instanceof AcDbAssocAction ? action : undefined
   }
 
-  get sourceEntityIds(): readonly AcDbObjectId[] {
-    return this._sourceEntityIds
+  private findDependency(
+    predicate: (dep: AcDbAssocDependency, target: unknown) => boolean
+  ): AcDbAssocDependency | undefined {
+    const action = this.action
+    const db = this.database
+    if (!action || !db) return undefined
+    for (const dep of action.dependencies(db)) {
+      if (predicate(dep, dep.dependentOnObject(db))) return dep
+    }
+    return undefined
   }
 
-  setParameters(parameters: AcDbAssocArrayParameters): void {
-    this._parameters = parameters
-    parameters.ownerActionBodyId = this.objectId
+  /** Dependency on the array INSERT (read + write). */
+  get arrayEntityDependency(): AcDbAssocDependency | undefined {
+    return this.findDependency(
+      (dep, target) =>
+        target instanceof AcDbBlockReference &&
+        dep.isWriteDependency &&
+        dep.isReadDependency
+    )
   }
 
+  /** True when the array INSERT no longer exists (erased). */
+  override isOrphaned(): boolean {
+    return !this.getArrayEntity()
+  }
+
+  /** Object id of the array INSERT (ObjectARX `getArrayEntity`). */
   get arrayEntityId(): AcDbObjectId {
-    return this._arrayEntityId
+    return this.arrayEntityDependency?.dependentOnObjectId ?? ''
   }
-  set arrayEntityId(value: AcDbObjectId) {
-    this._arrayEntityId = value ?? ''
+
+  /** The array INSERT, if resident. */
+  getArrayEntity(): AcDbBlockReference | undefined {
+    const db = this.database
+    const entity = db?.getObjectById(this.arrayEntityId)
+    return entity instanceof AcDbBlockReference ? entity : undefined
+  }
+
+  /** The source block (read-only block dependency). */
+  get sourceBlock(): AcDbBlockTableRecord | undefined {
+    const db = this.database
+    return this.findDependency(
+      (dep, target) =>
+        target instanceof AcDbBlockTableRecord &&
+        dep.isReadDependency &&
+        !dep.isWriteDependency
+    )?.dependentOnObject(db) as AcDbBlockTableRecord | undefined
+  }
+
+  /** The array block (write-only block dependency). */
+  get arrayBlock(): AcDbBlockTableRecord | undefined {
+    const db = this.database
+    const fromDep = this.findDependency(
+      (dep, target) =>
+        target instanceof AcDbBlockTableRecord &&
+        dep.isWriteDependency &&
+        !dep.isReadDependency
+    )?.dependentOnObject(db) as AcDbBlockTableRecord | undefined
+    return fromDep ?? this.getArrayEntity()?.blockTableRecord
   }
 
   get sourceBlockName(): string {
-    return this._sourceBlockName
+    return this.sourceBlock?.name ?? ''
   }
 
   get arrayBlockName(): string {
-    return this._arrayBlockName
+    return this.arrayBlock?.name ?? ''
   }
 
-  get basePoint(): AcGePoint3d {
-    return this._basePoint
+  /** Entities of the source block (ObjectARX `getSourceEntities`). */
+  get sourceEntityIds(): AcDbObjectId[] {
+    const btr = this.sourceBlock
+    if (!btr) return []
+    const ids: AcDbObjectId[] = []
+    for (const entity of btr.newIterator()) ids.push(entity.objectId)
+    return ids
   }
-  set basePoint(value: AcGePoint3dLike) {
-    this._basePoint.copy(value)
+
+  /** Path curve of a path array, if resident. */
+  getPathCurve(): AcDbCurve | undefined {
+    const action = this.action
+    const db = this.database
+    if (!action || !db) return undefined
+    const profile = action.paramAtName('RowProfile', db)
+    if (profile instanceof AcDbAssocEdgeActionParam) {
+      const target = profile.dependency(db)?.dependentOnObject(db)
+      if (target instanceof AcDbCurve) return target
+    }
+    const dep = this.findDependency(
+      (d, target) =>
+        target instanceof AcDbCurve &&
+        d.isReadDependency &&
+        !d.isWriteDependency
+    )
+    const target = dep?.dependentOnObject(db)
+    return target instanceof AcDbCurve ? target : undefined
+  }
+
+  /** Items of the last evaluation. */
+  get items(): readonly AcDbAssocArrayItem[] {
+    return this._items
+  }
+
+  /** Item at `locator` (ObjectARX `getItemAt`). */
+  getItemAt(
+    locator: AcDbAssocArrayItemLocator
+  ): AcDbAssocArrayItem | undefined {
+    return this._items.find(item => item.locator.equals(locator))
+  }
+
+  /** C++ class name of the parameters stored in DXF/DWG. */
+  get parametersClassName(): string {
+    return this._parametersClassName || this._parameters?.className || ''
+  }
+
+  /** Array INSERT transform recorded at the last evaluation. */
+  get arrayTransform(): AcGeMatrix3d {
+    return this._arrayTransform
+  }
+
+  // ---------------------------------------------------------------------------
+  // Parameters
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Array parameters (ObjectARX `parameters`). Built from the owning action's
+   * value and point parameters on first access.
+   */
+  get parameters(): AcDbAssocArrayParameters | undefined {
+    if (!this._parameters) this.loadParametersFromAction()
+    return this._parameters
   }
 
   /**
-   * Returns whether `entity` is the visible INSERT of an associative array.
+   * Replaces the parameters and writes them to the owning action
+   * (ObjectARX `setParameters`).
    */
-  static isAssociativeArray(
-    entity: AcDbEntity,
-    db?: AcDbDatabase
-  ): boolean {
+  setParameters(parameters: AcDbAssocArrayParameters): void {
+    this._parameters = parameters
+    this._parametersClassName = parameters.className
+    parameters.ownerActionBodyId = this.objectId
+    this.syncParametersToAction()
+  }
+
+  private loadParametersFromAction(): void {
+    const action = this.action
+    if (!action) return
+    let params: AcDbAssocArrayParameters | undefined
+    switch (this._parametersClassName) {
+      case 'AcDbAssocArrayRectangularParameters':
+        params = new AcDbAssocArrayRectangularParameters()
+        break
+      case 'AcDbAssocArrayPolarParameters':
+        params = new AcDbAssocArrayPolarParameters()
+        break
+      case 'AcDbAssocArrayPathParameters':
+        params = new AcDbAssocArrayPathParameters()
+        break
+      default:
+        return
+    }
+    params.fromValueParams(name => {
+      const value = action.getValueParam(name)
+      return typeof value === 'number' ? value : undefined
+    })
+    if (params instanceof AcDbAssocArrayCommonParameters) {
+      const db = this.database
+      const point = (name: string) => {
+        const p = action.paramAtName(name, db)
+        return p instanceof AcDbAssocVertexActionParam ? p.point : undefined
+      }
+      const origin = point('Origin')
+      if (origin) params.origin = origin.clone()
+      const normal = point('BaseNormal')
+      if (normal)
+        params.baseNormal = new AcGeVector3d(normal.x, normal.y, normal.z)
+      const base = point('basePoint')
+      if (base) params.basePoint = base.clone()
+    }
+    if (params instanceof AcDbAssocArrayPathParameters) {
+      const curve = this.getPathCurve()
+      if (curve) params.setPath({ entityId: curve.objectId })
+    }
+    params.ownerActionBodyId = this.objectId
+    this._parameters = params
+  }
+
+  /**
+   * Writes the parameters into the owning action's value and point
+   * parameters (AutoCAD's persistent form).
+   */
+  syncParametersToAction(): void {
+    const action = this.action
+    const params = this._parameters
+    if (!action || !params) return
+    for (const spec of params.toValueParams()) {
+      action.setValueParam(spec.name, spec.value, spec.unitType, spec.code)
+    }
+    if (params instanceof AcDbAssocArrayCommonParameters) {
+      const db = this.database
+      const setPoint = (name: string, p: AcGePoint3dLike) => {
+        let param = action.paramAtName(name, db)
+        if (!(param instanceof AcDbAssocVertexActionParam)) {
+          param = new AcDbAssocVertexActionParam(name)
+          action.addParam(param)
+        }
+        ;(param as AcDbAssocVertexActionParam).point = p
+      }
+      const n = params.baseNormal
+      setPoint('BaseNormal', { x: n.x, y: n.y, z: n.z })
+      setPoint('Origin', params.origin)
+      setPoint('basePoint', params.basePoint)
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Lookup
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Returns whether `entity` is the INSERT of an associative array
+   * (ObjectARX `isAssociativeArray`).
+   */
+  static isAssociativeArray(entity: AcDbEntity, db?: AcDbDatabase): boolean {
     return AcDbAssocArrayActionBody.getAssociativeArray(entity, db) != null
   }
 
   /**
-   * Returns the action body that evaluates `entity`, if it is an associative
-   * array INSERT.
+   * Returns the action body controlling the associative-array INSERT
+   * `entity`, found through the entity's persistent reactors (its
+   * dependencies), like AutoCAD.
    */
   static getAssociativeArray(
     entity: AcDbEntity,
@@ -107,22 +400,45 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
   ): AcDbAssocArrayActionBody | undefined {
     const database = db ?? entity.database
     if (!database) return undefined
-    const extId = entity.extensionDictionary
-    if (!extId) return undefined
-    const ext = database.getObjectById(extId)
-    if (!(ext instanceof AcDbDictionary)) return undefined
-    const entry = ext.getAt(ACDB_ASSOC_ARRAY_ACTION_BODY)
-    if (entry instanceof AcDbAssocArrayActionBody) return entry
-    if (entry instanceof AcDbDictionaryVar) {
-      const body = database.getObjectById(entry.value)
-      if (body instanceof AcDbAssocArrayActionBody) return body
+    for (const reactorId of entity.getPersistentReactors()) {
+      const dep = database.getObjectById(reactorId)
+      if (!(dep instanceof AcDbAssocDependency)) continue
+      if (dep.dependentOnObjectId !== entity.objectId) continue
+      const action = database.getObjectById(dep.owningActionId)
+      if (!(action instanceof AcDbAssocAction)) continue
+      const body = action.actionBody(database)
+      if (
+        body instanceof AcDbAssocArrayActionBody &&
+        body.arrayEntityId === entity.objectId
+      ) {
+        return body
+      }
     }
     return undefined
   }
 
+  /** Alias of {@link getAssociativeArray} (ObjectARX naming). */
+  static getControllingActionBody(
+    entity: AcDbEntity,
+    db?: AcDbDatabase
+  ): AcDbAssocArrayActionBody | undefined {
+    return AcDbAssocArrayActionBody.getAssociativeArray(entity, db)
+  }
+
+  // ---------------------------------------------------------------------------
+  // Creation
+  // ---------------------------------------------------------------------------
+
   /**
    * Creates an associative array from source entities
-   * (`AcDbAssocArrayActionBody::createInstance`).
+   * (`AcDbAssocArrayActionBody::createInstance`), in AutoCAD's layout.
+   *
+   * - Rectangular: the array INSERT sits at `basePoint`.
+   * - Polar: the INSERT is at the origin; set `parameters.center` (WCS)
+   *   first. Radius and start angle are derived from `basePoint`.
+   * - Path: the INSERT is at the origin; call `parameters.setPath` first.
+   *   Item 0 lands on the path start; with aligned items the source block is
+   *   authored in the tangent frame there.
    *
    * @returns Object ids of the array INSERT and the new action body / action.
    */
@@ -138,123 +454,117 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
 
     const base = new AcGePoint3d(basePoint.x, basePoint.y, basePoint.z ?? 0)
 
+    let pathCurve: AcDbCurve | undefined
     if (parameters instanceof AcDbAssocArrayPathParameters) {
       const pathId = parameters.path?.entityId
-      if (!pathId || !db.getObjectById(pathId)) {
+      const path = pathId ? db.getObjectById(pathId) : undefined
+      if (!(path instanceof AcDbCurve)) {
         throw new Error(
           'AcDbAssocArrayActionBody.createInstance: path parameters require a path curve entity'
         )
       }
+      pathCurve = path
     }
 
-    const sourceBtr = acdbCreateAnonymousUserBlock(db)
-    const arrayBtr = acdbCreateAnonymousUserBlock(db)
-
-    // Move / clone sources into the source BTR, translated so base → origin.
-    const toOrigin = AcGeMatrix3d.makeTranslation(-base.x, -base.y, -base.z)
-    const sourceIds: AcDbObjectId[] = []
+    const sources: AcDbEntity[] = []
     for (const id of sourceEntityIds) {
       const entity = db.getObjectById(id)
-      if (!(entity instanceof AcDbEntity)) continue
-      const copy = entity.getTransformedCopy(toOrigin)
-      sourceBtr.appendEntity(copy)
-      sourceIds.push(copy.objectId)
-      entity.erase()
+      if (entity instanceof AcDbEntity) sources.push(entity)
     }
-
-    if (sourceIds.length === 0) {
-      db.tables.blockTable.remove(sourceBtr.name)
-      db.tables.blockTable.remove(arrayBtr.name)
+    if (sources.length === 0) {
       throw new Error(
         'AcDbAssocArrayActionBody.createInstance: no valid source entities'
       )
     }
 
+    // Frames: insert position (array block → world) and source authoring
+    // transform (world → source block).
+    let insertPosition = new AcGePoint3d(0, 0, 0)
+    let toSource = AcGeMatrix3d.makeTranslation(-base.x, -base.y, -base.z)
+    if (parameters instanceof AcDbAssocArrayRectangularParameters) {
+      insertPosition = base.clone()
+      parameters.origin = new AcGePoint3d(0, 0, 0)
+    } else if (parameters instanceof AcDbAssocArrayPolarParameters) {
+      parameters.setFirstItemPosition(base)
+    } else if (parameters instanceof AcDbAssocArrayPathParameters) {
+      parameters.setPathCurve(pathCurve)
+      if (parameters.alignItems) {
+        const frame = parameters.getFirstItemFrame()
+        const e = frame.elements
+        const angle = Math.atan2(e[1], e[0])
+        toSource = new AcGeMatrix3d().makeRotationZ(-angle).multiply(toSource)
+      }
+    }
+    if (parameters instanceof AcDbAssocArrayCommonParameters) {
+      parameters.basePoint = new AcGePoint3d(0, 0, 0)
+    }
+
+    const sourceBtr = acdbCreateAnonymousUserBlock(db)
+    const arrayBtr = acdbCreateAnonymousUserBlock(db)
+    for (const entity of sources) {
+      sourceBtr.appendEntity(entity.getTransformedCopy(toSource))
+      entity.erase()
+    }
+
+    // The INSERT gets its handle and reactor before it is appended, so the
+    // transaction's append record (used by redo) already carries the reactor.
     const arrayInsert = new AcDbBlockReference(arrayBtr.name)
-    arrayInsert.position = base
+    arrayInsert.position = insertPosition
+    arrayInsert.objectId = db.generateHandle()
+
+    // Action graph in the model-space network.
+    const network = AcDbAssocNetwork.getInstanceFromObject(
+      db.tables.blockTable.modelSpace,
+      true
+    )!
+    const action = new AcDbAssocAction()
+    network.addAction(action, true)
+    const body = new AcDbAssocArrayActionBody()
+    action.setActionBody(body)
+    body._parametersClassName = parameters.className
+
+    const addDependency = (
+      target: AcDbObject,
+      read: boolean,
+      write: boolean,
+      order = 0
+    ) => {
+      const dep = new AcDbAssocDependency()
+      dep.isReadDependency = read
+      dep.isWriteDependency = write
+      dep.order = order
+      action.addDependency(dep)
+      dep.attachToObject(target.objectId, target)
+      return dep
+    }
+    const pathDep = pathCurve
+      ? addDependency(pathCurve, true, false)
+      : undefined
+    addDependency(arrayBtr, false, true)
+    addDependency(sourceBtr, true, false)
+    addDependency(arrayInsert, true, true, ARRAY_ENTITY_DEPENDENCY_ORDER)
     db.tables.blockTable.modelSpace.appendEntity(arrayInsert)
 
-    const body = new AcDbAssocArrayActionBody()
-    body._arrayEntityId = arrayInsert.objectId
-    body._sourceBlockName = sourceBtr.name
-    body._arrayBlockName = arrayBtr.name
-    body._basePoint.copy(base)
-    body._sourceEntityIds = [...sourceIds]
+    // Action parameters in AutoCAD's order.
+    action.addParam(
+      new AcDbAssocVertexActionParam('BaseNormal', { x: 0, y: 0, z: 1 })
+    )
+    action.addParam(new AcDbAssocVertexActionParam('Origin'))
+    if (pathDep && pathCurve) {
+      const profile = new AcDbAssocEdgeActionParam('RowProfile')
+      profile.dependencyId = pathDep.objectId
+      profile.setCachedLineSegments(acdbAssocLineSegmentsOf(pathCurve))
+      action.addParam(profile)
+    }
+    action.addParam(new AcDbAssocVertexActionParam('basePoint'))
+
     body.setParameters(parameters)
-
-    if (parameters instanceof AcDbAssocArrayPathParameters) {
-      const pathId = parameters.path!.entityId
-      const pathEntity = db.getObjectById(pathId)
-      if (pathEntity) parameters.setPathCurve(pathEntity as AcDbCurve)
-      parameters.basePoint = base
-    }
-    if (parameters instanceof AcDbAssocArrayPolarParameters) {
-      // Hosts must set `parameters.center` (polar orbit center) before calling
-      // createInstance. `base` is the source/array base point (first item).
-      parameters.basePoint = base
-    }
-
-    const action = new AcDbAssocAction()
-    const bodyKey = acdbAllocateAssocDictionaryKey(
-      db.objects.assocActionBody,
-      '*AB'
-    )
-    const actionKey = acdbAllocateAssocDictionaryKey(
-      db.objects.assocAction,
-      '*AA'
-    )
-    db.objects.assocActionBody.setAt(bodyKey, body)
-    db.objects.assocAction.setAt(actionKey, action)
-    action.actionBodyId = body.objectId
-    body.parentActionId = action.objectId
-
-    const network = AcDbAssocManager.getTopLevelNetwork(db, true)!
-    network.addAction(action.objectId)
-    action.owningNetworkId = network.objectId
-
-    // Dependencies: write on array INSERT; read on path when present.
-    const writeDep = new AcDbAssocDependency()
-    writeDep.dependentOnObjectId = arrayInsert.objectId
-    writeDep.isReadDependency = false
-    writeDep.isWriteDependency = true
-    writeDep.owningActionId = action.objectId
-    db.objects.assocDependency.setAt(
-      acdbAllocateAssocDictionaryKey(db.objects.assocDependency, '*AD'),
-      writeDep
-    )
-    action.addDependencyId(writeDep.objectId)
-
-    if (parameters instanceof AcDbAssocArrayPathParameters) {
-      const pathRef: AcDbAssocArrayPathEdgeRef | undefined = parameters.path
-      if (pathRef?.entityId) {
-        const readDep = new AcDbAssocDependency()
-        readDep.dependentOnObjectId = pathRef.entityId
-        readDep.isReadDependency = true
-        readDep.isWriteDependency = false
-        readDep.owningActionId = action.objectId
-        db.objects.assocDependency.setAt(
-          acdbAllocateAssocDictionaryKey(db.objects.assocDependency, '*AD'),
-          readDep
-        )
-        action.addDependencyId(readDep.objectId)
-      }
-    }
-
-    // Link INSERT → action body via extension dictionary soft pointer.
-    const extId = arrayInsert.createExtensionDictionary()
-    if (extId) {
-      const ext = db.getObjectById(extId)
-      if (ext instanceof AcDbDictionary) {
-        const marker = new AcDbDictionaryVar()
-        marker.value = body.objectId
-        ext.setAt(ACDB_ASSOC_ARRAY_ACTION_BODY, marker)
-      }
-    }
 
     action.setDirty()
     body.evaluateOverride()
     if (action.status !== AcDbAssocStatus.FailedToEvaluateAssocStatus) {
       action.setUpToDate()
+      for (const dep of action.dependencies()) dep.setUpToDate()
     }
 
     return {
@@ -264,92 +574,109 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     }
   }
 
-  /**
-   * Returns the transform for one array item.
-   */
-  getTransform(locator: AcDbAssocArrayItemLocator): AcGeMatrix3d {
-    if (!this._parameters) return new AcGeMatrix3d()
-    this.bindPathCurve()
-    return this._parameters.getItemTransform(locator)
+  // ---------------------------------------------------------------------------
+  // Evaluation
+  // ---------------------------------------------------------------------------
+
+  /** WCS → array block transform of the array INSERT. */
+  private worldToArray(): AcGeMatrix3d | undefined {
+    const ref = this.getArrayEntity()
+    if (!ref) return undefined
+    return acdbAssocArrayInsertTransform(ref).invert()
   }
 
   private bindPathCurve(): void {
-    if (!(this._parameters instanceof AcDbAssocArrayPathParameters)) return
-    const db = this.database
-    const pathId = this._parameters.path?.entityId
-    if (!db || !pathId) return
-    const entity = db.getObjectById(pathId)
-    if (entity) this._parameters.setPathCurve(entity as AcDbCurve)
+    const params = this.parameters
+    if (!(params instanceof AcDbAssocArrayPathParameters)) return
+    const curve = this.getPathCurve()
+    if (curve) {
+      params.setPath({ entityId: curve.objectId })
+      params.setPathCurve(curve, this.worldToArray())
+    }
   }
 
   /**
-   * Rebuilds every item INSERT inside the array anonymous block.
+   * Returns the transform for one array item (source block → array block).
+   */
+  getTransform(locator: AcDbAssocArrayItemLocator): AcGeMatrix3d {
+    const params = this.parameters
+    if (!params) return new AcGeMatrix3d()
+    this.bindPathCurve()
+    return params.getItemTransform(locator)
+  }
+
+  /**
+   * Rebuilds every item INSERT inside the array block and the item list.
    */
   override evaluateOverride(): void {
     const db = this.database
-    if (!db || !this._parameters) {
-      return
-    }
+    const params = this.parameters
+    if (!db || !params) return
     this.bindPathCurve()
 
-    const arrayBtr = db.tables.blockTable.getAt(this._arrayBlockName)
-    const sourceBtr = db.tables.blockTable.getAt(this._sourceBlockName)
+    const arrayBtr = this.arrayBlock
+    const sourceBtr = this.sourceBlock
     if (!arrayBtr || !sourceBtr) {
-      const action = db.getObjectById(this.parentActionId)
-      if (action instanceof AcDbAssocAction) {
-        action.status = AcDbAssocStatus.FailedToEvaluateAssocStatus
-      }
+      const action = this.action
+      if (action) action.status = AcDbAssocStatus.FailedToEvaluateAssocStatus
       return
     }
 
     // Clear previous items.
     const existingIds: AcDbObjectId[] = []
-    for (const ent of arrayBtr.newIterator()) {
-      existingIds.push(ent.objectId)
-    }
+    for (const ent of arrayBtr.newIterator()) existingIds.push(ent.objectId)
     if (existingIds.length > 0) arrayBtr.removeEntity(existingIds)
 
-    for (const locator of this._parameters.getItemLocators()) {
-      const matrix = this._parameters.getItemTransform(locator)
-      const item = new AcDbBlockReference(this._sourceBlockName)
-      // Decompose translation + Z rotation from the matrix when possible.
+    const items: AcDbAssocArrayItem[] = []
+    for (const locator of params.getItemLocators()) {
+      const matrix = params.getItemTransform(locator)
+      const item = new AcDbBlockReference(sourceBtr.name)
       const e = matrix.elements
-      // Column-major: translation in e[12], e[13], e[14]
       item.position = new AcGePoint3d(e[12], e[13], e[14])
       const rot = Math.atan2(e[1], e[0])
-      if (Number.isFinite(rot) && Math.abs(rot) > 1e-12) {
-        item.rotation = rot
-      }
-      // Skip identity item still needed (column 0,row 0,level 0).
+      if (Number.isFinite(rot) && Math.abs(rot) > 1e-12) item.rotation = rot
+      // AutoCAD items inherit everything from the array INSERT.
+      item.layer = '0'
+      item.color = new AcCmColor(AcCmColorMethod.ByBlock)
+      item.lineType = ByBlock
+      item.lineWeight = AcGiLineWeight.ByBlock
+      item.transparency = AcCmTransparency.fromString('ByBlock')
       arrayBtr.appendEntity(item)
+      items.push(new AcDbAssocArrayItem(locator, matrix, item.objectId))
     }
+    this._items = items
+
+    const ref = this.getArrayEntity()
+    if (ref) this._arrayTransform = acdbAssocArrayInsertTransform(ref)
+
+    // Keep persisted value parameters (e.g. a path FillPath count) current.
+    this.syncParametersToAction()
   }
 
   /**
    * Updates common count/spacing and marks the owning action dirty.
    */
-  setRowColumnLevel(
-    rows?: number,
-    columns?: number,
-    levels?: number
-  ): void {
-    if (!(this._parameters instanceof AcDbAssocArrayCommonParameters)) return
-    if (rows != null) this._parameters.rowCount = rows
-    if (columns != null) this._parameters.columnCount = columns
-    if (levels != null) this._parameters.levelCount = levels
+  setRowColumnLevel(rows?: number, columns?: number, levels?: number): void {
+    const params = this.parameters
+    if (!(params instanceof AcDbAssocArrayCommonParameters)) return
+    if (rows != null) params.rowCount = rows
+    if (columns != null) params.itemCount = columns
+    if (levels != null) params.levelCount = levels
+    this.syncParametersToAction()
     this.markDirty()
   }
 
   markDirty(): void {
-    const db = this.database
-    if (!db) return
-    const action = db.getObjectById(this.parentActionId)
-    if (action instanceof AcDbAssocAction) action.setDirty()
+    this.action?.setDirty()
   }
 
+  // ---------------------------------------------------------------------------
+  // Grips
+  // ---------------------------------------------------------------------------
+
   /**
-   * Grip indices for associative-array INSERTs (beyond the insertion point):
-   * - `0` — insertion / base point
+   * Grip indices for associative-array INSERTs:
+   * - `0` — base point (first item)
    * - `1` — primary-axis count grip (columns / items)
    * - `2` — secondary-axis count grip (rows), rectangular only
    */
@@ -357,64 +684,59 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
   static readonly GRIP_PRIMARY = 1
   static readonly GRIP_SECONDARY = 2
 
+  private itemWorldPoint(
+    ref: AcDbBlockReference,
+    locator: AcDbAssocArrayItemLocator
+  ): AcGePoint3d {
+    const m = acdbAssocArrayInsertTransform(ref).multiply(
+      this.getTransform(locator)
+    )
+    const e = m.elements
+    return new AcGePoint3d(e[12], e[13], e[14])
+  }
+
   /**
    * Returns WCS grip points for the associative-array INSERT `ref`.
    */
   getGripPoints(ref: AcDbBlockReference): AcGePoint3d[] {
-    const base = ref.position.clone()
-    const grips = [base]
-    if (!this._parameters) return grips
+    const params = this.parameters
+    if (!params) return [ref.position.clone()]
+    const grips = [this.itemWorldPoint(ref, new AcDbAssocArrayItemLocator())]
 
-    if (this._parameters instanceof AcDbAssocArrayRectangularParameters) {
-      const cols = Math.max(1, this._parameters.columnCount)
-      const rows = Math.max(1, this._parameters.rowCount)
-      const lastCol = this._parameters.getItemTransform(
-        new AcDbAssocArrayItemLocator(cols - 1, 0, 0)
-      )
-      const lastRow = this._parameters.getItemTransform(
-        new AcDbAssocArrayItemLocator(0, rows - 1, 0)
-      )
+    if (params instanceof AcDbAssocArrayRectangularParameters) {
       grips.push(
-        new AcGePoint3d(
-          base.x + lastCol.elements[12],
-          base.y + lastCol.elements[13],
-          base.z + lastCol.elements[14]
+        this.itemWorldPoint(
+          ref,
+          new AcDbAssocArrayItemLocator(
+            Math.max(1, params.columnCount) - 1,
+            0,
+            0
+          )
         ),
-        new AcGePoint3d(
-          base.x + lastRow.elements[12],
-          base.y + lastRow.elements[13],
-          base.z + lastRow.elements[14]
+        this.itemWorldPoint(
+          ref,
+          new AcDbAssocArrayItemLocator(0, Math.max(1, params.rowCount) - 1, 0)
         )
       )
       return grips
     }
 
-    if (this._parameters instanceof AcDbAssocArrayPolarParameters) {
-      const items = Math.max(1, this._parameters.itemCount)
-      const last = this._parameters.getItemTransform(
-        new AcDbAssocArrayItemLocator(items - 1, 0, 0)
-      )
+    if (params instanceof AcDbAssocArrayPolarParameters) {
       grips.push(
-        new AcGePoint3d(
-          base.x + last.elements[12],
-          base.y + last.elements[13],
-          base.z + last.elements[14]
+        this.itemWorldPoint(
+          ref,
+          new AcDbAssocArrayItemLocator(Math.max(1, params.itemCount) - 1, 0, 0)
         )
       )
       return grips
     }
 
-    if (this._parameters instanceof AcDbAssocArrayPathParameters) {
+    if (params instanceof AcDbAssocArrayPathParameters) {
       this.bindPathCurve()
-      const items = Math.max(1, this._parameters.itemCount)
-      const last = this._parameters.getItemTransform(
-        new AcDbAssocArrayItemLocator(items - 1, 0, 0)
-      )
       grips.push(
-        new AcGePoint3d(
-          base.x + last.elements[12],
-          base.y + last.elements[13],
-          base.z + last.elements[14]
+        this.itemWorldPoint(
+          ref,
+          new AcDbAssocArrayItemLocator(params.effectiveItemCount() - 1, 0, 0)
         )
       )
     }
@@ -431,96 +753,92 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     offset: AcGeVector3dLike
   ): void {
     if (indices.length === 0) return
-    const dx = offset.x ?? 0
-    const dy = offset.y ?? 0
-    const dz = offset.z ?? 0
+    const params = this.parameters
+    // Grip offsets are in WCS; count grips work in array-block space.
+    const local = new AcGeVector3d(offset.x ?? 0, offset.y ?? 0, offset.z ?? 0)
+    const toArray = this.worldToArray()
+    if (toArray) {
+      const e = toArray.elements
+      const { x, y, z } = local
+      local.set(
+        e[0] * x + e[4] * y + e[8] * z,
+        e[1] * x + e[5] * y + e[9] * z,
+        e[2] * x + e[6] * y + e[10] * z
+      )
+    }
+    const dx = local.x
+    const dy = local.y
 
     for (const index of indices) {
       if (index === AcDbAssocArrayActionBody.GRIP_BASE) {
         ref.position = new AcGePoint3d(
-          ref.position.x + dx,
-          ref.position.y + dy,
-          ref.position.z + dz
+          ref.position.x + (offset.x ?? 0),
+          ref.position.y + (offset.y ?? 0),
+          ref.position.z + (offset.z ?? 0)
         )
-        this._basePoint.copy(ref.position)
-        if (this._parameters instanceof AcDbAssocArrayPolarParameters) {
-          // Translate center with the base so the orbit radius is preserved.
-          const c = this._parameters.center
-          this._parameters.center = new AcGePoint3d(c.x + dx, c.y + dy, c.z + dz)
-          this._parameters.basePoint = this._basePoint
-        }
-        if (this._parameters instanceof AcDbAssocArrayPathParameters) {
-          this._parameters.basePoint = this._basePoint
-        }
         continue
       }
 
       if (
-        this._parameters instanceof AcDbAssocArrayRectangularParameters &&
+        params instanceof AcDbAssocArrayRectangularParameters &&
         index === AcDbAssocArrayActionBody.GRIP_PRIMARY
       ) {
-        const spacing = Math.max(1e-9, Math.abs(this._parameters.columnSpacing))
-        const projected = this._parameters.columnSpacing >= 0 ? dx : -dx
-        const delta = Math.round(projected / spacing)
-        this._parameters.columnCount = Math.max(
+        const spacing = Math.max(1e-9, Math.abs(params.columnSpacing))
+        const projected = params.columnSpacing >= 0 ? dx : -dx
+        params.columnCount = Math.max(
           1,
-          this._parameters.columnCount + delta
+          params.columnCount + Math.round(projected / spacing)
         )
-        this.markDirty()
       } else if (
-        this._parameters instanceof AcDbAssocArrayRectangularParameters &&
+        params instanceof AcDbAssocArrayRectangularParameters &&
         index === AcDbAssocArrayActionBody.GRIP_SECONDARY
       ) {
-        const spacing = Math.max(1e-9, Math.abs(this._parameters.rowSpacing))
-        const projected = this._parameters.rowSpacing >= 0 ? dy : -dy
-        const delta = Math.round(projected / spacing)
-        this._parameters.rowCount = Math.max(
+        const spacing = Math.max(1e-9, Math.abs(params.rowSpacing))
+        const projected = params.rowSpacing >= 0 ? dy : -dy
+        params.rowCount = Math.max(
           1,
-          this._parameters.rowCount + delta
+          params.rowCount + Math.round(projected / spacing)
         )
-        this.markDirty()
       } else if (
-        this._parameters instanceof AcDbAssocArrayPolarParameters &&
+        params instanceof AcDbAssocArrayPolarParameters &&
         index === AcDbAssocArrayActionBody.GRIP_PRIMARY
       ) {
-        const angleStep = Math.max(1e-9, Math.abs(this._parameters.angleBetweenItems))
-        const c = this._parameters.center
-        const b = this._parameters.basePoint
-        const r = Math.hypot(b.x - c.x, b.y - c.y)
-        const arcStep = Math.max(1e-9, r * angleStep)
+        const angleStep = Math.max(1e-9, Math.abs(params.angleBetweenItems))
+        const arcStep = Math.max(1e-9, params.radius * angleStep)
         const delta = Math.round(Math.hypot(dx, dy) / arcStep)
         const sign = dx + dy >= 0 ? 1 : -1
-        this._parameters.itemCount = Math.max(
-          1,
-          this._parameters.itemCount + sign * Math.max(0, delta)
-        )
-        this.markDirty()
+        params.itemCount = Math.max(1, params.itemCount + sign * delta)
       } else if (
-        this._parameters instanceof AcDbAssocArrayPathParameters &&
+        params instanceof AcDbAssocArrayPathParameters &&
         index === AcDbAssocArrayActionBody.GRIP_PRIMARY
       ) {
-        const spacing = Math.max(1e-9, Math.abs(this._parameters.itemSpacing))
+        const spacing = Math.max(1e-9, Math.abs(params.itemSpacing))
         const delta = Math.round(Math.hypot(dx, dy) / spacing)
         const sign = dx + dy >= 0 ? 1 : -1
-        this._parameters.itemCount = Math.max(
+        params.fillPath = false
+        params.itemCount = Math.max(
           1,
-          this._parameters.itemCount + sign * Math.max(0, delta)
+          params.effectiveItemCount() + sign * delta
         )
-        this.markDirty()
+      } else {
+        continue
       }
+      this.markDirty()
     }
 
+    this.syncParametersToAction()
     this.evaluateOverride()
-    const db = this.database
-    if (db) {
-      const action = db.getObjectById(this.parentActionId)
-      if (action instanceof AcDbAssocAction) action.setUpToDate()
-    }
+    this.action?.setUpToDate()
   }
 
+  // ---------------------------------------------------------------------------
+  // Explode / disassociate
+  // ---------------------------------------------------------------------------
+
   /**
-   * Explodes this associative array into independent entity copies and removes
-   * the associative action graph (AutoCAD EXPLODE on an associative array).
+   * Explodes this associative array into independent entity copies (AutoCAD
+   * EXPLODE on an associative array). Erasing the INSERT afterwards orphans
+   * the action, which is then dropped from evaluation and DXF export.
    *
    * @param _ref - The array INSERT being exploded (reserved for future use).
    * @param insertTransform - WCS transform of the array INSERT
@@ -531,152 +849,171 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     _ref: AcDbBlockReference,
     insertTransform: AcGeMatrix3d
   ): AcDbEntity[] | undefined {
-    const db = this.database
-    if (!db || !this._parameters) return undefined
-    this.bindPathCurve()
-
-    const sourceBtr = db.tables.blockTable.getAt(this._sourceBlockName)
+    const sourceBtr = this.sourceBlock
     if (!sourceBtr) return undefined
 
+    // Use the items the array shows (the last evaluation, or AutoCAD's stored
+    // items); recompute only when no items are stored or the action is dirty.
+    let itemMatrices: AcGeMatrix3d[]
+    if (this._items.length > 0 && !this.action?.needsEvaluation) {
+      itemMatrices = this._items.map(item => item.transform)
+    } else {
+      const params = this.parameters
+      if (!params) return undefined
+      this.bindPathCurve()
+      itemMatrices = params
+        .getItemLocators()
+        .map(locator => params.getItemTransform(locator))
+    }
+
     const created: AcDbEntity[] = []
-    for (const locator of this._parameters.getItemLocators()) {
-      const itemMatrix = this._parameters.getItemTransform(locator)
+    for (const itemMatrix of itemMatrices) {
       const world = insertTransform.clone().multiply(itemMatrix)
       for (const source of sourceBtr.newIterator()) {
         created.push(source.getTransformedCopy(world))
       }
     }
 
-    this.disassociate()
+    // The action graph is kept: the caller erases the array INSERT, which
+    // orphans the action (skipped on export) and keeps EXPLODE undoable.
     return created
   }
 
   /**
-   * Removes this action body, its action, and dependencies from the database
-   * associative network, and clears the INSERT extension-dictionary marker.
+   * Erases this action body with its action, dependencies and parameters,
+   * detaching the dependencies from the array INSERT, blocks and path.
    */
   disassociate(): void {
-    const db = this.database
-    if (!db) return
-
-    const arrayEntity = db.getObjectById(this._arrayEntityId)
-    if (arrayEntity instanceof AcDbEntity) {
-      const extId = arrayEntity.extensionDictionary
-      if (extId) {
-        const ext = db.getObjectById(extId)
-        if (ext instanceof AcDbDictionary) {
-          ext.remove(ACDB_ASSOC_ARRAY_ACTION_BODY)
-        }
-      }
+    const action = this.action
+    if (action) {
+      action.eraseAction()
+    } else {
+      this.database?.releaseObjectHandle(this)
     }
+  }
 
-    const action = db.getObjectById(this.parentActionId)
-    if (action instanceof AcDbAssocAction) {
-      for (const depId of [...action.dependencyIds]) {
-        for (const [key, dep] of db.objects.assocDependency.entries()) {
-          if (dep.objectId === depId) {
-            db.objects.assocDependency.remove(key)
-            break
-          }
-        }
-      }
-      const network = AcDbAssocManager.getTopLevelNetwork(db, false)
-      if (network) network.removeAction(action.objectId)
-      for (const [key, act] of db.objects.assocAction.entries()) {
-        if (act.objectId === action.objectId) {
-          db.objects.assocAction.remove(key)
-          break
-        }
-      }
-    }
+  // ---------------------------------------------------------------------------
+  // DXF
+  // ---------------------------------------------------------------------------
 
-    for (const [key, body] of db.objects.assocActionBody.entries()) {
-      if (body.objectId === this.objectId) {
-        db.objects.assocActionBody.remove(key)
-        break
-      }
-    }
+  override getHardOwnedObjectIds(): AcDbObjectId[] {
+    return []
   }
 
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeString(100, 'AcDbAssocArrayActionBody')
-    filer.writeObjectId(330, this._arrayEntityId)
-    filer.writeString(1, this._sourceBlockName)
-    filer.writeString(2, this._arrayBlockName)
-    filer.writePoint3d(10, this._basePoint)
-    const json = this._parameters ? JSON.stringify(this._parameters.toJSON()) : ''
-    filer.writeString(300, json)
+    filer.writeSubclassMarker('AcDbAssocArrayActionBody')
+    filer.writeInt32(90, this._classVersion)
+    filer.writeString(1, this.parametersClassName)
+    filer.writeInt32(90, this._parametersVersion)
+    filer.writeInt32(90, this._items.length)
+    filer.writeString(1, ITEM_CLASS_NAME)
+    for (const item of this._items) {
+      filer.writeSubclassMarker(ITEM_CLASS_NAME)
+      filer.writeInt32(90, item.classVersion)
+      filer.writeInt32(90, item.locator.itemIndex)
+      filer.writeInt32(90, item.locator.rowIndex)
+      filer.writeInt32(90, item.locator.levelIndex)
+      const flags = item.persistedFlags
+      filer.writeInt32(90, flags)
+      const e = item.transform.elements
+      if (item.isTranslationOnly) {
+        filer.writePoint3d(11, { x: e[12], y: e[13], z: e[14] })
+      } else {
+        acdbAssocWriteMatrix(filer, e)
+      }
+      acdbAssocWriteId(filer, 330, item.entityId)
+    }
+    acdbAssocWriteMatrix(filer, this._arrayTransform.elements)
     return this
   }
 
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
-    filer.atSubclassData('AcDbAssocArrayActionBody')
-
-    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
-      const item = filer.readItem()
-      if (!item) break
-      const code = Number(item.code)
-      if (code === 100) {
-        filer.pushBackItem(item)
-        break
+    const head = AcDbAssocDxfCursor.read(filer, 'AcDbAssocArrayActionBody')
+    this._classVersion = head.int(90, 1)
+    this._parametersClassName = head.string(1)
+    this._parametersVersion = head.int()
+    const count = head.int()
+    head.string(1) // item class name
+    this._items = []
+    let tail = head
+    for (let i = 0; i < count; i++) {
+      if (!filer.atSubclassData(ITEM_CLASS_NAME)) break
+      const c = AcDbAssocDxfCursor.read(filer)
+      const item = new AcDbAssocArrayItem()
+      item.classVersion = c.int()
+      item.locator = new AcDbAssocArrayItemLocator(c.int(), c.int(), c.int())
+      item.flags = c.int()
+      if (c.peekCode() === 40) {
+        item.transform = matrixFromRowMajor(c.doubles(16))
+      } else if (c.peekCode() === 11) {
+        const p = c.point(11)
+        item.transform = AcGeMatrix3d.makeTranslation(p.x, p.y, p.z)
       }
-      switch (code) {
-        case 330:
-          this._arrayEntityId = String(item.value ?? '')
-          break
-        case 1:
-          this._sourceBlockName = String(item.value ?? '')
-          break
-        case 2:
-          this._arrayBlockName = String(item.value ?? '')
-          break
-        case 10: {
-          const p = item.value as AcGePoint3dLike
-          this._basePoint.copy(p)
-          break
-        }
-        case 300: {
-          const raw = String(item.value ?? '')
-          if (raw) {
-            try {
-              const data = JSON.parse(raw) as Record<string, unknown>
-              this._parameters = acdbAssocArrayParametersFromJSON(data)
-              if (this._parameters) {
-                this._parameters.ownerActionBodyId = this.objectId
-              }
-            } catch {
-              this._parameters = undefined
-            }
-          }
-          break
-        }
-        default:
-          break
-      }
+      item.entityId = c.id([330, 360, 340])
+      this._items.push(item)
+      tail = c
     }
+    if (tail.peekCode() === 40) {
+      this._arrayTransform = matrixFromRowMajor(tail.doubles(16))
+    }
+    this._parameters = undefined
     return this
+  }
+
+  /**
+   * Restores fields decoded from a DWG record.
+   *
+   * @internal
+   */
+  setFromDwg(data: AcDbAssocArrayActionBodyData): void {
+    this._classVersion = data.classVersion
+    this._parametersClassName = data.parametersClassName
+    this._parametersVersion = data.parametersVersion
+    this._items = data.items.map(raw => {
+      const item = new AcDbAssocArrayItem(
+        new AcDbAssocArrayItemLocator(
+          raw.itemIndex,
+          raw.rowIndex,
+          raw.levelIndex
+        ),
+        matrixFromRowMajor(raw.matrix),
+        raw.entityId
+      )
+      item.classVersion = raw.classVersion
+      item.flags = raw.flags
+      return item
+    })
+    this._arrayTransform = matrixFromRowMajor(data.arrayTransform)
+    this._parameters = undefined
   }
 }
 
 /**
- * Reconstructs a parameters object from {@link AcDbAssocArrayParameters.toJSON}.
+ * Returns the line segments of `curve` (WCS) when it is made only of straight
+ * segments, for the `RowProfile` cached curve; otherwise `undefined`.
  */
-export function acdbAssocArrayParametersFromJSON(
-  data: Record<string, unknown>
-): AcDbAssocArrayParameters | undefined {
-  const type = data.type
-  let params: AcDbAssocArrayParameters
-  if (type === 'polar') {
-    params = new AcDbAssocArrayPolarParameters()
-  } else if (type === 'path') {
-    params = new AcDbAssocArrayPathParameters()
-  } else if (type === 'rectangular') {
-    params = new AcDbAssocArrayRectangularParameters()
-  } else {
-    return undefined
+export function acdbAssocLineSegmentsOf(
+  curve: AcDbCurve
+): AcDbAssocEdgeLineSegment[] | undefined {
+  if (curve instanceof AcDbLine) {
+    return [{ start: curve.startPoint.clone(), end: curve.endPoint.clone() }]
   }
-  params.fromJSON(data)
-  return params
+  if (curve instanceof AcDbPolyline) {
+    const n = curve.numberOfVertices
+    const segCount = curve.closed ? n : n - 1
+    const segments: AcDbAssocEdgeLineSegment[] = []
+    for (let i = 0; i < segCount; i++) {
+      if (Math.abs(curve.getBulgeAt(i)) > 1e-12) return undefined
+      segments.push({
+        start: curve.getPoint3dAt(i),
+        end: curve.getPoint3dAt((i + 1) % n)
+      })
+    }
+    return segments.length > 0 ? segments : undefined
+  }
+  return undefined
 }
+
+export type { AcDbAssocArrayPathEdgeRef }

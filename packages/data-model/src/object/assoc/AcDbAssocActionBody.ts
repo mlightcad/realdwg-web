@@ -1,22 +1,26 @@
 import { AcDbDxfFiler } from '../../base/AcDbDxfFiler.js'
 import { AcDbObject, type AcDbObjectId } from '../../base/AcDbObject.js'
+import { AcDbAssocDxfCursor } from './acdbAssocDxf.js'
 
 /**
  * Abstract body that implements the algorithm of an {@link AcDbAssocAction}
  * (ObjectARX `AcDbAssocActionBody`).
  *
  * Custom behaviors override {@link evaluateOverride}. The parent action owns
- * this body; when the action is erased the body is erased with it.
+ * this body (it is the body's DXF owner); when the action is erased the body
+ * is erased with it.
+ *
+ * DXF layout (`AcDbAssocActionBody` subclass): `90 classVersion (2)`.
  */
 export abstract class AcDbAssocActionBody extends AcDbObject {
-  /** Soft pointer back to the owning {@link AcDbAssocAction}. */
-  private _parentActionId: AcDbObjectId = ''
+  private _actionBodyClassVersion = 2
 
+  /** Owning {@link AcDbAssocAction} id (the DXF owner handle). */
   get parentActionId(): AcDbObjectId {
-    return this._parentActionId
+    return this.ownerId
   }
   set parentActionId(value: AcDbObjectId) {
-    this._parentActionId = value ?? ''
+    this.ownerId = value ?? ''
   }
 
   /**
@@ -26,29 +30,26 @@ export abstract class AcDbAssocActionBody extends AcDbObject {
    */
   abstract evaluateOverride(): void
 
+  /**
+   * True when the objects this body drives no longer exist (e.g. the array
+   * INSERT was erased). Orphaned actions are skipped by evaluation and DXF
+   * export but kept in memory, so undo/redo of the erase restores them.
+   */
+  isOrphaned(): boolean {
+    return false
+  }
+
   override dxfOutFields(filer: AcDbDxfFiler) {
     super.dxfOutFields(filer)
-    filer.writeString(100, 'AcDbAssocActionBody')
-    filer.writeObjectId(330, this._parentActionId)
+    filer.writeSubclassMarker('AcDbAssocActionBody')
+    filer.writeInt32(90, this._actionBodyClassVersion)
     return this
   }
 
   override dxfInFields(filer: AcDbDxfFiler): this {
     super.dxfInFields(filer)
-    filer.atSubclassData('AcDbAssocActionBody')
-
-    while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
-      const item = filer.readItem()
-      if (!item) break
-      const code = Number(item.code)
-      if (code === 100) {
-        filer.pushBackItem(item)
-        break
-      }
-      if (code === 330) {
-        this._parentActionId = String(item.value ?? '')
-      }
-    }
+    const c = AcDbAssocDxfCursor.read(filer, 'AcDbAssocActionBody')
+    this._actionBodyClassVersion = c.int(90, 2)
     return this
   }
 }
