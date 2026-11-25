@@ -60,9 +60,9 @@ import {
 import { AcDbEntityConverter } from './AcDbEntitiyConverter.js'
 import {
   convertLibreDwgAssocObjects,
-  type LibreDwgAssocObjects,
   linkLibreDwgAssocNetworkDictionary,
-  linkLibreDwgAssocReactors} from './AcDbLibreDwgAssocConverter.js'
+  linkLibreDwgAssocReactors
+} from './AcDbLibreDwgAssocConverter.js'
 import {
   AcDbObjectConverter,
   type LibreDwgAnnotScaleContextDataObject,
@@ -636,12 +636,7 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
     // Dependencies attach to their objects as persistent reactors; entities
     // only exist now.
-    linkLibreDwgAssocReactors(this.assocObjects(model), db)
-  }
-
-  /** Assoc collections of `model` (absent in older libredwg-web releases). */
-  private assocObjects(model: DwgDatabase): LibreDwgAssocObjects {
-    return model.objects as unknown as LibreDwgAssocObjects
+    linkLibreDwgAssocReactors(model.objects, db)
   }
 
   protected processClasses(model: DwgDatabase, db: AcDbDatabase) {
@@ -757,11 +752,10 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     this.processMLeaderStyles(model, db)
     // Assoc objects must be resident before dictionaries are materialized so
     // ACAD_ASSOCNETWORK entries (NOD and space-block xdicts) resolve.
-    const assocObjects = this.assocObjects(model)
-    convertLibreDwgAssocObjects(assocObjects, db)
+    convertLibreDwgAssocObjects(model.objects, db)
     this.processDynBlockMetadata(model, db)
     linkLibreDwgAssocNetworkDictionary(
-      assocObjects,
+      model.objects,
       (model.objects.DICTIONARY ?? []).map(dict => ({
         handle: String(dict.handle ?? ''),
         ownerHandle: String(dict.ownerHandle ?? '')

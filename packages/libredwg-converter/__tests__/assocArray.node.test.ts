@@ -3,8 +3,6 @@
  *
  * Loads an AutoCAD DWG with path, polar and rectangular associative arrays
  * through LibreDWG and checks that data-model gets live associative arrays.
- * Needs a libredwg-web release that exposes `objects.ASSOC*`; with older
- * releases the test is skipped.
  */
 import assert from 'node:assert/strict'
 import { readFileSync } from 'node:fs'
@@ -62,12 +60,9 @@ function assertItemsMatchStored(body: AcDbAssocArrayActionBody) {
   }
 }
 
-test('converts AutoCAD associative arrays from DWG', async t => {
+test('converts AutoCAD associative arrays from DWG', async () => {
   const db = await readDwg()
-  if (!AcDbAssocNetwork.getInstanceFromDatabase(db)) {
-    t.skip('installed libredwg-web does not expose ASSOC* objects yet')
-    return
-  }
+  assert.equal(AcDbAssocNetwork.getInstanceFromDatabase(db)?.objectId, '2D9')
 
   const space = AcDbAssocNetwork.getInstanceFromObject(
     db.tables.blockTable.modelSpace
