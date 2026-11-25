@@ -5,6 +5,7 @@ import {
   AcGeLine2d,
   AcGeLoop2d,
   AcGeMatrix3d,
+  AcGePoint2d,
   AcGePolyline2d,
   AcGeSpline3d
 } from '@mlightcad/geometry-engine'
@@ -19,7 +20,8 @@ import {
   AcDbHatch,
   AcDbHatchObjectType,
   AcDbHatchPatternType,
-  AcDbHatchStyle
+  AcDbHatchStyle,
+  AcDbPolyline
 } from '../src/entity'
 import {
   DEFAULT_HATCH_PATTERN_IMPERIAL,
@@ -1073,6 +1075,182 @@ describe('AcDbHatch', () => {
     hatch.add(createRectLoop(0, 0, 10, 5))
 
     expect(hatch.subGetGripPoints()).toEqual([])
+  })
+
+  it('dxfOutFields writes path source soft-pointers (97/330) for associative hatches', () => {
+    const db = createWorkingDb()
+    const boundary = new AcDbPolyline()
+    boundary.closed = true
+    ;[
+      new AcGePoint2d(0, 0),
+      new AcGePoint2d(10, 0),
+      new AcGePoint2d(10, 5),
+      new AcGePoint2d(0, 5)
+    ].forEach((p, i) => boundary.addVertexAt(i, p))
+    db.tables.blockTable.modelSpace.appendEntity(boundary)
+
+    const hatch = new AcDbHatch()
+    hatch.associative = true
+    hatch.isSolidFill = true
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.add(createRectLoop(0, 0, 10, 5))
+    hatch.setPathSourceIds(0, [boundary.objectId])
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+    const filer = new AcDbDxfFiler()
+    hatch.dxfOutFields(filer)
+    const body = filer.toString()
+
+    expect(body).toMatch(/\n71\n\s*1\n/)
+    expect(body).toMatch(/\n97\n\s*1\n/)
+    expect(body).toContain(`\n330\n${boundary.objectId}\n`)
+  })
+
+  it('dxfInFields reads path source soft-pointers (97/330)', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+
+    const dxf = [
+      '0',
+      'HATCH',
+      '5',
+      'A1',
+      '100',
+      'AcDbEntity',
+      '8',
+      '0',
+      '100',
+      'AcDbHatch',
+      '10',
+      '0.0',
+      '20',
+      '0.0',
+      '30',
+      '0.0',
+      '2',
+      'SOLID',
+      '70',
+      '1',
+      '71',
+      '1',
+      '91',
+      '1',
+      '92',
+      '2',
+      '72',
+      '0',
+      '73',
+      '1',
+      '93',
+      '4',
+      '10',
+      '0',
+      '20',
+      '0',
+      '10',
+      '10',
+      '20',
+      '0',
+      '10',
+      '10',
+      '20',
+      '5',
+      '10',
+      '0',
+      '20',
+      '5',
+      '97',
+      '2',
+      '330',
+      '4000',
+      '330',
+      '4001',
+      '75',
+      '0',
+      '76',
+      '1',
+      '0',
+      'ENDSEC'
+    ].join('\n')
+
+    const filer = AcDbDxfFiler.fromString(dxf, { database: db })
+    expect(filer.readItem()?.value).toBe('HATCH')
+    hatch.dxfIn(filer)
+
+    expect(hatch.associative).toBe(true)
+    expect(hatch.loops).toHaveLength(1)
+    expect(hatch.pathSourceIds(0)).toEqual(['4000', '4001'])
+  })
+
+  it('rebuilds loops from associative boundary sources when the boundary moves', async () => {
+    const db = createWorkingDb()
+    const boundary = new AcDbPolyline()
+    boundary.closed = true
+    ;[
+      new AcGePoint2d(0, 0),
+      new AcGePoint2d(10, 0),
+      new AcGePoint2d(10, 10),
+      new AcGePoint2d(0, 10)
+    ].forEach((p, i) => boundary.addVertexAt(i, p))
+    db.tables.blockTable.modelSpace.appendEntity(boundary)
+
+    const hatch = new AcDbHatch()
+    hatch.associative = true
+    hatch.isSolidFill = true
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.add(createRectLoop(0, 0, 10, 10))
+    hatch.setPathSourceIds(0, [boundary.objectId])
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    db.hatchAssociationIndex.refresh(hatch)
+
+    expect(hatch.area).toBeCloseTo(100, 5)
+
+    db.runDatabaseEdit('move-boundary', () => {
+      const poly = db.openEntityForWrite(boundary.objectId) as AcDbPolyline
+      poly.setPointAt(2, new AcGePoint2d(20, 10))
+      poly.setPointAt(1, new AcGePoint2d(20, 0))
+    })
+    // Association rebuild is deferred past commit dispatch.
+    await Promise.resolve()
+
+    const rebuilt = db.getObjectById(hatch.objectId) as AcDbHatch
+    expect(rebuilt.associative).toBe(true)
+    expect(rebuilt.area).toBeCloseTo(200, 4)
+  })
+
+  it('disassociates when the last source boundary is erased', async () => {
+    const db = createWorkingDb()
+    const boundary = new AcDbPolyline()
+    boundary.closed = true
+    ;[
+      new AcGePoint2d(0, 0),
+      new AcGePoint2d(4, 0),
+      new AcGePoint2d(4, 4),
+      new AcGePoint2d(0, 4)
+    ].forEach((p, i) => boundary.addVertexAt(i, p))
+    db.tables.blockTable.modelSpace.appendEntity(boundary)
+
+    const hatch = new AcDbHatch()
+    hatch.associative = true
+    hatch.isSolidFill = true
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.add(createRectLoop(0, 0, 4, 4))
+    hatch.setPathSourceIds(0, [boundary.objectId])
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    db.hatchAssociationIndex.refresh(hatch)
+
+    const areaBefore = hatch.area
+    db.runDatabaseEdit('erase-boundary', () => {
+      const poly = db.openEntityForWrite(boundary.objectId) as AcDbPolyline
+      poly.erase()
+    })
+    await Promise.resolve()
+
+    const after = db.getObjectById(hatch.objectId) as AcDbHatch
+    expect(after.associative).toBe(false)
+    expect(after.pathSourceIds(0)).toEqual([])
+    expect(after.area).toBeCloseTo(areaBefore, 5)
   })
 
   it('dxfInFields keeps single-spline paths when fit-count and source-count are both 0', () => {

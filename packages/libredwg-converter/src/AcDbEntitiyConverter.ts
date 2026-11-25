@@ -710,7 +710,9 @@ export class AcDbEntityConverter {
         dashLengths: item.numberOfDashLengths > 0 ? item.dashLengths : []
       })
     })
-    // Important: Don't use DwgHatchSolidFill.SolidFill to avoid bundling libredwg-web into libredeg-converter.
+    // Important: Don't use DwgHatchSolidFill / DwgHatchAssociativity enums at
+    // runtime — that pulls @mlightcad/libredwg-web (and its wasm) into the
+    // browser UMD main bundle. Compare numeric flags instead.
     // Set patternName first: its setter derives isSolidFill from the name (incl. LibreDWG's
     // `_SOLID`). Then OR in the binary solidFill flag so solid fills stay solid even when
     // the pattern string is unexpected.
@@ -719,9 +721,13 @@ export class AcDbEntityConverter {
     if (hatch.solidFill == 1) {
       dbEntity.isSolidFill = true
     }
+    // DwgHatchAssociativity.Associative === 1
+    dbEntity.associative = hatch.associativity === 1
     dbEntity.patternType = hatch.patternType as unknown as AcDbHatchPatternType
     dbEntity.patternAngle = hatch.patternAngle == null ? 0 : hatch.patternAngle
     dbEntity.patternScale = hatch.patternScale == null ? 0 : hatch.patternScale
+    // LibreDWG JSON currently omits per-path source boundary handles (DXF 330);
+    // only the entity-level associativity flag is available here.
 
     const paths = hatch.boundaryPaths
     paths.forEach(path => {

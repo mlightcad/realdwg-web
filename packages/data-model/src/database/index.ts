@@ -1,4 +1,5 @@
 export { AcDbDatabase } from './AcDbDatabase.js'
+export { AcDbHatchAssociationIndex } from './AcDbHatchAssociationIndex.js'
 export type { AcDbClass } from './AcDbClass.js'
 export type {
   AcDbCreateDefaultDataOptions,

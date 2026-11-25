@@ -43,6 +43,14 @@ export class AcGeArea2d extends AcGeShape2d {
   }
 
   /**
+   * Removes every loop from this area.
+   */
+  clear() {
+    this._loops.length = 0
+    this._boundingBoxNeedsUpdate = true
+  }
+
+  /**
    * The loops of this area
    */
   get loops() {

@@ -28,6 +28,7 @@ import {
 import { AcDbEntity } from '../entity/AcDbEntity.js'
 import { AcDbPolyline } from '../entity/AcDbPolyline.js'
 import { AcDbUnknownEntity } from '../entity/AcDbUnknownEntity.js'
+import { AcDbHatchAssociationIndex } from './AcDbHatchAssociationIndex.js'
 import {
   ACAD_APPID,
   ACDB_COMPAREHATCH_DEFAULT,
@@ -616,6 +617,12 @@ export class AcDbDatabase extends AcDbObject {
   /** Manages transactions and undo/redo for this database. */
   readonly transactionManager: AcDbDatabaseTransactionManager
 
+  /**
+   * Reverse index + live rebuild for associative hatch boundary soft-pointers
+   * (DXF 97/330).
+   */
+  readonly hatchAssociationIndex: AcDbHatchAssociationIndex
+
   private _eventBatchDepth = 0
   private _pendingEntityAppended: AcDbEntity[] = []
   private _pendingEntityErased: AcDbEntity[] = []
@@ -738,6 +745,8 @@ export class AcDbDatabase extends AcDbObject {
     }
     this._layerFilters = new AcLyLayerFilterTree()
     this.transactionManager = new AcDbDatabaseTransactionManager(this)
+    this.hatchAssociationIndex = new AcDbHatchAssociationIndex(this)
+    this.hatchAssociationIndex.attachListeners()
     this.registerBootstrapHandles()
   }
 
@@ -2891,6 +2900,7 @@ export class AcDbDatabase extends AcDbObject {
 
     this._lastOpenError = null
     this.ensureDatabaseDefaults()
+    this.hatchAssociationIndex.rebuildIndex()
   }
 
   private createConversionProgressHandler(): AcDbConversionProgressCallback {
@@ -4577,14 +4587,15 @@ export class AcDbDatabase extends AcDbObject {
     this._objects.objectContextData.removeAll()
     this._objects.scale.removeAll()
     this._objects.dictionaryVar.removeAll()
-    this._objects.sortentsTable.removeAll()
     this._objects.xrecord.removeAll()
+    this._objects.sortentsTable.removeAll()
     this._cannoscale = '1:1'
     this._dimStyleAnnotationScales.clear()
     this._annoallvisible = true
     this._layerFilters = new AcLyLayerFilterTree()
     this._currentSpace = undefined
     this._extents.makeEmpty()
+    this.hatchAssociationIndex.rebuildIndex()
     this.registerBootstrapHandles()
   }
 
