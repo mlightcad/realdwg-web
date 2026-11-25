@@ -591,10 +591,41 @@ export class AcDbSysVarManager {
       defaultValue: 0
     })
     /**
-     * Controls whether newly created hatches and fills are associative.
+     * Controls whether newly created arrays are associative.
      * - 0: Not associative
      * - 1: Associative
      */
+    this.registerVar({
+      name: AcDbSystemVariables.ARRAYASSOCIATIVITY,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 1
+    })
+    /**
+     * Indicates whether the drawing is in ARRAYEDIT Source editing state.
+     * Read-only through {@link setVar}; hosts use {@link setArrayEditState}.
+     * - 0: Not editing array source
+     * - 1: Array source edit state active
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ARRAYEDITSTATE,
+      type: 'number',
+      isDbVar: false,
+      readOnly: true,
+      defaultValue: 0
+    })
+    /**
+     * Default array type offered by ARRAY.
+     * - 0: Rectangular
+     * - 1: Path
+     * - 2: Polar
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.ARRAYTYPE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: 0
+    })
     this.registerVar({
       name: AcDbSystemVariables.HPASSOC,
       type: 'number',
@@ -1026,6 +1057,19 @@ export class AcDbSysVarManager {
   public setLoginName(value: string): void {
     const name = this.normalizeName(AcDbSystemVariables.LOGINNAME)
     this.cache.set(name, value.trim())
+  }
+
+  /**
+   * Sets {@link AcDbSystemVariables.ARRAYEDITSTATE} for ARRAYEDIT Source mode.
+   *
+   * {@link setVar} rejects writes because the variable is read-only for users;
+   * ARRAYEDIT / ARRAYCLOSE call this when entering or leaving source editing.
+   *
+   * @param value - `0` = inactive, any non-zero → stored as `1`.
+   */
+  public setArrayEditState(value: number): void {
+    const name = this.normalizeName(AcDbSystemVariables.ARRAYEDITSTATE)
+    this.cache.set(name, value === 0 ? 0 : 1)
   }
 
   /**

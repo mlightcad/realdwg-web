@@ -76,6 +76,20 @@ npm install @mlightcad/data-model
 - **AcDbLayoutDictionary**: Layout dictionary management
 - **AcDbLayoutManager**: Layout manager for switching between layouts
 
+### Associative framework and arrays
+- **AcDbAssocNetwork** / **AcDbAssocAction** / **AcDbAssocDependency** / **AcDbAssocManager**: ObjectARX-style associative evaluation network. Persisted like AutoCAD: a top-level network under the NOD key `ACAD_ASSOCNETWORK` and one network per space block in its extension dictionary; dependencies are persistent reactors of the objects they depend on
+- **AcDbAssocActionParam** / **AcDbAssocVertexActionParam** / **AcDbAssocEdgeActionParam**: Action parameters (`Origin`, `BaseNormal`, `basePoint`, path `RowProfile`)
+- **AcDbAssocArrayActionBody**: Evaluates rectangular, polar, and path associative arrays (visible entity remains an `AcDbBlockReference` of an anonymous `*U` block); reads and writes AutoCAD's `ACDBASSOC*` DXF records and reads them from DWG
+- **AcDbAssocArrayRectangularParameters** / **AcDbAssocArrayPolarParameters** / **AcDbAssocArrayPathParameters**: Sealed parameter classes, stored as the owning action's named value parameters (`Items`, `ItemSpacing`, `Rows`, …)
+- **AcDbObject.addPersistentReactor** / **getPersistentReactors**: Persistent reactors, read from and written to DXF `{ACAD_REACTORS`
+- **AcDbAssocArray**: Convenience wrapper around `createInstance` / `getAssociativeArray`
+- **acdbAllocateAnonymousUserBlockName**: Allocates the next free `*U{n}` block name
+- **AcDbCurve.getPointAtDist** / **getFirstDeriv**: Helpers used by path arrays
+- System variables:
+  - **ARRAYASSOCIATIVITY** (`0` / `1`, default `1`) — default associativity for new arrays
+  - **ARRAYTYPE** (`0` rectangular / `1` path / `2` polar, default `0`) — default type for ARRAY
+  - **ARRAYEDITSTATE** (read-only `0` / `1`, default `0`) — Source editing state; hosts use `setArrayEditState`
+
 ### File Conversion
 - **AcDbDatabaseConverter**: Base class for file format converters
 - **AcDbDatabaseConverterManager**: Manages registered file converters

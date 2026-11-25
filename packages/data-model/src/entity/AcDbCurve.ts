@@ -1,4 +1,8 @@
-import { AcGePoint3d, AcGePoint3dLike } from '@mlightcad/geometry-engine'
+import {
+  AcGePoint3d,
+  AcGePoint3dLike,
+  AcGeVector3d
+} from '@mlightcad/geometry-engine'
 
 import { AcDbEntity } from './AcDbEntity.js'
 
@@ -149,6 +153,70 @@ export abstract class AcDbCurve extends AcDbEntity {
    */
   getDistAtParam(_param: number): number | undefined {
     return undefined
+  }
+
+  /**
+   * Returns the parameter at a distance measured from {@link startParam}, like
+   * ObjectARX `AcDbCurve::getParamAtDist`.
+   *
+   * Default implementation binary-searches {@link getDistAtParam} over
+   * `[startParam, endParam]`.
+   */
+  getParamAtDist(dist: number): number | undefined {
+    const start = this.startParam
+    const end = this.endParam
+    if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
+      return undefined
+    }
+    const startDist = this.getDistAtParam(start)
+    const endDist = this.getDistAtParam(end)
+    if (startDist == null || endDist == null) return undefined
+    const target = startDist + dist
+    if (dist <= 0) return start
+    if (target >= endDist) return end
+
+    let lo = start
+    let hi = end
+    for (let i = 0; i < 48; i++) {
+      const mid = (lo + hi) / 2
+      const d = this.getDistAtParam(mid)
+      if (d == null) return undefined
+      if (d < target) lo = mid
+      else hi = mid
+    }
+    return (lo + hi) / 2
+  }
+
+  /**
+   * Returns the point at a distance measured from {@link startParam}, like
+   * ObjectARX `AcDbCurve::getPointAtDist`.
+   */
+  getPointAtDist(dist: number): AcGePoint3d | undefined {
+    const param = this.getParamAtDist(dist)
+    if (param == null) return undefined
+    return this.getPointAtParam(param)
+  }
+
+  /**
+   * Returns the first derivative (tangent) at `param`, like ObjectARX
+   * `AcDbCurve::getFirstDeriv`. Default uses a finite difference.
+   */
+  getFirstDeriv(param: number): AcGeVector3d | undefined {
+    const eps = 1e-4
+    const p0 = this.getPointAtParam(param - eps)
+    const p1 = this.getPointAtParam(param + eps)
+    if (!p0 || !p1) return undefined
+    const v = new AcGeVector3d(p1.x - p0.x, p1.y - p0.y, p1.z - p0.z)
+    return v.lengthSq() > 1e-20 ? v : undefined
+  }
+
+  /**
+   * Returns the first derivative at a distance from {@link startParam}.
+   */
+  getFirstDerivAtDist(dist: number): AcGeVector3d | undefined {
+    const param = this.getParamAtDist(dist)
+    if (param == null) return undefined
+    return this.getFirstDeriv(param)
   }
 
   /**

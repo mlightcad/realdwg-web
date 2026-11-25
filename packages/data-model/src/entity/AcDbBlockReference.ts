@@ -34,6 +34,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbRenderingCache } from '../misc/AcDbRenderingCache.js'
 import { AcDbBlkRefObjectContextData } from '../object/AcDbBlkRefObjectContextData.js'
 import { AcDbDynBlockReference } from '../object/AcDbDynBlockReference.js'
+import { AcDbAssocArrayActionBody } from '../object/assoc/AcDbAssocArrayActionBody.js'
 import { AcDbAttribute } from './AcDbAttribute.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import {
@@ -576,14 +577,24 @@ export class AcDbBlockReference extends AcDbEntity {
   /**
    * Gets the grip points for this block reference.
    *
-   * @returns Array containing the block insertion point.
+   * Associative arrays expose extra grips for item counts (columns / rows /
+   * polar or path items) in addition to the insertion point.
+   *
+   * @returns Array containing the block insertion point (and array grips).
    */
   subGetGripPoints() {
+    const body = AcDbAssocArrayActionBody.getAssociativeArray(this)
+    if (body) return body.getGripPoints(this)
     return [this._position]
   }
 
   /** @inheritdoc */
   subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const body = AcDbAssocArrayActionBody.getAssociativeArray(this)
+    if (body) {
+      body.moveGripPointsAt(this, indices, offset)
+      return this
+    }
     acdbMovePrimaryGripPointAt(indices, offset, this._position)
     return this
   }
@@ -1364,6 +1375,10 @@ export class AcDbBlockReference extends AcDbEntity {
    */
   protected override subExplode(): AcDbEntity[] | undefined {
     if (!this.isExplodable) return undefined
+    const assocBody = AcDbAssocArrayActionBody.getAssociativeArray(this)
+    if (assocBody) {
+      return assocBody.explodeToEntities(this, this.getExplodeTransform())
+    }
     const block = this.drawableBlockTableRecord
     if (!block) return undefined
     return acdbExplodeBlockContent(block, this.getExplodeTransform())
