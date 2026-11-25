@@ -33,8 +33,8 @@ import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
-import { AcDbPolyline } from './AcDbPolyline.js'
 import { acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
+import { AcDbPolyline } from './AcDbPolyline.js'
 import { acdbTransformNormal } from './AcDbTransformHelpers.js'
 
 function resolveSplineKnotParameterization(
