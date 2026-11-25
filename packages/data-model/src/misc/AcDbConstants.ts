@@ -221,6 +221,44 @@ export const ACDB_COMMANDPREVIEW_MIN = 0
 export const ACDB_COMMANDPREVIEW_MAX = 1
 
 /**
+ * AutoCAD default for HPISLANDDETECTIONMODE: island detection on.
+ *
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1595FDAF-AE59-475B-A8DA-D7D754C16501.htm
+ */
+export const ACDB_HPISLANDDETECTIONMODE_DEFAULT = 1
+export const ACDB_HPISLANDDETECTIONMODE_MIN = 0
+export const ACDB_HPISLANDDETECTIONMODE_MAX = 1
+
+/**
+ * AutoCAD default for HPORIGINMODE: use HPORIGIN as the hatch origin.
+ *
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-471B755D-69F9-467B-BE6F-103106C1B03A.htm
+ */
+export const ACDB_HPORIGINMODE_DEFAULT = 0
+export const ACDB_HPORIGINMODE_MIN = 0
+export const ACDB_HPORIGINMODE_MAX = 5
+
+/**
+ * AutoCAD default for HPQUICKPREVIEW: show hatch preview while hovering
+ * enclosed areas during HATCH pick-points.
+ *
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-55E323D8-5BC3-407E-A57C-B18273325604.htm
+ */
+export const ACDB_HPQUICKPREVIEW_DEFAULT = 1
+export const ACDB_HPQUICKPREVIEW_MIN = 0
+export const ACDB_HPQUICKPREVIEW_MAX = 1
+
+/**
+ * AutoCAD default for HPQUICKPREVTIMEOUT: max seconds to generate a hatch
+ * hover preview before cancelling it (valid range 1–300).
+ *
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-4AB77E71-3EA7-41E7-AE43-EFE547149D4C.htm
+ */
+export const ACDB_HPQUICKPREVTIMEOUT_DEFAULT = 2
+export const ACDB_HPQUICKPREVTIMEOUT_MIN = 1
+export const ACDB_HPQUICKPREVTIMEOUT_MAX = 300
+
+/**
  * AutoCAD default for PROJMODE: project to UCS XY for TRIM/EXTEND.
  * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-8735A062-2688-44A7-809A-9883761533F9.htm
  */

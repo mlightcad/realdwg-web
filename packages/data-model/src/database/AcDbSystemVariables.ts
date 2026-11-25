@@ -226,6 +226,26 @@ export const AcDbSystemVariables = {
   HPDOUBLE: 'HPDOUBLE',
   /** Controls how islands within newly created hatch boundaries are treated. */
   HPISLANDDETECTION: 'HPISLANDDETECTION',
+  /**
+   * Controls whether islands within new hatches are detected.
+   * `0` = Off (no island detection), `1` = On (use HPISLANDDETECTION).
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1595FDAF-AE59-475B-A8DA-D7D754C16501.htm
+   */
+  HPISLANDDETECTIONMODE: 'HPISLANDDETECTIONMODE',
+  /**
+   * Default hatch pattern origin point used when HPORIGINMODE is `0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-B8E46C19-6530-4602-8830-DFA172B7F787.htm
+   */
+  HPORIGIN: 'HPORIGIN',
+  /**
+   * Controls how the default hatch origin point is determined.
+   * `0` = HPORIGIN, `1`–`5` = boundary extents corners / center.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-471B755D-69F9-467B-BE6F-103106C1B03A.htm
+   */
+  HPORIGINMODE: 'HPORIGINMODE',
   /** Default layer for newly created hatches and fills. */
   HPLAYER: 'HPLAYER',
   /** Default pattern name for newly created hatches in this session. */
@@ -234,6 +254,20 @@ export const AcDbSystemVariables = {
   HPSCALE: 'HPSCALE',
   /** Controls whether one or separate hatch objects are created for multiple boundaries. */
   HPSEPARATE: 'HPSEPARATE',
+  /**
+   * Controls whether a hatch preview is displayed when specifying a hatch area
+   * (hover during pick-points). `0` = off, `1` = quick preview.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-55E323D8-5BC3-407E-A57C-B18273325604.htm
+   */
+  HPQUICKPREVIEW: 'HPQUICKPREVIEW',
+  /**
+   * Maximum time in seconds to generate a hatch hover preview before it is
+   * cancelled. Valid range 1–300; default 2.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-4AB77E71-3EA7-41E7-AE43-EFE547149D4C.htm
+   */
+  HPQUICKPREVTIMEOUT: 'HPQUICKPREVTIMEOUT',
   /** Default transparency for newly created hatches and fills. */
   HPTRANSPARENCY: 'HPTRANSPARENCY',
   /** Insertion units used for automatic scaling of inserted content. */
