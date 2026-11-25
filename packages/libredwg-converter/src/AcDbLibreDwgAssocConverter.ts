@@ -13,125 +13,29 @@ import {
   AcDbDictionary,
   AcDbObject
 } from '@mlightcad/data-model'
-import type { DwgCommonObject } from '@mlightcad/libredwg-web'
+import type {
+  DwgAssocActionObject,
+  DwgAssocActionParamObject,
+  DwgCommonObject,
+  DwgDatabase
+} from '@mlightcad/libredwg-web'
 
-// Associative-framework objects as exposed by libredwg-web (`DwgDatabase.
-// objects.ASSOC*`). Declared locally so this package still builds against
-// libredwg-web releases that predate them; older releases simply provide no
-// assoc objects and arrays load as plain block references.
-
-interface LibreDwgPoint3d {
-  x: number
-  y: number
-  z?: number
-}
-
-/** Dependency / action reference (`360` owned, `330` soft). */
-export interface LibreDwgAssocHandleRef {
-  handle: string
-  isOwned: boolean
-}
-
-export interface LibreDwgAssocValueParam {
-  classVersion: number
-  name: string
-  unitType: number
-  values: {
-    code: number
-    value: number | string | null
-    variableHandle: string
-  }[]
-  controlledObjectDependencyHandle: string
-}
-
-export interface LibreDwgAssocActionObject extends DwgCommonObject {
-  classVersion: number
-  status: number
-  owningNetworkHandle: string
-  actionBodyHandle: string
-  actionIndex: number
-  maxDependencyIndex: number
-  dependencies: LibreDwgAssocHandleRef[]
-  ownedParamHandles: string[]
-  valueParams: LibreDwgAssocValueParam[]
-}
-
-export interface LibreDwgAssocNetworkObject extends LibreDwgAssocActionObject {
-  networkVersion: number
-  maxActionIndex: number
-  actions: LibreDwgAssocHandleRef[]
-  ownedActionHandles: string[]
-}
-
-export interface LibreDwgAssocDependencyObject extends DwgCommonObject {
-  classVersion: number
-  status: number
-  isReadDependency: boolean
-  isWriteDependency: boolean
-  isAttachedToObject: boolean
-  isDelegatingToOwningAction: boolean
-  order: number
-  name: string
-  dependentOnHandle: string
-  prevDependencyHandle: string
-  nextDependencyHandle: string
-  dependencyBodyHandle: string
-  dependencyIndex: number
-}
-
-export interface LibreDwgAssocArrayActionBodyObject extends DwgCommonObject {
-  actionBodyVersion: number
-  classVersion: number
-  parametersClassName: string
-  parametersVersion: number
-  items: {
-    classVersion: number
-    itemIndex: number
-    rowIndex: number
-    levelIndex: number
-    flags: number
-    /** Row-major 4x4. */
-    matrix: number[]
-    entityHandle: string
-    /** Row-major 4x4 relative transform (flags & 2). */
-    relativeMatrix?: number[]
-    /** Second entity handle (flags & 0x10). */
-    secondaryEntityHandle?: string
-  }[]
-  /** Row-major 4x4. */
-  arrayTransform: number[]
-}
-
-export interface LibreDwgAssocActionParamObject extends DwgCommonObject {
-  classVersion: number
-  paramVersion: number
-  name: string
-  singleDependencyVersion: number
-  dependencyHandle: string
-}
-
-export interface LibreDwgAssocVertexActionParamObject
-  extends LibreDwgAssocActionParamObject {
-  vertexVersion: number
-  point: LibreDwgPoint3d
-}
-
-export interface LibreDwgAssocEdgeActionParamObject
-  extends LibreDwgAssocActionParamObject {
-  edgeVersion: number
-  hasCachedCurve: boolean
-  curveType: number
-}
-
-/** The assoc collections of a libredwg-web `DwgDatabase.objects`. */
-export interface LibreDwgAssocObjects {
-  ASSOCNETWORK?: LibreDwgAssocNetworkObject[]
-  ASSOCACTION?: LibreDwgAssocActionObject[]
-  ASSOCDEPENDENCY?: LibreDwgAssocDependencyObject[]
-  ASSOCARRAYACTIONBODY?: LibreDwgAssocArrayActionBodyObject[]
-  ASSOCVERTEXACTIONPARAM?: LibreDwgAssocVertexActionParamObject[]
-  ASSOCEDGEACTIONPARAM?: LibreDwgAssocEdgeActionParamObject[]
-}
+/**
+ * The associative-framework collections of a libredwg-web database
+ * (`DwgDatabase.objects.ASSOC*`, libredwg-web 0.9.4+). Collections may be
+ * absent in hand-built or partial databases.
+ */
+export type LibreDwgAssocObjects = Partial<
+  Pick<
+    DwgDatabase['objects'],
+    | 'ASSOCNETWORK'
+    | 'ASSOCACTION'
+    | 'ASSOCDEPENDENCY'
+    | 'ASSOCARRAYACTIONBODY'
+    | 'ASSOCVERTEXACTIONPARAM'
+    | 'ASSOCEDGEACTIONPARAM'
+  >
+>
 
 /** Normalizes a handle string; `0` / empty → `''`. */
 function id(handle: string | number | null | undefined): string {
@@ -141,7 +45,7 @@ function id(handle: string | number | null | undefined): string {
   return value === '' || /^0+$/.test(value) ? '' : value
 }
 
-function actionData(action: LibreDwgAssocActionObject): AcDbAssocActionData {
+function actionData(action: DwgAssocActionObject): AcDbAssocActionData {
   return {
     classVersion: action.classVersion,
     status: action.status,
@@ -257,7 +161,7 @@ export function convertLibreDwgAssocObjects(
     converted.push(body)
   }
   const paramBase = (
-    src: LibreDwgAssocActionParamObject,
+    src: DwgAssocActionParamObject,
     param: AcDbAssocVertexActionParam | AcDbAssocEdgeActionParam
   ) => {
     withIds(src, param)
