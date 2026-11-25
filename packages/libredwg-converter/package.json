@@ -52,7 +52,7 @@
     "verify:build": "node ../../tools/verify-build.mjs verify-build.profile.json",
     "lint": "eslint src/",
     "lint:fix": "eslint --fix --quiet src/",
-    "test:node": "tsx --test __tests__/dxfExportRoundTrip.node.test.ts"
+    "test:node": "tsx --test __tests__/dxfExportRoundTrip.node.test.ts __tests__/assocArray.node.test.ts"
   },
   "dependencies": {
     "@mlightcad/libredwg-web": "0.9.3"
