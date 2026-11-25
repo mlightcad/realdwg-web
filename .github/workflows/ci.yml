@@ -16,6 +16,13 @@ permissions:
   contents: write
   pages: write
   id-token: write
+  # Needed to delete stale github-pages artifacts left by previous attempts of the same run.
+  actions: write
+
+# Avoid overlapping main deploys; do not cancel in-progress so a deploy can finish.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   main:
@@ -88,6 +95,21 @@ jobs:
       - name: Setup Pages
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v6
+
+      # Artifacts are scoped to the workflow run, not the attempt. Re-running the
+      # job uploads another "github-pages" artifact and deploy-pages fails with
+      # "Multiple artifacts named github-pages". Clear any leftovers first.
+      - name: Delete stale github-pages artifacts
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts" \
+            --paginate --jq '.artifacts[] | select(.name=="github-pages") | .id' \
+            | while read -r id; do
+              echo "Deleting stale github-pages artifact $id"
+              gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"
+            done
 
       - name: Upload artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
