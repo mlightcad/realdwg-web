@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.16.4
+
+### Patch Changes
+
+- feat: adds ObjectARX-style associative arrays (rectangular, polar, path) with DXF round-trip and LibreDWG DWG import via libredwg-web 0.9.4, plus AutoCAD-style STRETCH points so selected vertices move without full grip sets. Polyline bulge encode/decode helpers centralize fillet math, and clockwise fillet arcs now use deltaAngle so peak corners no longer form lightbulb loops
+- Updated dependencies
+  - @mlightcad/common@1.16.4
+  - @mlightcad/emf-converter@1.16.4
+  - @mlightcad/geometry-engine@3.16.4
+  - @mlightcad/graphic-interface@3.16.4
+
 ## 1.16.3
 
 ### Patch Changes
