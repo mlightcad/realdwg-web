@@ -134,6 +134,37 @@ describe('AcDbLine', () => {
     expect(line.endPoint).toMatchObject({ x: 11, y: 3, z: 3 })
   })
 
+  it('exposes stretch points as endpoints only', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(8, 2, 0)
+    )
+    const stretchPoints = line.subGetStretchPoints()
+    expect(stretchPoints).toHaveLength(2)
+    expect(stretchPoints[0]).toBe(line.startPoint)
+    expect(stretchPoints[1]).toBe(line.endPoint)
+  })
+
+  it('stretches a single endpoint without moving the other', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    line.subMoveStretchPointsAt([1], new AcGeVector3d(0, 5, 0))
+    expect(line.startPoint).toMatchObject({ x: 0, y: 0, z: 0 })
+    expect(line.endPoint).toMatchObject({ x: 10, y: 5, z: 0 })
+  })
+
+  it('translates the line when both stretch points move', () => {
+    const line = new AcDbLine(
+      new AcGePoint3d(0, 0, 0),
+      new AcGePoint3d(10, 0, 0)
+    )
+    line.subMoveStretchPointsAt([0, 1], new AcGeVector3d(2, 3, 0))
+    expect(line.startPoint).toMatchObject({ x: 2, y: 3, z: 0 })
+    expect(line.endPoint).toMatchObject({ x: 12, y: 3, z: 0 })
+  })
+
   it('computes osnap points for all supported modes', () => {
     const line = new AcDbLine(
       new AcGePoint3d(0, 0, 0),

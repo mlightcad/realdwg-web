@@ -15,7 +15,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbPointArrayProperty } from './AcDbEntityPropertyHelpers.js'
-import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
+import { acdbMovePointArrayGripAt, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
 
@@ -294,6 +294,16 @@ export class AcDbFace extends AcDbEntity {
     acdbMovePointArrayGripAt(indices, offset, this._vertices)
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this face.

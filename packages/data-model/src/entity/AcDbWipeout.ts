@@ -1,8 +1,13 @@
-import { AcGeArea2d, AcGePolyline2d } from '@mlightcad/geometry-engine'
+import {
+  AcGeArea2d,
+  AcGePolyline2d,
+  AcGeVector3dLike
+} from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
+import { acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { AcDbRasterImage } from './AcDbRasterImage.js'
 
 /**
@@ -41,6 +46,18 @@ export class AcDbWipeout extends AcDbRasterImage {
       groups: properties.groups.filter(group => group.groupName !== 'image')
     }
   }
+
+  /**
+   * Wipeouts stretch via boundary vertices (unlike IMAGE insertion-only).
+   */
+  override subGetStretchPoints() {
+    return this.subGetGripPoints()
+  }
+
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
   /**
    * Draws the wipeout entity.
    *

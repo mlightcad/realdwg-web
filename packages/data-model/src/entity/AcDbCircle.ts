@@ -416,6 +416,14 @@ export class AcDbCircle extends AcDbCurve {
   }
 
   /**
+   * Circles cannot be locally stretched; only the center is a stretch point
+   * (AutoCAD moves the circle when the center lies in the crossing window).
+   */
+  override subGetStretchPoints() {
+    return [this.center]
+  }
+
+  /**
    * Transforms this circle by the specified matrix.
    *
    * This method applies a geometric transformation to the circle, updating

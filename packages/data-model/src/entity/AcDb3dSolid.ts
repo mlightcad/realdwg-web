@@ -3,7 +3,8 @@ import {
   AcGeIntersectPrimitive,
   AcGeLine3d,
   AcGeMatrix3d,
-  AcGePoint3d
+  AcGePoint3d,
+  AcGeVector3dLike
 } from '@mlightcad/geometry-engine'
 import { AcGiRenderer } from '@mlightcad/graphic-interface'
 
@@ -393,6 +394,20 @@ export class AcDb3dSolid extends AcDbEntity {
       })
     }
     return primitives
+  }
+
+  /**
+   * AutoCAD STRETCH does not modify 3D solids.
+   */
+  override subGetStretchPoints() {
+    return []
+  }
+
+  override subMoveStretchPointsAt(
+    _indices: number[],
+    _offset: AcGeVector3dLike
+  ) {
+    return this
   }
 
   /**

@@ -703,6 +703,21 @@ export class AcDbRasterImage extends AcDbEntity {
   }
 
   /**
+   * Images move via insertion point under STRETCH (not corner resize).
+   */
+  override subGetStretchPoints() {
+    return [this._position]
+  }
+
+  /**
+   * Translates the image; never resizes via boundary grips under STRETCH.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (indices.length === 0) return this
+    return this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+  }
+
+  /**
    * Gets the object snap points for this raster image.
    */
   subGetOsnapPoints(

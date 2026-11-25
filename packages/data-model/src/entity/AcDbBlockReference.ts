@@ -600,6 +600,13 @@ export class AcDbBlockReference extends AcDbEntity {
   }
 
   /**
+   * Blocks cannot be locally stretched; only the insertion point moves.
+   */
+  override subGetStretchPoints() {
+    return [this._position]
+  }
+
+  /**
    * Gets the object snap points for this block reference.
    *
    * Object snap points are precise points that can be used for positioning

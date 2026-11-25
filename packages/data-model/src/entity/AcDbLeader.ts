@@ -44,7 +44,7 @@ import {
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
 import { acdbExplodePointPath } from './AcDbExplodeHelpers.js'
-import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
+import { acdbMovePointArrayGripAt, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { AcDbMText } from './AcDbMText.js'
 import {
@@ -671,6 +671,16 @@ export class AcDbLeader extends AcDbCurve {
     acdbMovePointArrayGripAt(indices, offset, this._vertices)
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this leader.

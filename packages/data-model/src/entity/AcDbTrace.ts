@@ -23,7 +23,7 @@ import {
   acdbPointArrayProperty,
   acdbVector3dProperties
 } from './AcDbEntityPropertyHelpers.js'
-import { acdbMovePointArrayGripAt } from './AcDbGripHelpers.js'
+import { acdbMovePointArrayGripAt, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPointPath } from './AcDbIntersectHelpers.js'
 import { acdbCollectVertexPathOsnapPoints } from './AcDbOsnapHelpers.js'
 import { acdbOffsetVertexPathAsPolyline, AcDbPolyline } from './AcDbPolyline.js'
@@ -290,6 +290,16 @@ export class AcDbTrace extends AcDbCurve {
     acdbMovePointArrayGripAt(indices, offset, this._vertices)
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this trace.

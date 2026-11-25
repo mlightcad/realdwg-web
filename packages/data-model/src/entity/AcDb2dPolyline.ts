@@ -33,7 +33,8 @@ import {
 import { acdbExplodeBulgePath } from './AcDbExplodeHelpers.js'
 import {
   acdbForEachGripIndex,
-  acdbMovePolyline2dVertexAt
+  acdbMovePolyline2dVertexAt,
+  acdbMoveStretchPointsViaGrips
 } from './AcDbGripHelpers.js'
 import { acdbIntersectPrimitivesFromPolyline2d } from './AcDbIntersectHelpers.js'
 import {
@@ -331,6 +332,16 @@ export class AcDb2dPolyline extends AcDbCurve {
     })
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this polyline.

@@ -65,7 +65,8 @@ import {
 } from './AcDbEntityPropertyHelpers.js'
 import {
   acdbForEachGripIndex,
-  acdbMovePolyline2dVertexAt
+  acdbMovePolyline2dVertexAt,
+  acdbMoveStretchPointsViaGrips
 } from './AcDbGripHelpers.js'
 import { acdbTessellateHatchPattern } from './AcDbHatchPatternHelpers.js'
 import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers.js'
@@ -1458,6 +1459,16 @@ export class AcDbHatch extends AcDbEntity {
     this.invalidateAreasFromLoopsCache()
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Collects editable grip points from hatch boundary loops.

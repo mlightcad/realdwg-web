@@ -15,6 +15,19 @@ export function acdbForEachGripIndex(
 }
 
 /**
+ * Applies STRETCH by delegating to grip moves when stretch indices align with
+ * grip indices (typical for arcs, splines, leaders, meshes, etc.).
+ */
+export function acdbMoveStretchPointsViaGrips<
+  T extends {
+    subMoveGripPointsAt(indices: number[], offset: AcGeVector3dLike): T
+  }
+>(entity: T, indices: number[], offset: AcGeVector3dLike): T {
+  if (indices.length === 0) return entity
+  return entity.subMoveGripPointsAt(indices, offset)
+}
+
+/**
  * Moves the primary grip point at index 0.
  */
 export function acdbMovePrimaryGripPointAt(

@@ -12,7 +12,7 @@ import { AcDbOsnapMode } from '../misc/AcDbOsnapMode.js'
 import { AcDbEntity } from './AcDbEntity.js'
 import { AcDbEntityProperties } from './AcDbEntityProperties.js'
 import { acdbPoint3dProperties } from './AcDbEntityPropertyHelpers.js'
-import { acdbMovePrimaryGripPointAt } from './AcDbGripHelpers.js'
+import { acdbMovePrimaryGripPointAt, acdbMoveStretchPointsViaGrips } from './AcDbGripHelpers.js'
 import {
   acdbIsMirroring,
   acdbUniformScaleFactor
@@ -265,6 +265,16 @@ export class AcDb2dVertex extends AcDbEntity {
     acdbMovePrimaryGripPointAt(indices, offset, this._position)
     return this
   }
+  /**
+   * Local stretch: move selected stretch points via grip editing.
+   */
+  override subMoveStretchPointsAt(
+    indices: number[],
+    offset: AcGeVector3dLike
+  ) {
+    return acdbMoveStretchPointsViaGrips(this, indices, offset)
+  }
+
 
   /**
    * Gets the object snap points for this vertex.

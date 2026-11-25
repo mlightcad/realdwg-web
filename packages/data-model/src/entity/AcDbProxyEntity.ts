@@ -403,6 +403,30 @@ export class AcDbProxyEntity extends AcDbEntity {
   }
 
   /**
+   * When entity origins exist, they are stretchable; otherwise only the
+   * extents min corner acts as a move anchor (grips expose both min and max).
+   */
+  override subGetStretchPoints() {
+    if (this._entityOrigins.length > 0) {
+      return [...this._entityOrigins]
+    }
+    const extents = this.geometricExtents
+    if (!extents.isEmpty()) {
+      return [new AcGePoint3d(extents.min.x, extents.min.y, extents.min.z)]
+    }
+    return []
+  }
+
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    if (indices.length === 0) return this
+    if (this._entityOrigins.length > 0) {
+      acdbMovePointArrayGripAt(indices, offset, this._entityOrigins)
+      return this
+    }
+    return this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+  }
+
+  /**
    * Returns the full property definition for this proxy entity.
    */
   get properties(): AcDbEntityProperties {
@@ -623,11 +647,13 @@ export class AcDbProxyEntity extends AcDbEntity {
    * @param chunks - One or more hexadecimal strings or binary chunks from
    *   group code **310**.
    */
-  loadProxyGraphicFromDxf(length?: number, chunks?: Array<string | Uint8Array>) {
+  loadProxyGraphicFromDxf(
+    length?: number,
+    chunks?: Array<string | Uint8Array>
+  ) {
     const data = acdbLoadProxyGraphicFromDxf(length, chunks)
     if (data) {
       this.setProxyGraphic(data)
     }
   }
 }
-

@@ -361,6 +361,27 @@ export class AcDbLine extends AcDbCurve {
   }
 
   /**
+   * Stretch points are the endpoints only (AutoCAD excludes the midpoint grip).
+   */
+  override subGetStretchPoints() {
+    return [this.startPoint, this.endPoint]
+  }
+
+  /**
+   * Moves selected endpoints. When both are selected, translates the line.
+   */
+  override subMoveStretchPointsAt(indices: number[], offset: AcGeVector3dLike) {
+    const unique = new Set(indices.filter(i => Number.isInteger(i) && i >= 0))
+    if (unique.size === 0) return this
+    if (unique.has(0) && unique.has(1)) {
+      return this.transformBy(AcGeMatrix3d.makeTranslation(offset))
+    }
+    if (unique.has(0)) this.startPoint.add(offset)
+    if (unique.has(1)) this.endPoint.add(offset)
+    return this
+  }
+
+  /**
    * Gets the object snap points for this line.
    *
    * Object snap points are precise points that can be used for positioning
