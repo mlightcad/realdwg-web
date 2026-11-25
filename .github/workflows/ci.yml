@@ -97,7 +97,7 @@ jobs:
         uses: actions/configure-pages@v6
 
       # Artifacts are scoped to the workflow run, not the attempt. Re-running the
-      # job uploads another "github-pages" artifact and deploy-pages fails with
+      # build job uploads another "github-pages" artifact and deploy-pages fails with
       # "Multiple artifacts named github-pages". Clear any leftovers first.
       - name: Delete stale github-pages artifacts
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -111,13 +111,23 @@ jobs:
               gh api -X DELETE "repos/${{ github.repository }}/actions/artifacts/$id"
             done
 
-      - name: Upload artifact
+      - name: Upload Pages artifact
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v5
         with:
           path: './docs/'
 
+  # Deploy in a separate job so artifact listing happens after the upload job has
+  # fully completed. Same-job upload→deploy races on Actions artifact visibility
+  # and intermittently fails with "Found 0 artifact(s)" (actions/deploy-pages#451).
+  deploy-pages:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    needs: main
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy to GitHub Pages
         id: deployment
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         uses: actions/deploy-pages@v5
