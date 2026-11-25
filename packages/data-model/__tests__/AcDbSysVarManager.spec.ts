@@ -254,10 +254,23 @@ describe('AcDbSysVarManager', () => {
     expect(manager.getDefaultValue(AcDbSystemVariables.HPISLANDDETECTION)).toBe(
       1
     )
+    expect(
+      manager.getDefaultValue(AcDbSystemVariables.HPISLANDDETECTIONMODE)
+    ).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPORIGIN)).toEqual({
+      x: 0,
+      y: 0,
+      z: 0
+    })
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPORIGINMODE)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.HPLAYER)).toBe('.')
     expect(manager.getDefaultValue(AcDbSystemVariables.HPNAME)).toBe('ANGLE')
     expect(manager.getDefaultValue(AcDbSystemVariables.HPSCALE)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.HPSEPARATE)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPQUICKPREVIEW)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.HPQUICKPREVTIMEOUT)).toBe(
+      2
+    )
     expect(
       manager.getDefaultValue(AcDbSystemVariables.CETRANSPARENCY)
     ).toBeInstanceOf(AcCmTransparency)
@@ -510,5 +523,42 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.FILLETPOLYARC, oldFilletPolyArc, db)
     manager.setVar(AcDbSystemVariables.COMMANDPREVIEW, oldCommandPreview, db)
     manager.setVar(AcDbSystemVariables.PROJMODE, oldProjmode, db)
+  })
+
+  it('rejects out-of-range hatch preview and origin mode system variables', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.HPISLANDDETECTIONMODE, 2, db)
+    ).toThrow('Invalid HPISLANDDETECTIONMODE value! Valid range is 0 to 1.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.HPORIGINMODE, 6, db)
+    ).toThrow('Invalid HPORIGINMODE value! Valid range is 0 to 5.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.HPQUICKPREVIEW, 2, db)
+    ).toThrow('Invalid HPQUICKPREVIEW value! Valid range is 0 to 1.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.HPQUICKPREVTIMEOUT, 0, db)
+    ).toThrow('Invalid HPQUICKPREVTIMEOUT value! Valid range is 1 to 300.')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.HPQUICKPREVTIMEOUT, 301, db)
+    ).toThrow('Invalid HPQUICKPREVTIMEOUT value! Valid range is 1 to 300.')
+
+    manager.setVar(AcDbSystemVariables.HPISLANDDETECTIONMODE, 0, db)
+    manager.setVar(AcDbSystemVariables.HPORIGINMODE, 5, db)
+    manager.setVar(AcDbSystemVariables.HPQUICKPREVIEW, 0, db)
+    manager.setVar(AcDbSystemVariables.HPQUICKPREVTIMEOUT, 300, db)
+    expect(manager.getVar(AcDbSystemVariables.HPISLANDDETECTIONMODE, db)).toBe(
+      0
+    )
+    expect(manager.getVar(AcDbSystemVariables.HPORIGINMODE, db)).toBe(5)
+    expect(manager.getVar(AcDbSystemVariables.HPQUICKPREVIEW, db)).toBe(0)
+    expect(manager.getVar(AcDbSystemVariables.HPQUICKPREVTIMEOUT, db)).toBe(300)
+
+    manager.setVar(AcDbSystemVariables.HPISLANDDETECTIONMODE, 1, db)
+    manager.setVar(AcDbSystemVariables.HPORIGINMODE, 0, db)
+    manager.setVar(AcDbSystemVariables.HPQUICKPREVIEW, 1, db)
+    manager.setVar(AcDbSystemVariables.HPQUICKPREVTIMEOUT, 2, db)
   })
 })

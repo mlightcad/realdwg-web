@@ -428,6 +428,87 @@ describe('AcDbHatch', () => {
     })
   })
 
+  it('bakes origin after pattern angle for render and DXF (AutoCAD order)', () => {
+    const db = createWorkingDb()
+    const hatch = new AcDbHatch()
+    db.tables.blockTable.modelSpace.appendEntity(hatch)
+    hatch.patternName = DEFAULT_HATCH_PATTERN_IMPERIAL
+    hatch.patternAngle = Math.PI / 2
+    hatch.patternScale = 1
+    hatch.originPoint = { x: 10, y: 20 }
+    hatch.add(createRectLoop(0, 0, 1, 1))
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+    hatch.subWorldDraw(renderer as never)
+
+    const fillType = renderer.subEntityTraits.fillType as {
+      patternAngle: number
+      definitionLines: Array<{
+        angle: number
+        base: { x: number; y: number }
+        offset: { x: number; y: number }
+        dashLengths: number[]
+      }>
+    }
+    // Angle baked into lines so origin is applied as origin + R(base).
+    expect(fillType.patternAngle).toBe(0)
+    expect(fillType.definitionLines.length).toBeGreaterThan(0)
+
+    const line = hatch.definitionLines[0]
+    const cos = Math.cos(Math.PI / 2)
+    const sin = Math.sin(Math.PI / 2)
+    const expectedBase = {
+      x: line.base.x * cos - line.base.y * sin + 10,
+      y: line.base.x * sin + line.base.y * cos + 20
+    }
+    expect(fillType.definitionLines[0].base.x).toBeCloseTo(expectedBase.x)
+    expect(fillType.definitionLines[0].base.y).toBeCloseTo(expectedBase.y)
+    expect(fillType.definitionLines[0].angle).toBeCloseTo(
+      line.angle + Math.PI / 2
+    )
+
+    const filer = new AcDbDxfFiler()
+    hatch.dxfOutFields(filer)
+    const dxf = filer.toString()
+    const patternBase = dxf.match(/\n43\n([^\n]+)\n44\n([^\n]+)\n/)
+    expect(patternBase).not.toBeNull()
+    expect(Number(patternBase![1])).toBeCloseTo(expectedBase.x)
+    expect(Number(patternBase![2])).toBeCloseTo(expectedBase.y)
+  })
+
+  it('applies HPORIGIN when HPORIGINMODE is 0', () => {
+    const db = createWorkingDb()
+    const manager = AcDbSysVarManager.instance()
+    const previousOrigin = manager.getVar(AcDbSystemVariables.HPORIGIN, db)
+    const previousMode = manager.getVar(AcDbSystemVariables.HPORIGINMODE, db)
+
+    try {
+      manager.setVar(AcDbSystemVariables.HPORIGINMODE, 0, db)
+      manager.setVar(AcDbSystemVariables.HPORIGIN, { x: 3, y: 4, z: 0 }, db)
+
+      const hatch = new AcDbHatch()
+      hatch.applyPatternDefaultsFromSysVars(db)
+
+      expect(hatch.originPoint.x).toBe(3)
+      expect(hatch.originPoint.y).toBe(4)
+    } finally {
+      manager.setVar(
+        AcDbSystemVariables.HPORIGIN,
+        previousOrigin as { x: number; y: number; z: number },
+        db
+      )
+      manager.setVar(
+        AcDbSystemVariables.HPORIGINMODE,
+        previousMode as number,
+        db
+      )
+    }
+  })
+
   it('supports add(), geometricExtents and properties accessors', () => {
     const hatch = new AcDbHatch()
     const emptyExtents = hatch.geometricExtents

@@ -15,6 +15,18 @@ import {
   ACDB_COMMANDPREVIEW_DEFAULT,
   ACDB_COMMANDPREVIEW_MAX,
   ACDB_COMMANDPREVIEW_MIN,
+  ACDB_HPISLANDDETECTIONMODE_DEFAULT,
+  ACDB_HPISLANDDETECTIONMODE_MAX,
+  ACDB_HPISLANDDETECTIONMODE_MIN,
+  ACDB_HPORIGINMODE_DEFAULT,
+  ACDB_HPORIGINMODE_MAX,
+  ACDB_HPORIGINMODE_MIN,
+  ACDB_HPQUICKPREVIEW_DEFAULT,
+  ACDB_HPQUICKPREVIEW_MAX,
+  ACDB_HPQUICKPREVIEW_MIN,
+  ACDB_HPQUICKPREVTIMEOUT_DEFAULT,
+  ACDB_HPQUICKPREVTIMEOUT_MAX,
+  ACDB_HPQUICKPREVTIMEOUT_MIN,
   ACDB_COMPAREHATCH_DEFAULT,
   ACDB_COMPAREHATCH_MAX,
   ACDB_COMPAREHATCH_MIN,
@@ -676,6 +688,41 @@ export class AcDbSysVarManager {
       defaultValue: 1
     })
     /**
+     * Controls whether islands within new hatches are detected.
+     * - 0: Off (no island detection)
+     * - 1: On (recommended; use HPISLANDDETECTION)
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPISLANDDETECTIONMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_HPISLANDDETECTIONMODE_DEFAULT
+    })
+    /**
+     * Default hatch pattern origin used when HPORIGINMODE is 0.
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPORIGIN,
+      type: 'point',
+      isDbVar: false,
+      defaultValue: { x: 0, y: 0, z: 0 }
+    })
+    /**
+     * Controls how the default hatch origin is determined.
+     * - 0: Uses HPORIGIN
+     * - 1: Bottom-left of hatch boundary extents
+     * - 2: Bottom-right
+     * - 3: Top-right
+     * - 4: Top-left
+     * - 5: Center
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPORIGINMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_HPORIGINMODE_DEFAULT
+    })
+    /**
      * Specifies a default layer for new hatches and fills in the current drawing.
      * Use '.' to use the current layer.
      */
@@ -716,6 +763,32 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: 0
+    })
+    /**
+     * Controls whether a hatch preview is displayed when specifying a hatch
+     * area (hover during pick-points).
+     * - 0: No preview
+     * - 1: Quick preview
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-55E323D8-5BC3-407E-A57C-B18273325604.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPQUICKPREVIEW,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_HPQUICKPREVIEW_DEFAULT
+    })
+    /**
+     * Maximum time in seconds for a hatch hover preview to generate before it
+     * is cancelled. Valid range 1–300; default 2.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-4AB77E71-3EA7-41E7-AE43-EFE547149D4C.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.HPQUICKPREVTIMEOUT,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_HPQUICKPREVTIMEOUT_DEFAULT
     })
     /**
      * Sets the default transparency for new hatches and fills in the current drawing.
@@ -1313,6 +1386,38 @@ export class AcDbSysVarManager {
           value,
           ACDB_COMMANDPREVIEW_MIN,
           ACDB_COMMANDPREVIEW_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.HPISLANDDETECTIONMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'HPISLANDDETECTIONMODE',
+          value,
+          ACDB_HPISLANDDETECTIONMODE_MIN,
+          ACDB_HPISLANDDETECTIONMODE_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.HPORIGINMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'HPORIGINMODE',
+          value,
+          ACDB_HPORIGINMODE_MIN,
+          ACDB_HPORIGINMODE_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.HPQUICKPREVIEW.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'HPQUICKPREVIEW',
+          value,
+          ACDB_HPQUICKPREVIEW_MIN,
+          ACDB_HPQUICKPREVIEW_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.HPQUICKPREVTIMEOUT.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'HPQUICKPREVTIMEOUT',
+          value,
+          ACDB_HPQUICKPREVTIMEOUT_MIN,
+          ACDB_HPQUICKPREVTIMEOUT_MAX
         )
       }
       if (name === AcDbSystemVariables.PROJMODE.toLowerCase()) {
