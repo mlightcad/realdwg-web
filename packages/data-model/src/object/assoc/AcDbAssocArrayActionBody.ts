@@ -74,6 +74,10 @@ export interface AcDbAssocArrayActionBodyData {
     /** Row-major 4×4 matrix (16 values). */
     matrix: number[]
     entityId: AcDbObjectId
+    /** Row-major 4×4 relative transform (flags & 2). */
+    relativeMatrix?: number[]
+    /** Second entity handle (flags & 0x10). */
+    secondaryEntityId?: AcDbObjectId
   }[]
   /** Row-major 4×4 array transform (16 values). */
   arrayTransform: number[]
@@ -628,6 +632,9 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
     if (existingIds.length > 0) arrayBtr.removeEntity(existingIds)
 
     const items: AcDbAssocArrayItem[] = []
+    const previousItems = new Map(
+      this._items.map(item => [item.locator.toKey(), item])
+    )
     for (const locator of params.getItemLocators()) {
       const matrix = params.getItemTransform(locator)
       const item = new AcDbBlockReference(sourceBtr.name)
@@ -642,7 +649,14 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
       item.lineWeight = AcGiLineWeight.ByBlock
       item.transparency = AcCmTransparency.fromString('ByBlock')
       arrayBtr.appendEntity(item)
-      items.push(new AcDbAssocArrayItem(locator, matrix, item.objectId))
+      const record = new AcDbAssocArrayItem(locator, matrix, item.objectId)
+      // Keep per-item data AutoCAD stored for this locator.
+      const previous = previousItems.get(locator.toKey())
+      if (previous) {
+        record.relativeTransform = previous.relativeTransform
+        record.secondaryEntityId = previous.secondaryEntityId
+      }
+      items.push(record)
     }
     this._items = items
 
@@ -922,7 +936,13 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
       } else {
         acdbAssocWriteMatrix(filer, e)
       }
+      if (item.relativeTransform) {
+        acdbAssocWriteMatrix(filer, item.relativeTransform.elements)
+      }
       acdbAssocWriteId(filer, 330, item.entityId)
+      if (item.secondaryEntityId) {
+        acdbAssocWriteId(filer, 330, item.secondaryEntityId)
+      }
     }
     acdbAssocWriteMatrix(filer, this._arrayTransform.elements)
     return this
@@ -951,7 +971,11 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
         const p = c.point(11)
         item.transform = AcGeMatrix3d.makeTranslation(p.x, p.y, p.z)
       }
+      if (item.flags & 2 && c.peekCode() === 40) {
+        item.relativeTransform = matrixFromRowMajor(c.doubles(16))
+      }
       item.entityId = c.id([330, 360, 340])
+      if (item.flags & 0x10) item.secondaryEntityId = c.id([330, 360, 340])
       this._items.push(item)
       tail = c
     }
@@ -983,6 +1007,10 @@ export class AcDbAssocArrayActionBody extends AcDbAssocActionBody {
       )
       item.classVersion = raw.classVersion
       item.flags = raw.flags
+      if (raw.relativeMatrix?.length) {
+        item.relativeTransform = matrixFromRowMajor(raw.relativeMatrix)
+      }
+      item.secondaryEntityId = raw.secondaryEntityId ?? ''
       return item
     })
     this._arrayTransform = matrixFromRowMajor(data.arrayTransform)

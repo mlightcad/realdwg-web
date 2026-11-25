@@ -270,6 +270,35 @@ describe('associative arrays in AutoCAD DXF', () => {
     ).toBe(true)
   })
 
+  it('keeps an item relative transform and second handle', async () => {
+    // Give the rectangular array's first item (INSERT 31A) the optional data
+    // AutoCAD writes for an individually edited item: flags 2 (relative
+    // transform) and 0x10 (second handle).
+    const lines = original.toString('utf8').split(/\r?\n/)
+    const at = lines.findIndex(
+      (line, i) => line.trim() === '330' && lines[i + 1].trim() === '31A'
+    )
+    expect(at).toBeGreaterThan(0)
+    // Item layout before the handle: ... 90 flags, 11/21/31 translation.
+    expect(lines[at - 8].trim()).toBe('90')
+    lines[at - 7] = '       26'
+    const relative = [1, 0, 0, 5, 0, 1, 0, 6, 0, 0, 1, 0, 0, 0, 0, 1].flatMap(
+      v => [' 40', String(v)]
+    )
+    lines.splice(at + 2, 0, '330', '31B')
+    lines.splice(at, 0, ...relative)
+    const edited = lines.join('\n')
+
+    const db = await readDxf(edited)
+    const item = bodyOf(db, '30E').items[0]
+    expect(item.entityId).toBe('31A')
+    expect(item.secondaryEntityId).toBe('31B')
+    expect(item.relativeTransform?.elements[12]).toBe(5)
+    const after = parseRecords(db.dxfOut() as string)
+    const before = parseRecords(edited)
+    expectSameTags(after.get('312')!.tags, before.get('312')!.tags, 'body 312')
+  })
+
   it('re-evaluates an imported array after an edit', async () => {
     const db = await readDxf(original)
     const rect = bodyOf(db, '30E')

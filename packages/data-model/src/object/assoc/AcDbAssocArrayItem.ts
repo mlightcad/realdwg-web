@@ -7,6 +7,10 @@ import { AcDbAssocArrayItemLocator } from './AcDbAssocArrayItemLocator.js'
 export const ACDB_ASSOC_ARRAY_ITEM_HAS_TRANSFORM = 8
 /** Item flag: the transform is a full matrix rather than a translation. */
 export const ACDB_ASSOC_ARRAY_ITEM_FULL_MATRIX = 4
+/** Item flag: a relative transform follows (individually edited item). */
+export const ACDB_ASSOC_ARRAY_ITEM_HAS_RELATIVE_TRANSFORM = 2
+/** Item flag: a second entity handle follows. */
+export const ACDB_ASSOC_ARRAY_ITEM_HAS_SECONDARY_ENTITY = 0x10
 
 /**
  * Transform and metadata of one item of an associative array
@@ -25,6 +29,13 @@ export class AcDbAssocArrayItem {
   transform = new AcGeMatrix3d()
   /** The item INSERT inside the array block. */
   entityId: AcDbObjectId = ''
+  /**
+   * Relative transform of an individually edited item (AutoCAD flags & 2).
+   * Kept as read; not applied by evaluation.
+   */
+  relativeTransform: AcGeMatrix3d | undefined
+  /** Second entity handle (AutoCAD flags & 0x10), kept as read. */
+  secondaryEntityId: AcDbObjectId = ''
 
   constructor(
     public locator = new AcDbAssocArrayItemLocator(),
@@ -56,15 +67,27 @@ export class AcDbAssocArrayItem {
     )
   }
 
-  /** Flags to persist, with the transform-shape bits matching the matrix. */
+  /**
+   * Flags to persist: the bits describing which data follows always match
+   * the data this item holds.
+   */
   get persistedFlags(): number {
     const base =
       this.flags &
-      ~(ACDB_ASSOC_ARRAY_ITEM_FULL_MATRIX | ACDB_ASSOC_ARRAY_ITEM_HAS_TRANSFORM)
+      ~(
+        ACDB_ASSOC_ARRAY_ITEM_FULL_MATRIX |
+        ACDB_ASSOC_ARRAY_ITEM_HAS_TRANSFORM |
+        ACDB_ASSOC_ARRAY_ITEM_HAS_RELATIVE_TRANSFORM |
+        ACDB_ASSOC_ARRAY_ITEM_HAS_SECONDARY_ENTITY
+      )
     return (
       base |
       ACDB_ASSOC_ARRAY_ITEM_HAS_TRANSFORM |
-      (this.isTranslationOnly ? 0 : ACDB_ASSOC_ARRAY_ITEM_FULL_MATRIX)
+      (this.isTranslationOnly ? 0 : ACDB_ASSOC_ARRAY_ITEM_FULL_MATRIX) |
+      (this.relativeTransform
+        ? ACDB_ASSOC_ARRAY_ITEM_HAS_RELATIVE_TRANSFORM
+        : 0) |
+      (this.secondaryEntityId ? ACDB_ASSOC_ARRAY_ITEM_HAS_SECONDARY_ENTITY : 0)
     )
   }
 }
