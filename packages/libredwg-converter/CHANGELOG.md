@@ -1,5 +1,13 @@
 # @mlightcad/libredwg-converter
 
+## 3.16.5
+
+### Patch Changes
+
+- feat: supports associative hatch boundaries via soft-pointers that persist DXF 97/330 sources, rebuild loops when linked entities move, and disassociate when sources are erased. Adds hatch origin and quick-preview system variables (HPORIGIN, HPORIGINMODE, HPISLANDDETECTIONMODE, HPQUICKPREVIEW, HPQUICKPREVTIMEOUT), exposes AcDbHatch.originPoint, and applies origin after pattern-angle rotation for render, explode, and DXF. Splits GitHub Pages deploy into its own CI job to avoid artifact race failures
+- Updated dependencies
+  - @mlightcad/data-model@1.16.5
+
 ## 3.16.4
 
 ### Patch Changes
