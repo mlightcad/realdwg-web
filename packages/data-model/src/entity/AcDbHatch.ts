@@ -6,6 +6,7 @@ import {
 } from '@mlightcad/common'
 import {
   AcGeArea2d,
+  type AcGeBoundaryEdgeType,
   AcGeBox3d,
   AcGeCircArc2d,
   AcGeEllipseArc2d,
@@ -31,6 +32,8 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
+import type { AcDbIdMapping } from '../base/AcDbIdMapping.js'
+import type { AcDbObjectId } from '../base/AcDbObject.js'
 import type { AcDbDatabase } from '../database/AcDbDatabase.js'
 import { AcDbSystemVariables } from '../database/AcDbSystemVariables.js'
 import { AcDbSysVarManager } from '../database/AcDbSysVarManager.js'
@@ -68,6 +71,7 @@ import {
   acdbMovePolyline2dVertexAt,
   acdbMoveStretchPointsViaGrips
 } from './AcDbGripHelpers.js'
+import { acdbHatchBoundaryEdgesFromEntity } from './acdbHatchBoundaryEdgesFromEntity.js'
 import { acdbTessellateHatchPattern } from './AcDbHatchPatternHelpers.js'
 import { acdbIntersectPrimitivesFromAreaLoops } from './AcDbIntersectHelpers.js'
 import { AcDbLine } from './AcDbLine.js'
@@ -246,6 +250,11 @@ export class AcDbHatch extends AcDbEntity {
   private _associative: boolean
   /** Whether associativity was assigned explicitly instead of coming from HPASSOC. */
   private _associativeSet: boolean
+  /**
+   * Per-boundary-path soft pointers to source boundary entities (DXF 97/330).
+   * Parallel to {@link _geo}.loops — one entry per path, possibly empty.
+   */
+  private _pathSourceIds: AcDbObjectId[][]
   /** Optional background color for hatch patterns. */
   private _backgroundColor?: AcCmColor
   /** Whether the background color was assigned explicitly instead of coming from HPBACKGROUNDCOLOR. */
@@ -324,6 +333,7 @@ export class AcDbHatch extends AcDbEntity {
     this._patternScaleSet = false
     this._associative = false
     this._associativeSet = false
+    this._pathSourceIds = []
     this._backgroundColor = undefined
     this._backgroundColorSet = false
     this._patternDouble = false
@@ -495,6 +505,63 @@ export class AcDbHatch extends AcDbEntity {
   set associative(value: boolean) {
     this._associative = !!value
     this._associativeSet = true
+    this.notifyAssociationIndex()
+  }
+
+  /**
+   * Soft-pointer source object ids for every boundary path (DXF 97/330).
+   * Length matches {@link loops}.
+   */
+  get allPathSourceIds(): ReadonlyArray<ReadonlyArray<AcDbObjectId>> {
+    return this._pathSourceIds
+  }
+
+  /**
+   * Soft-pointer source object ids for the boundary path at `index`.
+   */
+  pathSourceIds(index: number): ReadonlyArray<AcDbObjectId> {
+    return this._pathSourceIds[index] ?? []
+  }
+
+  /**
+   * Replaces the source boundary soft-pointers for the path at `index`.
+   */
+  setPathSourceIds(index: number, ids: ReadonlyArray<AcDbObjectId>) {
+    if (index < 0 || index >= this._geo.loops.length) return
+    while (this._pathSourceIds.length < this._geo.loops.length) {
+      this._pathSourceIds.push([])
+    }
+    this._pathSourceIds[index] = ids.filter(id => !!id).map(id => String(id))
+    this.notifyAssociationIndex()
+  }
+
+  /**
+   * True when any path still lists at least one source boundary id.
+   */
+  hasAnyPathSourceIds(): boolean {
+    return this._pathSourceIds.some(ids => ids.length > 0)
+  }
+
+  /**
+   * Removes `boundaryId` from every path's source list. When no sources remain,
+   * clears the associative flag (geometry is kept).
+   */
+  removePathSourceId(boundaryId: AcDbObjectId) {
+    const id = String(boundaryId)
+    let changed = false
+    for (let i = 0; i < this._pathSourceIds.length; i++) {
+      const next = this._pathSourceIds[i].filter(sourceId => sourceId !== id)
+      if (next.length !== this._pathSourceIds[i].length) {
+        this._pathSourceIds[i] = next
+        changed = true
+      }
+    }
+    if (!changed) return
+    if (!this.hasAnyPathSourceIds()) {
+      this._associative = false
+      this._associativeSet = true
+    }
+    this.notifyAssociationIndex()
   }
 
   /**
@@ -1024,13 +1091,175 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Boundary loops of this hatch (outer first, then holes).
+   */
+  get loops() {
+    return this._geo.loops
+  }
+
+  /**
    * Append one loop to loops of this area. If it is the first loop added, it is the outter loop.
    * Otherwise, it is an inner loop.
    * @param loop Input the loop to append
    */
   add(loop: AcGeLoop2dType) {
     this._geo.add(loop)
+    this._pathSourceIds.push([])
     this.invalidateAreasFromLoopsCache()
+  }
+
+  /**
+   * Removes every boundary loop and its path source soft-pointers.
+   */
+  clearLoops() {
+    this._geo.clear()
+    this._pathSourceIds = []
+    this.invalidateAreasFromLoopsCache()
+    this.notifyAssociationIndex()
+  }
+
+  /**
+   * Replaces all boundary loops. Path source ids are cleared unless
+   * `pathSourceIds` is provided with one entry per loop.
+   */
+  setLoops(
+    loops: ReadonlyArray<AcGeLoop2dType>,
+    pathSourceIds?: ReadonlyArray<ReadonlyArray<AcDbObjectId>>
+  ) {
+    this._geo.clear()
+    this._pathSourceIds = []
+    loops.forEach((loop, index) => {
+      this._geo.add(loop)
+      const sources = pathSourceIds?.[index] ?? []
+      this._pathSourceIds.push(sources.filter(id => !!id).map(id => String(id)))
+    })
+    this.invalidateAreasFromLoopsCache()
+    this.notifyAssociationIndex()
+  }
+
+  /**
+   * Rebuilds boundary loops from live source boundary entities referenced by
+   * {@link allPathSourceIds}. No-op when the hatch is non-associative or has
+   * no source soft-pointers. Pattern / style properties are preserved.
+   *
+   * @returns `true` when loops were replaced.
+   */
+  rebuildLoopsFromSources(): boolean {
+    if (!this.associative || !this.hasAnyPathSourceIds()) {
+      return false
+    }
+    const database = this.database
+    if (!database) return false
+
+    const rebuiltLoops: AcGeLoop2dType[] = []
+    const rebuiltSources: AcDbObjectId[][] = []
+
+    for (let i = 0; i < this._pathSourceIds.length; i++) {
+      const sourceIds = this._pathSourceIds[i] ?? []
+      if (sourceIds.length === 0) {
+        // Keep prior geometry for paths that lost all sources.
+        const existing = this._geo.loops[i]
+        if (existing) {
+          rebuiltLoops.push(existing.clone())
+          rebuiltSources.push([])
+        }
+        continue
+      }
+
+      const edges: AcGeBoundaryEdgeType[] = []
+      const resolvedIds: AcDbObjectId[] = []
+      for (const id of sourceIds) {
+        const object = database.getObjectById(id)
+        if (!(object instanceof AcDbEntity)) continue
+        const entityEdges = acdbHatchBoundaryEdgesFromEntity(object)
+        if (entityEdges.length === 0) continue
+        edges.push(...entityEdges)
+        resolvedIds.push(id)
+      }
+
+      if (edges.length === 0) {
+        const existing = this._geo.loops[i]
+        if (existing) {
+          rebuiltLoops.push(existing.clone())
+          rebuiltSources.push([])
+        }
+        continue
+      }
+
+      const loop = this.buildLoopFromEdges(edges)
+      if (!loop) {
+        const existing = this._geo.loops[i]
+        if (existing) {
+          rebuiltLoops.push(existing.clone())
+          rebuiltSources.push(resolvedIds)
+        }
+        continue
+      }
+      rebuiltLoops.push(loop)
+      rebuiltSources.push(resolvedIds)
+    }
+
+    if (rebuiltLoops.length === 0) return false
+
+    this._geo.clear()
+    this._pathSourceIds = []
+    rebuiltLoops.forEach((loop, index) => {
+      this._geo.add(loop)
+      this._pathSourceIds.push(rebuiltSources[index] ?? [])
+    })
+    if (!this.hasAnyPathSourceIds()) {
+      this._associative = false
+      this._associativeSet = true
+    }
+    this.invalidateAreasFromLoopsCache()
+    this.notifyAssociationIndex()
+    return true
+  }
+
+  /**
+   * Translates path-source soft-pointers after a deep clone / wblock.
+   */
+  override translateClonedReferences(idMap: AcDbIdMapping): void {
+    super.translateClonedReferences(idMap)
+    this._pathSourceIds = this._pathSourceIds.map(sources =>
+      sources
+        .map(id => idMap.translateId(id) ?? '')
+        .filter(id => id.length > 0)
+    )
+    if (!this.hasAnyPathSourceIds() && this._associative) {
+      this._associative = false
+      this._associativeSet = true
+    }
+    this.notifyAssociationIndex()
+  }
+
+  private buildLoopFromEdges(
+    edges: ReadonlyArray<AcGeBoundaryEdgeType>
+  ): AcGeLoop2dType | undefined {
+    const tolerances = [1e-6, 1e-5, 1e-4, 1e-3]
+    let best: AcGeLoop2d[] = []
+    for (const tolerance of tolerances) {
+      const loops = AcGeLoop2d.buildFromEdges(edges, tolerance).filter(
+        loop => loop.closed && loop.numberOfEdges > 0
+      )
+      if (loops.length > best.length) {
+        best = loops
+      }
+      if (loops.length === 1) {
+        return loops[0]
+      }
+    }
+    if (best.length === 1) return best[0]
+    if (edges.length > 0) return new AcGeLoop2d([...edges])
+    return undefined
+  }
+
+  private notifyAssociationIndex() {
+    // Only notify when this hatch is bound to a database. Accessing
+    // {@link database} before bind falls back to the working database and
+    // can throw when none is set (e.g. constructing an unbound hatch).
+    const database = (this as unknown as { _database?: AcDbDatabase })._database
+    database?.hatchAssociationIndex?.refresh(this)
   }
 
   private invalidateAreasFromLoopsCache() {
@@ -2156,6 +2385,19 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
+   * Writes path-level source-boundary count (97) and soft pointers (330).
+   */
+  private writePathSourceIds(
+    filer: AcDbDxfFiler,
+    sources: ReadonlyArray<AcDbObjectId>
+  ) {
+    filer.writeInt16(97, sources.length)
+    for (const id of sources) {
+      filer.writeObjectId(330, id)
+    }
+  }
+
+  /**
    * Writes DXF fields for this object.
    *
    * @param filer - DXF output writer.
@@ -2181,6 +2423,7 @@ export class AcDbHatch extends AcDbEntity {
     filer.writeInt16(91, loops.length)
     loops.forEach((loop, index) => {
       const isExternal = index === 0
+      const pathSources = this._pathSourceIds[index] ?? []
 
       if (loop instanceof AcGePolyline2d) {
         const vertices = loop.vertices
@@ -2197,7 +2440,7 @@ export class AcDbHatch extends AcDbEntity {
             filer.writeDouble(42, vertex.bulge ?? 0)
           }
         }
-        filer.writeInt16(97, 0)
+        this.writePathSourceIds(filer, pathSources)
         return
       }
 
@@ -2284,7 +2527,7 @@ export class AcDbHatch extends AcDbEntity {
           }
         }
 
-        filer.writeInt16(97, 0)
+        this.writePathSourceIds(filer, pathSources)
       }
     })
     filer.writeInt16(75, this.hatchStyle)
@@ -2412,6 +2655,9 @@ export class AcDbHatch extends AcDbEntity {
     let afterBoundaries = false
     let gradientColorIndex = 0
     let pendingGradientAci: number | undefined
+    /** Remaining source-boundary soft-pointers (330) for the path just flushed. */
+    let pendingSourceCount = 0
+    let pendingSourcePathIndex = -1
 
     const applyGradientRgb = (rgb: number) => {
       if (gradientColorIndex === 0) {
@@ -2556,17 +2802,45 @@ export class AcDbHatch extends AcDbEntity {
     }
 
     /**
-     * End the current boundary path (source-boundary count / next path).
-     * Matches dxf-json: spline edge owns its own group 97 (fit count); the
-     * following group 97 is the path-level source-boundary object count.
+     * Finish the current path after geometry (and optional 330 sources) are in.
      */
-    const endCurrentPath = () => {
-      commitCurrentEdge()
-      flushCurrentLoop()
+    const finishPathAfterSources = () => {
+      pendingSourceCount = 0
+      pendingSourcePathIndex = -1
       loopsRemaining = Math.max(0, loopsRemaining - 1)
       if (loopsRemaining === 0) {
         afterBoundaries = true
       }
+    }
+
+    /**
+     * End the current boundary path (source-boundary count / next path).
+     * Matches dxf-json: spline edge owns its own group 97 (fit count); the
+     * following group 97 is the path-level source-boundary object count.
+     * When that count is non-zero, geometry is flushed first and subsequent
+     * group-330 soft pointers are collected before finishing the path.
+     */
+    const beginPathSourceCollection = (sourceCount: number) => {
+      const loopCountBefore = this._geo.loops.length
+      commitCurrentEdge()
+      flushCurrentLoop()
+      const pathIndex = this._geo.loops.length - 1
+      // Only attach soft-pointers when this path actually produced a loop.
+      // An empty path must not steal the previous path's index.
+      if (
+        sourceCount > 0 &&
+        pathIndex >= 0 &&
+        this._geo.loops.length > loopCountBefore
+      ) {
+        pendingSourceCount = sourceCount
+        pendingSourcePathIndex = pathIndex
+        while (this._pathSourceIds.length <= pathIndex) {
+          this._pathSourceIds.push([])
+        }
+        this._pathSourceIds[pathIndex] = []
+        return
+      }
+      finishPathAfterSources()
     }
 
     while (!filer.atEndOfObject && !filer.atEof && !filer.atExtendedData) {
@@ -2943,9 +3217,30 @@ export class AcDbHatch extends AcDbEntity {
             currentEdge.fitCountSeen = true
             break
           }
-          endCurrentPath()
+          beginPathSourceCollection(Math.max(0, n))
+          break
+        case 330:
+          // Path-level soft pointers to source boundary objects. Only valid
+          // while collecting after a non-zero path-level group 97.
+          if (pendingSourceCount > 0 && pendingSourcePathIndex >= 0) {
+            const handle = String(item.value ?? '')
+            if (handle) {
+              this._pathSourceIds[pendingSourcePathIndex].push(handle)
+            }
+            pendingSourceCount--
+            if (pendingSourceCount === 0) {
+              finishPathAfterSources()
+            }
+            break
+          }
           break
         case 75:
+          // Pattern section begins. If we were still collecting path-source
+          // soft-pointers, finish that path first so loopsRemaining stays
+          // consistent even when the DXF omits some 330s.
+          if (pendingSourceCount > 0) {
+            finishPathAfterSources()
+          }
           commitCurrentEdge()
           flushCurrentLoop()
           loopsRemaining = 0
@@ -2981,6 +3276,7 @@ export class AcDbHatch extends AcDbEntity {
       this.normal = extrusion
     }
     this.patternAngle = (patternAngleDeg * Math.PI) / 180
+    this.notifyAssociationIndex()
     return this
   }
 }

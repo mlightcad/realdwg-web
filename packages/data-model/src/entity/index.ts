@@ -75,6 +75,7 @@ export {
   acdbResolveByBlockProperties,
   acdbTransformForExplode
 } from './AcDbExplodeTransform.js'
+export { acdbHatchBoundaryEdgesFromEntity } from './acdbHatchBoundaryEdgesFromEntity.js'
 export { acdbTessellateHatchPattern } from './AcDbHatchPatternHelpers.js'
 export type { AcDbHatchPatternSegment } from './AcDbHatchPatternHelpers.js'
 export type {
