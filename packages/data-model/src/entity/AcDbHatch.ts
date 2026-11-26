@@ -596,12 +596,17 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   /**
-   * The pattern style of the hatch entity.
+   * Island style (DXF code 75). Applied when the hatch is drawn: `Normal`
+   * fills by odd parity, `Outer` fills the outermost area only and `Ignore`
+   * fills through every island. Changing it re-evaluates the filled areas.
    */
   get hatchStyle() {
     return this._hatchStyle
   }
   set hatchStyle(value: AcDbHatchStyle) {
+    if (this._hatchStyle !== value) {
+      this.invalidateAreasFromLoopsCache()
+    }
     this._hatchStyle = value
     this._hatchStyleSet = true
   }
@@ -856,6 +861,7 @@ export class AcDbHatch extends AcDbEntity {
     }
 
     if (!this._hatchStyleSet) {
+      this.invalidateAreasFromLoopsCache()
       this._hatchStyle = this.normalizeHatchStyle(
         manager.getVar(AcDbSystemVariables.HPISLANDDETECTION, db)
       )
@@ -1367,19 +1373,29 @@ export class AcDbHatch extends AcDbEntity {
 
     const hierarchy = this._geo.buildHierarchy()
     const areas: AcGeArea2d[] = []
+    // AutoCAD keeps every detected loop and applies the island style when
+    // drawing (DXF code 75), so editing the style of an existing hatch
+    // changes its fill. Normal: odd parity. Outer: outermost area only (the
+    // first island tier are holes, deeper loops are skipped). Ignore: outer
+    // boundaries only, islands are filled through.
+    const style = this._hatchStyle
 
     const visit = (node: AcGeIndexNode, depth: number) => {
       if (node.index >= 0 && depth % 2 === 0) {
         const area = new AcGeArea2d()
         area.add(loops[node.index])
-        node.children.forEach(child => {
-          if (child.index >= 0) {
-            area.add(loops[child.index])
-          }
-        })
+        if (style !== AcDbHatchStyle.Ignore) {
+          node.children.forEach(child => {
+            if (child.index >= 0) {
+              area.add(loops[child.index])
+            }
+          })
+        }
         areas.push(area)
       }
-      node.children.forEach(child => visit(child, depth + 1))
+      if (style === AcDbHatchStyle.Normal) {
+        node.children.forEach(child => visit(child, depth + 1))
+      }
     }
 
     hierarchy.children.forEach(child => visit(child, 0))

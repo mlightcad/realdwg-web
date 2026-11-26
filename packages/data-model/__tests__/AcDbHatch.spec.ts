@@ -1136,6 +1136,41 @@ describe('AcDbHatch', () => {
     expect(hatch.area).toBeCloseTo(64, 8)
   })
 
+  it('fills nested islands according to hatchStyle (AutoCAD code 75)', () => {
+    const hatch = new AcDbHatch()
+    // Outer 30×30, island 20×20, nested island 10×10 (areas 900/400/100).
+    hatch.add(createRectLoop(0, 0, 30, 30))
+    hatch.add(createRectLoop(5, 5, 20, 20))
+    hatch.add(createRectLoop(10, 10, 10, 10))
+
+    // Normal: odd parity — outer ring plus the innermost island.
+    hatch.hatchStyle = AcDbHatchStyle.Normal
+    expect(hatch.area).toBeCloseTo(600, 8)
+
+    // Outer: outermost area only — the nested island stays empty.
+    hatch.hatchStyle = AcDbHatchStyle.Outer
+    expect(hatch.area).toBeCloseTo(500, 8)
+
+    // Ignore: hatch through all islands.
+    hatch.hatchStyle = AcDbHatchStyle.Ignore
+    expect(hatch.area).toBeCloseTo(900, 8)
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn((entities: unknown[]) => ({ kind: 'group', entities }))
+    }
+    hatch.subWorldDraw(renderer as never)
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    expect(
+      (renderer.area.mock.calls[0][0] as { loops: unknown[] }).loops
+    ).toHaveLength(1)
+
+    // Switching back after a draw must not reuse the cached Ignore areas.
+    hatch.hatchStyle = AcDbHatchStyle.Normal
+    expect(hatch.area).toBeCloseTo(600, 8)
+  })
+
   it('returns boundary grip points for non-associative hatches', () => {
     const hatch = new AcDbHatch()
     hatch.associative = false
