@@ -52,6 +52,31 @@ describe('AcDbViewportTableRecord.dxfOutFields (#294)', () => {
     expect(text).toMatch(/\n41\n1\.5\n/)
     // LibreDWG rejects DXF group 45 on VPORT table records.
     expect(text).not.toMatch(/\n45\n/)
+    // UCSVP / ObjectARX ucsSavedWithViewport (default locked = 1).
+    expect(text).toMatch(/\n65\n1\n/)
+  })
+
+  it('writes UCSVP group 65 as 0 when ucsSavedWithViewport is false', () => {
+    const record = new AcDbViewportTableRecord()
+    record.name = ACTIVE_VPORT_NAME
+    record.ucsSavedWithViewport = false
+
+    const filer = new AcDbDxfFiler()
+    record.dxfOutFields(filer)
+    expect(filer.toString()).toMatch(/\n65\n0\n/)
+  })
+
+  it('round-trips UCSVP group 65 through dxfOut/dxfIn', () => {
+    const record = new AcDbViewportTableRecord()
+    record.name = ACTIVE_VPORT_NAME
+    record.ucsSavedWithViewport = false
+
+    const out = new AcDbDxfFiler()
+    record.dxfOutFields(out)
+
+    const restored = new AcDbViewportTableRecord()
+    restored.dxfInFields(AcDbDxfFiler.fromString(out.toString()))
+    expect(restored.ucsSavedWithViewport).toBe(false)
   })
 
   it('exports a default AC1015 database without VPORT group 45 or R2007+ fields', () => {

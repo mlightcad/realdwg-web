@@ -7,7 +7,15 @@ import {
 } from '@mlightcad/graphic-interface'
 
 import { AcDbDxfFiler } from '../base/AcDbDxfFiler.js'
-import { ACTIVE_VPORT_NAME } from '../misc/AcDbConstants.js'
+import {
+  ACDB_UCSICON_MAX,
+  ACDB_UCSICON_MIN,
+  ACDB_VPORT_UCSFOLLOW_FLAG,
+  ACDB_VPORT_UCSICON_ON_FLAG,
+  ACDB_VPORT_UCSICON_ORIGIN_FLAG,
+  acdbCoerceIntegerSysVar,
+  acdbPackUcsIcon,
+  ACTIVE_VPORT_NAME} from '../misc/AcDbConstants.js'
 import {
   AcDbAbstractViewTableRecord,
   AcDbAbstractViewTableRecordAttrs
@@ -48,6 +56,11 @@ export interface AcDbViewportTableRecordAttrs
   backgroundObjectId?: string
   /** UCS elevation for the viewport (DXF group 146) */
   ucsElevation: number
+  /**
+   * Whether this viewport stores its own UCS (**UCSVP** / ObjectARX
+   * `ucsSavedWithViewport`). DXF group 65.
+   */
+  ucsSavedWithViewport: boolean
 }
 
 type VportAspectRatioSource = {
@@ -159,7 +172,9 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
       standardFlag: 0,
       gridSpacing: new AcGePoint2d(),
       gridMajor: 10,
-      ucsElevation: 0
+      ucsElevation: 0,
+      // AutoCAD UCSVP default is 1 (UCS locked / saved with viewport).
+      ucsSavedWithViewport: true
     })
     super(attrs, defaultAttrs)
   }
@@ -330,6 +345,78 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
     this.setAttr('standardFlag', value)
   }
 
+  /**
+   * Whether changing the UCS generates a plan view in this viewport
+   * (**UCSFOLLOW** / ObjectARX `ucsFollowMode`). Stored as status-flag bit `0x8`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/OARX-ManagedRefGuide/files/OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_ViewportTableRecord_UcsFollowMode.html
+   */
+  get ucsFollowMode(): boolean {
+    return !!(this.standardFlag & ACDB_VPORT_UCSFOLLOW_FLAG)
+  }
+  set ucsFollowMode(value: boolean) {
+    this.standardFlag = value
+      ? this.standardFlag | ACDB_VPORT_UCSFOLLOW_FLAG
+      : this.standardFlag & ~ACDB_VPORT_UCSFOLLOW_FLAG
+  }
+
+  /**
+   * Whether the UCS icon is displayed in this viewport (ObjectARX
+   * `iconEnabled`). DXF group 74 bit 0; also mirrored on status-flag `0x20`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/OARX-ManagedRefGuide/files/OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_ViewportTableRecord_IconEnabled.html
+   */
+  get iconEnabled(): boolean {
+    return (this.gsView.ucsIconSetting & 1) !== 0
+  }
+  set iconEnabled(value: boolean) {
+    const next = acdbPackUcsIcon(value, this.iconAtOrigin)
+    this.gsView.ucsIconSetting = next
+    this.standardFlag = value
+      ? this.standardFlag | ACDB_VPORT_UCSICON_ON_FLAG
+      : this.standardFlag & ~ACDB_VPORT_UCSICON_ON_FLAG
+  }
+
+  /**
+   * Whether the UCS icon follows the UCS origin when possible (ObjectARX
+   * `iconAtOrigin`). DXF group 74 bit 1; also mirrored on status-flag `0x40`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/OARX-ManagedRefGuide/files/OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_ViewportTableRecord_IconAtOrigin.html
+   */
+  get iconAtOrigin(): boolean {
+    return (this.gsView.ucsIconSetting & 2) !== 0
+  }
+  set iconAtOrigin(value: boolean) {
+    const next = acdbPackUcsIcon(this.iconEnabled, value)
+    this.gsView.ucsIconSetting = next
+    this.standardFlag = value
+      ? this.standardFlag | ACDB_VPORT_UCSICON_ORIGIN_FLAG
+      : this.standardFlag & ~ACDB_VPORT_UCSICON_ORIGIN_FLAG
+  }
+
+  /**
+   * Packed **UCSICON** integer (`0–3`) for SETVAR / DXF group 74.
+   * Prefer {@link iconEnabled} / {@link iconAtOrigin} for ObjectARX-style code.
+   */
+  getUcsIconSysVar(): number {
+    return acdbPackUcsIcon(this.iconEnabled, this.iconAtOrigin)
+  }
+
+  /**
+   * Applies a packed **UCSICON** integer (`0–3`) onto {@link iconEnabled} /
+   * {@link iconAtOrigin}.
+   */
+  setUcsIconSysVar(value: number): void {
+    const next = acdbCoerceIntegerSysVar(
+      'UCSICON',
+      value,
+      ACDB_UCSICON_MIN,
+      ACDB_UCSICON_MAX
+    )
+    this.iconEnabled = (next & 1) !== 0
+    this.iconAtOrigin = (next & 2) !== 0
+  }
+
   get snapEnabled() {
     return !!(this.standardFlag & 0x100)
   }
@@ -352,6 +439,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
   }
   set ucsElevation(value: number) {
     this.setAttr('ucsElevation', value)
+  }
+
+  /**
+   * Whether this viewport stores its own UCS (**UCSVP** / ObjectARX
+   * `ucsSavedWithViewport`). When `true`, activating the viewport restores the
+   * UCS saved with it. DXF group 65; AutoCAD default is `true`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/OARX-ManagedRefGuide/files/OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_ViewportTableRecord_UcsSavedWithViewport.html
+   */
+  get ucsSavedWithViewport(): boolean {
+    return this.getAttr('ucsSavedWithViewport')
+  }
+  set ucsSavedWithViewport(value: boolean) {
+    this.setAttr('ucsSavedWithViewport', value)
   }
 
   /**
@@ -558,6 +659,7 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
     filer.writePoint2d(15, this.gridIncrements)
     filer.writeInt16(70, this.standardFlag)
     filer.writeInt16(71, this.circleSides)
+    filer.writeInt16(74, this.getUcsIconSysVar())
     filer.writeDouble(42, this.gsView.lensLength)
     filer.writePoint3d(16, this.gsView.viewDirectionFromTarget)
     filer.writePoint3d(17, this.gsView.viewTarget)
@@ -576,6 +678,9 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
       filer.writeObjectId(333, this.shadePlotObjectId)
       filer.writeObjectId(348, this.gsView.visualStyleObjectId)
     }
+    // UCSVP after snap/extended fields and before UCS groups (110+), matching
+    // AutoCAD VPORT table order (… 281, 65, 110 …).
+    filer.writeInt16(65, this.ucsSavedWithViewport ? 1 : 0)
     return this
   }
 
@@ -700,8 +805,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
         case 72:
           this.circleSides = n
           break
-        case 74:
-          this.gsView.ucsIconSetting = n
+        case 74: {
+          const intVal = Math.trunc(n)
+          if (
+            Number.isFinite(intVal) &&
+            intVal >= ACDB_UCSICON_MIN &&
+            intVal <= ACDB_UCSICON_MAX
+          ) {
+            this.setUcsIconSysVar(intVal)
+          }
+          break
+        }
+        case 65:
+          // UCSVP / ObjectARX ucsSavedWithViewport (0 or 1).
+          this.ucsSavedWithViewport = Math.trunc(n) !== 0
           break
         case 110:
           this.gsView.ucsOrigin.x = n
@@ -772,7 +889,6 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
         case 77:
         case 78:
         case 60:
-        case 65:
         case 141:
         case 142:
         case 63:

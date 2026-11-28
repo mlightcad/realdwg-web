@@ -1,7 +1,10 @@
 import {
   AcCmColorMethod,
   AcDbBlockTableRecord,
-  AcDbDatabase
+  AcDbDatabase,
+  AcDbSysVarManager,
+  AcDbSystemVariables,
+  ACTIVE_VPORT_NAME
 } from '@mlightcad/data-model'
 
 import { AcDbLibreDwgConverter } from '../src/AcDbLibreDwgConverter'
@@ -21,6 +24,10 @@ class TestLibreDwgConverter extends AcDbLibreDwgConverter {
 
   processObjectsPublic(model: any, db: AcDbDatabase) {
     return this.processObjects(model, db)
+  }
+
+  processViewportsPublic(model: any, db: AcDbDatabase) {
+    return this.processViewports(model, db)
   }
 }
 
@@ -183,6 +190,74 @@ describe('AcDbLibreDwgConverter', () => {
     const missing = new AcDbDatabase()
     converter.processHeaderPublic({ header: {} }, missing)
     expect(missing.dimstyle).toBe('Standard')
+  })
+
+  it('maps UCS header vars and derives WORLDUCS', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    const world = new AcDbDatabase()
+    converter.processHeaderPublic({ header: {} }, world)
+    expect(world.ucsbase).toBe('')
+    expect(world.ucsname).toBe('')
+    expect(world.ucsorg.equals({ x: 0, y: 0, z: 0 })).toBe(true)
+    expect(world.ucsxdir.equals({ x: 1, y: 0, z: 0 })).toBe(true)
+    expect(world.ucsydir.equals({ x: 0, y: 1, z: 0 })).toBe(true)
+    expect(world.worlducs).toBe(1)
+
+    const custom = new AcDbDatabase()
+    converter.processHeaderPublic(
+      {
+        header: {
+          UCSBASE: 'BaseUCS',
+          UCSNAME: 'MyUCS',
+          UCSORG: { x: 10, y: 20, z: 30 },
+          UCSXDIR: { x: 0, y: 1, z: 0 },
+          UCSYDIR: { x: -1, y: 0, z: 0 }
+        }
+      },
+      custom
+    )
+    expect(custom.ucsbase).toBe('BaseUCS')
+    expect(custom.ucsname).toBe('MyUCS')
+    expect(custom.ucsorg.equals({ x: 10, y: 20, z: 30 })).toBe(true)
+    expect(custom.ucsxdir.equals({ x: 0, y: 1, z: 0 })).toBe(true)
+    expect(custom.ucsydir.equals({ x: -1, y: 0, z: 0 })).toBe(true)
+    expect(custom.worlducs).toBe(0)
+  })
+
+  it('maps UCSFOLLOW and UCSICON onto *Active VPORT ObjectARX properties', () => {
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+    const db = new AcDbDatabase()
+
+    converter.processViewportsPublic(
+      {
+        tables: {
+          VPORT: {
+            entries: [
+              {
+                name: ACTIVE_VPORT_NAME,
+                handle: '1',
+                standardFlag: 0x8,
+                ucsIconSetting: 1,
+                center: { x: 0, y: 0 },
+                lowerLeftCorner: { x: 0, y: 0 },
+                upperRightCorner: { x: 1, y: 1 }
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    const active = db.tables.viewportTable.getActiveVport()
+    expect(active?.ucsFollowMode).toBe(true)
+    expect(active?.iconEnabled).toBe(true)
+    expect(active?.iconAtOrigin).toBe(false)
+    expect(active?.getUcsIconSysVar()).toBe(1)
+    const manager = AcDbSysVarManager.instance()
+    expect(manager.getVar(AcDbSystemVariables.UCSFOLLOW, db)).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.UCSICON, db)).toBe(1)
   })
 
   it('keeps CMC RGB for layers when libredwg leaves colorIndex at 256', () => {

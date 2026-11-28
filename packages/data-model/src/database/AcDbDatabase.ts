@@ -46,7 +46,12 @@ import {
   ACDB_COMPARETOLERANCE_DEFAULT,
   ACDB_COMPARETOLERANCE_MAX,
   ACDB_COMPARETOLERANCE_MIN,
+  ACDB_UCSICON_DEFAULT,
+  ACDB_WORLDUCS_DEFAULT,
+  ACDB_WORLDUCS_MAX,
+  ACDB_WORLDUCS_MIN,
   acdbCoerceIntegerSysVar,
+  acdbIsWorldUcs,
   ACTIVE_VPORT_NAME,
   ByBlock,
   ByLayer,
@@ -186,8 +191,17 @@ const DXF_HEADER_NATIVE_VARS = new Set([
   '$CHAMFERA',
   '$CHAMFERB',
   '$CHAMFERC',
-  '$CHAMFERD'
+  '$CHAMFERD',
+  '$UCSBASE',
+  '$UCSFOLLOW',
+  '$UCSICON',
+  '$UCSNAME',
+  '$UCSORG',
+  '$UCSXDIR',
+  '$UCSYDIR'
 ])
+// $UCSFOLLOW / $UCSICON remain native HEADER names for DXF I/O, but live on
+// VPORT *Active (ObjectARX), not as AcDbDatabase fields.
 
 /**
  * Event arguments for object events in the dictionary.
@@ -535,6 +549,18 @@ export class AcDbDatabase extends AcDbObject {
   private _comparetext: number
   /** COMPARETOLERANCE: decimal-place geometric tolerance for drawing comparison */
   private _comparetolerance: number
+  /** UCSBASE: named UCS used as the base for orthographic UCS settings */
+  private _ucsbase: string
+  /** UCSNAME: current UCS name (empty when unnamed) */
+  private _ucsname: string
+  /** UCSORG: current UCS origin in WCS */
+  private _ucsorg: AcGePoint3d
+  /** UCSXDIR: current UCS X direction */
+  private _ucsxdir: AcGePoint3d
+  /** UCSYDIR: current UCS Y direction */
+  private _ucsydir: AcGePoint3d
+  /** WORLDUCS: whether the current UCS matches the WCS */
+  private _worlducs: number
   /** Tables in the database */
   private _tables: AcDbTables
   /** Class definitions from DXF CLASSES / DWG class table (needed for proxy entities). */
@@ -716,6 +742,12 @@ export class AcDbDatabase extends AcDbObject {
     this._comparercmargin = ACDB_COMPARERCMARGIN_DEFAULT
     this._comparetext = ACDB_COMPARETEXT_DEFAULT
     this._comparetolerance = ACDB_COMPARETOLERANCE_DEFAULT
+    this._ucsbase = ''
+    this._ucsname = ''
+    this._ucsorg = new AcGePoint3d(0, 0, 0)
+    this._ucsxdir = new AcGePoint3d(1, 0, 0)
+    this._ucsydir = new AcGePoint3d(0, 1, 0)
+    this._worlducs = ACDB_WORLDUCS_DEFAULT
     this._maxHandle = 0
     this._tables = {
       appIdTable: new AcDbRegAppTable(this),
@@ -2792,6 +2824,166 @@ export class AcDbDatabase extends AcDbObject {
   }
 
   /**
+   * Named UCS used as the base for orthographic UCS settings (**UCSBASE**).
+   * Empty string means World. Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1ACE78C5-459C-4BC1-85DA-18FC9C5FD572.htm
+   */
+  get ucsbase(): string {
+    return this._ucsbase
+  }
+  set ucsbase(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.UCSBASE,
+      this._ucsbase,
+      value ?? '',
+      nextValue => {
+        this._ucsbase = nextValue
+      }
+    )
+  }
+
+  /**
+   * Returns VPORT `*Active`, creating it with AutoCAD UCSICON default (`3`)
+   * when missing. ObjectARX keeps **UCSICON** / **UCSFOLLOW** / **UCSVP** on
+   * the viewport record, not on {@link AcDbDatabase}.
+   */
+  ensureActiveVport(): AcDbViewportTableRecord {
+    const existing = this.tables.viewportTable.getActiveVport()
+    if (existing) return existing
+    const viewport = new AcDbViewportTableRecord()
+    viewport.name = ACTIVE_VPORT_NAME
+    viewport.setUcsIconSysVar(ACDB_UCSICON_DEFAULT)
+    this.tables.viewportTable.add(viewport)
+    return viewport
+  }
+
+  /**
+   * Current UCS name for the active viewport (**UCSNAME**).
+   * Empty when the UCS is unnamed. Read-only through {@link AcDbSysVarManager.setVar};
+   * assign here when restoring UCS state (for example from DXF HEADER).
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-7F43D2F1-8AE0-4089-80B1-26EA037B0709.htm
+   */
+  get ucsname(): string {
+    return this._ucsname
+  }
+  set ucsname(value: string) {
+    this.updateSysVar(
+      AcDbSystemVariables.UCSNAME,
+      this._ucsname,
+      value ?? '',
+      nextValue => {
+        this._ucsname = nextValue
+      }
+    )
+  }
+
+  /**
+   * Origin of the current UCS in WCS (**UCSORG**). Read-only through
+   * {@link AcDbSysVarManager.setVar}; assign here when restoring UCS state.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-E74F3E89-C887-44EE-9369-F0ED67607169.htm
+   */
+  get ucsorg(): AcGePoint3d {
+    return this._ucsorg
+  }
+  set ucsorg(value: AcGePoint3dLike) {
+    const nextValue = new AcGePoint3d(value ?? { x: 0, y: 0, z: 0 })
+    if (this._ucsorg.equals(nextValue)) return
+    this.updateSysVar(
+      AcDbSystemVariables.UCSORG,
+      this._ucsorg,
+      nextValue,
+      coerced => {
+        this._ucsorg = coerced
+      }
+    )
+    this.syncWorldUcsFromCurrentUcs()
+  }
+
+  /**
+   * X direction of the current UCS (**UCSXDIR**). Read-only through
+   * {@link AcDbSysVarManager.setVar}; assign here when restoring UCS state.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2A48D4C-47E8-4147-8580-C604351A8D27.htm
+   */
+  get ucsxdir(): AcGePoint3d {
+    return this._ucsxdir
+  }
+  set ucsxdir(value: AcGePoint3dLike) {
+    const nextValue = new AcGePoint3d(value ?? { x: 1, y: 0, z: 0 })
+    if (this._ucsxdir.equals(nextValue)) return
+    this.updateSysVar(
+      AcDbSystemVariables.UCSXDIR,
+      this._ucsxdir,
+      nextValue,
+      coerced => {
+        this._ucsxdir = coerced
+      }
+    )
+    this.syncWorldUcsFromCurrentUcs()
+  }
+
+  /**
+   * Y direction of the current UCS (**UCSYDIR**). Read-only through
+   * {@link AcDbSysVarManager.setVar}; assign here when restoring UCS state.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2E99479-FC68-4460-BE1F-68383AC1BE98.htm
+   */
+  get ucsydir(): AcGePoint3d {
+    return this._ucsydir
+  }
+  set ucsydir(value: AcGePoint3dLike) {
+    const nextValue = new AcGePoint3d(value ?? { x: 0, y: 1, z: 0 })
+    if (this._ucsydir.equals(nextValue)) return
+    this.updateSysVar(
+      AcDbSystemVariables.UCSYDIR,
+      this._ucsydir,
+      nextValue,
+      coerced => {
+        this._ucsydir = coerced
+      }
+    )
+    this.syncWorldUcsFromCurrentUcs()
+  }
+
+  /**
+   * Whether the current UCS coincides with the WCS (**WORLDUCS**).
+   * Read-only through {@link AcDbSysVarManager.setVar}; kept in sync when
+   * {@link ucsorg} / {@link ucsxdir} / {@link ucsydir} change. Not written to
+   * the DXF HEADER.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-2513B817-8652-49C9-87CE-9F44166F4453.htm
+   */
+  get worlducs(): number {
+    return this._worlducs
+  }
+  set worlducs(value: number) {
+    const nextValue = acdbCoerceIntegerSysVar(
+      'WORLDUCS',
+      value ?? ACDB_WORLDUCS_DEFAULT,
+      ACDB_WORLDUCS_MIN,
+      ACDB_WORLDUCS_MAX
+    )
+    this.updateSysVar(
+      AcDbSystemVariables.WORLDUCS,
+      this._worlducs,
+      nextValue,
+      coerced => {
+        this._worlducs = coerced
+      }
+    )
+  }
+
+  /** Derives **WORLDUCS** from the current UCS origin and axes. */
+  private syncWorldUcsFromCurrentUcs(): void {
+    this.worlducs = acdbIsWorldUcs(this._ucsorg, this._ucsxdir, this._ucsydir)
+      ? 1
+      : 0
+  }
+
+  /**
    * The most recent failure from {@link read} or {@link openUri}, or `null` after a successful open.
    *
    * Useful when a caller catches no exception (for example a viewer that returns `false`)
@@ -3501,11 +3693,7 @@ export class AcDbDatabase extends AcDbObject {
       )
     }
 
-    if (!this.tables.viewportTable.has(ACTIVE_VPORT_NAME)) {
-      const viewport = new AcDbViewportTableRecord()
-      viewport.name = ACTIVE_VPORT_NAME
-      this.tables.viewportTable.add(viewport)
-    }
+    this.ensureActiveVport()
 
     this.ensureMLineStyle(this._cmlstyle || DEFAULT_MLINE_STYLE)
     this.ensureMLeaderStyle(this._cmleaderstyle || DEFAULT_MLEADER_STYLE)
@@ -3780,6 +3968,27 @@ export class AcDbDatabase extends AcDbObject {
     filer.writeDouble(40, this.chamferc)
     filer.writeString(9, '$CHAMFERD')
     filer.writeDouble(40, this.chamferd)
+    filer.writeString(9, '$UCSBASE')
+    filer.writeString(2, this.ucsbase)
+    // $UCSFOLLOW / $UCSICON mirror VPORT *Active (ObjectARX), not db fields.
+    {
+      const active = this.tables.viewportTable.getActiveVport()
+      filer.writeString(9, '$UCSFOLLOW')
+      filer.writeInt16(70, active?.ucsFollowMode ? 1 : 0)
+      filer.writeString(9, '$UCSICON')
+      filer.writeInt16(
+        70,
+        active?.getUcsIconSysVar() ?? ACDB_UCSICON_DEFAULT
+      )
+    }
+    filer.writeString(9, '$UCSNAME')
+    filer.writeString(2, this.ucsname)
+    filer.writeString(9, '$UCSORG')
+    filer.writePoint3d(10, this.ucsorg)
+    filer.writeString(9, '$UCSXDIR')
+    filer.writePoint3d(10, this.ucsxdir)
+    filer.writeString(9, '$UCSYDIR')
+    filer.writePoint3d(10, this.ucsydir)
     this.writeDxfHeaderExtras(filer)
     filer.endSection()
   }

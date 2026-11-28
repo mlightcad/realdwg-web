@@ -325,7 +325,35 @@ describe('AcDbSysVarManager', () => {
     )
     expect(manager.getDefaultValue(AcDbSystemVariables.FILLETPOLYARC)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.COMMANDPREVIEW)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.LAYOUTTAB)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.LAYOUTTAB)?.isDbVar).toBe(
+      false
+    )
     expect(manager.getDefaultValue(AcDbSystemVariables.PROJMODE)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSAXISANG)).toBe(90)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSBASE)).toBe('')
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSFOLLOW)).toBe(0)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSICON)).toBe(3)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSVP)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSNAME)).toBe('')
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSORG)).toEqual({
+      x: 0,
+      y: 0,
+      z: 0
+    })
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSSELECTMODE)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSVIEW)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSXDIR)).toEqual({
+      x: 1,
+      y: 0,
+      z: 0
+    })
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSYDIR)).toEqual({
+      x: 0,
+      y: 1,
+      z: 0
+    })
+    expect(manager.getDefaultValue(AcDbSystemVariables.WORLDUCS)).toBe(1)
     expect(manager.getAllDescriptors().length).toBeGreaterThan(0)
     expect(() => manager.getDefaultValue('__NOT_FOUND__')).toThrow(
       'System variable __not_found__ not found!'
@@ -451,6 +479,34 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.COMPARETOLERANCE, 6, db)
   })
 
+  it('registers LAYOUTTAB with AutoCAD defaults and ranges', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldLayoutTab = manager.getVar(
+      AcDbSystemVariables.LAYOUTTAB,
+      db
+    ) as number
+
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.LAYOUTTAB)?.isDbVar).toBe(
+      false
+    )
+
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, 1, db)
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(1)
+
+    expect(() => manager.setVar(AcDbSystemVariables.LAYOUTTAB, 2, db)).toThrow(
+      'Invalid LAYOUTTAB value! Valid range is 0 to 1.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.LAYOUTTAB, -1, db)).toThrow(
+      'Invalid LAYOUTTAB value! Valid range is 0 to 1.'
+    )
+
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, oldLayoutTab, db)
+  })
+
   it('registers fillet/chamfer system variables with AutoCAD defaults and ranges', () => {
     const db = new AcDbDatabase()
     const manager = AcDbSysVarManager.instance()
@@ -523,6 +579,144 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.FILLETPOLYARC, oldFilletPolyArc, db)
     manager.setVar(AcDbSystemVariables.COMMANDPREVIEW, oldCommandPreview, db)
     manager.setVar(AcDbSystemVariables.PROJMODE, oldProjmode, db)
+  })
+
+  it('registers UCS system variables with AutoCAD defaults and ranges', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldAxisAng = manager.getVar(
+      AcDbSystemVariables.UCSAXISANG,
+      db
+    ) as number
+    const oldSelectMode = manager.getVar(
+      AcDbSystemVariables.UCSSELECTMODE,
+      db
+    ) as number
+    const oldView = manager.getVar(AcDbSystemVariables.UCSVIEW, db) as number
+
+    expect(db.ucsbase).toBe('')
+    expect(manager.getVar(AcDbSystemVariables.UCSFOLLOW, db)).toBe(0)
+    expect(manager.getVar(AcDbSystemVariables.UCSICON, db)).toBe(3)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(1)
+    expect(db.ucsname).toBe('')
+    expect(db.ucsorg.equals({ x: 0, y: 0, z: 0 })).toBe(true)
+    expect(db.ucsxdir.equals({ x: 1, y: 0, z: 0 })).toBe(true)
+    expect(db.ucsydir.equals({ x: 0, y: 1, z: 0 })).toBe(true)
+    expect(db.worlducs).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.UCSAXISANG, db)).toBe(90)
+    expect(manager.getVar(AcDbSystemVariables.UCSSELECTMODE, db)).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.UCSVIEW, db)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSAXISANG)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSBASE)?.isDbVar).toBe(
+      true
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSFOLLOW)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSICON)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSVP)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSNAME)?.readOnly).toBe(
+      true
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSORG)?.readOnly).toBe(
+      true
+    )
+    expect(
+      manager.getDescriptor(AcDbSystemVariables.UCSSELECTMODE)?.isDbVar
+    ).toBe(false)
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSVIEW)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSXDIR)?.readOnly).toBe(
+      true
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSYDIR)?.readOnly).toBe(
+      true
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.WORLDUCS)?.readOnly).toBe(
+      true
+    )
+
+    manager.setVar(AcDbSystemVariables.UCSAXISANG, 22.5, db)
+    expect(manager.getVar(AcDbSystemVariables.UCSAXISANG, db)).toBe(22.5)
+    manager.setVar(AcDbSystemVariables.UCSBASE, 'MyUCS', db)
+    expect(db.ucsbase).toBe('MyUCS')
+    manager.setVar(AcDbSystemVariables.UCSFOLLOW, 1, db)
+    expect(db.ensureActiveVport().ucsFollowMode).toBe(true)
+    expect(manager.getVar(AcDbSystemVariables.UCSFOLLOW, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.UCSICON, 1, db)
+    expect(db.ensureActiveVport().getUcsIconSysVar()).toBe(1)
+    expect(manager.getVar(AcDbSystemVariables.UCSICON, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.UCSVP, 0, db)
+    expect(db.ensureActiveVport().ucsSavedWithViewport).toBe(false)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.UCSVP, 1, db)
+    expect(db.ensureActiveVport().ucsSavedWithViewport).toBe(true)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.UCSSELECTMODE, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.UCSSELECTMODE, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.UCSVIEW, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.UCSVIEW, db)).toBe(0)
+
+    db.ucsname = 'Named'
+    db.ucsorg = { x: 10, y: 20, z: 30 }
+    db.ucsxdir = { x: 0, y: 1, z: 0 }
+    db.ucsydir = { x: -1, y: 0, z: 0 }
+    // WORLDUCS tracks UCSORG/UCSXDIR/UCSYDIR (not set via SETVAR).
+    expect(manager.getVar(AcDbSystemVariables.UCSNAME, db)).toBe('Named')
+    expect(
+      (manager.getVar(AcDbSystemVariables.UCSORG, db) as { x: number }).x
+    ).toBe(10)
+    expect(manager.getVar(AcDbSystemVariables.WORLDUCS, db)).toBe(0)
+
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.UCSAXISANG, 60, db)
+    ).toThrow(
+      'Invalid UCSAXISANG value! Valid values are 5, 10, 15, 18, 22.5, 30, 45, 90, 180.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.UCSFOLLOW, 2, db)).toThrow(
+      'Invalid UCSFOLLOW value! Valid range is 0 to 1.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.UCSICON, 4, db)).toThrow(
+      'Invalid UCSICON value! Valid range is 0 to 3.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.UCSVP, 2, db)).toThrow(
+      'Invalid UCSVP value! Valid range is 0 to 1.'
+    )
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.UCSSELECTMODE, 2, db)
+    ).toThrow('Invalid UCSSELECTMODE value! Valid range is 0 to 1.')
+    expect(() => manager.setVar(AcDbSystemVariables.UCSVIEW, -1, db)).toThrow(
+      'Invalid UCSVIEW value! Valid range is 0 to 1.'
+    )
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.UCSNAME, 'Nope', db)
+    ).toThrow('System variable ucsname is read-only!')
+    expect(() =>
+      manager.setVar(AcDbSystemVariables.UCSORG, { x: 1, y: 2, z: 3 }, db)
+    ).toThrow('System variable ucsorg is read-only!')
+    expect(() => manager.setVar(AcDbSystemVariables.WORLDUCS, 0, db)).toThrow(
+      'System variable worlducs is read-only!'
+    )
+
+    manager.setVar(AcDbSystemVariables.UCSAXISANG, oldAxisAng, db)
+    manager.setVar(AcDbSystemVariables.UCSBASE, '', db)
+    manager.setVar(AcDbSystemVariables.UCSFOLLOW, 0, db)
+    manager.setVar(AcDbSystemVariables.UCSICON, 3, db)
+    manager.setVar(AcDbSystemVariables.UCSVP, 1, db)
+    manager.setVar(AcDbSystemVariables.UCSSELECTMODE, oldSelectMode, db)
+    manager.setVar(AcDbSystemVariables.UCSVIEW, oldView, db)
+    db.ucsname = ''
+    db.ucsorg = { x: 0, y: 0, z: 0 }
+    db.ucsxdir = { x: 1, y: 0, z: 0 }
+    db.ucsydir = { x: 0, y: 1, z: 0 }
+    db.worlducs = 1
   })
 
   it('rejects out-of-range hatch preview and origin mode system variables', () => {

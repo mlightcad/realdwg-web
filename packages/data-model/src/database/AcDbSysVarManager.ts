@@ -54,6 +54,9 @@ import {
   ACDB_HPQUICKPREVTIMEOUT_DEFAULT,
   ACDB_HPQUICKPREVTIMEOUT_MAX,
   ACDB_HPQUICKPREVTIMEOUT_MIN,
+  ACDB_LAYOUTTAB_DEFAULT,
+  ACDB_LAYOUTTAB_MAX,
+  ACDB_LAYOUTTAB_MIN,
   ACDB_MIRRTEXT_DEFAULT,
   ACDB_MIRRTEXT_MAX,
   ACDB_MIRRTEXT_MIN,
@@ -63,7 +66,25 @@ import {
   ACDB_TRIMMODE_DEFAULT,
   ACDB_TRIMMODE_MAX,
   ACDB_TRIMMODE_MIN,
+  ACDB_UCSAXISANG_DEFAULT,
+  ACDB_UCSFOLLOW_DEFAULT,
+  ACDB_UCSFOLLOW_MAX,
+  ACDB_UCSFOLLOW_MIN,
+  ACDB_UCSICON_DEFAULT,
+  ACDB_UCSICON_MAX,
+  ACDB_UCSICON_MIN,
+  ACDB_UCSSELECTMODE_DEFAULT,
+  ACDB_UCSSELECTMODE_MAX,
+  ACDB_UCSSELECTMODE_MIN,
+  ACDB_UCSVIEW_DEFAULT,
+  ACDB_UCSVIEW_MAX,
+  ACDB_UCSVIEW_MIN,
+  ACDB_UCSVP_DEFAULT,
+  ACDB_UCSVP_MAX,
+  ACDB_UCSVP_MIN,
+  ACDB_WORLDUCS_DEFAULT,
   acdbCoerceIntegerSysVar,
+  acdbCoerceUcsAxisAngSysVar,
   ByLayer,
   DEFAULT_HATCH_PATTERN_METRIC,
   DEFAULT_MLEADER_STYLE,
@@ -814,6 +835,21 @@ export class AcDbSysVarManager {
       defaultValue: AcDbUnitsValue.Millimeters
     })
     /**
+     * Toggles visibility of the Model and layout tabs.
+     * - 0: Model and layout tabs are hidden
+     * - 1: Model and layout tabs are displayed (AutoCAD default)
+     *
+     * Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C340CB7C-F65B-4603-B8F6-9B1C6B5B5E2A.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.LAYOUTTAB,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_LAYOUTTAB_DEFAULT
+    })
+    /**
      * Displays the user's login name. Read-only through {@link setVar}; host
      * apps initialize it with {@link setLoginName}.
      *
@@ -1088,6 +1124,144 @@ export class AcDbSysVarManager {
       defaultValue: 1
     })
     /**
+     * Default UCS axis-rotation angle in degrees. Saved in the registry.
+     * Valid values: 5, 10, 15, 18, 22.5, 30, 45, 90, 180.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C370B5F1-9A62-4394-9973-939BD2071904.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSAXISANG,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSAXISANG_DEFAULT
+    })
+    /**
+     * UCS name used as the base for orthographic UCS definitions.
+     * Saved in the drawing. AutoCAD initial value is `""` (World).
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1ACE78C5-459C-4BC1-85DA-18FC9C5FD572.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSBASE,
+      type: 'string',
+      isDbVar: true,
+      defaultValue: ''
+    })
+    /**
+     * When on, changing the UCS generates a plan view. Viewport-backed
+     * (ObjectARX `AcDbViewportTableRecord::ucsFollowMode`); not an
+     * `AcDbDatabase` field. SETVAR reads/writes VPORT `*Active`.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C07B8F08-8854-4A84-94A6-98C5B9A2522A.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSFOLLOW,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSFOLLOW_DEFAULT
+    })
+    /**
+     * UCS icon visibility and placement. Viewport-backed (ObjectARX
+     * `iconEnabled` / `iconAtOrigin` on the active VPORT). Values:
+     * - 0: Off
+     * - 1: On at lower-left
+     * - 2: Origin placement when icon is on
+     * - 3: On at origin when possible (AutoCAD default)
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-BCC7DA63-7F74-4F61-8605-E36A010FD33A.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSICON,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSICON_DEFAULT
+    })
+    /**
+     * Current UCS name for the active viewport. Read-only; empty when unnamed.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-7F43D2F1-8AE0-4089-80B1-26EA037B0709.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSNAME,
+      type: 'string',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: ''
+    })
+    /**
+     * Current UCS origin in WCS. Read-only. Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-E74F3E89-C887-44EE-9369-F0ED67607169.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSORG,
+      type: 'point',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: { x: 0, y: 0, z: 0 }
+    })
+    /**
+     * Whether the UCS icon is grip-selectable. Saved in the registry.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-5AEDA561-BE5F-42E0-9A49-0894CCFBE020.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSSELECTMODE,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSSELECTMODE_DEFAULT
+    })
+    /**
+     * Whether the current UCS is stored with named views. Saved in the registry.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-37336AF7-160A-4A87-9688-46DE8929975C.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSVIEW,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSVIEW_DEFAULT
+    })
+    /**
+     * Whether this viewport locks / saves its own UCS. Viewport-backed
+     * (ObjectARX `AcDbViewportTableRecord::ucsSavedWithViewport`); not an
+     * `AcDbDatabase` field. SETVAR reads/writes VPORT `*Active`. Values:
+     * - 0: Unlocked; UCS follows the current viewport
+     * - 1: Locked; UCS stored with the viewport (AutoCAD default)
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F71044DB-48DE-4D02-89E4-B1C2BC4C64A0.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSVP,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSVP_DEFAULT
+    })
+    /**
+     * Current UCS X direction. Read-only. Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2A48D4C-47E8-4147-8580-C604351A8D27.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSXDIR,
+      type: 'point',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: { x: 1, y: 0, z: 0 }
+    })
+    /**
+     * Current UCS Y direction. Read-only. Saved in the drawing.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2E99479-FC68-4460-BE1F-68383AC1BE98.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSYDIR,
+      type: 'point',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: { x: 0, y: 1, z: 0 }
+    })
+    /**
      * Feet-inch / fractional delimiter style used with **LUNITS** (`0` report, `1` input).
      */
     this.registerVar({
@@ -1095,6 +1269,18 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: true,
       defaultValue: 0
+    })
+    /**
+     * Whether the current UCS matches the WCS. Read-only; not saved in the drawing.
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-2513B817-8652-49C9-87CE-9F44166F4453.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.WORLDUCS,
+      type: 'number',
+      isDbVar: true,
+      readOnly: true,
+      defaultValue: ACDB_WORLDUCS_DEFAULT
     })
   }
 
@@ -1153,6 +1339,11 @@ export class AcDbSysVarManager {
     const descriptor = this.getDescriptor(name)
     if (!descriptor) {
       throw new Error(`System variable ${name} not found!`)
+    }
+
+    const viewportUcs = this.getViewportBackedUcsVar(name, db)
+    if (viewportUcs !== undefined) {
+      return viewportUcs
     }
 
     if (descriptor.isDbVar) {
@@ -1420,6 +1611,14 @@ export class AcDbSysVarManager {
           ACDB_HPQUICKPREVTIMEOUT_MAX
         )
       }
+      if (name === AcDbSystemVariables.LAYOUTTAB.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'LAYOUTTAB',
+          value,
+          ACDB_LAYOUTTAB_MIN,
+          ACDB_LAYOUTTAB_MAX
+        )
+      }
       if (name === AcDbSystemVariables.PROJMODE.toLowerCase()) {
         value = acdbCoerceIntegerSysVar(
           'PROJMODE',
@@ -1460,7 +1659,54 @@ export class AcDbSysVarManager {
           ACDB_COMPARETOLERANCE_MAX
         )
       }
-      if (descriptor.isDbVar) {
+      if (name === AcDbSystemVariables.UCSAXISANG.toLowerCase()) {
+        value = acdbCoerceUcsAxisAngSysVar(value)
+      }
+      if (name === AcDbSystemVariables.UCSFOLLOW.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSFOLLOW',
+          value,
+          ACDB_UCSFOLLOW_MIN,
+          ACDB_UCSFOLLOW_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.UCSICON.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSICON',
+          value,
+          ACDB_UCSICON_MIN,
+          ACDB_UCSICON_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.UCSSELECTMODE.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSSELECTMODE',
+          value,
+          ACDB_UCSSELECTMODE_MIN,
+          ACDB_UCSSELECTMODE_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.UCSVIEW.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSVIEW',
+          value,
+          ACDB_UCSVIEW_MIN,
+          ACDB_UCSVIEW_MAX
+        )
+      }
+      if (name === AcDbSystemVariables.UCSVP.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSVP',
+          value,
+          ACDB_UCSVP_MIN,
+          ACDB_UCSVP_MAX
+        )
+      }
+      if (this.isViewportBackedUcsVar(name)) {
+        this.applyVarMutation(name, oldVal, value, db, () => {
+          this.setViewportBackedUcsVar(name, value as number, db)
+        })
+      } else if (descriptor.isDbVar) {
         this.applyVarMutation(name, oldVal, value, db, () => {
           ;(db as unknown as Record<string, unknown>)[name.toLowerCase()] =
             value
@@ -1473,6 +1719,58 @@ export class AcDbSysVarManager {
     } else {
       throw new Error(`System variable ${name} not found!`)
     }
+  }
+
+  private isViewportBackedUcsVar(normalizedName: string): boolean {
+    return (
+      normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase() ||
+      normalizedName === AcDbSystemVariables.UCSICON.toLowerCase() ||
+      normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()
+    )
+  }
+
+  /**
+   * Reads **UCSFOLLOW** / **UCSICON** / **UCSVP** from VPORT `*Active`
+   * (ObjectARX model). Returns `undefined` for other names so the normal
+   * getVar path continues.
+   */
+  private getViewportBackedUcsVar(
+    normalizedName: string,
+    db: AcDbDatabase
+  ): number | undefined {
+    if (!this.isViewportBackedUcsVar(normalizedName)) return undefined
+    const active = db.tables.viewportTable.getActiveVport()
+    if (normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase()) {
+      return active ? (active.ucsFollowMode ? 1 : 0) : ACDB_UCSFOLLOW_DEFAULT
+    }
+    if (normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()) {
+      return active
+        ? active.ucsSavedWithViewport
+          ? 1
+          : 0
+        : ACDB_UCSVP_DEFAULT
+    }
+    return active ? active.getUcsIconSysVar() : ACDB_UCSICON_DEFAULT
+  }
+
+  /**
+   * Writes **UCSFOLLOW** / **UCSICON** / **UCSVP** onto VPORT `*Active`.
+   */
+  private setViewportBackedUcsVar(
+    normalizedName: string,
+    value: number,
+    db: AcDbDatabase
+  ): void {
+    const active = db.ensureActiveVport()
+    if (normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase()) {
+      active.ucsFollowMode = value !== 0
+      return
+    }
+    if (normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()) {
+      active.ucsSavedWithViewport = value !== 0
+      return
+    }
+    active.setUcsIconSysVar(value)
   }
 
   /**
