@@ -1,5 +1,13 @@
 # @mlightcad/geometry-engine
 
+## 3.16.6
+
+### Patch Changes
+
+- feat: adds AutoCAD UCS system variables (UCSAXISANG, UCSBASE, UCSFOLLOW, UCSICON, UCSNAME, UCSORG, UCSSELECTMODE, UCSVIEW, UCSXDIR, UCSYDIR, WORLDUCS) with VPORT-backed UCSFOLLOW/UCSICON and LibreDWG header mapping, plus LAYOUTTAB and UCSVP. Hatch island style (DXF 75) now renders correctly for Normal, Outer, and Ignore so inner islands match AutoCAD fill behavior
+- Updated dependencies
+  - @mlightcad/common@1.16.6
+
 ## 3.16.5
 
 ### Patch Changes
