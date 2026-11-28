@@ -248,6 +248,15 @@ export const ACDB_COMMANDPREVIEW_MIN = 0
 export const ACDB_COMMANDPREVIEW_MAX = 1
 
 /**
+ * AutoCAD default for LAYOUTTAB: Model and layout tabs are displayed.
+ *
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C340CB7C-F65B-4603-B8F6-9B1C6B5B5E2A.htm
+ */
+export const ACDB_LAYOUTTAB_DEFAULT = 1
+export const ACDB_LAYOUTTAB_MIN = 0
+export const ACDB_LAYOUTTAB_MAX = 1
+
+/**
  * AutoCAD default for HPISLANDDETECTIONMODE: island detection on.
  *
  * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1595FDAF-AE59-475B-A8DA-D7D754C16501.htm
@@ -350,6 +359,14 @@ export const ACDB_UCSSELECTMODE_MAX = 1
 export const ACDB_UCSVIEW_DEFAULT = 1
 export const ACDB_UCSVIEW_MIN = 0
 export const ACDB_UCSVIEW_MAX = 1
+
+/**
+ * AutoCAD default for UCSVP: UCS is locked / saved with the viewport.
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F71044DB-48DE-4D02-89E4-B1C2BC4C64A0.htm
+ */
+export const ACDB_UCSVP_DEFAULT = 1
+export const ACDB_UCSVP_MIN = 0
+export const ACDB_UCSVP_MAX = 1
 
 /** AutoCAD default for WORLDUCS: current UCS matches the WCS. */
 export const ACDB_WORLDUCS_DEFAULT = 1

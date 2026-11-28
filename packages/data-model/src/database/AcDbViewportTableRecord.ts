@@ -56,6 +56,11 @@ export interface AcDbViewportTableRecordAttrs
   backgroundObjectId?: string
   /** UCS elevation for the viewport (DXF group 146) */
   ucsElevation: number
+  /**
+   * Whether this viewport stores its own UCS (**UCSVP** / ObjectARX
+   * `ucsSavedWithViewport`). DXF group 65.
+   */
+  ucsSavedWithViewport: boolean
 }
 
 type VportAspectRatioSource = {
@@ -167,7 +172,9 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
       standardFlag: 0,
       gridSpacing: new AcGePoint2d(),
       gridMajor: 10,
-      ucsElevation: 0
+      ucsElevation: 0,
+      // AutoCAD UCSVP default is 1 (UCS locked / saved with viewport).
+      ucsSavedWithViewport: true
     })
     super(attrs, defaultAttrs)
   }
@@ -435,6 +442,20 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
   }
 
   /**
+   * Whether this viewport stores its own UCS (**UCSVP** / ObjectARX
+   * `ucsSavedWithViewport`). When `true`, activating the viewport restores the
+   * UCS saved with it. DXF group 65; AutoCAD default is `true`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2026/ENU/OARX-ManagedRefGuide/files/OARX-ManagedRefGuide-Autodesk_AutoCAD_DatabaseServices_ViewportTableRecord_UcsSavedWithViewport.html
+   */
+  get ucsSavedWithViewport(): boolean {
+    return this.getAttr('ucsSavedWithViewport')
+  }
+  set ucsSavedWithViewport(value: boolean) {
+    this.setAttr('ucsSavedWithViewport', value)
+  }
+
+  /**
    * Builds the model-space WCS view rectangle from this VPORT record.
    *
    * AutoCAD stores:
@@ -657,6 +678,9 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
       filer.writeObjectId(333, this.shadePlotObjectId)
       filer.writeObjectId(348, this.gsView.visualStyleObjectId)
     }
+    // UCSVP after snap/extended fields and before UCS groups (110+), matching
+    // AutoCAD VPORT table order (… 281, 65, 110 …).
+    filer.writeInt16(65, this.ucsSavedWithViewport ? 1 : 0)
     return this
   }
 
@@ -792,6 +816,10 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
           }
           break
         }
+        case 65:
+          // UCSVP / ObjectARX ucsSavedWithViewport (0 or 1).
+          this.ucsSavedWithViewport = Math.trunc(n) !== 0
+          break
         case 110:
           this.gsView.ucsOrigin.x = n
           break
@@ -861,7 +889,6 @@ export class AcDbViewportTableRecord extends AcDbAbstractViewTableRecord<AcDbVie
         case 77:
         case 78:
         case 60:
-        case 65:
         case 141:
         case 142:
         case 63:

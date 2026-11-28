@@ -325,11 +325,16 @@ describe('AcDbSysVarManager', () => {
     )
     expect(manager.getDefaultValue(AcDbSystemVariables.FILLETPOLYARC)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.COMMANDPREVIEW)).toBe(1)
+    expect(manager.getDefaultValue(AcDbSystemVariables.LAYOUTTAB)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.LAYOUTTAB)?.isDbVar).toBe(
+      false
+    )
     expect(manager.getDefaultValue(AcDbSystemVariables.PROJMODE)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSAXISANG)).toBe(90)
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSBASE)).toBe('')
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSFOLLOW)).toBe(0)
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSICON)).toBe(3)
+    expect(manager.getDefaultValue(AcDbSystemVariables.UCSVP)).toBe(1)
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSNAME)).toBe('')
     expect(manager.getDefaultValue(AcDbSystemVariables.UCSORG)).toEqual({
       x: 0,
@@ -474,6 +479,34 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.COMPARETOLERANCE, 6, db)
   })
 
+  it('registers LAYOUTTAB with AutoCAD defaults and ranges', () => {
+    const db = new AcDbDatabase()
+    const manager = AcDbSysVarManager.instance()
+    const oldLayoutTab = manager.getVar(
+      AcDbSystemVariables.LAYOUTTAB,
+      db
+    ) as number
+
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(1)
+    expect(manager.getDescriptor(AcDbSystemVariables.LAYOUTTAB)?.isDbVar).toBe(
+      false
+    )
+
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, 0, db)
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, 1, db)
+    expect(manager.getVar(AcDbSystemVariables.LAYOUTTAB, db)).toBe(1)
+
+    expect(() => manager.setVar(AcDbSystemVariables.LAYOUTTAB, 2, db)).toThrow(
+      'Invalid LAYOUTTAB value! Valid range is 0 to 1.'
+    )
+    expect(() => manager.setVar(AcDbSystemVariables.LAYOUTTAB, -1, db)).toThrow(
+      'Invalid LAYOUTTAB value! Valid range is 0 to 1.'
+    )
+
+    manager.setVar(AcDbSystemVariables.LAYOUTTAB, oldLayoutTab, db)
+  })
+
   it('registers fillet/chamfer system variables with AutoCAD defaults and ranges', () => {
     const db = new AcDbDatabase()
     const manager = AcDbSysVarManager.instance()
@@ -564,6 +597,7 @@ describe('AcDbSysVarManager', () => {
     expect(db.ucsbase).toBe('')
     expect(manager.getVar(AcDbSystemVariables.UCSFOLLOW, db)).toBe(0)
     expect(manager.getVar(AcDbSystemVariables.UCSICON, db)).toBe(3)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(1)
     expect(db.ucsname).toBe('')
     expect(db.ucsorg.equals({ x: 0, y: 0, z: 0 })).toBe(true)
     expect(db.ucsxdir.equals({ x: 1, y: 0, z: 0 })).toBe(true)
@@ -582,6 +616,9 @@ describe('AcDbSysVarManager', () => {
       false
     )
     expect(manager.getDescriptor(AcDbSystemVariables.UCSICON)?.isDbVar).toBe(
+      false
+    )
+    expect(manager.getDescriptor(AcDbSystemVariables.UCSVP)?.isDbVar).toBe(
       false
     )
     expect(manager.getDescriptor(AcDbSystemVariables.UCSNAME)?.readOnly).toBe(
@@ -616,6 +653,12 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.UCSICON, 1, db)
     expect(db.ensureActiveVport().getUcsIconSysVar()).toBe(1)
     expect(manager.getVar(AcDbSystemVariables.UCSICON, db)).toBe(1)
+    manager.setVar(AcDbSystemVariables.UCSVP, 0, db)
+    expect(db.ensureActiveVport().ucsSavedWithViewport).toBe(false)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(0)
+    manager.setVar(AcDbSystemVariables.UCSVP, 1, db)
+    expect(db.ensureActiveVport().ucsSavedWithViewport).toBe(true)
+    expect(manager.getVar(AcDbSystemVariables.UCSVP, db)).toBe(1)
     manager.setVar(AcDbSystemVariables.UCSSELECTMODE, 0, db)
     expect(manager.getVar(AcDbSystemVariables.UCSSELECTMODE, db)).toBe(0)
     manager.setVar(AcDbSystemVariables.UCSVIEW, 0, db)
@@ -643,6 +686,9 @@ describe('AcDbSysVarManager', () => {
     expect(() => manager.setVar(AcDbSystemVariables.UCSICON, 4, db)).toThrow(
       'Invalid UCSICON value! Valid range is 0 to 3.'
     )
+    expect(() => manager.setVar(AcDbSystemVariables.UCSVP, 2, db)).toThrow(
+      'Invalid UCSVP value! Valid range is 0 to 1.'
+    )
     expect(() =>
       manager.setVar(AcDbSystemVariables.UCSSELECTMODE, 2, db)
     ).toThrow('Invalid UCSSELECTMODE value! Valid range is 0 to 1.')
@@ -663,6 +709,7 @@ describe('AcDbSysVarManager', () => {
     manager.setVar(AcDbSystemVariables.UCSBASE, '', db)
     manager.setVar(AcDbSystemVariables.UCSFOLLOW, 0, db)
     manager.setVar(AcDbSystemVariables.UCSICON, 3, db)
+    manager.setVar(AcDbSystemVariables.UCSVP, 1, db)
     manager.setVar(AcDbSystemVariables.UCSSELECTMODE, oldSelectMode, db)
     manager.setVar(AcDbSystemVariables.UCSVIEW, oldView, db)
     db.ucsname = ''

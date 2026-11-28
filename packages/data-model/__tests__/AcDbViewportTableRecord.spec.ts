@@ -26,6 +26,16 @@ describe('AcDbViewportTableRecord', () => {
     expect(record.standardFlag & ACDB_VPORT_UCSFOLLOW_FLAG).toBe(0)
   })
 
+  it('defaults UCSVP / ucsSavedWithViewport to true (AutoCAD default 1)', () => {
+    const record = new AcDbViewportTableRecord()
+    expect(record.ucsSavedWithViewport).toBe(true)
+
+    record.ucsSavedWithViewport = false
+    expect(record.ucsSavedWithViewport).toBe(false)
+    record.ucsSavedWithViewport = true
+    expect(record.ucsSavedWithViewport).toBe(true)
+  })
+
   it('maps UCSICON onto iconEnabled / iconAtOrigin and related flag bits', () => {
     const record = new AcDbViewportTableRecord()
 

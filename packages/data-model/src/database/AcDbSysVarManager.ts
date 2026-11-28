@@ -54,6 +54,9 @@ import {
   ACDB_HPQUICKPREVTIMEOUT_DEFAULT,
   ACDB_HPQUICKPREVTIMEOUT_MAX,
   ACDB_HPQUICKPREVTIMEOUT_MIN,
+  ACDB_LAYOUTTAB_DEFAULT,
+  ACDB_LAYOUTTAB_MAX,
+  ACDB_LAYOUTTAB_MIN,
   ACDB_MIRRTEXT_DEFAULT,
   ACDB_MIRRTEXT_MAX,
   ACDB_MIRRTEXT_MIN,
@@ -76,6 +79,9 @@ import {
   ACDB_UCSVIEW_DEFAULT,
   ACDB_UCSVIEW_MAX,
   ACDB_UCSVIEW_MIN,
+  ACDB_UCSVP_DEFAULT,
+  ACDB_UCSVP_MAX,
+  ACDB_UCSVP_MIN,
   ACDB_WORLDUCS_DEFAULT,
   acdbCoerceIntegerSysVar,
   acdbCoerceUcsAxisAngSysVar,
@@ -829,6 +835,21 @@ export class AcDbSysVarManager {
       defaultValue: AcDbUnitsValue.Millimeters
     })
     /**
+     * Toggles visibility of the Model and layout tabs.
+     * - 0: Model and layout tabs are hidden
+     * - 1: Model and layout tabs are displayed (AutoCAD default)
+     *
+     * Saved in the registry (not in the drawing).
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C340CB7C-F65B-4603-B8F6-9B1C6B5B5E2A.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.LAYOUTTAB,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_LAYOUTTAB_DEFAULT
+    })
+    /**
      * Displays the user's login name. Read-only through {@link setVar}; host
      * apps initialize it with {@link setLoginName}.
      *
@@ -1200,6 +1221,21 @@ export class AcDbSysVarManager {
       type: 'number',
       isDbVar: false,
       defaultValue: ACDB_UCSVIEW_DEFAULT
+    })
+    /**
+     * Whether this viewport locks / saves its own UCS. Viewport-backed
+     * (ObjectARX `AcDbViewportTableRecord::ucsSavedWithViewport`); not an
+     * `AcDbDatabase` field. SETVAR reads/writes VPORT `*Active`. Values:
+     * - 0: Unlocked; UCS follows the current viewport
+     * - 1: Locked; UCS stored with the viewport (AutoCAD default)
+     *
+     * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F71044DB-48DE-4D02-89E4-B1C2BC4C64A0.htm
+     */
+    this.registerVar({
+      name: AcDbSystemVariables.UCSVP,
+      type: 'number',
+      isDbVar: false,
+      defaultValue: ACDB_UCSVP_DEFAULT
     })
     /**
      * Current UCS X direction. Read-only. Saved in the drawing.
@@ -1575,6 +1611,14 @@ export class AcDbSysVarManager {
           ACDB_HPQUICKPREVTIMEOUT_MAX
         )
       }
+      if (name === AcDbSystemVariables.LAYOUTTAB.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'LAYOUTTAB',
+          value,
+          ACDB_LAYOUTTAB_MIN,
+          ACDB_LAYOUTTAB_MAX
+        )
+      }
       if (name === AcDbSystemVariables.PROJMODE.toLowerCase()) {
         value = acdbCoerceIntegerSysVar(
           'PROJMODE',
@@ -1650,6 +1694,14 @@ export class AcDbSysVarManager {
           ACDB_UCSVIEW_MAX
         )
       }
+      if (name === AcDbSystemVariables.UCSVP.toLowerCase()) {
+        value = acdbCoerceIntegerSysVar(
+          'UCSVP',
+          value,
+          ACDB_UCSVP_MIN,
+          ACDB_UCSVP_MAX
+        )
+      }
       if (this.isViewportBackedUcsVar(name)) {
         this.applyVarMutation(name, oldVal, value, db, () => {
           this.setViewportBackedUcsVar(name, value as number, db)
@@ -1672,13 +1724,15 @@ export class AcDbSysVarManager {
   private isViewportBackedUcsVar(normalizedName: string): boolean {
     return (
       normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase() ||
-      normalizedName === AcDbSystemVariables.UCSICON.toLowerCase()
+      normalizedName === AcDbSystemVariables.UCSICON.toLowerCase() ||
+      normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()
     )
   }
 
   /**
-   * Reads **UCSFOLLOW** / **UCSICON** from VPORT `*Active` (ObjectARX model).
-   * Returns `undefined` for other names so the normal getVar path continues.
+   * Reads **UCSFOLLOW** / **UCSICON** / **UCSVP** from VPORT `*Active`
+   * (ObjectARX model). Returns `undefined` for other names so the normal
+   * getVar path continues.
    */
   private getViewportBackedUcsVar(
     normalizedName: string,
@@ -1689,11 +1743,18 @@ export class AcDbSysVarManager {
     if (normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase()) {
       return active ? (active.ucsFollowMode ? 1 : 0) : ACDB_UCSFOLLOW_DEFAULT
     }
+    if (normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()) {
+      return active
+        ? active.ucsSavedWithViewport
+          ? 1
+          : 0
+        : ACDB_UCSVP_DEFAULT
+    }
     return active ? active.getUcsIconSysVar() : ACDB_UCSICON_DEFAULT
   }
 
   /**
-   * Writes **UCSFOLLOW** / **UCSICON** onto VPORT `*Active`.
+   * Writes **UCSFOLLOW** / **UCSICON** / **UCSVP** onto VPORT `*Active`.
    */
   private setViewportBackedUcsVar(
     normalizedName: string,
@@ -1703,6 +1764,10 @@ export class AcDbSysVarManager {
     const active = db.ensureActiveVport()
     if (normalizedName === AcDbSystemVariables.UCSFOLLOW.toLowerCase()) {
       active.ucsFollowMode = value !== 0
+      return
+    }
+    if (normalizedName === AcDbSystemVariables.UCSVP.toLowerCase()) {
+      active.ucsSavedWithViewport = value !== 0
       return
     }
     active.setUcsIconSysVar(value)

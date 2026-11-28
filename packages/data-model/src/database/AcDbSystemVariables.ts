@@ -273,6 +273,13 @@ export const AcDbSystemVariables = {
   /** Insertion units used for automatic scaling of inserted content. */
   INSUNITS: 'INSUNITS',
   /**
+   * Toggles visibility of the Model and layout tabs.
+   * `0` = hidden, `1` = displayed (AutoCAD default). Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C340CB7C-F65B-4603-B8F6-9B1C6B5B5E2A.htm
+   */
+  LAYOUTTAB: 'LAYOUTTAB',
+  /**
    * Displays the user's login name (read-only). Session-scoped; not stored in
    * the drawing. Host applications may initialize it via
    * {@link AcDbSysVarManager.setLoginName}.
@@ -442,6 +449,16 @@ export const AcDbSystemVariables = {
    * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-37336AF7-160A-4A87-9688-46DE8929975C.htm
    */
   UCSVIEW: 'UCSVIEW',
+  /**
+   * Whether the UCS in other viewports is independent of the current
+   * viewport's UCS. Viewport-specific; saved in the drawing (VPORT group 65 /
+   * ObjectARX `UcsSavedWithViewport`). AutoCAD initial value is `1`.
+   * - `0` = unlocked; UCS follows the current viewport
+   * - `1` = locked; UCS stored with the viewport
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F71044DB-48DE-4D02-89E4-B1C2BC4C64A0.htm
+   */
+  UCSVP: 'UCSVP',
   /**
    * X axis direction of the current UCS for the current viewport (`$UCSXDIR`).
    * Read-only. Saved in the drawing. AutoCAD initial value is `1,0,0`.

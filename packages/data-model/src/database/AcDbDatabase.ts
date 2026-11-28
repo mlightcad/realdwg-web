@@ -2845,8 +2845,8 @@ export class AcDbDatabase extends AcDbObject {
 
   /**
    * Returns VPORT `*Active`, creating it with AutoCAD UCSICON default (`3`)
-   * when missing. ObjectARX keeps **UCSICON** / **UCSFOLLOW** on the viewport
-   * record, not on {@link AcDbDatabase}.
+   * when missing. ObjectARX keeps **UCSICON** / **UCSFOLLOW** / **UCSVP** on
+   * the viewport record, not on {@link AcDbDatabase}.
    */
   ensureActiveVport(): AcDbViewportTableRecord {
     const existing = this.tables.viewportTable.getActiveVport()
