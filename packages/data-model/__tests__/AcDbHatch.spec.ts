@@ -711,6 +711,41 @@ describe('AcDbHatch', () => {
     expect([drawnArea.box.min.x, drawnArea.box.max.x]).toEqual([5, 10])
   })
 
+  it('draws near-+Z full-circle hatches without Illegal Parameters', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+    hatch.patternName = HATCH_PATTERN_SOLID
+    // DWG normals are often not exactly (0,0,1).
+    hatch.normal = new AcGeVector3d(
+      -1.9124799122417297e-18,
+      1.912479912197254e-18,
+      1
+    )
+    hatch.add(
+      new AcGeLoop2d([
+        new AcGeCircArc2d(
+          { x: 10, y: 20 },
+          0.3888,
+          4.915228842761202,
+          4.915228842761206,
+          false
+        )
+      ])
+    )
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+
+    expect(() => hatch.subWorldDraw(renderer as never)).not.toThrow()
+    expect(renderer.area).toHaveBeenCalledTimes(1)
+    const drawnArea = renderer.area.mock.calls[0][0] as AcGeArea2d
+    expect(drawnArea.box.min.x).toBeCloseTo(10 - 0.3888, 6)
+    expect(drawnArea.box.max.x).toBeCloseTo(10 + 0.3888, 6)
+  })
+
   it('converts negative-Z hatch pattern lines to WCS without mutating the hatch', () => {
     createWorkingDb()
     const hatch = new AcDbHatch()

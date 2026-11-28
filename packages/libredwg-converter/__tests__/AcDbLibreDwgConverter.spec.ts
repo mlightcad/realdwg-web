@@ -29,6 +29,10 @@ class TestLibreDwgConverter extends AcDbLibreDwgConverter {
   processViewportsPublic(model: any, db: AcDbDatabase) {
     return this.processViewports(model, db)
   }
+
+  processBlockTablesPublic(model: any, db: AcDbDatabase) {
+    return this.processBlockTables(model, db)
+  }
 }
 
 describe('AcDbLibreDwgConverter', () => {
@@ -147,6 +151,100 @@ describe('AcDbLibreDwgConverter', () => {
     expect(defaults?.dimblk).toBe('')
     expect(defaults?.dimblk1).toBe('')
     expect(defaults?.dimblk2).toBe('NOT_A_HANDLE')
+  })
+
+  it('registers symbol BTRs before appending paper-space INSERTs', () => {
+    const db = new AcDbDatabase()
+    db.createDefaultData()
+    const converter = new TestLibreDwgConverter({ useWorker: false })
+
+    let insertSawSymbolBlock = false
+    db.events.entityAppended.addEventListener(args => {
+      const entities = Array.isArray(args.entity) ? args.entity : [args.entity]
+      for (const entity of entities) {
+        if (
+          entity.type === 'INSERT' ||
+          (entity as { blockName?: string }).blockName === 'TitleBlock'
+        ) {
+          insertSawSymbolBlock = !!db.tables.blockTable.getAt('TitleBlock')
+        }
+      }
+    })
+
+    // *Paper_Space listed before the referenced symbol — the bug that emptied
+    // title-block INSERTs when entities were filled in the same BTR loop.
+    converter.processBlockTablesPublic(
+      {
+        tables: {
+          BLOCK_RECORD: {
+            entries: [
+              {
+                name: '*Model_Space',
+                handle: '1F',
+                ownerHandle: '1',
+                flags: 0,
+                basePoint: { x: 0, y: 0, z: 0 },
+                entities: []
+              },
+              {
+                name: '*Paper_Space',
+                handle: '1B',
+                ownerHandle: '1',
+                flags: 0,
+                basePoint: { x: 0, y: 0, z: 0 },
+                entities: [
+                  {
+                    type: 'INSERT',
+                    handle: '2607',
+                    ownerBlockRecordSoftId: '1B',
+                    name: 'TitleBlock',
+                    insertionPoint: { x: 0, y: 0, z: 0 },
+                    xScale: 1,
+                    yScale: 1,
+                    zScale: 1,
+                    rotation: 0,
+                    extrusionDirection: { x: 0, y: 0, z: 1 },
+                    layer: '0',
+                    attribs: []
+                  }
+                ]
+              },
+              {
+                name: 'TitleBlock',
+                handle: 'B8',
+                ownerHandle: '1',
+                flags: 0,
+                basePoint: { x: 0, y: 0, z: 0 },
+                entities: [
+                  {
+                    type: 'LINE',
+                    handle: 'B9',
+                    ownerBlockRecordSoftId: 'B8',
+                    startPoint: { x: 0, y: 0, z: 0 },
+                    endPoint: { x: 10, y: 0, z: 0 },
+                    extrusionDirection: { x: 0, y: 0, z: 1 },
+                    layer: '0'
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      },
+      db
+    )
+
+    expect(db.tables.blockTable.getAt('TitleBlock')).toBeDefined()
+    const paper = db.tables.blockTable.getAt('*Paper_Space')
+    expect(paper).toBeDefined()
+    const inserts = [...paper!.newIterator()].filter(
+      e => (e as { blockName?: string }).blockName === 'TitleBlock'
+    )
+    expect(inserts.length).toBe(1)
+    expect(insertSawSymbolBlock).toBe(true)
+    expect([...db.tables.blockTable.getAt('TitleBlock')!.newIterator()].length).toBe(
+      1
+    )
   })
 
   it('uses the closed-filled arrow when the block table is missing', () => {

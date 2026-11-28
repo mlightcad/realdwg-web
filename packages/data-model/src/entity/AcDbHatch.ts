@@ -22,6 +22,7 @@ import {
   AcGePoint3dLike,
   AcGePolyline2d,
   AcGeSpline3d,
+  AcGeTol,
   acgeTransformOcsPointToWcs,
   AcGeVector3d,
   AcGeVector3dLike
@@ -2292,7 +2293,14 @@ export class AcDbHatch extends AcDbEntity {
   }
 
   private getOcsToWcsProjectionMatrix() {
-    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
+    // Exact (0,0,1) is common, but DWG normals often carry ~1e-18 noise. Treat
+    // near-+Z as already in WCS so we skip a no-op transform that can still
+    // trip degenerate boundary arcs (start≈end full circles).
+    if (
+      AcGeTol.equalToZero(this._normal.x) &&
+      AcGeTol.equalToZero(this._normal.y) &&
+      AcGeTol.equal(this._normal.z, 1)
+    ) {
       return undefined
     }
     if (this._normal.lengthSq() === 0) {

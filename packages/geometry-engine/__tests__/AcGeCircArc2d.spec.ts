@@ -38,6 +38,17 @@ describe('Test AcGeCircArc2d', () => {
     const closedArc3 = new AcGeCircArc2d(ORIGIN_POINT_2D, 1, 0, 0, true)
     expect(closedArc3.closed).toBe(true)
 
+    // DWG hatch circular edges often store a full circle as start≈end with
+    // ~1e-15 float noise — still a closed circle, not a zero-sweep sliver.
+    const noisyFullCircle = new AcGeCircArc2d(
+      ORIGIN_POINT_2D,
+      1,
+      4.915228842761202,
+      4.915228842761206,
+      false
+    )
+    expect(noisyFullCircle.closed).toBe(true)
+
     const notClosedArc1 = new AcGeCircArc2d(
       ORIGIN_POINT_2D,
       1,
@@ -46,6 +57,36 @@ describe('Test AcGeCircArc2d', () => {
       true
     )
     expect(notClosedArc1.closed).toBe(false)
+  })
+
+  it('transforms near-zero-sweep arcs without throwing', () => {
+    const arc = new AcGeCircArc2d(
+      { x: 339690.0835548686, y: 2025059.0730831623 },
+      0.3888,
+      4.915228842761202,
+      4.915228842761206,
+      false
+    )
+    expect(() =>
+      arc.transform(new AcGeMatrix2d().makeTranslation(1, -2))
+    ).not.toThrow()
+    expect(arc.closed).toBe(true)
+    expect(arc.center.x).toBeCloseTo(339691.0835548686, 6)
+    expect(arc.center.y).toBeCloseTo(2025057.0730831623, 6)
+  })
+
+  it('falls back when three transformed points are collinear', () => {
+    const arc = new AcGeCircArc2d(
+      ORIGIN_POINT_2D,
+      2,
+      0,
+      Math.PI / 2,
+      false
+    )
+    // Collapse Y so start/mid/end project onto the X axis.
+    expect(() => arc.transform(new AcGeMatrix2d().makeScale(1, 0))).not.toThrow()
+    expect(arc.center.x).toBeCloseTo(0, 8)
+    expect(arc.center.y).toBeCloseTo(0, 8)
   })
 
   it('computes clockwise property correctly', () => {

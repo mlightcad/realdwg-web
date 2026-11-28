@@ -720,7 +720,10 @@ export class AcDbRenderingCache {
           }
           key = this.createCacheKey(scopedName, blockColor, sawByBlockColor)
           const setCloneBefore = profile ? stats.setCloneMs : 0
-          if (block && willCache) {
+          // Never cache an empty miss. Streaming imports can draw an INSERT
+          // before its block body is appended; caching that empty group would
+          // poison later hits even after the BTR is filled.
+          if (block && willCache && results.length > 0) {
             prepareCacheTemplate(block)
             // Store the immutable template by reference, then hand the scene a
             // per-INSERT clone so applyMatrix cannot mutate the cache entry.
