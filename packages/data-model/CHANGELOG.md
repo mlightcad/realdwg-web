@@ -1,5 +1,16 @@
 # @mlightcad/data-model
 
+## 1.16.7
+
+### Patch Changes
+
+- fix: keeps paper-space inserts drawable by registering symbol BTRs before paper-space entities and skipping empty streaming-cache misses, and tolerates near-+Z normals plus start≈end full-circle/ellipse arcs so DWG imports no longer blank title blocks or throw Illegal Parameters. Hatch areas and pattern lines transform from OCS to WCS at draw time so negative-Z normals no longer mirror fills relative to their outlines
+- Updated dependencies
+  - @mlightcad/common@1.16.7
+  - @mlightcad/emf-converter@1.16.7
+  - @mlightcad/geometry-engine@3.16.7
+  - @mlightcad/graphic-interface@3.16.7
+
 ## 1.16.6
 
 ### Patch Changes
