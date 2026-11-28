@@ -17,6 +17,10 @@ import {
   ACDB_COMPARETOLERANCE_MIN,
   ACDB_MIRRTEXT_MAX,
   ACDB_MIRRTEXT_MIN,
+  ACDB_UCSFOLLOW_MAX,
+  ACDB_UCSFOLLOW_MIN,
+  ACDB_UCSICON_MAX,
+  ACDB_UCSICON_MIN,
   acdbIntegerSysVarIfInRange,
   ByLayer,
   DEFAULT_MLEADER_STYLE,
@@ -251,6 +255,46 @@ function applyHeaderVar(
         ACDB_COMPARETOLERANCE_MAX
       )
       if (n != null) db.comparetolerance = n
+      break
+    }
+    case '$UCSBASE':
+      db.ucsbase = readHeaderString(filer) ?? ''
+      break
+    case '$UCSFOLLOW': {
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_UCSFOLLOW_MIN,
+        ACDB_UCSFOLLOW_MAX
+      )
+      // ObjectARX: UCSFOLLOW lives on the active VPORT, not AcDbDatabase.
+      if (n != null) db.ensureActiveVport().ucsFollowMode = n !== 0
+      break
+    }
+    case '$UCSICON': {
+      const n = acdbIntegerSysVarIfInRange(
+        readHeaderNumber(filer),
+        ACDB_UCSICON_MIN,
+        ACDB_UCSICON_MAX
+      )
+      if (n != null) db.ensureActiveVport().setUcsIconSysVar(n)
+      break
+    }
+    case '$UCSNAME':
+      db.ucsname = readHeaderString(filer) ?? ''
+      break
+    case '$UCSORG': {
+      const p = readHeaderPoint3d(filer)
+      if (p) db.ucsorg = p
+      break
+    }
+    case '$UCSXDIR': {
+      const p = readHeaderPoint3d(filer)
+      if (p) db.ucsxdir = p
+      break
+    }
+    case '$UCSYDIR': {
+      const p = readHeaderPoint3d(filer)
+      if (p) db.ucsydir = p
       break
     }
     case '$PDMODE':

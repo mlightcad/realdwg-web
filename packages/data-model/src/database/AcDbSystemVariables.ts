@@ -382,13 +382,94 @@ export const AcDbSystemVariables = {
    * @see https://help.autodesk.com/view/ACD/2024/ENU/?guid=GUID-3D639DCE-5A01-4C07-899D-0595F8DDEBF7
    */
   TRIMMODE: 'TRIMMODE',
+  /**
+   * Default angle in degrees when rotating the UCS about an axis via UCS X/Y/Z.
+   * Valid values: `5`, `10`, `15`, `18`, `22.5`, `30`, `45`, `90`, `180`.
+   * Saved in the registry. AutoCAD initial value is `90`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C370B5F1-9A62-4394-9973-939BD2071904.htm
+   */
+  UCSAXISANG: 'UCSAXISANG',
+  /**
+   * Name of the UCS that defines origin/orientation for orthographic UCS
+   * settings (`$UCSBASE`). Empty string means World. Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-1ACE78C5-459C-4BC1-85DA-18FC9C5FD572.htm
+   */
+  UCSBASE: 'UCSBASE',
+  /**
+   * When `1`, switching UCS generates a plan view of the new UCS in the
+   * current viewport (`$UCSFOLLOW`). Saved per viewport in the drawing.
+   * AutoCAD initial value is `0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C07B8F08-8854-4A84-94A6-98C5B9A2522A.htm
+   */
+  UCSFOLLOW: 'UCSFOLLOW',
+  /**
+   * UCS icon visibility/placement for the current viewport (`$UCSICON`):
+   * `0` = off, `1` = on at lower-left, `2` = origin placement when on,
+   * `3` = on at origin when possible (AutoCAD default). Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-BCC7DA63-7F74-4F61-8605-E36A010FD33A.htm
+   */
+  UCSICON: 'UCSICON',
+  /**
+   * Name of the current UCS for the current viewport (`$UCSNAME`).
+   * Empty string when the UCS is unnamed. Read-only. Saved in the drawing.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-7F43D2F1-8AE0-4089-80B1-26EA037B0709.htm
+   */
+  UCSNAME: 'UCSNAME',
+  /**
+   * Origin of the current UCS for the current viewport, in WCS (`$UCSORG`).
+   * Read-only. Saved in the drawing. AutoCAD initial value is `0,0,0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-E74F3E89-C887-44EE-9369-F0ED67607169.htm
+   */
+  UCSORG: 'UCSORG',
+  /**
+   * Whether the UCS icon can be selected and grip-edited.
+   * `0` = not selectable; `1` = selectable (AutoCAD default).
+   * Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-5AEDA561-BE5F-42E0-9A49-0894CCFBE020.htm
+   */
+  UCSSELECTMODE: 'UCSSELECTMODE',
+  /**
+   * Whether the current UCS is saved with a named view.
+   * `0` = no; `1` = yes (AutoCAD default). Saved in the registry.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-37336AF7-160A-4A87-9688-46DE8929975C.htm
+   */
+  UCSVIEW: 'UCSVIEW',
+  /**
+   * X axis direction of the current UCS for the current viewport (`$UCSXDIR`).
+   * Read-only. Saved in the drawing. AutoCAD initial value is `1,0,0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2A48D4C-47E8-4147-8580-C604351A8D27.htm
+   */
+  UCSXDIR: 'UCSXDIR',
+  /**
+   * Y axis direction of the current UCS for the current viewport (`$UCSYDIR`).
+   * Read-only. Saved in the drawing. AutoCAD initial value is `0,1,0`.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-F2E99479-FC68-4460-BE1F-68383AC1BE98.htm
+   */
+  UCSYDIR: 'UCSYDIR',
   /** Current dimension style name used when creating new dimension entities. */
   DIMSTYLE: 'DIMSTYLE',
   /**
    * Controls feet-inch and fractional display delimiters together with **LUNITS**
    * (`0` = report format, `1` = input format).
    */
-  UNITMODE: 'UNITMODE'
+  UNITMODE: 'UNITMODE',
+  /**
+   * Whether the current UCS coincides with the WCS.
+   * `0` = differs; `1` = matches (AutoCAD default). Read-only; not saved.
+   *
+   * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-2513B817-8652-49C9-87CE-9F44166F4453.htm
+   */
+  WORLDUCS: 'WORLDUCS'
 } as const
 
 /**

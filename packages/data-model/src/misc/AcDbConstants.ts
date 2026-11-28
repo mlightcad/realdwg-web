@@ -96,6 +96,33 @@ export const ByBlock = 'ByBlock'
 export const ACTIVE_VPORT_NAME = '*Active'
 
 /**
+ * VPORT status-flag bit that enables **UCSFOLLOW** for that viewport
+ * (DXF group 70 / AutoCAD “UCS follow”).
+ */
+export const ACDB_VPORT_UCSFOLLOW_FLAG = 0x8
+
+/**
+ * VPORT status-flag bit for UCS icon visibility (**UCSICON** on).
+ */
+export const ACDB_VPORT_UCSICON_ON_FLAG = 0x20
+
+/**
+ * VPORT status-flag bit for displaying the UCS icon at the origin.
+ */
+export const ACDB_VPORT_UCSICON_ORIGIN_FLAG = 0x40
+
+/**
+ * Packs ObjectARX `iconEnabled` / `iconAtOrigin` into the **UCSICON** integer
+ * (`0–3`), matching DXF VPORT group 74 bit 0 / bit 1.
+ */
+export function acdbPackUcsIcon(
+  iconEnabled: boolean,
+  iconAtOrigin: boolean
+): number {
+  return (iconEnabled ? 1 : 0) | (iconAtOrigin ? 2 : 0)
+}
+
+/**
  * Application ID for MLightCAD used in dictionaries and XData registration.
  */
 export const MLIGHTCAD_APPID = 'mlightcad'
@@ -288,6 +315,69 @@ export const ACDB_COMPARETOLERANCE_MIN = 0
 export const ACDB_COMPARETOLERANCE_MAX = 14
 
 /**
+ * AutoCAD default for UCSAXISANG: 90° when rotating the UCS about an axis.
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-C370B5F1-9A62-4394-9973-939BD2071904.htm
+ */
+export const ACDB_UCSAXISANG_DEFAULT = 90
+
+/**
+ * Discrete angles (degrees) accepted by UCSAXISANG.
+ * Includes `22.5`, so the variable is stored as a real, not a truncated int.
+ */
+export const ACDB_UCSAXISANG_VALUES = Object.freeze([
+  5, 10, 15, 18, 22.5, 30, 45, 90, 180
+])
+
+/** AutoCAD default for UCSFOLLOW: changing UCS does not change the view. */
+export const ACDB_UCSFOLLOW_DEFAULT = 0
+export const ACDB_UCSFOLLOW_MIN = 0
+export const ACDB_UCSFOLLOW_MAX = 1
+
+/**
+ * AutoCAD default for UCSICON: icon on at the UCS origin when possible.
+ * @see https://help.autodesk.com/cloudhelp/2027/ENU/AutoCAD-Core/files/GUID-BCC7DA63-7F74-4F61-8605-E36A010FD33A.htm
+ */
+export const ACDB_UCSICON_DEFAULT = 3
+export const ACDB_UCSICON_MIN = 0
+export const ACDB_UCSICON_MAX = 3
+
+/** AutoCAD default for UCSSELECTMODE: UCS icon is grip-selectable. */
+export const ACDB_UCSSELECTMODE_DEFAULT = 1
+export const ACDB_UCSSELECTMODE_MIN = 0
+export const ACDB_UCSSELECTMODE_MAX = 1
+
+/** AutoCAD default for UCSVIEW: save current UCS with named views. */
+export const ACDB_UCSVIEW_DEFAULT = 1
+export const ACDB_UCSVIEW_MIN = 0
+export const ACDB_UCSVIEW_MAX = 1
+
+/** AutoCAD default for WORLDUCS: current UCS matches the WCS. */
+export const ACDB_WORLDUCS_DEFAULT = 1
+export const ACDB_WORLDUCS_MIN = 0
+export const ACDB_WORLDUCS_MAX = 1
+
+/**
+ * Whether the given UCS origin / axes coincide with the WCS (**WORLDUCS**).
+ */
+export function acdbIsWorldUcs(
+  org: { x: number; y: number; z: number },
+  xDir: { x: number; y: number; z: number },
+  yDir: { x: number; y: number; z: number }
+): boolean {
+  return (
+    org.x === 0 &&
+    org.y === 0 &&
+    org.z === 0 &&
+    xDir.x === 1 &&
+    xDir.y === 0 &&
+    xDir.z === 0 &&
+    yDir.x === 0 &&
+    yDir.y === 1 &&
+    yDir.z === 0
+  )
+}
+
+/**
  * Truncates a numeric system-variable value to an integer and rejects values
  * outside AutoCAD's documented valid range.
  */
@@ -304,6 +394,22 @@ export function acdbCoerceIntegerSysVar(
     )
   }
   return intVal
+}
+
+/**
+ * Accepts only the discrete UCSAXISANG angles documented by AutoCAD.
+ */
+export function acdbCoerceUcsAxisAngSysVar(value: unknown): number {
+  const num = Number(value)
+  if (
+    !Number.isFinite(num) ||
+    !ACDB_UCSAXISANG_VALUES.some(allowed => Object.is(allowed, num))
+  ) {
+    throw new Error(
+      `Invalid UCSAXISANG value! Valid values are ${ACDB_UCSAXISANG_VALUES.join(', ')}.`
+    )
+  }
+  return num
 }
 
 /**

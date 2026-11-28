@@ -473,8 +473,11 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       if (item.viewMode) {
         record.gsView.viewMode = item.viewMode
       }
-      if (item.ucsIconSetting) {
-        record.gsView.ucsIconSetting = item.ucsIconSetting
+      if (item.ucsIconSetting != null) {
+        const icon = Math.trunc(item.ucsIconSetting)
+        if (icon >= 0 && icon <= 3) {
+          record.setUcsIconSysVar(icon)
+        }
       }
       if (item.ucsOrigin) {
         record.gsView.ucsOrigin.copy(item.ucsOrigin)
@@ -704,6 +707,16 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     if (headerExt.CHAMFERB != null) db.chamferb = headerExt.CHAMFERB
     if (headerExt.CHAMFERC != null) db.chamferc = headerExt.CHAMFERC
     if (headerExt.CHAMFERD != null) db.chamferd = headerExt.CHAMFERD
+    // Drawing-backed UCS header vars (match DXF $UCS* / AcDbDxfHeaderReader).
+    if (header.UCSBASE != null) db.ucsbase = String(header.UCSBASE)
+    if (header.UCSNAME != null) db.ucsname = String(header.UCSNAME)
+    if (header.UCSORG) db.ucsorg = header.UCSORG
+    // libredwg-web types UCSXDIR/UCSYDIR as number; runtime values are points.
+    const ucsXDir = this.asHeaderPoint3d(header.UCSXDIR)
+    if (ucsXDir) db.ucsxdir = ucsXDir
+    const ucsYDir = this.asHeaderPoint3d(header.UCSYDIR)
+    if (ucsYDir) db.ucsydir = ucsYDir
+    // WORLDUCS is derived by AcDbDatabase when UCSORG/UCSXDIR/UCSYDIR change.
     db.textstyle = header.TEXTSTYLE ?? DEFAULT_TEXT_STYLE
     // Match DXF header reader: new dimensions must inherit $DIMSTYLE.
     // Without this, DWG loads leave db.dimstyle as the constructor default
@@ -1419,5 +1432,24 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
     if (typeof value !== 'string') return undefined
     const trimmed = value.trim()
     return trimmed.length > 0 ? trimmed : undefined
+  }
+
+  /**
+   * Coerces a LibreDWG header value to a 3D point when it looks like one.
+   * Needed because some UCS direction fields are mistyped as `number` upstream.
+   */
+  private asHeaderPoint3d(
+    value: unknown
+  ): { x: number; y: number; z: number } | undefined {
+    if (
+      value != null &&
+      typeof value === 'object' &&
+      typeof (value as { x?: unknown }).x === 'number' &&
+      typeof (value as { y?: unknown }).y === 'number' &&
+      typeof (value as { z?: unknown }).z === 'number'
+    ) {
+      return value as { x: number; y: number; z: number }
+    }
+    return undefined
   }
 }
