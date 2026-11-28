@@ -7,6 +7,43 @@ describe('AcGeEllipseArc2d', () => {
     expect(mid.y).toBeCloseTo(2, 6)
   })
 
+  it('treats start≈end float noise as a closed full ellipse', () => {
+    const exact = new AcGeEllipseArc2d({ x: 0, y: 0 }, 3, 2, 0, Math.PI * 2)
+    expect(exact.closed).toBe(true)
+
+    // DWG hatch elliptical edges often store a full ellipse as start≈end with
+    // ~1e-15 float noise — still a closed ellipse, not a zero-sweep sliver.
+    const noisy = new AcGeEllipseArc2d(
+      { x: 0, y: 0 },
+      3,
+      2,
+      4.915228842761202,
+      4.915228842761206,
+      false
+    )
+    expect(noisy.closed).toBe(true)
+
+    const nearTwoPi = new AcGeEllipseArc2d(
+      { x: 0, y: 0 },
+      3,
+      2,
+      0,
+      Math.PI * 2 - 1e-15,
+      false
+    )
+    expect(nearTwoPi.closed).toBe(true)
+
+    const partial = new AcGeEllipseArc2d(
+      { x: 0, y: 0 },
+      3,
+      2,
+      0,
+      Math.PI / 2,
+      false
+    )
+    expect(partial.closed).toBe(false)
+  })
+
   it('covers full-ellipse and clockwise branches', () => {
     const full = new AcGeEllipseArc2d(
       { x: 0, y: 0 },

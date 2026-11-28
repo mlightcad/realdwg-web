@@ -524,6 +524,17 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
 
   protected processBlockTables(model: DwgDatabase, db: AcDbDatabase) {
     const btrs = model.tables.BLOCK_RECORD.entries
+    // Pass 1: register every BTR shell (and metadata) before appending entities.
+    // Paper-space INSERTs often appear earlier in BLOCK_RECORD order than the
+    // symbol blocks they reference (e.g. *Paper_Space before 注解2). Filling
+    // layout entities in the same loop used to fire entityAppended while
+    // getAt(blockName) was still undefined, so the viewer committed an empty
+    // group and never retried.
+    const pendingEntities: Array<{
+      entities: DwgEntity[]
+      block: AcDbBlockTableRecord
+      isPaperSpace: boolean
+    }> = []
     btrs.forEach(btr => {
       let dbBlock = db.tables.blockTable.getAt(btr.name)
       if (!dbBlock) {
@@ -551,11 +562,28 @@ export class AcDbLibreDwgConverter extends AcDbDatabaseConverter<DwgDatabase> {
       }
       dbBlock.origin.copy(btr.basePoint)
 
-      // Don't process entities in block space until other blocks are processed
-      if (!dbBlock.isModelSapce && btr.entities && btr.entities.length > 0) {
-        this.processEntitiesInBlock(btr.entities, dbBlock)
+      // Model space is filled later by processEntities (chunked + progress).
+      if (dbBlock.isModelSapce || !btr.entities || btr.entities.length === 0) {
+        return
       }
+      pendingEntities.push({
+        entities: btr.entities,
+        block: dbBlock,
+        isPaperSpace: dbBlock.isPaperSapce
+      })
     })
+
+    // Pass 2a: symbol / anonymous block bodies first so paper INSERTs can
+    // resolve nested definitions (and rendering-cache templates stay non-empty).
+    for (const pending of pendingEntities) {
+      if (pending.isPaperSpace) continue
+      this.processEntitiesInBlock(pending.entities, pending.block)
+    }
+    // Pass 2b: paper layouts last — entityAppended converts these into the scene.
+    for (const pending of pendingEntities) {
+      if (!pending.isPaperSpace) continue
+      this.processEntitiesInBlock(pending.entities, pending.block)
+    }
   }
 
   protected processBlocks(_model: DwgDatabase, _db: AcDbDatabase) {

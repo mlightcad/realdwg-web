@@ -7,7 +7,13 @@ import {
   AcGePoint2dLike,
   AcGeVector2d
 } from '../math/index.js'
-import { acgeClamp, AcGeMathUtil, FLOAT_TOL, TAU } from '../util/index.js'
+import {
+  acgeClamp,
+  AcGeMathUtil,
+  AcGeTol,
+  FLOAT_TOL,
+  TAU
+} from '../util/index.js'
 import {
   acgeTryCreateArcByCenterStartChord,
   acgeTryCreateArcByCenterStartEnd,
@@ -579,12 +585,23 @@ export class AcGeCircArc2d extends AcGeCurve2d {
   }
 
   /**
-   * Return true if its start point is identical to its end point. Otherwise, return false.
+   * Return true if this arc is a full circle (start angle equals end angle
+   * modulo 2π, including float noise from DWG/DXF round-trips).
    */
   get closed() {
     const internalStartAngle = this._getInternalAngle(this.startAngle)
     const internalEndAngle = this._getInternalAngle(this.endAngle)
-    return (Math.abs(internalEndAngle - internalStartAngle) / Math.PI) % 2 == 0
+    // Half-turns modulo 2: 0, 2, 4, … mean a full-circle span (0, 2π, 4π, …).
+    // Use a tight angle epsilon so intentional tiny sweeps stay open, while
+    // DWG float noise (e.g. start/end differing by ~1e-15) still counts as closed.
+    const halfTurns =
+      Math.abs(internalEndAngle - internalStartAngle) / Math.PI
+    const mod = halfTurns % 2
+    const angleTol = 1e-12
+    return (
+      AcGeTol.equalToZero(mod, angleTol) ||
+      AcGeTol.equalToZero(2 - mod, angleTol)
+    )
   }
 
   /**
@@ -648,7 +665,10 @@ export class AcGeCircArc2d extends AcGeCurve2d {
 
     const transformedMid = this.midPoint.clone().applyMatrix2d(matrix)
     const transformedEnd = this.endPoint.clone().applyMatrix2d(matrix)
-    const transformedArc = new AcGeCircArc2d(
+    // Affine maps can make start/mid/end collinear (near-zero sweep, or a
+    // near-singular OCS→XY projection). Never throw from transform — fall
+    // back to transforming the defining center and polar angles.
+    const transformedArc = AcGeCircArc2d.tryCreateByThreePoints(
       transformedStart,
       transformedMid,
       transformedEnd
@@ -658,6 +678,29 @@ export class AcGeCircArc2d extends AcGeCurve2d {
     const toPublicAngle = (angle: number) => {
       const normalized = AcGeMathUtil.normalizeAngle(angle)
       return clockwise ? this._mirrorAngle(normalized) : normalized
+    }
+
+    if (!transformedArc) {
+      this.center = transformedCenter
+      const radius = transformedCenter.distanceTo(transformedStart)
+      if (radius > FLOAT_TOL) {
+        this.radius = radius
+      }
+      this.clockwise = clockwise
+      this.startAngle = toPublicAngle(
+        Math.atan2(
+          transformedStart.y - transformedCenter.y,
+          transformedStart.x - transformedCenter.x
+        )
+      )
+      this.endAngle = toPublicAngle(
+        Math.atan2(
+          transformedEnd.y - transformedCenter.y,
+          transformedEnd.x - transformedCenter.x
+        )
+      )
+      this._boundingBoxNeedsUpdate = true
+      return this
     }
 
     this.center = transformedArc.center

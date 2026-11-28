@@ -261,6 +261,30 @@ describe('AcDbRenderingCache', () => {
     expect(cache.has('*U12')).toBe(false)
   })
 
+  it('does not cache empty miss templates', () => {
+    const cache = new AcDbRenderingCache()
+    const emptyGroup = createMockGroup()
+    const renderer = {
+      group: jest.fn(() => emptyGroup)
+    }
+    const blockRecord = {
+      name: 'EMPTY_YET',
+      newIterator: function* () {
+        // Block body not appended yet — no drawable children.
+      }
+    }
+
+    cache.draw(
+      renderer as never,
+      blockRecord as never,
+      new AcCmColor().setRGBValue(0xffffff),
+      [],
+      true
+    )
+    expect(cache.has('EMPTY_YET')).toBe(false)
+    expect(renderer.group).toHaveBeenCalledWith([])
+  })
+
   it('disposes cached templates on clear', () => {
     const cache = new AcDbRenderingCache()
     const dispose = jest.fn()
