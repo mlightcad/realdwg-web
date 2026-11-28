@@ -1043,6 +1043,20 @@ describe('AcDbHatch', () => {
     expect(collapsed.closed).toBe(true)
     hatch.add(new AcGeLoop2d([collapsed]))
 
+    // DWG float noise on a full-ellipse edge (start≈end) must still restore
+    // a 360° span via the tolerant closed check.
+    const noisyFull = new AcGeEllipseArc2d(
+      { x: 50, y: 5 },
+      4,
+      2,
+      4.915228842761202,
+      4.915228842761206,
+      false,
+      0
+    )
+    expect(noisyFull.closed).toBe(true)
+    hatch.add(new AcGeLoop2d([noisyFull]))
+
     // Genuine partial ellipse must stay untouched.
     hatch.add(
       new AcGeLoop2d([
@@ -1070,6 +1084,16 @@ describe('AcDbHatch', () => {
     const collapsedAngles = dxf.match(/\n50\n45\n51\n([^\n]+)\n/)
     expect(collapsedAngles).not.toBeNull()
     expect(Number(collapsedAngles![1])).toBeCloseTo(405, 6)
+    // Noisy full ellipse: restore start°..(start°+360°) rather than a
+    // degenerate near-zero sweep.
+    const noisyStartDeg = (noisyFull.startAngle * 180) / Math.PI
+    const anglePairs = [...dxf.matchAll(/\n50\n([^\n]+)\n51\n([^\n]+)\n/g)]
+    const noisyPair = anglePairs.find(
+      ([, start, end]) =>
+        Math.abs(Number(start) - noisyStartDeg) < 1e-6 &&
+        Math.abs(Number(end) - (noisyStartDeg + 360)) < 1e-4
+    )
+    expect(noisyPair).toBeDefined()
   })
 
   it('dxfInFields reads gradient colors, name, angle (radians), and tint', () => {

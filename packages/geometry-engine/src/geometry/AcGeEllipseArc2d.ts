@@ -7,7 +7,7 @@ import {
   AcGePoint3d,
   AcGePointLike
 } from '../math/index.js'
-import { AcGeMathUtil, TAU } from '../util/index.js'
+import { AcGeMathUtil, AcGeTol, TAU } from '../util/index.js'
 import { AcGeCurve2d } from './AcGeCurve2d.js'
 
 /**
@@ -194,10 +194,19 @@ export class AcGeEllipseArc2d extends AcGeCurve2d {
   }
 
   /**
-   * Return true if its start point is identical to its end point. Otherwise, return false.
+   * Return true if this arc is a full ellipse (start angle equals end angle
+   * modulo 2π, including float noise from DWG/DXF round-trips).
    */
   get closed() {
-    return this.deltaAngle == 0
+    // deltaAngle is already in [0, 2π). Near-0 and near-2π both mean a full
+    // span; use a tight angle epsilon so intentional tiny sweeps stay open
+    // while DWG float noise (e.g. start/end differing by ~1e-15) still counts
+    // as closed — matching AcGeCircArc2d.
+    const angleTol = 1e-12
+    return (
+      AcGeTol.equalToZero(this.deltaAngle, angleTol) ||
+      AcGeTol.equalToZero(TAU - this.deltaAngle, angleTol)
+    )
   }
 
   /**
