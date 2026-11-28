@@ -2291,11 +2291,92 @@ export class AcDbHatch extends AcDbEntity {
     return { patternScale, preferred, annotationScale }
   }
 
+  private getOcsToWcsProjectionMatrix() {
+    if (this._normal.x === 0 && this._normal.y === 0 && this._normal.z === 1) {
+      return undefined
+    }
+    if (this._normal.lengthSq() === 0) {
+      return undefined
+    }
+
+    const origin = acgeTransformOcsPointToWcs(
+      { x: 0, y: 0, z: this._elevation },
+      this._normal
+    )
+    const xAxis = acgeTransformOcsPointToWcs(
+      { x: 1, y: 0, z: this._elevation },
+      this._normal
+    )
+    const yAxis = acgeTransformOcsPointToWcs(
+      { x: 0, y: 1, z: this._elevation },
+      this._normal
+    )
+
+    return new AcGeMatrix2d(
+      xAxis.x - origin.x,
+      yAxis.x - origin.x,
+      origin.x,
+      xAxis.y - origin.y,
+      yAxis.y - origin.y,
+      origin.y,
+      0,
+      0,
+      1
+    )
+  }
+
+  private transformDefinitionLinesToWcs(
+    matrix: AcGeMatrix2d,
+    definitionLines: AcGiHatchPatternLine[],
+    patternAngle: number
+  ): AcGiHatchPatternLine[] {
+    const elements = matrix.elements
+    const transformPoint = (x: number, y: number) => ({
+      x: elements[0] * x + elements[3] * y + elements[6],
+      y: elements[1] * x + elements[4] * y + elements[7]
+    })
+    const transformVector = (x: number, y: number) => ({
+      x: elements[0] * x + elements[3] * y,
+      y: elements[1] * x + elements[4] * y
+    })
+    const rotate = (x: number, y: number, angle: number) => {
+      const cos = Math.cos(angle)
+      const sin = Math.sin(angle)
+      return { x: x * cos - y * sin, y: x * sin + y * cos }
+    }
+
+    return definitionLines.map(line => {
+      const base = rotate(line.base.x, line.base.y, patternAngle)
+      const offset = rotate(line.offset.x, line.offset.y, patternAngle)
+      const direction = transformVector(
+        Math.cos(line.angle + patternAngle),
+        Math.sin(line.angle + patternAngle)
+      )
+
+      return {
+        angle: Math.atan2(direction.y, direction.x),
+        base: transformPoint(base.x, base.y),
+        offset: transformVector(offset.x, offset.y),
+        dashLengths: line.dashLengths.map(
+          length => length * Math.hypot(direction.x, direction.y)
+        )
+      }
+    })
+  }
+
+  private transformAngleToWcs(angle: number, matrix: AcGeMatrix2d) {
+    const elements = matrix.elements
+    const x = elements[0] * Math.cos(angle) + elements[3] * Math.sin(angle)
+    const y = elements[1] * Math.cos(angle) + elements[4] * Math.sin(angle)
+    return Math.atan2(y, x)
+  }
+
   /**
    * @inheritdoc
    */
   subWorldDraw(renderer: AcGiRenderer) {
     const presentation = this.resolveAnnotativePresentation()
+    const ocsToWcs = this.getOcsToWcsProjectionMatrix()
     const savedScale = this._patternScale
     const savedSet = this._patternScaleSet
     this._patternScale = presentation.patternScale
@@ -2306,13 +2387,21 @@ export class AcDbHatch extends AcDbEntity {
       const traits = renderer.subEntityTraits
       traits.fillType = {
         solidFill: this.isSolidFill,
-        patternAngle,
-        definitionLines,
+        patternAngle: ocsToWcs ? 0 : patternAngle,
+        definitionLines: ocsToWcs
+          ? this.transformDefinitionLinesToWcs(
+              ocsToWcs,
+              definitionLines,
+              patternAngle
+            )
+          : definitionLines,
         backgroundColor: this.backgroundColor?.clone(),
         gradient: this.isGradient
           ? {
               name: this.gradientName,
-              angle: this.gradientAngle,
+              angle: ocsToWcs
+                ? this.transformAngleToWcs(this.gradientAngle, ocsToWcs)
+                : this.gradientAngle,
               shift: this.gradientShift,
               oneColorMode: this.gradientOneColorMode,
               shadeTintValue: this.shadeTintValue,
@@ -2323,13 +2412,15 @@ export class AcDbHatch extends AcDbEntity {
       }
       traits.drawOrder = -1
       const areas = this.buildAreasFromLoops()
+      const renderArea = (area: AcGeArea2d) =>
+        ocsToWcs ? area.clone().transform(ocsToWcs) : area
       let drawable
       if (areas.length === 0) {
-        drawable = renderer.area(this._geo)
+        drawable = renderer.area(renderArea(this._geo))
       } else if (areas.length === 1) {
-        drawable = renderer.area(areas[0])
+        drawable = renderer.area(renderArea(areas[0]))
       } else {
-        const entities = areas.map(area => renderer.area(area))
+        const entities = areas.map(area => renderer.area(renderArea(area)))
         drawable = renderer.group(entities)
       }
       if (drawable && this.annotative) {

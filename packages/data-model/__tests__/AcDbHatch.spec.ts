@@ -1,5 +1,6 @@
 import { AcCmColor } from '@mlightcad/common'
 import {
+  AcGeArea2d,
   AcGeCircArc2d,
   AcGeEllipseArc2d,
   AcGeLine2d,
@@ -7,7 +8,8 @@ import {
   AcGeMatrix3d,
   AcGePoint2d,
   AcGePolyline2d,
-  AcGeSpline3d
+  AcGeSpline3d,
+  AcGeVector3d
 } from '@mlightcad/geometry-engine'
 
 import { acdbHostApplicationServices, AcDbDxfFiler } from '../src/base'
@@ -685,6 +687,65 @@ describe('AcDbHatch', () => {
     expect(multiRenderer.group).toHaveBeenCalledTimes(1)
     expect(multiDraw.kind).toBe('group')
     expect(multiDraw.entities).toHaveLength(2)
+  })
+
+  it('converts negative-Z hatch boundaries from OCS to WCS before drawing', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+    hatch.patternName = HATCH_PATTERN_SOLID
+    hatch.normal = new AcGeVector3d(0, 0, -1)
+    hatch.add(createRectLoop(-10, 0, 5, 5))
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+
+    hatch.subWorldDraw(renderer as never)
+
+    const drawnArea = renderer.area.mock.calls[0][0] as AcGeArea2d
+    const extents = hatch.geometricExtents
+    expect(drawnArea.box.min.x).toBeCloseTo(extents.min.x)
+    expect(drawnArea.box.max.x).toBeCloseTo(extents.max.x)
+    expect([drawnArea.box.min.x, drawnArea.box.max.x]).toEqual([5, 10])
+  })
+
+  it('converts negative-Z hatch pattern lines to WCS without mutating the hatch', () => {
+    createWorkingDb()
+    const hatch = new AcDbHatch()
+    hatch.normal = new AcGeVector3d(0, 0, -1)
+    hatch.definitionLines.push({
+      angle: Math.PI / 6,
+      base: { x: -10, y: 2 },
+      offset: { x: 0, y: 4 },
+      dashLengths: [2, -1]
+    })
+    hatch.add(createRectLoop(-10, 0, 5, 5))
+
+    const renderer = {
+      subEntityTraits: {} as Record<string, unknown>,
+      area: jest.fn((area: unknown) => ({ kind: 'area', area })),
+      group: jest.fn()
+    }
+
+    hatch.subWorldDraw(renderer as never)
+
+    const fillType = renderer.subEntityTraits.fillType as {
+      patternAngle: number
+      definitionLines: Array<{
+        angle: number
+        base: { x: number; y: number }
+        offset: { x: number; y: number }
+        dashLengths: number[]
+      }>
+    }
+    expect(fillType.patternAngle).toBe(0)
+    expect(fillType.definitionLines[0].angle).toBeCloseTo((5 * Math.PI) / 6)
+    expect(fillType.definitionLines[0].base).toMatchObject({ x: 10, y: 2 })
+    expect(fillType.definitionLines[0].offset).toMatchObject({ x: 0, y: 4 })
+    expect(fillType.definitionLines[0].dashLengths).toEqual([2, -1])
+    expect(hatch.definitionLines[0].base).toMatchObject({ x: -10, y: 2 })
   })
 
   it('reuses and invalidates cached areasFromLoops across draw and mutations', () => {
